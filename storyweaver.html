@@ -283,10 +283,6 @@
 
             function updateUIFromHistory() {
                 storyContainer.innerHTML = '';
-                storyHistory.forEach((part, i) => {
-                    if (i === 0) return;
-                    addParagraphToUI(part.text, part.author, i);
-                });
 
                 storyHistory.forEach((part, i) => {
                     if (i === 0) return; // Skip system prompt
@@ -472,6 +468,7 @@
             function addParagraphToStory(text, author) {
                 const role = (author === 'user' || author === 'ai') ? (author === 'user' ? 'user' : 'model') : 'system';
                  if(role !== 'system') {
+                    // This is incorrect logic, it will add system messages to history
                     storyHistory.push({role: role, parts: [{text: text}]});
                  }
                 updateUIFromHistory();
@@ -494,7 +491,7 @@
             }
 
             async function getAIResponseForTitle(history) {
-                 const apiKey = "";
+                 const apiKey = "AIzaSyBV0I7cih-RvH0TZx3fQDdOHiGNY5dg1Wg";
                  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                  const payload = { contents: history };
                  const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -608,7 +605,7 @@
             }
 
             async function getAIResponse() {
-                const apiKey = ""; // IMPORTANT: Add your API Key here
+                const apiKey = "AIzaSyBV0I7cih-RvH0TZx3fQDdOHiGNY5dg1Wg"; // IMPORTANT: Add your API Key here
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: storyHistory };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
