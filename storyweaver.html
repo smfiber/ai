@@ -80,25 +80,27 @@
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
     <div id="app-container" class="w-full max-w-4xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
-        <header class="flex flex-col sm:flex-row justify-between items-center w-full mb-4 pb-4 border-b border-gray-700">
-            <div class="text-center sm:text-left">
-                <h1 class="text-3xl font-bold text-white">AI Story Weaver</h1>
-                <p class="text-sm text-gray-400 mt-1">Guide the AI with up to 10 prompts to weave a collaborative story.</p>
-                <p class="text-xs text-gray-500 mt-2">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.46</span></p>
+        <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
+            <div class="flex-shrink-0 mr-6">
+                <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
+                    AI Story Weaver
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.47</span>
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 max-w-xs">Guide the AI with up to 10 prompts to weave a collaborative story.</p>
             </div>
             
-            <div class="flex flex-col items-center sm:items-end gap-4 mt-4 sm:mt-0">
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex-1 min-w-[150px]">
+            <div class="flex-grow flex flex-col items-end gap-2 mt-4 sm:mt-0">
+                <div class="flex flex-col sm:flex-row gap-4 w-full justify-end">
+                    <div class="flex-1 min-w-[150px] max-w-xs">
                         <label for="persona-select" class="block mb-1 text-gray-400 text-sm">Story Weaver:</label>
                         <select id="persona-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                    <div class="flex-1 min-w-[150px]">
+                    <div class="flex-1 min-w-[150px] max-w-xs">
                         <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Tone:</label>
                         <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-2">
+                <div class="flex flex-col items-end gap-2 mt-2">
                     <!-- Row 1: Save buttons -->
                     <div class="flex flex-wrap justify-end gap-2">
                         <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story</button>
