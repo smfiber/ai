@@ -75,6 +75,18 @@
         #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover {
             background: #6b7280; /* gray-500 */
         }
+        
+        .illustration-container {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .illustration-container img {
+            border-radius: 0.5rem;
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
@@ -84,7 +96,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.47</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.50</span>
                 </h1>
                 <p class="text-xs text-gray-400 mt-1 max-w-xs">Guide the AI with up to 10 prompts to weave a collaborative story.</p>
             </div>
@@ -266,7 +278,11 @@
                     pushToHistory();
                 } catch (error) {
                     console.error("Error continuing story:", error);
-                    displaySystemMessage(error.message, 'error');
+                     if (error.message.includes("overloaded")) {
+                        displaySystemMessage("The AI model is currently busy. Please try again in a moment.", 'error');
+                    } else {
+                        displaySystemMessage(error.message, 'error');
+                    }
                     storyHistory.pop(); // Remove user prompt that caused error
                 } finally {
                     setLoading(false);
@@ -301,7 +317,7 @@
                 paragraphContent.appendChild(contentTag);
 
                 const controlsContainer = document.createElement('div');
-                controlsContainer.classList.add('flex-shrink-0', 'py-4');
+                controlsContainer.classList.add('flex-shrink-0', 'py-4', 'flex', 'flex-col', 'gap-2');
 
                 if (role === 'user') {
                     wrapper.classList.add('justify-start');
@@ -314,7 +330,9 @@
                     wrapper.classList.add('justify-end');
                     paragraphContent.classList.add('ai-paragraph', 'rounded-br-none');
                     const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
+                    const illustrateBtn = createControlButton('Illustrate', () => handleIllustration(index));
                     controlsContainer.appendChild(regenBtn);
+                    controlsContainer.appendChild(illustrateBtn);
                     wrapper.appendChild(controlsContainer);
                     wrapper.appendChild(paragraphContent);
                 }
@@ -338,7 +356,7 @@
                 storyContainer.scrollTop = storyContainer.scrollHeight; // Auto-scroll
             }
 
-            // --- Edit & Regenerate ---
+            // --- Edit & Regenerate & Illustrate ---
 
             function enterEditMode(index, text) {
                 if(isAITurn) return;
@@ -367,6 +385,33 @@
                     setLoading(false);
                     updateUIFromHistory();
                 }
+            }
+            
+            async function handleIllustration(index) {
+                 if (isAITurn) return;
+                 setLoading(true);
+                 
+                 const sceneText = storyHistory[index].parts[0].text;
+                 const imageContainer = document.createElement('div');
+                 imageContainer.classList.add('illustration-container');
+                 imageContainer.innerHTML = `<div class="text-center p-4">Generating illustration... <svg class="animate-spin h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+                 
+                 const paragraphWrapper = storyContainer.children[index -1]; // -1 to account for system prompt
+                 paragraphWrapper.appendChild(imageContainer);
+                 
+                 try {
+                    const imageUrl = await generateImage(sceneText);
+                    imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated illustration of the scene">`;
+                 } catch(error) {
+                    console.error("Error generating image:", error);
+                    if (error.message.includes("billed users")) {
+                        imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.<br>This feature requires a billed Google Cloud account.</p>`;
+                    } else {
+                        imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.</p>`;
+                    }
+                 } finally {
+                    setLoading(false);
+                 }
             }
             
             // --- Saving & Export ---
@@ -538,6 +583,37 @@
                     return result.candidates[0].content.parts[0].text;
                 } else {
                     throw new Error(`Unexpected API response format.`);
+                }
+            }
+            
+             async function generateImage(prompt) {
+                const apiKey = "AIzaSyBV0I7cih-RvH0TZx3fQDdOHiGNY5dg1Wg";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                
+                const payload = {
+                    instances: [{ "prompt": prompt }],
+                    parameters: { "sampleCount": 1 }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Image generation API error:", errorText);
+                    throw new Error(`Image generation failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                } else {
+                    console.error("Unexpected image generation response:", result);
+                    throw new Error('Could not retrieve image from API response.');
                 }
             }
             
