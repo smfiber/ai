@@ -129,7 +129,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.73</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.75</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -360,19 +360,6 @@
             ].sort((a, b) => a.name.localeCompare(b.name));
             
             const sentenceLengths = [1, 2, 3, 4, 5];
-            
-            const laminationThemes = [
-                { name: "Ladybug on Leaf", prompt: "A beautiful, photorealistic background of a ladybug on a dewy green leaf" },
-                { name: "Cherry Blossoms", prompt: "A soft-focus background of cherry blossoms in spring" },
-                { name: "Zen Garden", prompt: "A serene zen garden with stacked stones and raked sand" },
-                { name: "Lotus Flower", prompt: "A tranquil pond with a single, perfect lotus flower" },
-                { name: "Sunflowers", prompt: "A field of bright, cheerful sunflowers under a blue sky" },
-                { name: "Mandala Pattern", prompt: "A detailed, calming mandala pattern" },
-                { name: "Sunset Beach", prompt: "A calm beach at sunset with gentle waves" },
-                { name: "Misty Forest", prompt: "A misty, atmospheric forest path" },
-                { name: "Cosmic Yoga", prompt: "A celestial, starry galaxy background suitable for yoga and inspiration" },
-                { name: "Lavender Fields", prompt: "A beautiful, calming field of lavender" }
-            ];
 
             // --- Core Functions ---
 
@@ -394,6 +381,7 @@
             function resetApp() {
                 storyContainer.classList.remove('hidden');
                 isLaminationMode = false;
+                storyContainer.innerHTML = '';
                 storyHistory = [ getSystemPrompt() ];
                 historyStack = [ JSON.parse(JSON.stringify(storyHistory)) ];
                 historyPointer = 0;
@@ -545,31 +533,26 @@
             function renderLaminationThemes(container) {
                 container.innerHTML = ''; // Clear old controls
 
-                const themeLabel = document.createElement('label');
-                themeLabel.textContent = "Theme:";
-                themeLabel.className = "text-sm text-gray-400";
+                const searchLabel = document.createElement('label');
+                searchLabel.textContent = "Background Theme:";
+                searchLabel.className = "text-sm text-gray-400";
 
-                const themeSelect = document.createElement('select');
-                themeSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
-                
-                laminationThemes.forEach(theme => {
-                    const option = document.createElement('option');
-                    option.value = theme.prompt;
-                    option.textContent = theme.name;
-                    themeSelect.appendChild(option);
-                });
+                const searchInput = document.createElement('input');
+                searchInput.type = "text";
+                searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
+                searchInput.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
 
                 const redesignButton = document.createElement('button');
-                redesignButton.textContent = "Redesign";
+                redesignButton.textContent = "Generate Background";
                 redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg";
                 redesignButton.onclick = () => {
-                    const selectedThemePrompt = themeSelect.value;
+                    const selectedThemePrompt = searchInput.value;
                     const selectedImageStyle = imageStyles[imageStyleSelect.value];
                     handleCreateLamination(`${selectedImageStyle.prefix} of ${selectedThemePrompt}`);
                 };
                 
-                container.appendChild(themeLabel);
-                container.appendChild(themeSelect);
+                container.appendChild(searchLabel);
+                container.appendChild(searchInput);
                 container.appendChild(redesignButton);
             }
             
@@ -892,7 +875,7 @@
             }
 
             async function getAIResponse(history) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const cleanHistory = history.map(({role, parts}) => ({role, parts}));
@@ -914,7 +897,7 @@
             }
             
              async function generateImage(prompt) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 
                 const payload = {
