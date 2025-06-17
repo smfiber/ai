@@ -13,13 +13,13 @@
     <style>
         /* Main font styling for the app */
         body {
-            font-family: 'Inter', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            letter-spacing: 0.01em;
+            font-family: 'Inter', sans-serif; /* Using a modern font */
+            font-size: 16px; /* Keep current font size */
+            line-height: 1.6; /* Increased for better readability */
+            letter-spacing: 0.01em; /* Subtle spacing */
         }
 
-        /* Styling for the paragraphs to distinguish authors and add animations */
+        /* Styling for the paragraphs to distinguish authors */
         .story-paragraph {
             opacity: 0;
             transform: translateY(20px);
@@ -34,37 +34,38 @@
         }
 
         .user-paragraph {
-            background-image: linear-gradient(to right, #374151, #2f3743);
+            background-image: linear-gradient(to right, #374151, #2f3743); /* Subtle gradient from gray-700 to a slightly darker shade */
             align-self: flex-start;
-            border-radius: 1.5rem;
-            border-bottom-left-radius: 0;
+            border-radius: 1.5rem; /* Apply full rounded corners */
+            border-bottom-left-radius: 0; /* Flatten the inner bottom corner */
         }
 
         .ai-paragraph {
-            background-image: linear-gradient(to left, #1e293b, #1a222f);
+            background-image: linear-gradient(to left, #1e293b, #1a222f); /* Subtle gradient from slate-800 to a slightly darker shade */
             align-self: flex-end;
-            border-radius: 1.5rem;
-            border-bottom-right-radius: 0;
-        }
-        
-        .error-paragraph, .system-message-paragraph {
-             align-self: center;
-             text-align: center;
-             padding: 1rem;
-             border-radius: 0.5rem;
-             font-weight: bold;
-             max-width: 80%;
+            border-radius: 1.5rem; /* Apply full rounded corners */
+            border-bottom-right-radius: 0; /* Flatten the inner bottom corner */
         }
 
         .error-paragraph {
-             background-color: #dc2626; /* red-600 */
-             color: #fee2e2; /* red-100 */
+             background-color: #dc2626; /* red-600 for more visibility */
+             color: #fee2e2; /* red-100 for better contrast */
+             align-self: center;
+             text-align: center;
+             padding: 1rem; /* Ensure good padding */
+             border-radius: 0.5rem; /* Slightly rounded for errors */
+             font-weight: bold;
         }
 
         .system-message-paragraph {
-            background-color: #374151; /* gray-700 */
-            color: #a78bfa; /* violet-400 */
-            white-space: pre-wrap; /* Preserve whitespace for formatted text like titles */
+            background-color: #374151; /* gray-700, similar to user but centered */
+            color: #a78bfa; /* violet-400 for emphasis */
+            align-self: center;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks for formatted titles */
         }
 
         /* Custom scrollbar for a cleaner look */
@@ -89,11 +90,11 @@
         <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
             <div class="text-center sm:text-left flex-grow">
                 <h1 class="text-3xl font-bold text-white">AI Story Weaver</h1>
-                <p class="text-sm text-gray-400 mt-1">Co-author rich narratives with an AI. Choose your guide, shape the plot, and refine your tale.</p>
-                <p class="text-xs text-gray-500 mt-2">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.44</span></p>
+                <p class="text-sm text-gray-400 mt-1">Co-author rich narratives with an AI. Choose your guide, shape the plot, and refine your tale with powerful editing and navigation controls.</p>
+                <p class="text-xs text-gray-500 mt-2">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.34</span></p>
             </div>
             <!-- Control Panel: Persona, Tone, and Action Buttons -->
-            <div class="flex flex-col gap-4 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
+            <div class="flex flex-col gap-3 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
                 <!-- Persona and Tone Selections -->
                 <div class="flex flex-col sm:flex-row gap-4">
                     <div class="flex-1 min-w-[150px]">
@@ -106,14 +107,14 @@
                     </div>
                 </div>
                 <!-- Action Buttons -->
-                <div class="flex flex-wrap justify-center sm:justify-end gap-2 pt-2 border-t border-gray-700">
+                <div class="flex flex-wrap justify-center sm:justify-end gap-2">
                     <button id="undo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Undo</button>
                     <button id="redo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Redo</button>
-                    <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Suggest Title & Save</button>
-                    <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Save Weaver Chat</button>
-                    <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Save My Prompts</button>
+                    <button id="suggest-title-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story</button>
+                    <button id="export-text-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Save Weaver</button>
+                    <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Save Prompts</button>
                     <button id="save-titles-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Titles</button>
-                    <button id="reset-story-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Reset Story</button>
+                    <button id="reset-story-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Reset Story</button>
                 </div>
             </div>
         </header>
@@ -127,7 +128,7 @@
                 <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 pr-40 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Write your part of the story here..."></textarea>
                 <button id="continue-btn" class="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     <span id="btn-text">Continue Story</span>
-                    <svg id="loading-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -149,492 +150,528 @@
     </div>
 
     <script>
-        // --- DOM Element References ---
-        const storyContainer = document.getElementById('story-container');
-        const promptInput = document.getElementById('prompt-input');
-        const continueBtn = document.getElementById('continue-btn');
-        const btnText = document.getElementById('btn-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const saveWeaverBtn = document.getElementById('save-weaver-btn');
-        const undoBtn = document.getElementById('undo-btn');
-        const redoBtn = document.getElementById('redo-btn');
-        const personaSelect = document.getElementById('persona-select');
-        const toneSelect = document.getElementById('tone-select');
-        const resetStoryBtn = document.getElementById('reset-story-btn');
-        const saveStoryBtn = document.getElementById('save-story-btn');
-        const savePromptsBtn = document.getElementById('save-prompts-btn');
-        const saveTitlesBtn = document.getElementById('save-titles-btn');
-        
-        // Modal DOM references
-        const compiledStoryModal = document.getElementById('compiled-story-modal');
-        const compiledStoryTextarea = document.getElementById('compiled-story-textarea');
-        const saveEditedStoryBtn = document.getElementById('save-edited-story-btn');
-        const closeCompiledStoryModalBtn = document.getElementById('close-compiled-story-modal-btn');
-        const modalTitle = document.getElementById('modal-title');
-
-
-        // --- Application State ---
-        let isAITurn = false;
-        let isEditing = false;
-        let isRegenerating = false;
-        let isSuggestingTitle = false;
-        let isModalOpen = false;
-        let editingParagraphIndex = null;
-        let regeneratingAIIndex = null;
-        let currentPersonaIndex = 0;
-        let currentToneIndex = 0;
-        let lastSuggestedTitles = '';
-
-        const MIN_PARAGRAPHS_FOR_SAVE_STORY = 4; // User/AI turns
-
-        // --- Data: Personas and Tones ---
-        const personas = [
-            { name: "Zen Master (Wisdom)", systemPrompt: "You are the Zen Master...", welcomeMessage: "Welcome, seeker. I am the Zen Master..." },
-            { name: "Karma Weaver (Dharma)", systemPrompt: "You are the Karma Weaver...", welcomeMessage: "The threads of destiny await..." },
-            { name: "Yoga Sutra Guide (Unity)", systemPrompt: "You are the Yoga Sutra Guide...", welcomeMessage: "Breathe. I am your Yoga Sutra Guide..." },
-            { name: "Taoist Sage (Flow)", systemPrompt: "You are the Taoist Sage...", welcomeMessage: "The Way is open. I am the Taoist Sage..." },
-            { name: "Bodhi Tree Chronicler (Awakening)", systemPrompt: "You are the Bodhi Tree Chronicler...", welcomeMessage: "Beneath the canopy of thought, I await..." },
-        ];
-        const tones = [
-            { name: "Neutral", description: "a neutral and objective" },
-            { name: "Humorous", description: "a funny and lighthearted" },
-            { name: "Romantic", description: "a romantic and tender" },
-            { name: "Mysterious", description: "a mysterious and suspenseful" },
-            { name: "Poetic", description: "a poetic and lyrical" }
-        ];
-
-        // --- Story and History Management ---
-        const initialSystemPrompt = { role: "user", parts: [{ text: "" }] };
-        let storyHistory = [];
-        let historyStack = [];
-        let historyPointer = -1;
-
-        // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            populatePersonaSelect();
-            populateToneSelect();
-            applyCurrentPersonaAndTone();
-        });
-        
-        // --- Core Application Logic ---
+            // --- DOM Element References ---
+            const storyContainer = document.getElementById('story-container');
+            const promptInput = document.getElementById('prompt-input');
+            const continueBtn = document.getElementById('continue-btn');
+            const btnText = document.getElementById('btn-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const saveWeaverBtn = document.getElementById('export-text-btn');
+            const undoBtn = document.getElementById('undo-btn');
+            const redoBtn = document.getElementById('redo-btn');
+            const personaSelect = document.getElementById('persona-select');
+            const toneSelect = document.getElementById('tone-select');
+            const resetStoryBtn = document.getElementById('reset-story-btn');
+            const saveStoryBtn = document.getElementById('suggest-title-btn');
+            const savePromptsBtn = document.getElementById('save-prompts-btn');
+            const saveTitlesBtn = document.getElementById('save-titles-btn');
+            
+            // Modal DOM references
+            const compiledStoryModal = document.getElementById('compiled-story-modal');
+            const compiledStoryTextarea = document.getElementById('compiled-story-textarea');
+            const saveCompiledStoryBtn = document.getElementById('save-edited-story-btn');
+            const closeCompiledStoryModalBtn = document.getElementById('close-compiled-story-modal-btn');
+            const modalTitle = document.getElementById('modal-title');
 
-        /**
-         * Populates the persona and tone dropdowns on load.
-         */
-        function populatePersonaSelect() {
-            personas.forEach((persona, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = persona.name;
-                personaSelect.appendChild(option);
-            });
-        }
-        function populateToneSelect() {
-            tones.forEach((tone, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = tone.name;
-                toneSelect.appendChild(option);
-            });
-        }
+            // --- Application State ---
+            let isAITurn = false;
+            let isEditing = false;
+            let isRegenerating = false;
+            let isSuggestingTitle = false;
+            let isModalOpen = false;
+            let editingParagraphIndex = null;
+            let regeneratingAIIndex = null;
+            let currentPersonaIndex = 0;
+            let currentToneIndex = 0;
+            let lastSuggestedTitles = '';
 
-        /**
-         * Sets the system prompt and resets the story based on dropdown selections.
-         * This is the main initialization and reset function.
-         */
-        function applyCurrentPersonaAndTone() {
-            const selectedPersona = personas[currentPersonaIndex];
-            const selectedTone = tones[currentToneIndex];
+            const MIN_PARAGRAPHS_FOR_SAVE_STORY = 10;
 
-            const basePrompt = "Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to 2-3 sentences.";
-            initialSystemPrompt.parts[0].text = `${selectedPersona.systemPrompt} Always maintain ${selectedTone.description} tone throughout the story. ${basePrompt}`;
-
-            const dynamicWelcomeMessage = `Greetings from ${selectedPersona.name}. Let us begin our story with ${selectedTone.description} tone. Please write the first sentence or paragraph below.`;
-            storyHistory = [
-                JSON.parse(JSON.stringify(initialSystemPrompt)),
-                { role: "model", parts: [{ text: dynamicWelcomeMessage }] }
+            // Define personas with their specific instructions and welcome messages
+            const personas = [
+                {
+                    name: "Zen Master (Wisdom)",
+                    systemPrompt: "You are the Zen Master, a storyteller guiding narratives with profound wisdom and a focus on simplicity, enlightenment, and the interconnectedness of all things. Your responses are clear, concise, and lead towards moments of quiet insight. Emphasize presence and inner peace. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.",
+                    welcomeMessage: "Welcome, seeker. I am the Zen Master. Let us unfold a narrative where each word is a step towards understanding. What is your first breath of story?"
+                },
+                {
+                    name: "Karma Weaver (Dharma)",
+                    systemPrompt: "You are the Karma Weaver, a storyteller who explores themes of cause and effect, duty (dharma), and the cyclical nature of existence. Your narratives gently illustrate consequences, personal growth, and the journey towards balance. Respond with a tone that is thoughtful and emphasizes moral or ethical dimensions. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.",
+                    welcomeMessage: "The threads of destiny await our weaving. I am the Karma Weaver. Share your beginning, and let us witness the unfolding of action and consequence."
+                },
+                {
+                    name: "Yoga Sutra Guide (Unity)",
+                    systemPrompt: "You are the Yoga Sutra Guide, narrating stories focused on the journey towards union (yoga), self-discipline, and the harmony between mind, body, and spirit. Your tales incorporate elements of inner strength, balance, and the path to liberation. Respond with a serene, encouraging, and guiding tone. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.",
+                    welcomeMessage: "Breathe. I am your Yoga Sutra Guide. Let us align our thoughts and begin a narrative that flows with unity and purpose. What posture does your story take?"
+                },
+                {
+                    name: "Taoist Sage (Flow)",
+                    systemPrompt: "You are the Taoist Sage, crafting narratives that embody effortless flow, the wisdom of non-action (wu wei), and the beauty of nature's simple path. Your stories are about embracing change, finding harmony, and the balance of Yin and Yang. Respond with a calm, adaptable, and paradoxical wisdom. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.",
+                    welcomeMessage: "The Way is open. I am the Taoist Sage. Tell me where the current begins, and we shall let the story flow naturally, like water seeking its level."
+                },
+                {
+                    name: "Bodhi Tree Chronicler (Awakening)",
+                    systemPrompt: "You are the Bodhi Tree Chronicler, telling stories of awakening, enlightenment, and the journey of self-discovery under the silent witness of ancient wisdom. Your narratives often feature moments of profound realization and compassionate understanding. Respond with a deeply compassionate and insightful tone. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.",
+                    welcomeMessage: "Beneath the canopy of thought, I await. I am the Bodhi Tree Chronicler. What seed of inquiry shall we nurture into a story of awakening?"
+                }
             ];
 
-            historyStack = [];
-            historyPointer = -1;
-            pushToHistory(); 
-            updateUIFromHistory();
-            promptInput.value = '';
-            exitEditMode();
-            setLoading(false);
-        }
+            const tones = [
+                { name: "Neutral", description: "a neutral and objective" },
+                { name: "Humorous", description: "a funny and lighthearted" },
+                { name: "Romantic", description: "a romantic and tender" },
+                { name: "Mysterious", description: "a mysterious and suspenseful" },
+                { name: "Whimsical", description: "a whimsical and fantastical" }
+            ];
 
-        /**
-         * Handles the primary user action: submitting text to continue the story or update a paragraph.
-         */
-        async function handleUserTurn() {
-            const userText = promptInput.value.trim();
-            if (!userText || isAITurn || isRegenerating || isSuggestingTitle) return;
+            const initialSystemPrompt = { role: "user", parts: [{ text: "" }] };
+            let storyHistory = [];
+            let historyStack = [];
+            let historyPointer = -1;
 
-            if (isEditing) {
-                // If in edit mode, update the existing paragraph
-                storyHistory[editingParagraphIndex].parts[0].text = userText;
-                // Invalidate subsequent AI responses by truncating the history
-                storyHistory = storyHistory.slice(0, editingParagraphIndex + 1);
-                exitEditMode();
+            // --- Main Functions ---
+
+            function populatePersonaSelect() {
+                personaSelect.innerHTML = '';
+                personas.forEach((persona, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = persona.name;
+                    personaSelect.appendChild(option);
+                });
+            }
+
+            function populateToneSelect() {
+                toneSelect.innerHTML = '';
+                tones.forEach((tone, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = tone.name;
+                    toneSelect.appendChild(option);
+                });
+            }
+
+            function applyCurrentPersonaAndTone() {
+                const selectedPersona = personas[currentPersonaIndex];
+                const selectedTone = tones[currentToneIndex];
+                initialSystemPrompt.parts[0].text = selectedPersona.systemPrompt + " Always maintain " + selectedTone.description + " tone throughout the story. Limit your response to 2 sentences. Crucially, your response should seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers.";
+                const dynamicWelcomeMessage = `Greetings from ${selectedPersona.name}. Let us begin our story with a ${selectedTone.description} tone. Please write the first sentence or paragraph below to commence our narrative journey.`;
+                storyHistory = [
+                    JSON.parse(JSON.stringify(initialSystemPrompt)),
+                    { role: "model", parts: [{ text: dynamicWelcomeMessage }] }
+                ];
+                historyStack = [];
+                historyPointer = -1;
                 pushToHistory();
                 updateUIFromHistory();
-            } else {
-                // Otherwise, add a new user paragraph
-                storyHistory.push({ role: 'user', parts: [{ text: userText }] });
                 promptInput.value = '';
+                isEditing = false;
+                editingParagraphIndex = null;
+                btnText.textContent = 'Continue Story';
+                setLoading(false);
+            }
+
+            function pushToHistory() {
+                if (historyPointer < historyStack.length - 1) {
+                    historyStack = historyStack.slice(0, historyPointer + 1);
+                }
+                historyStack.push(JSON.parse(JSON.stringify(storyHistory)));
+                historyPointer++;
+                updateUndoRedoButtons();
+            }
+
+            function updateUIFromHistory() {
+                storyContainer.innerHTML = '';
+                storyHistory.forEach((part, i) => {
+                    if (i === 0) return;
+                    addParagraphToUI(part.text, part.author, i);
+                });
+
+                storyHistory.forEach((part, i) => {
+                    if (i === 0) return; // Skip system prompt
+                    const role = part.role === 'model' ? 'ai' : 'user';
+                    addParagraphToUI(part.parts[0].text, role, i);
+                });
+
+                storyContainer.scrollTop = storyContainer.scrollHeight;
+                updateUndoRedoButtons();
+            }
+
+            function addParagraphToUI(text, author, index) {
+                const paragraphWrapper = document.createElement('div');
+                const contentAndAuthorWrapper = document.createElement('div');
+                contentAndAuthorWrapper.classList.add('flex', 'flex-col', 'flex-grow');
+
+                const authorTag = document.createElement('p');
+                const contentTag = document.createElement('p');
+
+                paragraphWrapper.classList.add('story-paragraph', 'p-4', 'max-w-xl', 'relative', 'group');
+                authorTag.classList.add('font-bold', 'mb-1', 'text-sm');
+                contentTag.textContent = text;
+
+                if (author === 'user') {
+                    paragraphWrapper.classList.add('user-paragraph');
+                    contentAndAuthorWrapper.classList.add('pr-14');
+                    authorTag.classList.add('text-amber-300');
+                    authorTag.textContent = 'You';
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Edit';
+                    editBtn.classList.add('absolute', 'top-2', 'right-2', 'bg-gray-700', 'hover:bg-gray-600', 'text-white', 'text-xs', 'py-1', 'px-2', 'rounded-md', 'transition-colors');
+                    editBtn.dataset.index = index;
+                    editBtn.addEventListener('click', (e) => {
+                        const indexToEdit = parseInt(e.target.dataset.index);
+                        enterEditMode(indexToEdit, storyHistory[indexToEdit].parts[0].text);
+                    });
+                    
+                    contentAndAuthorWrapper.appendChild(authorTag);
+                    contentAndAuthorWrapper.appendChild(contentTag);
+                    paragraphWrapper.appendChild(contentAndAuthorWrapper);
+                    paragraphWrapper.appendChild(editBtn);
+                } else if (author === 'ai') {
+                    paragraphWrapper.classList.add('ai-paragraph');
+                    contentAndAuthorWrapper.classList.add('pr-14');
+                    authorTag.classList.add('text-indigo-400');
+                    authorTag.textContent = 'Story Weaver';
+
+                    const tryAgainBtn = document.createElement('button');
+                    tryAgainBtn.textContent = 'Try again';
+                    tryAgainBtn.classList.add('absolute', 'top-2', 'right-2', 'bg-gray-700', 'hover:bg-gray-600', 'text-white', 'text-xs', 'py-1', 'px-2', 'rounded-md', 'transition-colors');
+                    tryAgainBtn.dataset.index = index;
+                    tryAgainBtn.addEventListener('click', (e) => {
+                        const indexToRegenerate = parseInt(e.target.dataset.index);
+                        handleRegenerateAIResponse(indexToRegenerate);
+                    });
+
+                    contentAndAuthorWrapper.appendChild(authorTag);
+                    contentAndAuthorWrapper.appendChild(contentTag);
+                    paragraphWrapper.appendChild(contentAndAuthorWrapper);
+                    paragraphWrapper.appendChild(tryAgainBtn);
+                } else {
+                     const roleClass = author === 'error' ? 'error-paragraph' : 'system-message-paragraph';
+                     const colorClass = author === 'error' ? 'text-red-300' : 'text-violet-400';
+                     paragraphWrapper.classList.add(roleClass);
+                     authorTag.classList.add(colorClass);
+                     authorTag.textContent = 'System Message';
+                     paragraphWrapper.appendChild(authorTag);
+                     paragraphWrapper.appendChild(contentTag);
+                }
+                
+                storyContainer.appendChild(paragraphWrapper);
+            }
+            
+            function showCompiledStoryModal(storyText, title) {
+                modalTitle.textContent = title;
+                compiledStoryTextarea.value = storyText;
+                compiledStoryModal.classList.remove('hidden');
+                isModalOpen = true;
+                // Disable all primary app controls when modal is open
+                promptInput.disabled = true;
+                continueBtn.disabled = true;
+                updateUndoRedoButtons();
+            }
+
+            function hideCompiledStoryModal() {
+                compiledStoryModal.classList.add('hidden');
+                isModalOpen = false;
+                promptInput.disabled = false;
+                continueBtn.disabled = false;
+                updateUndoRedoButtons();
+            }
+            
+            function saveCompiledStory() {
+                const editedText = compiledStoryTextarea.value;
+                const blob = new Blob([editedText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = (modalTitle.textContent || 'AI_Story_Weaver_Compiled_Story').replace(/\s+/g, '_') + '.txt';
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            function enterEditMode(index, text) {
+                if (isAITurn || isRegenerating || isSuggestingTitle || isModalOpen) return;
+                isEditing = true;
+                editingParagraphIndex = index;
+                promptInput.value = text;
+                btnText.textContent = 'Update Story';
+                updateUndoRedoButtons();
+                promptInput.focus();
+            }
+
+            async function handleRegenerateAIResponse(index) {
+                if (isAITurn || isEditing || isSuggestingTitle || isModalOpen) return;
+
+                setLoading(true);
+                isRegenerating = true;
+                regeneratingAIIndex = index;
+
+                try {
+                    storyHistory = storyHistory.slice(0, regeneratingAIIndex);
+                    const newAiResponseText = await getAIResponse();
+                    storyHistory.push({ role: "model", parts: [{ text: newAiResponseText }] });
+                    pushToHistory();
+                } catch (error) {
+                    console.error("Error regenerating AI response:", error);
+                    addParagraphToStory(`Failed to regenerate: ${error.message}`, 'error');
+                } finally {
+                    setLoading(false);
+                    isRegenerating = false;
+                    regeneratingAIIndex = null;
+                    updateUIFromHistory();
+                }
+            }
+
+            async function handleSaveStory() {
+                if (storyHistory.length - 2 < MIN_PARAGRAPHS_FOR_SAVE_STORY) {
+                    addParagraphToStory(`The story needs to be at least ${MIN_PARAGRAPHS_FOR_SAVE_STORY} paragraphs long to save.`, 'system-message');
+                    return;
+                }
+                if (isAITurn || isEditing || isRegenerating || isSuggestingTitle || isModalOpen) return;
+
+                setLoading(true);
+                isSuggestingTitle = true;
+
+                let compiledAIStoryText = '';
+                const currentPersonaName = personas[currentPersonaIndex].name;
+                const currentToneName = tones[currentToneIndex].name;
+                const storyTitleForModal = `A Story from ${currentPersonaName} with a ${currentToneName} Tone`;
+                
+                storyHistory.forEach(part => {
+                    if (part.role === 'model' && !personas.some(p => p.welcomeMessage === part.parts[0].text)) {
+                       compiledAIStoryText += part.parts[0].text + '\n\n';
+                    }
+                });
+                
+                const titlePrompt = `Based on the following story, suggest 5 creative and fitting titles:\n\n"${compiledAIStoryText}"\n\nTitles:`;
+                
+                try {
+                    const tempHistoryForTitle = [{ role: "user", parts: [{ text: titlePrompt }] }];
+                    const titlesResponse = await getAIResponseForTitle(tempHistoryForTitle);
+                    const titleLines = titlesResponse.split('\n').filter(line => line.trim() !== '');
+                    const formattedTitles = titleLines.map((title, index) => `${index + 1}. ${title.replace(/^- /, '').trim()}`).join('\n');
+                    lastSuggestedTitles = formattedTitles;
+
+                    addParagraphToStory("Suggested Titles:\n" + formattedTitles, 'system-message');
+                    showCompiledStoryModal(compiledAIStoryText, storyTitleForModal);
+                } catch (error) {
+                    console.error("Error suggesting titles:", error);
+                    addParagraphToStory(`Failed to suggest titles: ${error.message}`, 'error');
+                } finally {
+                    setLoading(false);
+                    isSuggestingTitle = false;
+                    updateUIFromHistory();
+                }
+            }
+            
+            function addParagraphToStory(text, author) {
+                const role = (author === 'user' || author === 'ai') ? (author === 'user' ? 'user' : 'model') : 'system';
+                 if(role !== 'system') {
+                    storyHistory.push({role: role, parts: [{text: text}]});
+                 }
+                updateUIFromHistory();
+            }
+
+            function saveSuggestedTitles() {
+                if (!lastSuggestedTitles) {
+                    addParagraphToStory("No titles have been suggested yet to save.", 'system-message');
+                    return;
+                }
+                const blob = new Blob([lastSuggestedTitles], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'AI_Story_Weaver_Suggested_Titles.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            async function getAIResponseForTitle(history) {
+                 const apiKey = "";
+                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                 const payload = { contents: history };
+                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                 const responseText = await response.text();
+                 if (!response.ok) {
+                     try { const errorData = JSON.parse(responseText); throw new Error(errorData.error.message || `API request failed: ${responseText}`); }
+                     catch (e) { throw new Error(`API request failed: ${responseText || 'No response'}`); }
+                 }
+                 try {
+                     const result = JSON.parse(responseText);
+                     if (result.candidates?.[0]?.content?.parts?.[0]?.text) { return result.candidates[0].content.parts[0].text; }
+                     else { throw new Error(`Unexpected response format: ${responseText}`); }
+                 } catch (e) { throw new Error(`Failed to parse response: ${responseText || 'Empty response'}`); }
+             }
+
+            function updateUndoRedoButtons() {
+                const isBusy = isEditing || isRegenerating || isSuggestingTitle || isModalOpen;
+                undoBtn.disabled = isBusy || historyPointer <= 0;
+                redoBtn.disabled = isBusy || historyPointer >= historyStack.length - 1;
+                saveWeaverBtn.disabled = isBusy;
+                personaSelect.disabled = isBusy;
+                toneSelect.disabled = isBusy;
+                resetStoryBtn.disabled = isBusy;
+                saveStoryBtn.disabled = isBusy || (storyHistory.length - 2 < MIN_PARAGRAPHS_FOR_SAVE_STORY);
+                savePromptsBtn.disabled = isBusy;
+                saveTitlesBtn.disabled = isBusy || !lastSuggestedTitles;
+                storyContainer.querySelectorAll('button').forEach(btn => btn.disabled = isBusy);
+            }
+
+            function handleUndo() {
+                if (historyPointer > 0 && !isModalOpen) {
+                    historyPointer--;
+                    storyHistory = JSON.parse(JSON.stringify(historyStack[historyPointer]));
+                    isEditing = false;
+                    btnText.textContent = 'Continue Story';
+                    updateUIFromHistory();
+                }
+            }
+
+            function handleRedo() {
+                if (historyPointer < historyStack.length - 1 && !isModalOpen) {
+                    historyPointer++;
+                    storyHistory = JSON.parse(JSON.stringify(historyStack[historyPointer]));
+                    isEditing = false;
+                    btnText.textContent = 'Continue Story';
+                    updateUIFromHistory();
+                }
+            }
+            
+            function saveWeaverChatHistory() {
+                let fullChatHistoryText = '';
+                storyHistory.forEach((part, i) => {
+                    if(i === 0) return;
+                    const author = part.role === 'user' ? 'You' : 'Story Weaver';
+                    fullChatHistoryText += `${author}: ${part.parts[0].text}\n\n`;
+                });
+                saveTextToFile(fullChatHistoryText, 'AI_Story_Weaver_Chat_History.txt');
+            }
+            
+            function saveTextToFile(content, filename) {
+                 const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                 const url = URL.createObjectURL(blob);
+                 const a = document.createElement('a');
+                 a.href = url;
+                 a.download = filename;
+                 document.body.appendChild(a);
+                 a.click();
+                 document.body.removeChild(a);
+                 URL.revokeObjectURL(url);
+            }
+
+            function saveUserPrompts() {
+                let userPromptsText = '';
+                storyHistory.forEach(part => {
+                    if (part.role === 'user' && part.parts[0].text !== initialSystemPrompt.parts[0].text) {
+                        userPromptsText += `${part.parts[0].text}\n\n`;
+                    }
+                });
+                saveTextToFile(userPromptsText, 'AI_Story_Weaver_Prompts.txt');
+            }
+
+            async function handleUserTurn() {
+                const userPrompt = promptInput.value.trim();
+                if (!userPrompt || isAITurn || isModalOpen) return;
+
                 setLoading(true);
 
                 try {
-                    const aiResponseText = await getAIResponse(storyHistory);
-                    storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+                    if (isEditing) {
+                        storyHistory[editingParagraphIndex].parts[0].text = userPrompt;
+                        storyHistory = storyHistory.slice(0, editingParagraphIndex + 1);
+                        isEditing = false;
+                        editingParagraphIndex = null;
+                        btnText.textContent = 'Continue Story';
+                    } else {
+                        storyHistory.push({ role: "user", parts: [{ text: userPrompt }] });
+                    }
+                    
+                    promptInput.value = '';
+                    const aiResponseText = await getAIResponse();
+                    storyHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
                     pushToHistory();
+
                 } catch (error) {
-                    console.error("Error getting AI response:", error);
-                    addParagraphToUI(`Error: ${error.message}`, 'error');
-                    storyHistory.pop(); // Remove the user's turn that led to the error
+                    console.error("Error from Gemini API:", error);
+                    addParagraphToStory(error.message, 'error');
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
                 }
             }
-        }
 
-        // --- UI Update and Control Functions ---
+            async function getAIResponse() {
+                const apiKey = ""; // IMPORTANT: Add your API Key here
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: storyHistory };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const responseText = await response.text();
 
-        /**
-         * Renders the entire story history to the UI.
-         */
-        function updateUIFromHistory() {
-            storyContainer.innerHTML = ''; 
-
-            storyHistory.forEach((part, i) => {
-                // Skip rendering the system prompt
-                if (i === 0) return;
-                addParagraphToUI(part.parts[0].text, part.role, i);
-            });
-
-            storyContainer.scrollTop = storyContainer.scrollHeight;
-            updateUndoRedoButtons();
-            updateSaveButtons();
-        }
-        
-        /**
-         * Adds a single paragraph to the UI. Can be a user, model, system, or error message.
-         * @param {string} text - The content of the paragraph.
-         * @param {string} role - 'user', 'model', 'system-message', or 'error'.
-         * @param {number} [index=-1] - The index in storyHistory for attaching controls.
-         */
-        function addParagraphToUI(text, role, index = -1) {
-            const paragraphWrapper = document.createElement('div');
-            paragraphWrapper.classList.add('story-paragraph', 'p-4', 'max-w-xl', 'relative', 'group');
-
-            const contentTag = document.createElement('p');
-            contentTag.textContent = text;
-            
-            const authorTag = document.createElement('p');
-            authorTag.classList.add('font-bold', 'mb-1', 'text-sm');
-
-            const contentAndAuthorWrapper = document.createElement('div');
-            contentAndAuthorWrapper.classList.add('flex', 'flex-col', 'flex-grow');
-
-            if (role === 'user') {
-                paragraphWrapper.classList.add('user-paragraph');
-                authorTag.classList.add('text-amber-300');
-                authorTag.textContent = 'You';
-                contentAndAuthorWrapper.appendChild(authorTag);
-                contentAndAuthorWrapper.appendChild(contentTag);
-                paragraphWrapper.appendChild(contentAndAuthorWrapper);
-                // Add edit button
-                const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
-                paragraphWrapper.appendChild(editBtn);
-            } else if (role === 'model') {
-                const welcomeMessages = personas.map(p => p.welcomeMessage);
-                const isWelcome = welcomeMessages.includes(text);
-
-                paragraphWrapper.classList.add('ai-paragraph');
-                authorTag.classList.add('text-indigo-400');
-                authorTag.textContent = 'Story Weaver';
-                contentAndAuthorWrapper.appendChild(authorTag);
-                contentAndAuthorWrapper.appendChild(contentTag);
-                paragraphWrapper.appendChild(contentAndAuthorWrapper);
-                
-                // Don't add controls to the initial welcome message
-                if (!isWelcome) {
-                    const tryAgainBtn = createControlButton('Try again', () => handleRegenerateAIResponse(index));
-                    paragraphWrapper.appendChild(tryAgainBtn);
+                if (!response.ok) {
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        throw new Error(errorData.error.message || `API Error: ${responseText}`);
+                    } catch (e) {
+                        throw new Error(`API Error: ${responseText || 'No response'}`);
+                    }
                 }
-            } else { // System messages and errors
-                paragraphWrapper.classList.add(role === 'error' ? 'error-paragraph' : 'system-message-paragraph');
-                contentTag.textContent = text;
-                paragraphWrapper.appendChild(contentTag);
+                try {
+                    const result = JSON.parse(responseText);
+                    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error(`Unexpected API response format: ${responseText}`);
+                    }
+                } catch (e) {
+                    throw new Error(`Failed to parse API response: ${responseText || 'Empty response'}`);
+                }
             }
-            
-            storyContainer.appendChild(paragraphWrapper);
-        }
 
-        /**
-         * Factory function to create control buttons for paragraphs.
-         */
-        function createControlButton(text, onClick) {
-            const button = document.createElement('button');
-            button.textContent = text;
-            button.classList.add('absolute', 'top-2', 'right-2', 'bg-gray-700', 'hover:bg-gray-600', 'text-white', 'text-xs', 'py-1', 'px-2', 'rounded-md', 'transition-colors', 'opacity-0', 'group-hover:opacity-100');
-            button.addEventListener('click', onClick);
-            return button;
-        }
-
-        function enterEditMode(index, text) {
-            if (isAITurn || isModalOpen) return;
-            isEditing = true;
-            editingParagraphIndex = index;
-            promptInput.value = text;
-            btnText.textContent = 'Update Story';
-            promptInput.focus();
-            promptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Visually indicate which paragraph is being edited
-            storyContainer.children[index-1]?.classList.add('ring-2', 'ring-amber-400');
-        }
-
-        function exitEditMode() {
-            isEditing = false;
-            editingParagraphIndex = null;
-            btnText.textContent = 'Continue Story';
-            document.querySelectorAll('.ring-2').forEach(el => el.classList.remove('ring-2', 'ring-amber-400'));
-        }
-
-        function setLoading(isLoading) {
-            isAITurn = isLoading;
-            continueBtn.disabled = isLoading;
-            loadingSpinner.classList.toggle('hidden', !isLoading);
-            btnText.classList.toggle('hidden', isLoading);
-        }
-
-        function updateUndoRedoButtons() {
-            undoBtn.disabled = historyPointer <= 0;
-            redoBtn.disabled = historyPointer >= historyStack.length - 1;
-        }
-
-        function updateSaveButtons() {
-            const hasContent = storyHistory.length > 2; // System prompt + welcome
-            const storyIsLongEnough = (storyHistory.length - 2) >= MIN_PARAGRAPHS_FOR_SAVE_STORY;
-
-            saveWeaverBtn.disabled = !hasContent;
-            savePromptsBtn.disabled = !hasContent;
-            saveStoryBtn.disabled = !storyIsLongEnough;
-            saveTitlesBtn.disabled = !lastSuggestedTitles;
-        }
-
-        // --- Action Handlers (Buttons, etc.) ---
-
-        function handleUndo() {
-            if (historyPointer > 0) {
-                historyPointer--;
-                storyHistory = JSON.parse(JSON.stringify(historyStack[historyPointer]));
-                updateUIFromHistory();
+            function setLoading(isLoading) {
+                isAITurn = isLoading;
+                continueBtn.disabled = isLoading;
+                loadingSpinner.classList.toggle('hidden', !isLoading);
+                btnText.classList.toggle('hidden', isLoading);
             }
-        }
 
-        function handleRedo() {
-            if (historyPointer < historyStack.length - 1) {
-                historyPointer++;
-                storyHistory = JSON.parse(JSON.stringify(historyStack[historyPointer]));
-                updateUIFromHistory();
-            }
-        }
-        
-        personaSelect.addEventListener('change', (e) => {
-            currentPersonaIndex = parseInt(e.target.value);
+            // --- Event Listeners ---
+            continueBtn.addEventListener('click', handleUserTurn);
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    handleUserTurn();
+                }
+            });
+            saveWeaverBtn.addEventListener('click', saveWeaverChatHistory);
+            savePromptsBtn.addEventListener('click', saveUserPrompts);
+            saveTitlesBtn.addEventListener('click', saveSuggestedTitles);
+            undoBtn.addEventListener('click', handleUndo);
+            redoBtn.addEventListener('click', handleRedo);
+            personaSelect.addEventListener('change', (e) => {
+                currentPersonaIndex = parseInt(e.target.value);
+                applyCurrentPersonaAndTone();
+            });
+            toneSelect.addEventListener('change', (e) => {
+                currentToneIndex = parseInt(e.target.value);
+                applyCurrentPersonaAndTone();
+            });
+            resetStoryBtn.addEventListener('click', () => applyCurrentPersonaAndTone());
+            saveStoryBtn.addEventListener('click', handleSaveStory);
+            saveCompiledStoryBtn.addEventListener('click', saveCompiledStory);
+            closeCompiledStoryModalBtn.addEventListener('click', hideCompiledStoryModal);
+
+            // --- Initialization ---
+            populatePersonaSelect();
+            populateToneSelect();
             applyCurrentPersonaAndTone();
         });
-        
-        toneSelect.addEventListener('change', (e) => {
-            currentToneIndex = parseInt(e.target.value);
-            applyCurrentPersonaAndTone();
-        });
-        
-        resetStoryBtn.addEventListener('click', () => applyCurrentPersonaAndTone());
-
-        async function handleRegenerateAIResponse(index) {
-            if (isAITurn || isEditing) return;
-
-            setLoading(true);
-            isRegenerating = true;
-            
-            try {
-                // Truncate history to the point before the AI response to be regenerated
-                const historyForRegen = storyHistory.slice(0, index);
-                const newAiResponseText = await getAIResponse(historyForRegen);
-                
-                // Replace the old response with the new one
-                storyHistory[index] = { role: "model", parts: [{ text: newAiResponseText }] };
-                
-                // If there were user inputs after this, they are now based on an old context.
-                // For simplicity, we'll truncate history here. A more complex implementation
-                // could try to re-run subsequent user prompts.
-                storyHistory = storyHistory.slice(0, index + 1);
-
-                pushToHistory();
-            } catch (error) {
-                console.error("Error regenerating AI response:", error);
-                addParagraphToUI(`Failed to regenerate: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-                isRegenerating = false;
-                updateUIFromHistory();
-            }
-        }
-        
-        // --- API Communication ---
-
-        async function getAIResponse(historyPayload) {
-            // IMPORTANT: Replace with your actual API key or use a secure method to provide it.
-            // Leaving API keys in client-side code is a security risk.
-            const apiKey = ""; // Your API Key for gemini-2.0-flash
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-            const payload = { contents: historyPayload };
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                 const errorData = await response.json().catch(() => ({ error: { message: 'An unknown API error occurred.' } }));
-                 throw new Error(errorData.error.message || `API Error: ${response.status}`);
-            }
-
-            const result = await response.json();
-            if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-                return result.candidates[0].content.parts[0].text;
-            } else {
-                throw new Error('Invalid response structure from API.');
-            }
-        }
-
-        async function getAIResponseForTitle(titlePrompt) {
-            const tempHistoryForTitle = [{ role: "user", parts: [{ text: titlePrompt }] }];
-            return await getAIResponse(tempHistoryForTitle);
-        }
-
-        // --- History Management ---
-
-        function pushToHistory() {
-            historyStack = historyStack.slice(0, historyPointer + 1);
-            historyStack.push(JSON.parse(JSON.stringify(storyHistory)));
-            historyPointer++;
-            updateUndoRedoButtons();
-        }
-
-        // --- File Saving & Modal Logic ---
-
-        function saveTextToFile(content, filename) {
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function saveWeaverChatHistory() {
-            let chatText = `AI Story Weaver Chat\nPersona: ${personas[currentPersonaIndex].name}\nTone: ${tones[currentToneIndex].name}\n\n---\n\n`;
-            storyHistory.forEach((part, i) => {
-                if (i === 0) return; // Skip system prompt
-                const author = part.role === 'user' ? 'You' : 'Story Weaver';
-                chatText += `[${author}]:\n${part.parts[0].text}\n\n`;
-            });
-            saveTextToFile(chatText, 'AI_Story_Weaver_Chat.txt');
-        }
-
-        function saveUserPrompts() {
-            let promptsText = 'My Story Prompts\n\n---\n\n';
-            storyHistory.forEach(part => {
-                if (part.role === 'user' && part.parts[0].text !== initialSystemPrompt.parts[0].text) {
-                    promptsText += `${part.parts[0].text}\n\n---\n\n`;
-                }
-            });
-            saveTextToFile(promptsText, 'My_Story_Prompts.txt');
-        }
-        
-        async function handleSaveStory() {
-            if (isAITurn || isEditing || isRegenerating || isModalOpen) return;
-            
-            setLoading(true);
-            isSuggestingTitle = true;
-
-            let compiledStoryText = '';
-            storyHistory.forEach((part, i) => {
-                if (i > 1) { // Skip system prompt and welcome message
-                   compiledStoryText += part.parts[0].text + '\n\n';
-                }
-            });
-            
-            const titlePrompt = `Based on the following story, suggest 5 creative and fitting titles. List them clearly:\n\n"${compiledStoryText}"`;
-            
-            try {
-                const titlesResponse = await getAIResponseForTitle(titlePrompt);
-                lastSuggestedTitles = titlesResponse.split('\n').filter(line => line.trim()).join('\n');
-                updateSaveButtons();
-                addParagraphToUI("Suggested Titles:\n" + lastSuggestedTitles, 'system-message');
-                showCompiledStoryModal(compiledStoryText.trim(), "Your Compiled Story");
-            } catch (error) {
-                console.error("Error suggesting titles:", error);
-                addParagraphToUI(`Failed to suggest titles: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-                isSuggestingTitle = false;
-            }
-        }
-
-        function saveSuggestedTitles() {
-            if (!lastSuggestedTitles) return;
-            saveTextToFile(lastSuggestedTitles, 'Suggested_Story_Titles.txt');
-        }
-
-        function showCompiledStoryModal(storyText, title) {
-            modalTitle.textContent = title;
-            compiledStoryTextarea.value = storyText;
-            compiledStoryModal.classList.remove('hidden');
-            isModalOpen = true;
-        }
-
-        function hideCompiledStoryModal() {
-            compiledStoryModal.classList.add('hidden');
-            isModalOpen = false;
-        }
-
-        function saveCompiledStory() {
-            const editedText = compiledStoryTextarea.value;
-            saveTextToFile(editedText, 'AI_Story_Weaver_Compiled_Story.txt');
-        }
-        
-        // --- Event Listeners ---
-        continueBtn.addEventListener('click', handleUserTurn);
-        promptInput.addEventListener('keydown', (e) => {
-            // Use Ctrl+Enter or Cmd+Enter for submission
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                handleUserTurn();
-            }
-        });
-
-        saveWeaverBtn.addEventListener('click', saveWeaverChatHistory);
-        savePromptsBtn.addEventListener('click', saveUserPrompts);
-        saveTitlesBtn.addEventListener('click', saveSuggestedTitles);
-        saveStoryBtn.addEventListener('click', handleSaveStory);
-
-        undoBtn.addEventListener('click', handleUndo);
-        redoBtn.addEventListener('click', handleRedo);
-
-        saveEditedStoryBtn.addEventListener('click', saveCompiledStory);
-        closeCompiledStoryModalBtn.addEventListener('click', hideCompiledStoryModal);
-
     </script>
 </body>
 </html>
