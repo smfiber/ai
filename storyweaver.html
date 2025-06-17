@@ -4,13 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Story Weaver</title>
-    <!-- Google Fonts - Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html-to-image library for PNG export -->
+    <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
     <style>
+        /* Embedded Google Fonts to prevent CORS issues with html-to-image */
+        /* latin */
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 300;
+          font-display: swap;
+          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+        /* latin */
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 400;
+          font-display: swap;
+          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+        /* latin */
+        @font-face {
+          font-family: 'Inter';
+          font-style: normal;
+          font-weight: 700;
+          font-display: swap;
+          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
+          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+
         /* Main font styling for the app */
         body {
             font-family: 'Inter', sans-serif;
@@ -62,43 +89,55 @@
         }
 
         /* Custom scrollbar for a cleaner look */
-        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar {
+        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar {
             width: 8px;
         }
-        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track {
+        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track {
             background: #1f2937; /* gray-800 */
         }
-        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb {
+        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb {
             background: #4b5563; /* gray-600 */
             border-radius: 4px;
         }
-        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover {
+        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover {
             background: #6b7280; /* gray-500 */
         }
         
         .illustration-container {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: center;
+            margin-bottom: 1rem; /* Space between image and text */
+            position: relative;
+            width: 100%;
+            padding-top: 75%; /* 4:3 Aspect Ratio */
+            border-radius: 0.5rem;
+            overflow: hidden;
         }
 
-        .illustration-container img {
-            border-radius: 0.5rem;
-            max-width: 100%;
-            height: auto;
+        .illustration-container img, .illustration-container .loading-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
-    <div id="app-container" class="w-full max-w-4xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
+    <div id="app-container" class="w-full max-w-5xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
         <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
             <div class="flex-shrink-0 mr-6">
-                <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.50</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.72</span>
+                    <button id="help-icon" title="How to Use">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                        </svg>
+                    </button>
                 </h1>
-                <p class="text-xs text-gray-400 mt-1 max-w-xs">Guide the AI with up to 10 prompts to weave a collaborative story.</p>
+                <p class="text-xs text-gray-400 mt-1 max-w-xs">Guide the AI with prompts, add your own narration, illustrate scenes, and fine-tune the story with powerful editing controls.</p>
             </div>
             
             <div class="flex-grow flex flex-col items-end gap-2 mt-4 sm:mt-0">
@@ -111,6 +150,14 @@
                         <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Tone:</label>
                         <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
+                     <div class="flex-1 min-w-[150px] max-w-xs">
+                        <label for="image-style-select" class="block mb-1 text-gray-400 text-sm">Image Style:</label>
+                        <select id="image-style-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
+                    <div class="flex-1 min-w-[120px] max-w-xs">
+                        <label for="sentence-length-select" class="block mb-1 text-gray-400 text-sm">Sentences:</label>
+                        <select id="sentence-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
                 </div>
                 <div class="flex flex-col items-end gap-2 mt-2">
                     <!-- Row 1: Save buttons -->
@@ -118,7 +165,8 @@
                         <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story</button>
                         <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Weaver</button>
                         <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Prompts</button>
-                        <button id="save-titles-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Titles</button>
+                        <button id="save-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Lamination</button>
+                        <button id="save-narration-btn" class="bg-teal-600 hover:bg-teal-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Narration</button>
                     </div>
                     <!-- Row 2: Action buttons -->
                     <div class="flex flex-wrap justify-end gap-2">
@@ -132,12 +180,18 @@
 
         <!-- Story Display Area -->
         <main id="story-container" class="flex-grow w-full min-h-0 overflow-y-auto p-4 space-y-6 flex flex-col"></main>
-
+        
         <!-- User Input Area -->
         <footer class="mt-4 pt-4 border-t border-gray-700">
-            <div class="relative">
-                <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 pr-40 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Add the next part of the story..."></textarea>
-                <button id="continue-btn" class="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
+            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Add the next part of the story..."></textarea>
+            <div class="flex justify-end items-center mt-2 gap-4">
+                 <button id="create-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Create Lamination
+                </button>
+                 <button id="add-narration-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Add as Narration
+                </button>
+                <button id="continue-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     <span id="btn-text">Add to Story</span>
                     <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -147,6 +201,49 @@
             </div>
         </footer>
     </div>
+    
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
+            <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use AI Story Weaver</h2>
+            <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
+                <div class="prose prose-invert">
+                    <h3 class="font-semibold text-white">Core Controls</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative.</li>
+                        <li><strong>Add as Narration:</strong> Inserts your text directly into the story without AI generation. This is useful for adding your own voice, descriptions, or transitions.</li>
+                        <li><strong>Create Lamination:</strong> Takes the text in the prompt box and generates a single, shareable image with the text overlaid on a themed background.</li>
+                    </ul>
+                    <h3 class="font-semibold text-white mt-4">Creative Direction</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Story Weaver:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
+                        <li><strong>Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
+                        <li><strong>Image Style:</strong> Pick an artistic style for the illustrations you generate.</li>
+                        <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences). Changing this will start a new story.</li>
+                    </ul>
+                     <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Edit:</strong> Appears next to your prompts and narrations. Click to modify your text.</li>
+                        <li><strong>Regen:</strong> Appears next to AI-generated paragraphs. Click to ask the AI for a different response based on the same preceding text.</li>
+                        <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs and your narrations. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
+                         <li><strong>Undo/Redo:</strong> Step backward or forward through your story's history.</li>
+                    </ul>
+                     <h3 class="font-semibold text-white mt-4">Saving Your Work</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Save Story:</strong> Becomes active after 1 prompt. Saves the full illustrated story as a styled HTML file.</li>
+                        <li><strong>Save Weaver:</strong> Saves the entire back-and-forth dialogue between you and the AI as a .txt file.</li>
+                        <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
+                        <li><strong>Save Lamination:</strong> Saves the currently displayed lamination image as a PNG file.</li>
+                        <li><strong>Save Narration:</strong> Saves the most recently added narration block as a PNG file.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="close-instructions-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -154,72 +251,152 @@
             const storyContainer = document.getElementById('story-container');
             const promptInput = document.getElementById('prompt-input');
             const continueBtn = document.getElementById('continue-btn');
+            const addNarrationBtn = document.getElementById('add-narration-btn');
+            const createLaminationBtn = document.getElementById('create-lamination-btn');
             const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
             const personaSelect = document.getElementById('persona-select');
             const toneSelect = document.getElementById('tone-select');
+            const imageStyleSelect = document.getElementById('image-style-select');
+            const sentenceLengthSelect = document.getElementById('sentence-length-select');
             const resetStoryBtn = document.getElementById('reset-story-btn');
             const saveStoryBtn = document.getElementById('save-story-btn');
-            const saveTitlesBtn = document.getElementById('save-titles-btn');
             const saveWeaverBtn = document.getElementById('save-weaver-btn');
             const savePromptsBtn = document.getElementById('save-prompts-btn');
+            const saveLaminationBtn = document.getElementById('save-lamination-btn');
+            const saveNarrationBtn = document.getElementById('save-narration-btn');
             const undoBtn = document.getElementById('undo-btn');
             const redoBtn = document.getElementById('redo-btn');
+            const helpIcon = document.getElementById('help-icon');
+            const instructionsModal = document.getElementById('instructions-modal');
+            const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
+
 
             // --- Application State ---
             const MAX_PROMPTS = 10;
-            const MIN_PROMPTS_FOR_SAVE = 5;
+            const MIN_PROMPTS_FOR_SAVE = 1;
             let isAITurn = false;
             let isEditing = false;
             let editingParagraphIndex = null;
             let currentPersonaIndex = 0;
             let currentToneIndex = 0;
-            let lastSuggestedTitles = '';
+            let currentImageStyleIndex = 0;
+            let currentSentenceLength = 2;
+            let currentLaminationText = '';
+            let isLaminationMode = false;
             
             let storyHistory = [];
             let historyStack = [];
             let historyPointer = -1;
 
-            // --- Persona & Tone Data (Sorted) ---
+            // --- Persona, Tone, Style & Length Data (Sorted) ---
             const personas = [
-                { name: "Ayurveda Alchemist (Balance)", systemPrompt: "You are the Ayurveda Alchemist. Based on the user's prompts, continue the narrative focusing on holistic well-being and balance. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Bodhi Tree Chronicler (Awakening)", systemPrompt: "You are the Bodhi Tree Chronicler. Based on the user's prompts, continue the narrative telling stories of awakening and compassionate understanding. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Chakra Oracle (Energy)", systemPrompt: "You are the Chakra Oracle. Based on the user's prompts, continue the narrative exploring energy centers and emotional landscapes. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Dharma Protector (Justice)", systemPrompt: "You are the Dharma Protector. Based on the user's prompts, continue the narrative where justice and righteousness are central. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Karma Weaver (Dharma)", systemPrompt: "You are a Karma Weaver storyteller. Based on the user's prompts, continue the narrative exploring themes of cause and effect, and duty (dharma). Gently illustrate consequences and personal growth. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Mandala Architect (Pattern)", systemPrompt: "You are the Mandala Architect. Based on the user's prompts, continue the narrative revealing intricate patterns and interconnectedness. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Sankalpa Seeker (Intention)", systemPrompt: "You are the Sankalpa Seeker. Based on the user's prompts, continue the narrative around the power of intention and resolve. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Taoist Sage (Flow)", systemPrompt: "You are a Taoist Sage. Based on the user's prompts, continue the narrative embodying effortless flow (wu wei) and the beauty of nature's path. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Yoga Sutra Guide (Unity)", systemPrompt: "You are a Yoga Sutra Guide. Based on the user's prompts, continue the narrative focusing on the journey towards union (yoga) and harmony of mind and body. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." },
-                { name: "Zen Master (Wisdom)", systemPrompt: "You are a Zen Master storyteller. Based on the user's prompts, continue the narrative with profound wisdom, focusing on simplicity and enlightenment. Seamlessly continue the story in the same narrative person and style as the preceding text, avoiding direct questions or conversational fillers. Limit your response to exactly 2 sentences." }
+                { name: "Ask me anything", systemPrompt: "You are a helpful and factual assistant. Answer the user's question directly and concisely." },
+                { name: "Ayurveda Alchemist (Balance)", systemPrompt: "You are the Ayurveda Alchemist. Based on the user's prompts, continue the narrative focusing on holistic well-being and balance." },
+                { name: "Bodhi Tree Chronicler (Awakening)", systemPrompt: "You are the Bodhi Tree Chronicler. Based on the user's prompts, continue the narrative telling stories of awakening and compassionate understanding." },
+                { name: "Chakra Oracle (Energy)", systemPrompt: "You are the Chakra Oracle. Based on the user's prompts, continue the narrative exploring energy centers and emotional landscapes." },
+                { name: "Cosmic Dreamer", systemPrompt: "You are a Cosmic Dreamer. Based on the user's prompts, continue the narrative with a sense of wonder, exploring space, the universe, and philosophical questions about existence." },
+                { name: "Cyberpunk Netrunner", systemPrompt: "You are a Cyberpunk Netrunner. Based on the user's prompts, continue the narrative with a high-tech, gritty, and futuristic feel. Use slang and concepts from the cyberpunk genre." },
+                { name: "Dharma Protector (Justice)", systemPrompt: "You are the Dharma Protector. Based on the user's prompts, continue the narrative where justice and righteousness are central." },
+                { name: "Gothic Novelist", systemPrompt: "You are a Gothic Novelist. Based on the user's prompts, continue the narrative in a dark, mysterious, and atmospheric style, focusing on themes of horror, romance, and the sublime." },
+                { name: "Haiku Poet", systemPrompt: "You are a Haiku Poet. Respond to the user's prompt by continuing the narrative in a short, three-phrase block structured with a 5, 7, 5 syllable pattern." },
+                { name: "Karma Weaver (Dharma)", systemPrompt: "You are a Karma Weaver storyteller. Based on the user's prompts, continue the narrative exploring themes of cause and effect, and duty (dharma)." },
+                { name: "Mandala Architect (Pattern)", systemPrompt: "You are the Mandala Architect. Based on the user's prompts, continue the narrative revealing intricate patterns and interconnectedness." },
+                { name: "Mythic Chronicler", systemPrompt: "You are a Mythic Chronicler. Based on the user's prompts, continue the narrative in an epic, mythological style, with heroic deeds and legendary events." },
+                { name: "Nature Documentarian", systemPrompt: "You are a Nature Documentarian. Based on the user's prompts, describe the scene with the clinical yet awe-filled detail of a nature documentary." },
+                { name: "Noir Detective", systemPrompt: "You are a Noir Detective. Based on the user's prompts, continue the narrative in a hardboiled, cynical, and stylish manner, filled with witty one-liners and a sense of moral ambiguity." },
+                { name: "Sankalpa Seeker (Intention)", systemPrompt: "You are the Sankalpa Seeker. Based on the user's prompts, continue the narrative around the power of intention and resolve." },
+                { name: "Stoic Philosopher", systemPrompt: "You are a Stoic Philosopher. Based on the user's prompts, continue the narrative with a focus on logic, virtue, and acceptance of fate." },
+                { name: "Taoist Sage (Flow)", systemPrompt: "You are a Taoist Sage. Based on the user's prompts, continue the narrative embodying effortless flow (wu wei) and the beauty of nature's path." },
+                { name: "Vedic Scholar", systemPrompt: "You are a Vedic Scholar. Based on the user's prompts, continue the narrative by weaving in themes from the Vedas and ancient Indian philosophy." },
+                { name: "Yoga Sutra Guide (Unity)", systemPrompt: "You are a Yoga Sutra Guide. Based on the user's prompts, continue the narrative focusing on the journey towards union (yoga) and harmony of mind and body." },
+                { name: "Zen Master (Wisdom)", systemPrompt: "You are a Zen Master storyteller. Based on the user's prompts, continue the narrative with profound wisdom, focusing on simplicity and enlightenment." }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             const tones = [
+                { name: "Acerbic", description: "an acerbic, witty, and sarcastic" },
+                { name: "Awestruck", description: "an awestruck and amazed" },
+                { name: "Clinical", description: "a clinical, detached, and precise" },
+                { name: "Comforting", description: "a comforting, gentle, and warm" },
+                { name: "Cynical", description: "a cynical and distrustful" },
                 { name: "Dramatic", description: "a dramatic and intense" },
+                { name: "Eerie", description: "an eerie, strange, and frightening" },
+                { name: "Empathetic", description: "an empathetic, understanding, and compassionate" },
+                { name: "Euphoric", description: "a euphoric, intensely happy, and excited" },
                 { name: "Factual", description: "a factual and descriptive" },
                 { name: "Humorous", description: "a funny and lighthearted" },
                 { name: "Magical", description: "a magical and enchanting" },
                 { name: "Mysterious", description: "a mysterious and suspenseful" },
                 { name: "Newscast", description: "a formal and journalistic" },
+                { name: "Nostalgic", description: "a nostalgic and sentimental" },
                 { name: "Optimistic", description: "an optimistic and uplifting" },
                 { name: "Poetic", description: "a poetic and lyrical" },
                 { name: "Romantic", description: "a romantic and tender" },
+                { name: "Scholarly", description: "a scholarly, academic, and formal" },
                 { name: "Whimsical", description: "a whimsical and fantastical" }
             ].sort((a, b) => a.name.localeCompare(b.name));
+
+             const imageStyles = [
+                { name: "Surreal", prefix: "A surrealist painting of" },
+                { name: "Highly Detailed", prefix: "A highly detailed, intricate illustration of" },
+                { name: "Photorealistic", prefix: "A photorealistic image of" },
+                { name: "Anime", prefix: "An anime style illustration of" },
+                { name: "Watercolor", prefix: "A watercolor painting of" },
+                { name: "Oil Painting", prefix: "An oil painting of" },
+                { name: "Charcoal Sketch", prefix: "A charcoal sketch of" },
+                { name: "Pixel Art", prefix: "16-bit pixel art of" },
+                { name: "Art Deco", prefix: "An art deco illustration of" },
+                { name: "Minimalist", prefix: "A minimalist, simple line drawing of" },
+                { name: "Blueprint Diagram", prefix: "A blueprint diagram of" },
+                { name: "Cubism", prefix: "A cubist painting of" },
+                { name: "Gothic Art", prefix: "Gothic art of" },
+                { name: "Impressionism", prefix: "An impressionist painting of" },
+                { name: "Pop Art", prefix: "Pop art of" },
+                { name: "Rococo", prefix: "A rococo painting of" },
+                { name: "Steampunk", prefix: "A steampunk illustration of" },
+                { name: "Synthwave", prefix: "Synthwave art of" },
+                { name: "Tribal Art", prefix: "Tribal art of" },
+                { name: "Infographic", prefix: "An infographic about" }
+            ].sort((a, b) => a.name.localeCompare(b.name));
             
+            const sentenceLengths = [1, 2, 3, 4, 5];
+            
+            const laminationThemes = [
+                { name: "Ladybug on Leaf", prompt: "A beautiful, photorealistic background of a ladybug on a dewy green leaf" },
+                { name: "Cherry Blossoms", prompt: "A soft-focus background of cherry blossoms in spring" },
+                { name: "Zen Garden", prompt: "A serene zen garden with stacked stones and raked sand" },
+                { name: "Lotus Flower", prompt: "A tranquil pond with a single, perfect lotus flower" },
+                { name: "Sunflowers", prompt: "A field of bright, cheerful sunflowers under a blue sky" },
+                { name: "Mandala Pattern", prompt: "A detailed, calming mandala pattern" },
+                { name: "Sunset Beach", prompt: "A calm beach at sunset with gentle waves" },
+                { name: "Misty Forest", prompt: "A misty, atmospheric forest path" },
+                { name: "Cosmic Yoga", prompt: "A celestial, starry galaxy background suitable for yoga and inspiration" },
+                { name: "Lavender Fields", prompt: "A beautiful, calming field of lavender" }
+            ];
+
             // --- Core Functions ---
 
             function initializeApp() {
                 populatePersonaSelect();
                 populateToneSelect();
+                populateImageStyleSelect();
+                populateSentenceLengthSelect();
+                
+                currentPersonaIndex = personas.findIndex(p => p.name === "Ask me anything");
+                currentToneIndex = tones.findIndex(t => t.name === "Factual");
+                personaSelect.value = currentPersonaIndex;
+                toneSelect.value = currentToneIndex;
+                sentenceLengthSelect.value = 2; // Default to 2 sentences
+
                 resetApp();
             }
 
             function resetApp() {
+                storyContainer.classList.remove('hidden');
+                isLaminationMode = false;
                 storyHistory = [ getSystemPrompt() ];
                 historyStack = [ JSON.parse(JSON.stringify(storyHistory)) ];
                 historyPointer = 0;
-                lastSuggestedTitles = '';
                 isEditing = false;
                 editingParagraphIndex = null;
                 
@@ -231,15 +408,14 @@
             function getSystemPrompt() {
                 const selectedPersona = personas[currentPersonaIndex];
                 const selectedTone = tones[currentToneIndex];
-                const text = `${selectedPersona.systemPrompt} The story should have ${selectedTone.description} tone.`;
+                const text = `${selectedPersona.systemPrompt} Limit your response to exactly ${currentSentenceLength} sentence(s).`;
                 return { role: "user", parts: [{ text }] };
             }
 
             function populatePersonaSelect() {
                 personas.forEach((persona, index) => {
                     const option = document.createElement('option');
-                    // Store the original index before sorting
-                    option.value = personas.findIndex(p => p.name === persona.name);
+                    option.value = index;
                     option.textContent = persona.name;
                     personaSelect.appendChild(option);
                 });
@@ -248,10 +424,27 @@
             function populateToneSelect() {
                 tones.forEach((tone, index) => {
                     const option = document.createElement('option');
-                     // Store the original index before sorting
-                    option.value = tones.findIndex(t => t.name === tone.name);
+                    option.value = index;
                     option.textContent = tone.name;
                     toneSelect.appendChild(option);
+                });
+            }
+            
+             function populateImageStyleSelect() {
+                imageStyles.forEach((style, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = style.name;
+                    imageStyleSelect.appendChild(option);
+                });
+            }
+
+            function populateSentenceLengthSelect() {
+                sentenceLengths.forEach(length => {
+                    const option = document.createElement('option');
+                    option.value = length;
+                    option.textContent = length;
+                    sentenceLengthSelect.appendChild(option);
                 });
             }
 
@@ -263,7 +456,7 @@
 
                 if (isEditing) {
                     storyHistory[editingParagraphIndex].parts[0].text = userPrompt;
-                    storyHistory.splice(editingParagraphIndex + 1); // Truncate history
+                    storyHistory.splice(editingParagraphIndex + 1);
                 } else {
                     storyHistory.push({ role: 'user', parts: [{ text: userPrompt }] });
                 }
@@ -283,35 +476,135 @@
                     } else {
                         displaySystemMessage(error.message, 'error');
                     }
-                    storyHistory.pop(); // Remove user prompt that caused error
+                    storyHistory.pop();
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
                 }
             }
+
+            function handleAddNarration() {
+                const userText = promptInput.value.trim();
+                if (!userText || isAITurn) return;
+
+                storyHistory.push({ role: 'narrator', parts: [{ text: userText }] });
+                pushToHistory();
+                promptInput.value = '';
+                updateUIFromHistory();
+            }
+
+             async function handleCreateLamination(themePrompt) {
+                if(!themePrompt) { // Initial creation
+                     currentLaminationText = promptInput.value.trim();
+                     if (!currentLaminationText || isAITurn) return;
+                     isLaminationMode = true;
+                     storyContainer.innerHTML = ''; // Clear story view
+                }
+               
+                setLoading(true);
+                storyContainer.innerHTML = `<div id="lamination-creator" class="w-full p-4 flex flex-col items-center"></div>`;
+                const laminationCreatorEl = document.getElementById('lamination-creator');
+
+                const imageDisplayContainer = document.createElement('div');
+                imageDisplayContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-gray-700 rounded-lg flex items-center justify-center';
+                imageDisplayContainer.innerHTML = `<svg class="animate-spin h-8 w-8 text-white absolute" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                laminationCreatorEl.appendChild(imageDisplayContainer);
+
+                const controlsContainer = document.createElement('div');
+                controlsContainer.id = "lamination-controls";
+                controlsContainer.className = "flex items-center gap-4 mt-4";
+                laminationCreatorEl.appendChild(controlsContainer);
+                
+                const imagePrompt = `${themePrompt || 'A beautiful, serene background'}`;
+
+                try {
+                    const imageUrl = await generateImage(imagePrompt);
+                    imageDisplayContainer.innerHTML = ''; 
+                    
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.className = 'absolute top-0 left-0 w-full h-full object-cover';
+                    
+                    const textOverlay = document.createElement('div');
+                    textOverlay.className = "absolute inset-0 flex items-center justify-center p-8 bg-black bg-opacity-50";
+                    textOverlay.innerHTML = `<p class="text-white text-2xl font-semibold text-center whitespace-pre-wrap">${currentLaminationText}</p>`;
+
+                    imageDisplayContainer.appendChild(img);
+                    imageDisplayContainer.appendChild(textOverlay);
+
+                    renderLaminationThemes(controlsContainer);
+                } catch (error) {
+                    console.error("Error creating lamination:", error);
+                    imageDisplayContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed. Please try again.</p>`;
+                } finally {
+                    setLoading(false);
+                }
+            }
+            
+            function renderLaminationThemes(container) {
+                container.innerHTML = ''; // Clear old controls
+
+                const themeLabel = document.createElement('label');
+                themeLabel.textContent = "Theme:";
+                themeLabel.className = "text-sm text-gray-400";
+
+                const themeSelect = document.createElement('select');
+                themeSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                
+                laminationThemes.forEach(theme => {
+                    const option = document.createElement('option');
+                    option.value = theme.prompt;
+                    option.textContent = theme.name;
+                    themeSelect.appendChild(option);
+                });
+
+                const redesignButton = document.createElement('button');
+                redesignButton.textContent = "Redesign";
+                redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg";
+                redesignButton.onclick = () => {
+                    const selectedThemePrompt = themeSelect.value;
+                    const selectedImageStyle = imageStyles[imageStyleSelect.value];
+                    handleCreateLamination(`${selectedImageStyle.prefix} of ${selectedThemePrompt}`);
+                };
+                
+                container.appendChild(themeLabel);
+                container.appendChild(themeSelect);
+                container.appendChild(redesignButton);
+            }
             
             // --- UI & Display ---
 
             function updateUIFromHistory() {
+                if (isLaminationMode) return;
                 storyContainer.innerHTML = '';
                 storyHistory.forEach((part, i) => {
-                    if (i === 0) return; // Don't display system prompt
-                    addParagraphToUI(part.role, part.parts[0].text, i);
+                    if (i === 0) return;
+                    addParagraphToUI(part, i);
                 });
-                storyContainer.scrollTop = storyContainer.scrollHeight; // Auto-scroll
+                storyContainer.scrollTop = storyContainer.scrollHeight;
                 updateButtonStates();
                 if (!promptInput.disabled) {
                     promptInput.focus();
                 }
             }
             
-            function addParagraphToUI(role, text, index) {
+            function addParagraphToUI(part, index) {
+                const { role, parts, imageUrl } = part;
+                const text = parts[0].text;
+
                 const wrapper = document.createElement('div');
                 wrapper.classList.add('story-paragraph-wrapper', 'flex', 'items-start', 'gap-4');
                 
                 const paragraphContent = document.createElement('div');
                 paragraphContent.classList.add('flex-grow', 'p-4', 'rounded-lg');
                 
+                if (imageUrl) {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.classList.add('illustration-container');
+                    imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated illustration of the scene" class="w-full h-full">`;
+                    paragraphContent.insertBefore(imageContainer, paragraphContent.firstChild);
+                }
+
                 const contentTag = document.createElement('p');
                 contentTag.textContent = text;
                 paragraphContent.appendChild(contentTag);
@@ -326,12 +619,19 @@
                     controlsContainer.appendChild(editBtn);
                     wrapper.appendChild(paragraphContent);
                     wrapper.appendChild(controlsContainer);
-                } else if (role === 'model') {
+                } else if (role === 'model' || role === 'narrator') {
                     wrapper.classList.add('justify-end');
                     paragraphContent.classList.add('ai-paragraph', 'rounded-br-none');
-                    const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
+
+                    if(role === 'narrator'){
+                         const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
+                         controlsContainer.appendChild(editBtn);
+                    } else {
+                         const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
+                         controlsContainer.appendChild(regenBtn);
+                    }
+
                     const illustrateBtn = createControlButton('Illustrate', () => handleIllustration(index));
-                    controlsContainer.appendChild(regenBtn);
                     controlsContainer.appendChild(illustrateBtn);
                     wrapper.appendChild(controlsContainer);
                     wrapper.appendChild(paragraphContent);
@@ -351,12 +651,12 @@
                 storyContainer.querySelectorAll('.system-message-paragraph, .error-paragraph').forEach(el => el.remove());
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('story-paragraph-wrapper', type === 'error' ? 'error-paragraph' : 'system-message-paragraph');
-                messageWrapper.innerHTML = text.replace(/\n/g, '<br>'); // Use innerHTML to render line breaks
+                messageWrapper.innerHTML = text.replace(/\n/g, '<br>');
                 storyContainer.appendChild(messageWrapper);
-                storyContainer.scrollTop = storyContainer.scrollHeight; // Auto-scroll
+                storyContainer.scrollTop = storyContainer.scrollHeight;
             }
 
-            // --- Edit & Regenerate & Illustrate ---
+            // --- Edit, Regenerate, Illustrate ---
 
             function enterEditMode(index, text) {
                 if(isAITurn) return;
@@ -392,16 +692,25 @@
                  setLoading(true);
                  
                  const sceneText = storyHistory[index].parts[0].text;
-                 const imageContainer = document.createElement('div');
-                 imageContainer.classList.add('illustration-container');
-                 imageContainer.innerHTML = `<div class="text-center p-4">Generating illustration... <svg class="animate-spin h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+                 const paragraphWrapper = storyContainer.children[index - 1];
+                 const paragraphContent = paragraphWrapper.querySelector('.flex-grow');
+
+                 let imageContainer = paragraphContent.querySelector('.illustration-container');
+                 if (!imageContainer) {
+                     imageContainer = document.createElement('div');
+                     imageContainer.classList.add('illustration-container');
+                     paragraphContent.insertBefore(imageContainer, paragraphContent.firstChild);
+                 }
                  
-                 const paragraphWrapper = storyContainer.children[index -1]; // -1 to account for system prompt
-                 paragraphWrapper.appendChild(imageContainer);
-                 
+                 imageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-gray-700 text-center p-4"><svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+
                  try {
-                    const imageUrl = await generateImage(sceneText);
+                    const style = imageStyles[currentImageStyleIndex];
+                    const imagePrompt = `${style.prefix} of ${sceneText}`;
+                    const imageUrl = await generateImage(imagePrompt);
                     imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated illustration of the scene">`;
+                    storyHistory[index].imageUrl = imageUrl;
+                    pushToHistory();
                  } catch(error) {
                     console.error("Error generating image:", error);
                     if (error.message.includes("billed users")) {
@@ -416,39 +725,31 @@
             
             // --- Saving & Export ---
 
-            function handleSaveAndTitle() {
+            function handleSaveStory() {
                 if (isAITurn || getUserPromptCount() < MIN_PROMPTS_FOR_SAVE) return;
                 
                 setLoading(true);
-                const fullStoryText = storyHistory
-                    .filter(p => p.role === 'model')
-                    .map(p => p.parts[0].text)
-                    .join('\n\n');
-
-                const titlePrompt = `Based on the following story, suggest 5 creative titles:\n\n"${fullStoryText}"`;
-
-                getAIResponse([{ role: 'user', parts: [{ text: titlePrompt }] }])
-                    .then(titles => {
-                        lastSuggestedTitles = titles.split('\n').filter(Boolean).join('\n');
-                        displaySystemMessage("Story saved! Suggested Titles below. You can save them separately.", 'system-message');
-                        saveAsHtml(getStoryHtml(), 'AI-Woven-Story.html');
-                    })
-                    .catch(error => {
-                        console.error("Error getting titles:", error);
-                        displaySystemMessage(error.message, 'error');
-                    })
-                    .finally(() => {
-                        setLoading(false);
-                        updateButtonStates();
-                    });
+                saveAsHtml(getStoryHtml(), 'AI-Woven-Story.html');
+                displaySystemMessage("Story saved successfully!", 'system-message');
+                setLoading(false);
+                updateButtonStates();
             }
 
             function getStoryHtml() {
                 const storyContent = storyHistory
-                    .filter(p => p.role === 'model')
-                    .map(p => `<p>${p.parts[0].text}</p>`).join('');
-                return createHtmlWrapper(`<div class="ai-paragraph p-4">${storyContent}</div>`, "Your AI-Woven Story");
+                    .filter(part => part.role === 'model' || part.role === 'narrator')
+                    .map(part => {
+                        let html = '';
+                        if (part.imageUrl) {
+                            html += `<div style="position: relative; width: 100%; padding-top: 75%; margin-bottom: 1rem; border-radius: 0.5rem; overflow: hidden;"><img src="${part.imageUrl}" alt="Illustration" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;"></div>`;
+                        }
+                        html += `<p>${part.parts[0].text}</p>`;
+                        return `<div>${html}</div>`;
+                    })
+                    .join('');
+                return createHtmlWrapper(`<div class="ai-paragraph p-4">${storyContent}</div>`);
             }
+
             
             function savePrompts() {
                 const promptsText = storyHistory
@@ -461,19 +762,20 @@
             function saveWeaver() {
                 const weaverText = storyHistory
                     .slice(1)
-                    .map(p => `[${p.role === 'user' ? 'You' : 'Story Weaver'}]:\n${p.parts[0].text}`)
+                    .map(p => {
+                        let author = 'Unknown';
+                        if(p.role === 'user') author = 'You';
+                        else if (p.role === 'model') author = 'Story Weaver';
+                        else if (p.role === 'narrator') author = 'Narration';
+                        return `[${author}]:\n${p.parts[0].text}`
+                    })
                     .join('\n\n');
                 saveAsTxt(weaverText, 'Weaver-Chat.txt');
             }
-            
-            function saveTitles() {
-                if (!lastSuggestedTitles) return;
-                saveAsTxt(lastSuggestedTitles, 'Suggested-Titles.txt');
-            }
-            
-            function createHtmlWrapper(content, title) {
+
+            function createHtmlWrapper(content, title = "AI-Woven Story") {
                 const styles = `body{font-family:'Inter',sans-serif;background-color:#111827;color:white;padding:2rem;display:flex;flex-direction:column;align-items:center;} div{border-radius:1rem;margin-bottom:1rem;max-width:800px;width:100%;} .user-paragraph{background-color:#374151;} .ai-paragraph{background-color:#1e293b;} .system-message-paragraph{background-color:#374151;color:#a78bfa;text-align:center;}`;
-                return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${title}</title><script src="https://cdn.tailwindcss.com"><\/script><style>${styles}</style></head><body><h1 class="text-3xl font-bold mb-4">${title}</h1>${content}</body></html>`;
+                return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${title}</title><script src="https://cdn.tailwindcss.com"><\/script><style>${styles}</style></head><body>${content}</body></html>`;
             }
 
             function saveAsTxt(textContent, filename) {
@@ -500,6 +802,22 @@
                 URL.revokeObjectURL(url);
             }
             
+            function saveElementAsPng(element, filename) {
+                htmlToImage.toPng(element)
+                    .then(function (dataUrl) {
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    })
+                    .catch(function (error) {
+                        console.error('oops, something went wrong!', error);
+                        displaySystemMessage('Could not save image.', 'error');
+                    });
+            }
+
             // --- History & State Management ---
 
             function pushToHistory() {
@@ -537,6 +855,8 @@
                 const isBusy = isAITurn;
                 
                 continueBtn.disabled = isBusy || isStoryComplete || isEditing;
+                addNarrationBtn.disabled = isBusy || isEditing;
+                
                 if(isEditing) {
                     btnText.textContent = 'Update';
                 } else {
@@ -557,20 +877,26 @@
                 saveStoryBtn.disabled = isBusy || !canSave;
                 saveWeaverBtn.disabled = isBusy || storyHistory.length <= 1;
                 savePromptsBtn.disabled = isBusy || promptCount < 1;
-                saveTitlesBtn.disabled = isBusy || !lastSuggestedTitles;
+                saveLaminationBtn.disabled = isBusy || !isLaminationMode;
+                saveNarrationBtn.disabled = isBusy || !storyHistory.some(p => p.role === 'narrator');
             }
             
             function setLoading(isLoading) {
                 isAITurn = isLoading;
                 loadingSpinner.classList.toggle('hidden', !isLoading);
                 continueBtn.disabled = isLoading;
+                addNarrationBtn.disabled = isLoading;
+                createLaminationBtn.disabled = isLoading;
                 updateButtonStates();
             }
 
             async function getAIResponse(history) {
                 const apiKey = "AIzaSyBV0I7cih-RvH0TZx3fQDdOHiGNY5dg1Wg";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const payload = { contents: history };
+                
+                const cleanHistory = history.map(({role, parts}) => ({role, parts}));
+
+                const payload = { contents: cleanHistory };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const responseText = await response.text();
 
@@ -619,6 +945,8 @@
             
             // --- Event Listeners ---
             continueBtn.addEventListener('click', handleContinueStory);
+            addNarrationBtn.addEventListener('click', handleAddNarration);
+            createLaminationBtn.addEventListener('click', () => handleCreateLamination());
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -627,15 +955,32 @@
             });
             
             resetStoryBtn.addEventListener('click', resetApp);
-            saveStoryBtn.addEventListener('click', handleSaveAndTitle);
-            saveTitlesBtn.addEventListener('click', saveTitles);
+            saveStoryBtn.addEventListener('click', handleSaveStory);
             saveWeaverBtn.addEventListener('click', saveWeaver);
             savePromptsBtn.addEventListener('click', savePrompts);
+            saveLaminationBtn.addEventListener('click', () => saveElementAsPng(document.querySelector('#lamination-creator > div'), 'lamination.png'));
+            saveNarrationBtn.addEventListener('click', () => {
+                const narrationBlocks = document.querySelectorAll('.ai-paragraph');
+                const lastNarration = Array.from(narrationBlocks).pop();
+                if(lastNarration) saveElementAsPng(lastNarration, 'narration.png')
+            });
+            
             undoBtn.addEventListener('click', handleUndo);
             redoBtn.addEventListener('click', handleRedo);
+            helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
+            closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
+            instructionsModal.addEventListener('click', (e) => {
+                if (e.target === instructionsModal) {
+                    instructionsModal.classList.add('hidden');
+                }
+            });
+
 
             personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
             toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
+            imageStyleSelect.addEventListener('change', (e) => { currentImageStyleIndex = parseInt(e.target.value); });
+            sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
+
 
             // --- Initialization ---
             initializeApp();
