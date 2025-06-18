@@ -15,33 +15,31 @@
         @font-face {
           font-family: 'Inter';
           font-style: normal;
-          font-weight: 300;
-          font-display: swap;
-          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
-          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-        }
-        @font-face {
-          font-family: 'Inter';
-          font-style: normal;
           font-weight: 400;
           font-display: swap;
           src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
-          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-        }
-        @font-face {
-          font-family: 'Inter';
-          font-style: normal;
-          font-weight: 700;
-          font-display: swap;
-          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
-          unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
         }
          @font-face {
             font-family: 'Dancing Script';
-            font-style: normal;
-            font-weight: 400;
             src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
         }
+        @font-face {
+            font-family: 'Lobster';
+            src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2');
+        }
+         @font-face {
+            font-family: 'Pacifico';
+            src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2');
+        }
+        @font-face {
+            font-family: 'Great Vibes';
+            src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2');
+        }
+        @font-face {
+            font-family: 'Sacramento';
+            src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2');
+        }
+
 
         body { font-family: 'Inter', sans-serif; }
 
@@ -102,7 +100,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.75</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.81</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -206,15 +204,16 @@
                         <li><strong>Save Story:</strong> Becomes active after 1 prompt. Saves the full illustrated story as a styled HTML file.</li>
                         <li><strong>Save Weaver:</strong> Saves the entire back-and-forth dialogue between you and the AI as a .txt file.</li>
                         <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
-                        <li><strong>Save Lamination:</strong> Saves the currently displayed lamination image as a PNG file.</li>
+                        <li><strong>Save Lamination:</strong> Saves the currently displayed lamination as a 4-up sheet, ready to print on 8.5x11 paper.</li>
                         <li><strong>Save Narration:</strong> Saves the most recently added narration block as a PNG file.</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Lamination Text Editing</h3>
                     <ul class="list-disc pl-5 space-y-1">
                         <li>Once a lamination is created, a new set of controls appears.</li>
-                        <li><strong>Font Family:</strong> Choose from fonts like Calibri, Bahnschrift, and Freestyle Script.</li>
-                        <li><strong>Font Size:</strong> Adjust the text size from 10px to 30px.</li>
-                        <li><strong>Bold:</strong> Toggle bold formatting on or off.</li>
+                        <li><strong>Font Family:</strong> Choose from a wide variety of fonts.</li>
+                        <li><strong>Font Size:</strong> Select a size from a dropdown list.</li>
+                        <li><strong>Font Color:</strong> Pick a custom color for your text.</li>
+                        <li><strong>Styling:</strong> Toggle Bold, Italic, and Underline formatting.</li>
                         <li><strong>Interaction:</strong> You can drag, resize, and rotate the text box directly on the image to position it perfectly.</li>
                     </ul>
                 </div>
@@ -485,7 +484,7 @@
                 controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
                 laminationCreatorEl.appendChild(controlsContainer);
                 
-                const imagePrompt = `${themePrompt || 'A beautiful, serene background'}`;
+                const imagePrompt = `A photorealistic image of ${themePrompt || 'a beautiful, serene background'}`;
 
                 try {
                     const imageUrl = await generateImage(imagePrompt);
@@ -518,70 +517,89 @@
             }
             
             function renderLaminationControls(container, textElement) {
-                container.innerHTML = ''; // Clear old controls
+                container.innerHTML = ''; 
 
-                // --- Background Theme Controls ---
-                const themeContainer = document.createElement('div');
-                themeContainer.className = "flex items-center gap-2";
+                const backgroundRow = document.createElement('div');
+                backgroundRow.className = "w-full flex items-center justify-center gap-2 mb-2";
                 
                 const searchLabel = document.createElement('label');
-                searchLabel.textContent = "Background Theme:";
+                searchLabel.textContent = "Background:";
                 searchLabel.className = "text-sm text-gray-400";
+                backgroundRow.appendChild(searchLabel);
 
                 const searchInput = document.createElement('input');
                 searchInput.type = "text";
                 searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
-                searchInput.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                searchInput.className = "flex-grow p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                backgroundRow.appendChild(searchInput);
 
                 const redesignButton = document.createElement('button');
                 redesignButton.textContent = "Generate";
                 redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-lg";
-                redesignButton.onclick = () => {
-                    const selectedThemePrompt = searchInput.value;
-                    const selectedImageStyle = imageStyles[imageStyleSelect.value];
-                    handleCreateLamination(`${selectedImageStyle.prefix} of ${selectedThemePrompt}`);
-                };
+                redesignButton.onclick = () => handleCreateLamination(searchInput.value);
+                backgroundRow.appendChild(redesignButton);
+
+                container.appendChild(backgroundRow);
+
+                const fontRow = document.createElement('div');
+                fontRow.className = "w-full flex flex-wrap items-center justify-center gap-4";
                 
-                themeContainer.appendChild(searchLabel);
-                themeContainer.appendChild(searchInput);
-                themeContainer.appendChild(redesignButton);
-                container.appendChild(themeContainer);
+                const fontList = [
+                    'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif',
+                    'Courier New, monospace', 'Lucida Console, monospace', 'Impact, sans-serif', 
+                    'Comic Sans MS, cursive', 'Trebuchet MS, sans-serif', 'Palatino Linotype, book antiqua, palatino, serif',
+                    'Dancing Script, cursive', 'Lobster, cursive', 'Pacifico, cursive', 'Great Vibes, cursive', 'Sacramento, cursive',
+                    'Calibri, sans-serif', 'Bahnschrift, system-ui'
+                ].sort();
 
-                // --- Text Styling Controls ---
-                const textControlsContainer = document.createElement('div');
-                textControlsContainer.className = "flex items-center gap-4";
+                const fontSelect = createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
+                fontSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white max-w-[150px]";
+                fontRow.appendChild(fontSelect);
 
-                // Font Family
-                const fontSelect = createSelect(['Inter', 'Calibri, sans-serif', 'Bahnschrift, system-ui', 'Dancing Script, cursive'], (e) => {
-                    textElement.style.fontFamily = e.target.value;
+                const sizeSelect = document.createElement('select');
+                sizeSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                for(let i = 8; i <= 72; i += 2) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${i}px`;
+                    sizeSelect.appendChild(option);
+                }
+                sizeSelect.value = 24;
+                textElement.style.fontSize = '24px';
+                sizeSelect.addEventListener('change', (e) => { textElement.style.fontSize = `${e.target.value}px`; });
+                fontRow.appendChild(sizeSelect);
+                
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.value = '#FFFFFF';
+                colorInput.className = "w-10 h-10 p-1 bg-gray-600 rounded border-0 cursor-pointer";
+                colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
+                fontRow.appendChild(colorInput);
+
+                const styleButtonWrapper = document.createElement('div');
+                styleButtonWrapper.className = 'flex items-center bg-gray-600 rounded-lg';
+                
+                const boldButton = createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
+                const italicButton = createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
+                const underlineButton = createStyleButton('U', 'underline', () => { textElement.style.textDecoration = textElement.style.textDecoration === 'underline' ? 'none' : 'underline'; });
+
+                styleButtonWrapper.appendChild(boldButton);
+                styleButtonWrapper.appendChild(italicButton);
+                styleButtonWrapper.appendChild(underlineButton);
+                fontRow.appendChild(styleButtonWrapper);
+
+                container.appendChild(fontRow);
+            }
+
+            function createStyleButton(text, styleClass, onClick) {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.className = `px-3 py-1 ${styleClass} text-white transition-colors duration-200 rounded-lg`;
+                button.addEventListener('click', () => {
+                    onClick();
+                    button.classList.toggle('bg-indigo-500');
                 });
-                textControlsContainer.appendChild(fontSelect);
-
-                // Font Size
-                const sizeInput = document.createElement('input');
-                sizeInput.type = 'range';
-                sizeInput.min = 10;
-                sizeInput.max = 48;
-                sizeInput.value = 24;
-                sizeInput.className = "w-24";
-                sizeInput.addEventListener('input', (e) => {
-                     textElement.style.fontSize = `${e.target.value}px`;
-                });
-                textControlsContainer.appendChild(sizeInput);
-                textElement.style.fontSize = '24px'; // initial size
-
-                // Bold button
-                const boldButton = document.createElement('button');
-                boldButton.textContent = 'B';
-                boldButton.className = 'px-3 py-1 bg-gray-600 rounded font-bold';
-                boldButton.onclick = () => {
-                    const isBold = textElement.style.fontWeight === 'bold';
-                    textElement.style.fontWeight = isBold ? 'normal' : 'bold';
-                    boldButton.classList.toggle('bg-indigo-500', !isBold);
-                };
-                textControlsContainer.appendChild(boldButton);
-
-                container.appendChild(textControlsContainer);
+                return button;
             }
 
             function createSelect(options, onChange) {
@@ -590,7 +608,7 @@
                 options.forEach(opt => {
                     const option = document.createElement('option');
                     option.value = opt;
-                    option.textContent = opt.split(',')[0]; // Show only the primary font name
+                    option.textContent = opt.split(',')[0];
                     select.appendChild(option);
                 });
                 select.addEventListener('change', onChange);
@@ -630,6 +648,9 @@
                             }
                         },
                         modifiers: [
+                           interact.modifiers.restrictEdges({
+                             outer: 'parent'
+                           }),
                            interact.modifiers.restrictSize({
                               min: { width: 100, height: 50 }
                            })
@@ -875,7 +896,7 @@
                 URL.revokeObjectURL(url);
             }
             
-             function saveElementAsPng(element, filename) {
+            function saveElementAsPng(element, filename) {
                 const textOverlay = element.querySelector('#lamination-text-overlay');
                 if (textOverlay) {
                     textOverlay.classList.add('hide-borders');
@@ -885,7 +906,24 @@
                     fontEmbedCss: `@font-face {
                         font-family: 'Dancing Script';
                         src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
-                    }`
+                    }
+                    @font-face {
+                        font-family: 'Lobster';
+                        src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2');
+                    }
+                    @font-face {
+                        font-family: 'Pacifico';
+                        src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2');
+                    }
+                     @font-face {
+                        font-family: 'Great Vibes';
+                        src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2');
+                    }
+                    @font-face {
+                        font-family: 'Sacramento';
+                        src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2');
+                    }
+                    `
                 })
                 .then(function (dataUrl) {
                     const a = document.createElement('a');
@@ -905,6 +943,87 @@
                     }
                 });
             }
+
+            async function saveLaminationSheet(element, filename) {
+                const textOverlay = element.querySelector('#lamination-text-overlay');
+                if (textOverlay) {
+                    textOverlay.classList.add('hide-borders');
+                }
+
+                try {
+                    const dataUrl = await htmlToImage.toPng(element, { 
+                        backgroundColor: '#ffffff',
+                         fontEmbedCss: `@font-face { font-family: 'Dancing Script'; src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2'); }
+                                     @font-face { font-family: 'Lobster'; src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2'); }
+                                     @font-face { font-family: 'Pacifico'; src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2'); }
+                                     @font-face { font-family: 'Great Vibes'; src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2'); }
+                                     @font-face { font-family: 'Sacramento'; src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2'); }
+                                    `
+                    });
+
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const DPI = 150; 
+                    canvas.width = 8.5 * DPI;
+                    canvas.height = 11 * DPI;
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    const singleImage = new Image();
+                    const imageLoadPromise = new Promise((resolve, reject) => {
+                        singleImage.onload = resolve;
+                        singleImage.onerror = reject;
+                        singleImage.src = dataUrl;
+                    });
+                    
+                    await imageLoadPromise;
+
+                    const margin = 0.5 * DPI; 
+                    const sheetW = canvas.width - 2 * margin;
+                    const sheetH = canvas.height - 2 * margin;
+                    const colWidth = sheetW / 2;
+                    const rowHeight = sheetH / 2;
+
+                    const aspect = singleImage.width / singleImage.height;
+                    let w, h;
+                    if( colWidth / rowHeight > aspect) {
+                        h = rowHeight;
+                        w = h * aspect;
+                    } else {
+                        w = colWidth;
+                        h = w / aspect;
+                    }
+
+                    const positions = [
+                        { x: margin + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
+                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
+                        { x: margin + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 },
+                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 }
+                    ];
+
+                    positions.forEach(pos => {
+                        ctx.drawImage(singleImage, pos.x, pos.y, w, h);
+                    });
+
+                    const finalImageDataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = finalImageDataUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                } catch (error) {
+                    console.error('Lamination sheet saving error:', error);
+                    displaySystemMessage('Could not save lamination sheet.', 'error');
+                } finally {
+                    if (textOverlay) {
+                        textOverlay.classList.remove('hide-borders');
+                    }
+                }
+            }
+
 
             // --- History & State Management ---
 
@@ -1046,7 +1165,7 @@
             saveStoryBtn.addEventListener('click', handleSaveStory);
             saveWeaverBtn.addEventListener('click', saveWeaver);
             savePromptsBtn.addEventListener('click', savePrompts);
-            saveLaminationBtn.addEventListener('click', () => saveElementAsPng(document.getElementById('lamination-image-container'), 'lamination.png'));
+            saveLaminationBtn.addEventListener('click', () => saveLaminationSheet(document.getElementById('lamination-image-container'), 'lamination-sheet.png'));
             saveNarrationBtn.addEventListener('click', () => {
                 const narrationBlocks = document.querySelectorAll('.ai-paragraph');
                 const lastNarration = Array.from(narrationBlocks).pop();
