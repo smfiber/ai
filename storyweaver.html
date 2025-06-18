@@ -14,27 +14,39 @@
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
         .user-paragraph { background-image: linear-gradient(to right, #374151, #2f3743); }
         .ai-paragraph { background-image: linear-gradient(to left, #1e293b, #1a222f); }
-        .insight-paragraph { background-image: linear-gradient(to left, #0f766e, #134e4a); color: #f0fdfa; }
         .error-paragraph, .system-message-paragraph { align-self: center; text-align: center; padding: 1rem; border-radius: 0.5rem; font-weight: bold; max-width: 80%; }
         .error-paragraph { background-color: #dc2626; color: #fee2e2; }
         .system-message-paragraph { background-color: #374151; color: #a78bfa; white-space: pre-wrap; }
-        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar { width: 8px; }
-        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track { background: #1f2937; }
-        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar, #style-dropdown-content::-webkit-scrollbar { width: 8px; }
+        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track, #style-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
+        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb, #style-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover, #style-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 56.25%; /* 16:9 Aspect Ratio */ border-radius: 0.5rem; overflow: hidden; }
         .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        
+        .style-checkbox-label {
+            display: block;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .style-checkbox-label:hover {
+            background-color: #374151;
+        }
+        .style-checkbox-label input {
+            margin-right: 0.75rem;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
-    <div id="app-container" class="w-full max-w-5xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
+    <div id="app-container" class="w-full max-w-6xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
         <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
                     <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.99</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.01</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -55,9 +67,15 @@
                         <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Story Tone:</label>
                         <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                     <div class="flex-1 min-w-[150px] max-w-xs">
-                        <label for="image-style-select" class="block mb-1 text-gray-400 text-sm">Image Style:</label>
-                        <select id="image-style-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                     <div class="flex-1 min-w-[250px] max-w-sm relative">
+                        <label class="block mb-1 text-gray-400 text-sm">Image Style:</label>
+                        <button id="style-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center">
+                            <span>Select Styles (0)</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="style-dropdown-content" class="hidden absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                           <!-- Checkboxes will be populated here by JavaScript -->
+                        </div>
                     </div>
                      <div class="flex-1 min-w-[120px] max-w-xs">
                         <label for="sentence-length-select" class="block mb-1 text-gray-400 text-sm">Sentences:</label>
@@ -115,12 +133,12 @@
                     <ul class="list-disc pl-5 space-y-1">
                         <li><strong>AI Persona:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
                         <li><strong>Story Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
-                        <li><strong>Image Style:</strong> Pick an artistic style for the illustrations you generate.</li>
+                        <li><strong>Image Style:</strong> Click the button to open a dropdown where you can select one or more artistic styles for the illustrations you generate.</li>
                         <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences, or Unlimited for a longer response).</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Edit:</strong> Appears next to your prompts. Click to modify your text. The main button will change to "Update".</li>
+                        <li><strong>Edit:</strong> Appears next to your prompts. Click to modify your text. The main button will change to "Update". You will be asked to confirm before the story is changed.</li>
                         <li><strong>Regen:</strong> Appears next to AI-generated paragraphs. Click to ask the AI for a different response based on the same preceding text.</li>
                         <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
                          <li><strong>Undo/Redo:</strong> Step backward or forward through your story's history.</li>
@@ -138,6 +156,18 @@
             </div>
         </div>
     </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-update-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+            <h3 class="text-xl font-bold mb-2 text-white">Confirm Update</h3>
+            <p class="text-gray-300 mb-6">This will change your prompt and regenerate all following parts of the story. Are you sure you want to continue?</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-update-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Cancel</button>
+                <button id="confirm-update-btn" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -149,7 +179,8 @@
             const loadingSpinner = document.getElementById('loading-spinner');
             const personaSelect = document.getElementById('persona-select');
             const toneSelect = document.getElementById('tone-select');
-            const imageStyleSelect = document.getElementById('image-style-select');
+            const styleDropdownButton = document.getElementById('style-dropdown-button');
+            const styleDropdownContent = document.getElementById('style-dropdown-content');
             const sentenceLengthSelect = document.getElementById('sentence-length-select');
             const resetStoryBtn = document.getElementById('reset-story-btn');
             const saveStoryBtn = document.getElementById('save-story-btn');
@@ -160,6 +191,9 @@
             const helpIcon = document.getElementById('help-icon');
             const instructionsModal = document.getElementById('instructions-modal');
             const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
+            const confirmUpdateModal = document.getElementById('confirm-update-modal');
+            const confirmUpdateBtn = document.getElementById('confirm-update-btn');
+            const cancelUpdateBtn = document.getElementById('cancel-update-btn');
 
             // --- Application State ---
             const MAX_PROMPTS = 10;
@@ -168,7 +202,6 @@
             let editingParagraphIndex = null;
             let currentPersonaIndex = 0;
             let currentToneIndex = 0;
-            let currentImageStyleIndex = 0;
             let currentSentenceLength = 2;
 
             let storyHistory = [];
@@ -222,33 +255,75 @@
                 { name: "Foreboding/Ominous", description: "a foreboding and ominous" }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
-             const imageStyles = [
-                { name: "3D Model", prefix: "A professional 3D model of {placeholder}, rendered in a cinematic style with dynamic lighting, suitable for a portfolio, 8k, octane render." },
-                { name: "Anime", prefix: "A vibrant, high-quality anime screenshot of {placeholder}, cinematic lighting, detailed, by Studio Ghibli and Makoto Shinkai." },
-                { name: "Art Deco", prefix: "An elegant art deco illustration of {placeholder}, featuring geometric patterns, bold lines, and a luxurious feel, 1920s style." },
-                { name: "Blueprint", prefix: "A detailed blueprint diagram of {placeholder}, with annotations, measurements, and technical specifications on a blue background." },
-                { name: "Charcoal Sketch", prefix: "A dramatic charcoal sketch of {placeholder} on textured paper, with deep blacks, high contrast, and expressive strokes." },
-                { name: "Cubism", prefix: "A cubist painting of {placeholder}, fragmented and abstracted, showing the subject from multiple viewpoints, in the style of Picasso." },
-                { name: "Cyberpunk", prefix: "A neon-drenched cyberpunk city scene featuring {placeholder}, with towering skyscrapers, holographic ads, and a Blade Runner aesthetic." },
-                { name: "Fantasy Art", prefix: "An epic fantasy art painting of {placeholder}, with dramatic lighting, mystical elements, and a high level of detail, in the style of Frank Frazetta." },
-                { name: "Gothic Art", prefix: "A dark and moody gothic art piece depicting {placeholder}, with dramatic shadows, intricate details, and a sense of sublime horror." },
-                { name: "Highly Detailed", prefix: "An extremely detailed, intricate illustration of {placeholder}, hyper-realistic, 8k resolution, sharp focus." },
-                { name: "Impressionism", prefix: "An impressionist painting of {placeholder}, with visible brush strokes, soft focus, and an emphasis on light and its changing qualities, in the style of Monet." },
-                { name: "Infographic", prefix: "Create a clean, professional infographic about '{placeholder}'. CRITICAL: ALL TEXT MUST BE SPELLED CORRECTLY. Double-check all spelling. Use clear, legible fonts, icons, and charts to present the information." },
-                { name: "Minimalist", prefix: "A minimalist, simple line drawing of {placeholder}, clean and elegant, with plenty of negative space." },
-                { name: "Oil Painting", prefix: "A classic oil painting of {placeholder}, with rich colors, deep shadows, and visible canvas texture, in the style of Rembrandt." },
-                { name: "Photorealistic", prefix: "A photorealistic, cinematic, 4k, high-resolution photograph of {placeholder}, sharp focus, professional quality." },
-                { name: "Pixel Art", prefix: "A detailed 16-bit pixel art scene of {placeholder}, vibrant colors, in the style of a classic SNES RPG." },
-                { name: "Pop Art", prefix: "A pop art image of {placeholder}, with bold colors, thick outlines, and a comic book feel, in the style of Andy Warhol." },
-                { name: "Rococo", prefix: "An ornate Rococo painting of {placeholder}, with soft colors, curving lines, and themes of love and nature." },
-                { name: "Steampunk", prefix: "A detailed steampunk illustration of {placeholder}, featuring gears, cogs, steam pipes, and Victorian-era technology." },
-                { name: "Surreal", prefix: "A surrealist painting of {placeholder}, dreamlike and bizarre, with unexpected juxtapositions, in the style of Salvador Dali." },
-                { name: "Synthwave", prefix: "A synthwave art piece of {placeholder}, with neon grids, a retro-futuristic aesthetic, and a 1980s color palette of pink and blue." },
-                { name: "Tribal Art", prefix: "A tribal art depiction of {placeholder}, using traditional patterns, earthy colors, and symbolic imagery." },
-                { name: "Vintage Photo", prefix: "A vintage, sepia-toned photograph of {placeholder} from the 1940s, with a soft focus and film grain." },
-                { name: "Watercolor", prefix: "A beautiful watercolor painting of {placeholder}, with soft, translucent colors, and a gentle, blended look." }
+            const imageStyles = [
+                { name: "Academic Art", prefix: "in the style of Academic Art, highly polished, with technically precise and idealized forms" },
+                { name: "Abstract Expressionism", prefix: "in the style of Abstract Expressionism, with large scale, spontaneous brushwork and emotional intensity" },
+                { name: "Afrofuturism", prefix: "in the style of Afrofuturism, combining sci-fi, fantasy, and African culture" },
+                { name: "Anime", prefix: "in a vibrant, high-quality anime style, with cinematic lighting" },
+                { name: "Art Deco", prefix: "in an elegant Art Deco style, featuring geometric patterns and bold lines" },
+                { name: "Art Nouveau", prefix: "in an Art Nouveau style, with organic, flowing lines and natural forms" },
+                { name: "Baroque", prefix: "in a Baroque style, with dramatic light and shadow (tenebrism) and intense emotion" },
+                { name: "Bauhaus", prefix: "in a Bauhaus style, with minimalism, functionality, and geometric forms" },
+                { name: "Biedermeier", prefix: "in a Biedermeier style, depicting comfortable, quiet, and intimate domesticity" },
+                { name: "Biopunk", prefix: "in a Biopunk style, with visceral forms and biological manipulation themes" },
+                { name: "Blueprint", prefix: "as a detailed blueprint diagram, with annotations and technical specifications" },
+                { name: "Byzantine Mosaic", prefix: "as a Byzantine mosaic, with gold tesserae and shimmering, majestic light" },
+                { name: "Celtic Knotwork", prefix: "with intricate Insular Art (Celtic Knotwork) interlace patterns and zoomorphic designs" },
+                { name: "Charcoal Sketch", prefix: "as a dramatic charcoal sketch on textured paper, with high contrast" },
+                { name: "Concept Art", prefix: "as detailed concept art for a film or video game" },
+                { name: "Constructivism", prefix: "in a Constructivist style, with geometric abstraction and functional forms" },
+                { name: "Cubism", prefix: "in a Cubist style, fragmented and abstracted from multiple viewpoints" },
+                { name: "Cyberpunk", prefix: "in a neon-drenched cyberpunk aesthetic, with a grimy, high-tech feel" },
+                { name: "Dada", prefix: "as a Dadaist collage, absurd and nonsensical" },
+                { name: "De Stijl", prefix: "in the De Stijl style, with rigid geometric abstraction and primary colors" },
+                { name: "Digital Art", prefix: "as modern digital art" },
+                { name: "Dutch Golden Age", prefix: "in the style of the Dutch Golden Age, with realistic portraiture and masterful use of light" },
+                { name: "Expressionism", prefix: "in an Expressionist style, with emotional intensity and distorted figures" },
+                { name: "Fantasy Art", prefix: "as epic fantasy art, with dramatic lighting and mystical elements" },
+                { name: "Fauvism", prefix: "in a Fauvist style, with bold, non-naturalistic colors and expressive brushwork" },
+                { name: "Fractal Art", prefix: "as intricate fractal art, with complex, self-similar mathematical patterns" },
+                { name: "Futurism", prefix: "in a Futurist style, depicting dynamic movement, technology, and speed" },
+                { name: "Game Art", prefix: "in a modern, stylized 3D game art aesthetic" },
+                { name: "Generative Art", prefix: "as algorithm-based generative art" },
+                { name: "Glitch Art", prefix: "with intentional digital glitches, pixelation, and distortion" },
+                { name: "Gothic Illuminated Manuscript", prefix: "as a Gothic illuminated manuscript, with delicate details and vibrant colors" },
+                { name: "Gothic Stained Glass", prefix: "as Gothic stained glass, with deep, jewel-like colors and strong lead lines" },
+                { name: "Graffiti", prefix: "in a bold, urban graffiti or street art style" },
+                { name: "Greek Vase Painting", prefix: "in the style of Ancient Greek red-figure or black-figure vase painting" },
+                { name: "High Renaissance", prefix: "in the style of the High Renaissance, with chiaroscuro and anatomical accuracy" },
+                { name: "Hieroglyphic", prefix: "as an Ancient Egyptian hieroglyphic, with flat, profile figures and symbolic imagery" },
+                { name: "Hyperrealism", prefix: "as a hyperrealistic, photorealistic painting, with extreme detail" },
+                { name: "Impressionism", prefix: "in an Impressionist style, with visible brushstrokes focusing on light and atmosphere" },
+                { name: "Islamic Geometric Pattern", prefix: "with intricate Islamic geometric patterns (Arabesque)" },
+                { name: "Jugendstil", prefix: "in a Jugendstil (German Art Nouveau) style, with linear, geometric patterns" },
+                { name: "Low Poly", prefix: "as a stylized low poly 3D render" },
+                { name: "Mannerism", prefix: "in a Mannerist style, with elongated figures and dramatic lighting" },
+                { name: "Medieval Tapestry", prefix: "as a medieval narrative tapestry, like the Bayeux Tapestry" },
+                { name: "Minimalism", prefix: "in a minimalist style, focusing on simplicity and basic elements" },
+                { name: "Neoclassicism", prefix: "in a Neoclassical style, with strict lines and classical subject matter" },
+                { name: "Oil Painting", prefix: "as a classic oil painting with rich colors and visible texture" },
+                { name: "Op Art", prefix: "as Op Art, with geometric patterns creating optical illusions" },
+                { name: "Photorealistic", prefix: "as a photorealistic, cinematic, 4k, high-resolution photograph" },
+                { name: "Pixel Art", prefix: "as detailed 16-bit pixel art" },
+                { name: "Pop Art", prefix: "in a Pop Art style, with bold colors and a comic book feel" },
+                { name: "Post-Impressionism", prefix: "in a Post-Impressionist style, with symbolic color and expressive brushwork" },
+                { name: "Pre-Raphaelite", prefix: "in a Pre-Raphaelite style, with intense detail, vivid colors, and rich symbolism" },
+                { name: "Realism", prefix: "in a Realist style, depicting an unidealized, everyday scene" },
+                { name: "Rococo", prefix: "in a light, playful Rococo style with pastel colors and ornate decoration" },
+                { name: "Roman Fresco", prefix: "as a Roman fresco, with vibrant colors and an illusion of depth" },
+                { name: "Romanticism", prefix: "in a Romanticist style, emphasizing emotion, drama, and the sublime" },
+                { name: "Solarpunk", prefix: "in an optimistic Solarpunk aesthetic, with eco-friendly technology and lush environments" },
+                { name: "Steampunk", prefix: "in a detailed Steampunk style, featuring gears, cogs, and Victorian-era technology" },
+                { name: "Street Art", prefix: "in a bold, urban street art style" },
+                { name: "Suprematism", prefix: "in a Suprematist style, with pure geometric forms and a limited color palette" },
+                { name: "Surrealism", "prefix": "in a dream-like, surrealist style with illogical juxtapositions" },
+                { name: "Symbolism", prefix: "in a Symbolist style, evoking dreams and the subconscious with mysterious imagery" },
+                { name: "Synthwave", prefix: "in a Synthwave aesthetic, with neon grids and a retro-futuristic 1980s feel" },
+                { name: "Vaporwave", prefix: "in a Vaporwave aesthetic, with digital glitches, classical sculptures, and pastel colors" },
+                { name: "Vintage Photo", prefix: "as a vintage, sepia-toned photograph from the 1940s" },
+                { name: "Watercolor", prefix: "as a beautiful watercolor painting with soft, translucent colors" }
             ].sort((a, b) => a.name.localeCompare(b.name));
-            
+
             const sentenceLengths = [1, 2, 3, 4, 5, 0]; // 0 represents "Unlimited"
 
             // --- Core Functions ---
@@ -272,7 +347,8 @@
             function addEventListeners() {
                 const primaryAction = () => {
                     if (isEditing) {
-                        handleUpdateAndRegenerate();
+                        // Show confirmation modal instead of directly executing
+                        confirmUpdateModal.classList.remove('hidden');
                     } else {
                         handleAddNewPart();
                     }
@@ -309,15 +385,30 @@
                 redoBtn.addEventListener('click', handleRedo);
                 helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
                 closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
-                instructionsModal.addEventListener('click', (e) => {
-                    if (e.target === instructionsModal) {
-                        instructionsModal.classList.add('hidden');
+                
+                // Confirmation Modal Listeners
+                confirmUpdateBtn.addEventListener('click', () => {
+                    confirmUpdateModal.classList.add('hidden');
+                    handleUpdateAndRegenerate();
+                });
+                cancelUpdateBtn.addEventListener('click', () => {
+                     confirmUpdateModal.classList.add('hidden');
+                });
+                
+                // Dropdown Listeners
+                styleDropdownButton.addEventListener('click', () => {
+                    styleDropdownContent.classList.toggle('hidden');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!styleDropdownButton.contains(event.target) && !styleDropdownContent.contains(event.target)) {
+                        styleDropdownContent.classList.add('hidden');
                     }
                 });
 
+
                 personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
                 toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
-                imageStyleSelect.addEventListener('change', (e) => { currentImageStyleIndex = parseInt(e.target.value); });
                 sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
             }
 
@@ -357,8 +448,44 @@
 
             function populatePersonaSelect() { populateSelect(personaSelect, personas); }
             function populateToneSelect() { populateSelect(toneSelect, tones); }
-            function populateImageStyleSelect() { populateSelect(imageStyleSelect, imageStyles); }
             function populateSentenceLengthSelect() { populateSelect(sentenceLengthSelect, sentenceLengths); }
+            
+            function populateImageStyleSelect() {
+                styleDropdownContent.innerHTML = '';
+                imageStyles.forEach((style, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'style-checkbox-label';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = index;
+                    checkbox.className = 'accent-indigo-500';
+                    checkbox.addEventListener('change', updateSelectedStyleCount);
+
+                    label.appendChild(checkbox);
+                    label.append(style.name);
+                    styleDropdownContent.appendChild(label);
+                });
+            }
+
+            function updateSelectedStyleCount() {
+                const selectedCount = styleDropdownContent.querySelectorAll('input[type="checkbox"]:checked').length;
+                styleDropdownButton.querySelector('span').textContent = `Select Styles (${selectedCount})`;
+            }
+
+            function getSelectedImageStylesPrefix() {
+                const selectedCheckboxes = styleDropdownContent.querySelectorAll('input[type="checkbox"]:checked');
+                if (selectedCheckboxes.length === 0) {
+                    return "A photorealistic, cinematic, 4k, high-resolution photograph of {placeholder}"; // Default
+                }
+                const prefixes = Array.from(selectedCheckboxes).map(cb => {
+                    return imageStyles[parseInt(cb.value)].prefix;
+                });
+                let combined = "A masterpiece of {placeholder}, combining the styles of ";
+                combined += prefixes.join(', ');
+                return combined;
+            }
+
 
             async function handleAddNewPart() {
                 const userPrompt = promptInput.value.trim();
@@ -550,8 +677,8 @@
                  imageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-gray-700 text-center p-4"><svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
 
                  try {
-                    const style = imageStyles[currentImageStyleIndex];
-                    const imagePrompt = style.prefix.replace('{placeholder}', sceneText);
+                    const stylePrefix = getSelectedImageStylesPrefix();
+                    const imagePrompt = stylePrefix.replace('{placeholder}', sceneText);
                     const imageUrl = await generateImage(imagePrompt);
                     
                     const img = new Image();
@@ -663,7 +790,7 @@
                 
                 const isBusy = isAITurn;
                 
-                continueBtn.disabled = isBusy || isStoryComplete; // The `isEditing` check is handled by the button's text content now
+                continueBtn.disabled = isBusy || isStoryComplete; 
                 
                 if(isEditing) {
                     btnText.textContent = 'Update';
@@ -676,7 +803,7 @@
                     promptInput.disabled = true;
                 } else {
                     const countText = currentSentenceLength === 0 ? '' : ` of ${MAX_PROMPTS}`;
-                    promptInput.placeholder = `Add prompt ${promptCount + 1}${countText}...`;
+                    promptInput.placeholder = isEditing ? 'Edit your prompt...' : `Add prompt ${promptCount + 1}${countText}...`;
                     promptInput.disabled = isBusy;
                 }
 
@@ -703,7 +830,6 @@
                 
                 const messagesForAPI = chatHistory.map(({role, parts}) => ({role, parts}));
 
-                // Use a different approach for the title generation to not modify the history
                 if (systemInstruction.includes("provide a short, creative title")) {
                     const titleGenerationPayload = {
                         contents: [...messagesForAPI, {role: 'user', parts: [{text: systemInstruction}]}]
