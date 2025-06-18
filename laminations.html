@@ -7,7 +7,7 @@
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html-to-image library for PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIm9D6McV2Rk1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIm9D6McV2R1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- interact.js for drag, resize, rotate -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
@@ -45,9 +45,9 @@
         /* Styles for the interactive text overlay */
         .resizable-text-box {
             position: absolute;
-            top: 50%;
+            /* Changed top from 50% to 25% for initial placement */
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%); /* Still centers horizontally and vertically adjusts from new top */
             min-height: 50px;
             width: 70%;
             display: flex;
@@ -114,7 +114,7 @@
                         <circle cx="9" cy="13" r="1.5" fill="black"/>
                         <circle cx="15" cy="13" r="1.5" fill="black"/>
                     </svg>
-                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.05</span>
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.06</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -291,8 +291,9 @@
                     textOverlay.id = 'lamination-text-overlay';
                     textOverlay.className = 'resizable-text-box';
                     textOverlay.innerHTML = `<p>${currentLaminationText}</p>`;
-                    // Store initial position/angle for interact.js
-                    textOverlay.setAttribute('data-x', 0);
+                    // Set initial position for interact.js to upper middle
+                    textOverlay.style.top = '25%'; // Position it at 25% from the top
+                    textOverlay.setAttribute('data-x', 0); // These will be dynamically updated by interact.js
                     textOverlay.setAttribute('data-y', 0);
                     textOverlay.setAttribute('data-angle', 0);
 
