@@ -113,7 +113,7 @@
                     </svg>
                     Lamination Creator
                     <!-- NOTE: Remember to increment the version number for each revision. -->
-                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.12</span>
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.13</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -585,7 +585,7 @@
                 // --- API ---
                 api: {
                      async generateImage(prompt) {
-                        const apiKey = "";
+                        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
                         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                         const payload = { instances: [{ "prompt": prompt }], parameters: { "sampleCount": 1 } };
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
