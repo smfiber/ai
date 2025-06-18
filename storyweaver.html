@@ -7,7 +7,7 @@
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html-to-image library for PNG export -->
-    <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIIm9D6McV2Rk1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- interact.js for drag, resize, rotate -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
@@ -47,6 +47,7 @@
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
         .user-paragraph { background-image: linear-gradient(to right, #374151, #2f3743); }
         .ai-paragraph { background-image: linear-gradient(to left, #1e293b, #1a222f); }
+        .narrator-paragraph { background-image: linear-gradient(to left, #0f766e, #134e4a); color: #f0fdfa; }
         .error-paragraph, .system-message-paragraph { align-self: center; text-align: center; padding: 1rem; border-radius: 0.5rem; font-weight: bold; max-width: 80%; }
         .error-paragraph { background-color: #dc2626; color: #fee2e2; }
         .system-message-paragraph { background-color: #374151; color: #a78bfa; white-space: pre-wrap; }
@@ -80,7 +81,7 @@
         }
         .resizable-text-box.hide-borders {
             border: none;
-            background-color: transparent; /* Or original background if needed */
+            background-color: transparent;
         }
         .resizable-text-box p {
             width: 100%;
@@ -100,7 +101,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.81</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.89</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -190,7 +191,7 @@
                         <li><strong>Story Weaver:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
                         <li><strong>Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
                         <li><strong>Image Style:</strong> Pick an artistic style for the illustrations you generate.</li>
-                        <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences). Changing this will start a new story.</li>
+                        <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences, or Unlimited for a longer response).</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
                     <ul class="list-disc pl-5 space-y-1">
@@ -201,16 +202,14 @@
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Saving Your Work</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Save Story:</strong> Becomes active after 1 prompt. Saves the full illustrated story as a styled HTML file.</li>
-                        <li><strong>Save Weaver:</strong> Saves the entire back-and-forth dialogue between you and the AI as a .txt file.</li>
-                        <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
-                        <li><strong>Save Lamination:</strong> Saves the currently displayed lamination as a 4-up sheet, ready to print on 8.5x11 paper.</li>
-                        <li><strong>Save Narration:</strong> Saves the most recently added narration block as a PNG file.</li>
+                        <li><strong>Save Story / Save Narration:</strong> Saves the full story or the last narration block as a full-page PNG image, perfect for social media.</li>
+                        <li><strong>Save Weaver / Save Prompts:</strong> Saves the dialogue or your prompts as a .txt file.</li>
+                        <li><strong>Save Lamination:</strong> Opens a dialog to save the current lamination as a 4-up sheet for printing or as a single full-size PNG for social media.</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Lamination Text Editing</h3>
                     <ul class="list-disc pl-5 space-y-1">
                         <li>Once a lamination is created, a new set of controls appears.</li>
-                        <li><strong>Font Family:</strong> Choose from a wide variety of fonts.</li>
+                        <li><strong>Font Family:</strong> Choose from a wide variety of fonts, including several cursive styles.</li>
                         <li><strong>Font Size:</strong> Select a size from a dropdown list.</li>
                         <li><strong>Font Color:</strong> Pick a custom color for your text.</li>
                         <li><strong>Styling:</strong> Toggle Bold, Italic, and Underline formatting.</li>
@@ -221,6 +220,18 @@
             <div class="flex justify-end mt-6">
                 <button id="close-instructions-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Lamination Save Options Modal -->
+    <div id="lamination-save-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+            <h3 class="text-xl font-bold mb-4">Save Lamination As...</h3>
+            <div class="flex justify-center gap-4">
+                <button id="save-4up-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">4-Up Print Sheet</button>
+                <button id="save-full-png-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Full Size PNG</button>
+            </div>
+             <button id="close-save-modal-btn" class="mt-6 text-sm text-gray-400 hover:text-white">Cancel</button>
         </div>
     </div>
 
@@ -250,6 +261,10 @@
             const helpIcon = document.getElementById('help-icon');
             const instructionsModal = document.getElementById('instructions-modal');
             const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
+            const laminationSaveModal = document.getElementById('lamination-save-modal');
+            const save4UpBtn = document.getElementById('save-4up-btn');
+            const saveFullPngBtn = document.getElementById('save-full-png-btn');
+            const closeSaveModalBtn = document.getElementById('close-save-modal-btn');
 
 
             // --- Application State ---
@@ -261,9 +276,9 @@
             let currentPersonaIndex = 0;
             let currentToneIndex = 0;
             let currentImageStyleIndex = 0;
-            let currentSentenceLength = 2;
-            let currentLaminationText = '';
+            let currentSentenceLength = 2; // Default
             let isLaminationMode = false;
+            let currentLaminationText = '';
             
             let storyHistory = [];
             let historyStack = [];
@@ -317,29 +332,33 @@
             ].sort((a, b) => a.name.localeCompare(b.name));
 
              const imageStyles = [
-                { name: "Surreal", prefix: "A surrealist painting of" },
-                { name: "Highly Detailed", prefix: "A highly detailed, intricate illustration of" },
-                { name: "Photorealistic", prefix: "A photorealistic image of" },
-                { name: "Anime", prefix: "An anime style illustration of" },
-                { name: "Watercolor", prefix: "A watercolor painting of" },
-                { name: "Oil Painting", prefix: "An oil painting of" },
-                { name: "Charcoal Sketch", prefix: "A charcoal sketch of" },
-                { name: "Pixel Art", prefix: "16-bit pixel art of" },
-                { name: "Art Deco", prefix: "An art deco illustration of" },
-                { name: "Minimalist", prefix: "A minimalist, simple line drawing of" },
-                { name: "Blueprint Diagram", prefix: "A blueprint diagram of" },
-                { name: "Cubism", prefix: "A cubist painting of" },
-                { name: "Gothic Art", prefix: "Gothic art of" },
-                { name: "Impressionism", prefix: "An impressionist painting of" },
-                { name: "Pop Art", prefix: "Pop art of" },
-                { name: "Rococo", prefix: "A rococo painting of" },
-                { name: "Steampunk", prefix: "A steampunk illustration of" },
-                { name: "Synthwave", prefix: "Synthwave art of" },
-                { name: "Tribal Art", prefix: "Tribal art of" },
-                { name: "Infographic", prefix: "An infographic about" }
+                { name: "3D Model", prefix: "A professional 3D model of {placeholder}, rendered in a cinematic style with dynamic lighting, suitable for a portfolio, 8k, octane render." },
+                { name: "Anime", prefix: "A vibrant, high-quality anime screenshot of {placeholder}, cinematic lighting, detailed, by Studio Ghibli and Makoto Shinkai." },
+                { name: "Art Deco", prefix: "An elegant art deco illustration of {placeholder}, featuring geometric patterns, bold lines, and a luxurious feel, 1920s style." },
+                { name: "Blueprint", prefix: "A detailed blueprint diagram of {placeholder}, with annotations, measurements, and technical specifications on a blue background." },
+                { name: "Charcoal Sketch", prefix: "A dramatic charcoal sketch of {placeholder} on textured paper, with deep blacks, high contrast, and expressive strokes." },
+                { name: "Cubism", prefix: "A cubist painting of {placeholder}, fragmented and abstracted, showing the subject from multiple viewpoints, in the style of Picasso." },
+                { name: "Cyberpunk", prefix: "A neon-drenched cyberpunk city scene featuring {placeholder}, with towering skyscrapers, holographic ads, and a Blade Runner aesthetic." },
+                { name: "Fantasy Art", prefix: "An epic fantasy art painting of {placeholder}, with dramatic lighting, mystical elements, and a high level of detail, in the style of Frank Frazetta." },
+                { name: "Gothic Art", prefix: "A dark and moody gothic art piece depicting {placeholder}, with dramatic shadows, intricate details, and a sense of sublime horror." },
+                { name: "Highly Detailed", prefix: "An extremely detailed, intricate illustration of {placeholder}, hyper-realistic, 8k resolution, sharp focus." },
+                { name: "Impressionism", prefix: "An impressionist painting of {placeholder}, with visible brush strokes, soft focus, and an emphasis on light and its changing qualities, in the style of Monet." },
+                { name: "Infographic", prefix: "Create a clean, professional infographic about '{placeholder}'. CRITICAL: ALL TEXT MUST BE SPELLED CORRECTLY. Double-check all spelling. Use clear, legible fonts, icons, and charts to present the information." },
+                { name: "Minimalist", prefix: "A minimalist, simple line drawing of {placeholder}, clean and elegant, with plenty of negative space." },
+                { name: "Oil Painting", prefix: "A classic oil painting of {placeholder}, with rich colors, deep shadows, and visible canvas texture, in the style of Rembrandt." },
+                { name: "Photorealistic", prefix: "A photorealistic, cinematic, 4k, high-resolution photograph of {placeholder}, sharp focus, professional quality." },
+                { name: "Pixel Art", prefix: "A detailed 16-bit pixel art scene of {placeholder}, vibrant colors, in the style of a classic SNES RPG." },
+                { name: "Pop Art", prefix: "A pop art image of {placeholder}, with bold colors, thick outlines, and a comic book feel, in the style of Andy Warhol." },
+                { name: "Rococo", prefix: "An ornate Rococo painting of {placeholder}, with soft colors, curving lines, and themes of love and nature." },
+                { name: "Steampunk", prefix: "A detailed steampunk illustration of {placeholder}, featuring gears, cogs, steam pipes, and Victorian-era technology." },
+                { name: "Surreal", prefix: "A surrealist painting of {placeholder}, dreamlike and bizarre, with unexpected juxtapositions, in the style of Salvador Dali." },
+                { name: "Synthwave", prefix: "A synthwave art piece of {placeholder}, with neon grids, a retro-futuristic aesthetic, and a 1980s color palette of pink and blue." },
+                { name: "Tribal Art", prefix: "A tribal art depiction of {placeholder}, using traditional patterns, earthy colors, and symbolic imagery." },
+                { name: "Vintage Photo", prefix: "A vintage, sepia-toned photograph of {placeholder} from the 1940s, with a soft focus and film grain." },
+                { name: "Watercolor", prefix: "A beautiful watercolor painting of {placeholder}, with soft, translucent colors, and a gentle, blended look." }
             ].sort((a, b) => a.name.localeCompare(b.name));
             
-            const sentenceLengths = [1, 2, 3, 4, 5];
+            const sentenceLengths = [1, 2, 3, 4, 5, 0]; // 0 represents "Unlimited"
 
             // --- Core Functions ---
 
@@ -375,8 +394,11 @@
             
             function getSystemPrompt() {
                 const selectedPersona = personas[currentPersonaIndex];
-                const selectedTone = tones[currentToneIndex];
-                const text = `${selectedPersona.systemPrompt} Limit your response to exactly ${currentSentenceLength} sentence(s).`;
+                let lengthConstraint = `Limit your response to exactly ${currentSentenceLength} sentence(s).`;
+                if(currentSentenceLength == 0) {
+                     lengthConstraint = "There is no limit to the length of your response.";
+                }
+                const text = `${selectedPersona.systemPrompt} ${lengthConstraint}`;
                 return { role: "user", parts: [{ text }] };
             }
 
@@ -408,17 +430,17 @@
             }
 
             function populateSentenceLengthSelect() {
-                sentenceLengths.forEach(length => {
+                 sentenceLengths.forEach(length => {
                     const option = document.createElement('option');
                     option.value = length;
-                    option.textContent = length;
+                    option.textContent = length === 0 ? "Unlimited" : length;
                     sentenceLengthSelect.appendChild(option);
                 });
             }
 
             async function handleContinueStory() {
                 const userPrompt = promptInput.value.trim();
-                if (!userPrompt || isAITurn || getUserPromptCount() >= MAX_PROMPTS) return;
+                if (!userPrompt || isAITurn || (getUserPromptCount() >= MAX_PROMPTS && currentSentenceLength !== 0)) return;
 
                 setLoading(true);
 
@@ -484,13 +506,14 @@
                 controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
                 laminationCreatorEl.appendChild(controlsContainer);
                 
-                const imagePrompt = `A photorealistic image of ${themePrompt || 'a beautiful, serene background'}`;
+                const imagePrompt = `Photorealistic image, 4k, high resolution: ${themePrompt || 'a beautiful, serene background'}`;
 
                 try {
                     const imageUrl = await generateImage(imagePrompt);
                     imageDisplayContainer.innerHTML = ''; 
                     
                     const img = new Image();
+                    img.crossOrigin = "anonymous"; // Important for canvas saving
                     img.src = imageUrl;
                     img.className = 'absolute top-0 left-0 w-full h-full object-cover rounded-lg';
                     imageDisplayContainer.appendChild(img);
@@ -688,6 +711,7 @@
 
                 const wrapper = document.createElement('div');
                 wrapper.classList.add('story-paragraph-wrapper', 'flex', 'items-start', 'gap-4');
+                wrapper.dataset.role = role; // Add role for easier selection later
                 
                 const paragraphContent = document.createElement('div');
                 paragraphContent.classList.add('flex-grow', 'p-4', 'rounded-lg');
@@ -695,7 +719,12 @@
                 if (imageUrl) {
                     const imageContainer = document.createElement('div');
                     imageContainer.classList.add('illustration-container');
-                    imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated illustration of the scene" class="w-full h-full">`;
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = imageUrl;
+                    img.alt = "Generated illustration of the scene";
+                    img.className = 'w-full h-full';
+                    imageContainer.appendChild(img);
                     paragraphContent.insertBefore(imageContainer, paragraphContent.firstChild);
                 }
 
@@ -715,12 +744,14 @@
                     wrapper.appendChild(controlsContainer);
                 } else if (role === 'model' || role === 'narrator') {
                     wrapper.classList.add('justify-end');
-                    paragraphContent.classList.add('ai-paragraph', 'rounded-br-none');
+                    paragraphContent.classList.add('rounded-br-none');
 
                     if(role === 'narrator'){
+                         paragraphContent.classList.add('narrator-paragraph');
                          const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
                          controlsContainer.appendChild(editBtn);
-                    } else {
+                    } else { // 'model'
+                         paragraphContent.classList.add('ai-paragraph');
                          const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
                          controlsContainer.appendChild(regenBtn);
                     }
@@ -800,14 +831,23 @@
 
                  try {
                     const style = imageStyles[currentImageStyleIndex];
-                    const imagePrompt = `${style.prefix} of ${sceneText}`;
+                    const imagePrompt = style.prefix.replace('{placeholder}', sceneText);
                     const imageUrl = await generateImage(imagePrompt);
-                    imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated illustration of the scene">`;
+                    
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = imageUrl;
+                    img.alt = "Generated illustration of the scene";
+                    imageContainer.innerHTML = '';
+                    imageContainer.appendChild(img);
+
                     storyHistory[index].imageUrl = imageUrl;
                     pushToHistory();
                  } catch(error) {
                     console.error("Error generating image:", error);
-                    if (error.message.includes("billed users")) {
+                    const errorText = await error.text();
+                    console.error("Image generation API error:", errorText);
+                    if (errorText && errorText.includes("billed an account")) {
                         imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.<br>This feature requires a billed Google Cloud account.</p>`;
                     } else {
                         imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.</p>`;
@@ -818,59 +858,6 @@
             }
             
             // --- Saving & Export ---
-
-            function handleSaveStory() {
-                if (isAITurn || getUserPromptCount() < MIN_PROMPTS_FOR_SAVE) return;
-                
-                setLoading(true);
-                saveAsHtml(getStoryHtml(), 'AI-Woven-Story.html');
-                displaySystemMessage("Story saved successfully!", 'system-message');
-                setLoading(false);
-                updateButtonStates();
-            }
-
-            function getStoryHtml() {
-                const storyContent = storyHistory
-                    .filter(part => part.role === 'model' || part.role === 'narrator')
-                    .map(part => {
-                        let html = '';
-                        if (part.imageUrl) {
-                            html += `<div style="position: relative; width: 100%; padding-top: 75%; margin-bottom: 1rem; border-radius: 0.5rem; overflow: hidden;"><img src="${part.imageUrl}" alt="Illustration" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;"></div>`;
-                        }
-                        html += `<p>${part.parts[0].text}</p>`;
-                        return `<div>${html}</div>`;
-                    })
-                    .join('');
-                return createHtmlWrapper(`<div class="ai-paragraph p-4">${storyContent}</div>`);
-            }
-
-            
-            function savePrompts() {
-                const promptsText = storyHistory
-                    .filter(p => p.role === 'user' && p.parts[0].text !== getSystemPrompt().parts[0].text)
-                    .map((p, i) => `Prompt ${i + 1}:\n${p.parts[0].text}`)
-                    .join('\n\n---\n\n');
-                saveAsTxt(promptsText, 'My-Prompts.txt');
-            }
-            
-            function saveWeaver() {
-                const weaverText = storyHistory
-                    .slice(1)
-                    .map(p => {
-                        let author = 'Unknown';
-                        if(p.role === 'user') author = 'You';
-                        else if (p.role === 'model') author = 'Story Weaver';
-                        else if (p.role === 'narrator') author = 'Narration';
-                        return `[${author}]:\n${p.parts[0].text}`
-                    })
-                    .join('\n\n');
-                saveAsTxt(weaverText, 'Weaver-Chat.txt');
-            }
-
-            function createHtmlWrapper(content, title = "AI-Woven Story") {
-                const styles = `body{font-family:'Inter',sans-serif;background-color:#111827;color:white;padding:2rem;display:flex;flex-direction:column;align-items:center;} div{border-radius:1rem;margin-bottom:1rem;max-width:800px;width:100%;} .user-paragraph{background-color:#374151;} .ai-paragraph{background-color:#1e293b;} .system-message-paragraph{background-color:#374151;color:#a78bfa;text-align:center;}`;
-                return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${title}</title><script src="https://cdn.tailwindcss.com"><\/script><style>${styles}</style></head><body>${content}</body></html>`;
-            }
 
             function saveAsTxt(textContent, filename) {
                 const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
@@ -884,83 +871,70 @@
                 URL.revokeObjectURL(url);
             }
 
-            function saveAsHtml(htmlContent, filename) {
-                const blob = new Blob([htmlContent], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-            
-            function saveElementAsPng(element, filename) {
-                const textOverlay = element.querySelector('#lamination-text-overlay');
-                if (textOverlay) {
-                    textOverlay.classList.add('hide-borders');
-                }
+            async function saveContentAsPng(elementToSave, filename, isLamination = false) {
+                setLoading(true);
+                // The filter function will be used to exclude elements from the final image.
+                const filter = (node) => {
+                    // For story/narration, exclude the edit/regen/illustrate buttons.
+                    if (!isLamination && node.classList && node.classList.contains('flex-shrink-0')) {
+                        return false;
+                    }
+                    return true;
+                };
 
-                htmlToImage.toPng(element, { 
-                    fontEmbedCss: `@font-face {
-                        font-family: 'Dancing Script';
-                        src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
-                    }
-                    @font-face {
-                        font-family: 'Lobster';
-                        src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2');
-                    }
-                    @font-face {
-                        font-family: 'Pacifico';
-                        src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2');
-                    }
-                     @font-face {
-                        font-family: 'Great Vibes';
-                        src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2');
-                    }
-                    @font-face {
-                        font-family: 'Sacramento';
-                        src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2');
-                    }
-                    `
-                })
-                .then(function (dataUrl) {
-                    const a = document.createElement('a');
-                    a.href = dataUrl;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                })
-                .catch(function (error) {
-                    console.error('Image saving error:', error);
-                    displaySystemMessage('Could not save image.', 'error');
-                })
-                .finally(() => {
-                    if (textOverlay) {
-                        textOverlay.classList.remove('hide-borders');
-                    }
-                });
-            }
+                // Options for html-to-image
+                const options = {
+                    quality: 0.98,
+                    backgroundColor: isLamination ? null : '#1f2937', // Story container bg: #1f2937
+                    filter: filter,
+                    pixelRatio: 2, // Higher resolution
+                };
 
-            async function saveLaminationSheet(element, filename) {
-                const textOverlay = element.querySelector('#lamination-text-overlay');
+                // For lamination, we want to hide the interactive border before capture.
+                const textOverlay = isLamination ? elementToSave.querySelector('#lamination-text-overlay') : null;
                 if (textOverlay) {
                     textOverlay.classList.add('hide-borders');
                 }
 
                 try {
-                    const dataUrl = await htmlToImage.toPng(element, { 
-                        backgroundColor: '#ffffff',
-                         fontEmbedCss: `@font-face { font-family: 'Dancing Script'; src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2'); }
-                                     @font-face { font-family: 'Lobster'; src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2'); }
-                                     @font-face { font-family: 'Pacifico'; src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2'); }
-                                     @font-face { font-family: 'Great Vibes'; src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2'); }
-                                     @font-face { font-family: 'Sacramento'; src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2'); }
-                                    `
-                    });
+                    // Directly capture the intended element.
+                    const dataUrl = await htmlToImage.toPng(elementToSave, options);
 
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = filename;
+                    a.click();
+                } catch (error) {
+                    console.error('Error saving content as PNG:', error);
+                    displaySystemMessage('Could not save image. It might be too large or complex.', 'error');
+                } finally {
+                    // Restore the border if it was hidden.
+                    if (textOverlay) {
+                        textOverlay.classList.remove('hide-borders');
+                    }
+                    setLoading(false);
+                }
+            }
+
+
+             async function saveLaminationSheet(element, filename) {
+                setLoading(true);
+                const textOverlay = element.querySelector('#lamination-text-overlay');
+                 const options = {
+                    quality: 0.98,
+                    backgroundColor: '#00000000', // Capture with transparent BG
+                    pixelRatio: 2
+                };
+
+                if (textOverlay) {
+                    textOverlay.classList.add('hide-borders');
+                }
+
+                try {
+                    // 1. Capture the single lamination image as a data URL
+                    const dataUrl = await htmlToImage.toPng(element, options);
+
+                    // 2. Create the 4-up canvas
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     const DPI = 150; 
@@ -971,6 +945,7 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
                     const singleImage = new Image();
+                    singleImage.crossOrigin = "anonymous";
                     const imageLoadPromise = new Promise((resolve, reject) => {
                         singleImage.onload = resolve;
                         singleImage.onerror = reject;
@@ -979,19 +954,20 @@
                     
                     await imageLoadPromise;
 
-                    const margin = 0.5 * DPI; 
+                    const margin = 0.5 * DPI;
                     const sheetW = canvas.width - 2 * margin;
                     const sheetH = canvas.height - 2 * margin;
                     const colWidth = sheetW / 2;
                     const rowHeight = sheetH / 2;
+                    const padding = 0.125 * DPI; // Padding between images
 
                     const aspect = singleImage.width / singleImage.height;
                     let w, h;
-                    if( colWidth / rowHeight > aspect) {
-                        h = rowHeight;
+                    if( (colWidth - padding) / (rowHeight - padding) > aspect) {
+                        h = rowHeight - padding;
                         w = h * aspect;
                     } else {
-                        w = colWidth;
+                        w = colWidth - padding;
                         h = w / aspect;
                     }
 
@@ -1002,17 +978,14 @@
                         { x: margin + colWidth + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 }
                     ];
 
-                    positions.forEach(pos => {
-                        ctx.drawImage(singleImage, pos.x, pos.y, w, h);
-                    });
+                    positions.forEach(pos => ctx.drawImage(singleImage, pos.x, pos.y, w, h));
 
+                    // 3. Download the final sheet
                     const finalImageDataUrl = canvas.toDataURL('image/png');
                     const a = document.createElement('a');
                     a.href = finalImageDataUrl;
                     a.download = filename;
-                    document.body.appendChild(a);
                     a.click();
-                    document.body.removeChild(a);
 
                 } catch (error) {
                     console.error('Lamination sheet saving error:', error);
@@ -1021,6 +994,7 @@
                     if (textOverlay) {
                         textOverlay.classList.remove('hide-borders');
                     }
+                    setLoading(false);
                 }
             }
 
@@ -1056,8 +1030,8 @@
 
             function updateButtonStates() {
                 const promptCount = getUserPromptCount();
-                const isStoryComplete = promptCount >= MAX_PROMPTS;
-                const canSave = promptCount >= MIN_PROMPTS_FOR_SAVE;
+                const isStoryComplete = promptCount >= MAX_PROMPTS && currentSentenceLength !== 0;
+                const canSave = storyHistory.length > 1;
                 
                 const isBusy = isAITurn;
                 
@@ -1071,10 +1045,11 @@
                 }
 
                 if (isStoryComplete && !isBusy) {
-                    promptInput.placeholder = "Story complete! You can save your story now.";
+                    promptInput.placeholder = "Max prompts reached! You can save your story now.";
                     promptInput.disabled = true;
                 } else {
-                    promptInput.placeholder = `Add prompt ${promptCount + 1} of ${MAX_PROMPTS}...`;
+                    const countText = currentSentenceLength === 0 ? '' : ` of ${MAX_PROMPTS}`;
+                    promptInput.placeholder = `Add prompt ${promptCount + 1}${countText}...`;
                     promptInput.disabled = isBusy;
                 }
 
@@ -1098,23 +1073,26 @@
             }
 
             async function getAIResponse(history) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
                 
                 const cleanHistory = history.map(({role, parts}) => ({role, parts}));
 
                 const payload = { contents: cleanHistory };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const responseText = await response.text();
-
+                
                 if (!response.ok) {
-                    const errorData = JSON.parse(responseText || "{}");
+                    const errorText = await response.text();
+                    console.error("AI response API error:", errorText);
+                    const errorData = JSON.parse(errorText || "{}");
                     throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
                 }
-                const result = JSON.parse(responseText);
+
+                const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                     return result.candidates[0].content.parts[0].text;
                 } else {
+                    console.error("Unexpected AI response format:", result);
                     throw new Error(`Unexpected API response format.`);
                 }
             }
@@ -1162,15 +1140,55 @@
             });
             
             resetStoryBtn.addEventListener('click', resetApp);
-            saveStoryBtn.addEventListener('click', handleSaveStory);
-            saveWeaverBtn.addEventListener('click', saveWeaver);
-            savePromptsBtn.addEventListener('click', savePrompts);
-            saveLaminationBtn.addEventListener('click', () => saveLaminationSheet(document.getElementById('lamination-image-container'), 'lamination-sheet.png'));
+            
+            saveStoryBtn.addEventListener('click', () => saveContentAsPng(storyContainer, 'story.png', false));
+
             saveNarrationBtn.addEventListener('click', () => {
-                const narrationBlocks = document.querySelectorAll('.ai-paragraph');
-                const lastNarration = Array.from(narrationBlocks).pop();
-                if(lastNarration) saveElementAsPng(lastNarration, 'narration.png')
+                const narrationParagraphs = storyContainer.querySelectorAll('[data-role="narrator"]');
+                if (narrationParagraphs.length > 0) {
+                    const lastNarration = narrationParagraphs[narrationParagraphs.length - 1];
+                    saveContentAsPng(lastNarration, 'narration.png', false);
+                }
             });
+
+
+            saveWeaverBtn.addEventListener('click', () => {
+                const weaverText = storyHistory
+                    .slice(1)
+                    .map(p => {
+                        let author = 'Unknown';
+                        if(p.role === 'user') author = 'You';
+                        else if (p.role === 'model') author = 'Story Weaver';
+                        else if (p.role === 'narrator') author = 'Narration';
+                        return `[${author}]:\n${p.parts[0].text}`
+                    })
+                    .join('\n\n');
+                saveAsTxt(weaverText, 'Weaver-Chat.txt');
+            });
+
+             savePromptsBtn.addEventListener('click', () => {
+                const promptsText = storyHistory
+                    .filter(p => p.role === 'user' && p.parts[0].text !== getSystemPrompt().parts[0].text)
+                    .map((p, i) => `Prompt ${i + 1}:\n${p.parts[0].text}`)
+                    .join('\n\n---\n\n');
+                saveAsTxt(promptsText, 'My-Prompts.txt');
+            });
+
+            saveLaminationBtn.addEventListener('click', () => {
+                laminationSaveModal.classList.remove('hidden');
+            });
+            closeSaveModalBtn.addEventListener('click', () => {
+                 laminationSaveModal.classList.add('hidden');
+            });
+            save4UpBtn.addEventListener('click', () => {
+                saveLaminationSheet(document.getElementById('lamination-image-container'), 'lamination-sheet.png');
+                laminationSaveModal.classList.add('hidden');
+            });
+            saveFullPngBtn.addEventListener('click', () => {
+                saveContentAsPng(document.getElementById('lamination-image-container'), 'lamination-full.png', true);
+                laminationSaveModal.classList.add('hidden');
+            });
+
             
             undoBtn.addEventListener('click', handleUndo);
             redoBtn.addEventListener('click', handleRedo);
