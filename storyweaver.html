@@ -8,9 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html-to-image library for PNG export -->
     <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
+    <!-- interact.js for drag, resize, rotate -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
         /* Embedded Google Fonts to prevent CORS issues with html-to-image */
-        /* latin */
         @font-face {
           font-family: 'Inter';
           font-style: normal;
@@ -19,7 +20,6 @@
           src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
           unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
         }
-        /* latin */
         @font-face {
           font-family: 'Inter';
           font-style: normal;
@@ -28,7 +28,6 @@
           src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
           unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
         }
-        /* latin */
         @font-face {
           font-family: 'Inter';
           font-style: normal;
@@ -37,88 +36,62 @@
           src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
           unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
         }
-
-        /* Main font styling for the app */
-        body {
-            font-family: 'Inter', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            letter-spacing: 0.01em;
+         @font-face {
+            font-family: 'Dancing Script';
+            font-style: normal;
+            font-weight: 400;
+            src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
         }
 
-        /* Styling for the paragraphs to distinguish authors */
-        .story-paragraph-wrapper {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeIn 0.5s ease-out forwards;
-        }
+        body { font-family: 'Inter', sans-serif; }
 
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .user-paragraph {
-            background-image: linear-gradient(to right, #374151, #2f3743); /* gray-700 to darker */
-        }
+        .story-paragraph-wrapper { opacity: 0; transform: translateY(20px); animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        .user-paragraph { background-image: linear-gradient(to right, #374151, #2f3743); }
+        .ai-paragraph { background-image: linear-gradient(to left, #1e293b, #1a222f); }
+        .error-paragraph, .system-message-paragraph { align-self: center; text-align: center; padding: 1rem; border-radius: 0.5rem; font-weight: bold; max-width: 80%; }
+        .error-paragraph { background-color: #dc2626; color: #fee2e2; }
+        .system-message-paragraph { background-color: #374151; color: #a78bfa; white-space: pre-wrap; }
+        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar { width: 8px; }
+        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track { background: #1f2937; }
+        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 75%; border-radius: 0.5rem; overflow: hidden; }
+        .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
 
-        .ai-paragraph {
-            background-image: linear-gradient(to left, #1e293b, #1a222f); /* slate-800 to darker */
-        }
-        
-        .error-paragraph, .system-message-paragraph {
-             align-self: center;
-             text-align: center;
-             padding: 1rem;
-             border-radius: 0.5rem;
-             font-weight: bold;
-             max-width: 80%;
-        }
-
-        .error-paragraph {
-             background-color: #dc2626; /* red-600 */
-             color: #fee2e2; /* red-100 */
-        }
-
-        .system-message-paragraph {
-            background-color: #374151; /* gray-700 */
-            color: #a78bfa; /* violet-400 */
-            white-space: pre-wrap;
-        }
-
-        /* Custom scrollbar for a cleaner look */
-        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar {
-            width: 8px;
-        }
-        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
-        }
-        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
-            border-radius: 4px;
-        }
-        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
-        }
-        
-        .illustration-container {
-            margin-bottom: 1rem; /* Space between image and text */
-            position: relative;
-            width: 100%;
-            padding-top: 75%; /* 4:3 Aspect Ratio */
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-
-        .illustration-container img, .illustration-container .loading-placeholder {
+        /* Styles for the interactive text overlay */
+        .resizable-text-box {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-height: 50px;
+            width: 70%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.5);
+            border: 2px dashed #fff;
+            border-radius: 0.5rem;
+            color: white;
+            touch-action: none; /* prevent default browser actions */
+            box-sizing: border-box;
+            cursor: move;
+            z-index: 10;
+        }
+        .resizable-text-box.hide-borders {
+            border: none;
+            background-color: transparent; /* Or original background if needed */
+        }
+        .resizable-text-box p {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            margin: 0;
+            overflow: hidden;
+            text-align: center;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -235,6 +208,14 @@
                         <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
                         <li><strong>Save Lamination:</strong> Saves the currently displayed lamination image as a PNG file.</li>
                         <li><strong>Save Narration:</strong> Saves the most recently added narration block as a PNG file.</li>
+                    </ul>
+                     <h3 class="font-semibold text-white mt-4">Lamination Text Editing</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Once a lamination is created, a new set of controls appears.</li>
+                        <li><strong>Font Family:</strong> Choose from fonts like Calibri, Bahnschrift, and Freestyle Script.</li>
+                        <li><strong>Font Size:</strong> Adjust the text size from 10px to 30px.</li>
+                        <li><strong>Bold:</strong> Toggle bold formatting on or off.</li>
+                        <li><strong>Interaction:</strong> You can drag, resize, and rotate the text box directly on the image to position it perfectly.</li>
                     </ul>
                 </div>
             </div>
@@ -480,17 +461,17 @@
                 promptInput.value = '';
                 updateUIFromHistory();
             }
-
+             
              async function handleCreateLamination(themePrompt) {
-                if(!themePrompt) { // Initial creation
+                if(!themePrompt) { 
                      currentLaminationText = promptInput.value.trim();
                      if (!currentLaminationText || isAITurn) return;
                      isLaminationMode = true;
-                     storyContainer.innerHTML = ''; // Clear story view
+                     storyContainer.innerHTML = ''; 
                 }
                
                 setLoading(true);
-                storyContainer.innerHTML = `<div id="lamination-creator" class="w-full p-4 flex flex-col items-center"></div>`;
+                storyContainer.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
                 const laminationCreatorEl = document.getElementById('lamination-creator');
 
                 const imageDisplayContainer = document.createElement('div');
@@ -501,7 +482,7 @@
 
                 const controlsContainer = document.createElement('div');
                 controlsContainer.id = "lamination-controls";
-                controlsContainer.className = "flex items-center gap-4 mt-4";
+                controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
                 laminationCreatorEl.appendChild(controlsContainer);
                 
                 const imagePrompt = `${themePrompt || 'A beautiful, serene background'}`;
@@ -512,16 +493,22 @@
                     
                     const img = new Image();
                     img.src = imageUrl;
-                    img.className = 'absolute top-0 left-0 w-full h-full object-cover';
+                    img.className = 'absolute top-0 left-0 w-full h-full object-cover rounded-lg';
+                    imageDisplayContainer.appendChild(img);
                     
                     const textOverlay = document.createElement('div');
-                    textOverlay.className = "absolute inset-0 flex items-center justify-center p-8 bg-black bg-opacity-50";
-                    textOverlay.innerHTML = `<p class="text-white text-2xl font-semibold text-center whitespace-pre-wrap">${currentLaminationText}</p>`;
+                    textOverlay.id = 'lamination-text-overlay';
+                    textOverlay.className = 'resizable-text-box';
+                    textOverlay.innerHTML = `<p>${currentLaminationText}</p>`;
+                    textOverlay.setAttribute('data-x', 0);
+                    textOverlay.setAttribute('data-y', 0);
+                    textOverlay.setAttribute('data-angle', 0);
 
-                    imageDisplayContainer.appendChild(img);
                     imageDisplayContainer.appendChild(textOverlay);
 
-                    renderLaminationThemes(controlsContainer);
+                    setupTextInteraction(textOverlay);
+                    renderLaminationControls(controlsContainer, textOverlay);
+
                 } catch (error) {
                     console.error("Error creating lamination:", error);
                     imageDisplayContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed. Please try again.</p>`;
@@ -530,9 +517,13 @@
                 }
             }
             
-            function renderLaminationThemes(container) {
+            function renderLaminationControls(container, textElement) {
                 container.innerHTML = ''; // Clear old controls
 
+                // --- Background Theme Controls ---
+                const themeContainer = document.createElement('div');
+                themeContainer.className = "flex items-center gap-2";
+                
                 const searchLabel = document.createElement('label');
                 searchLabel.textContent = "Background Theme:";
                 searchLabel.className = "text-sm text-gray-400";
@@ -543,19 +534,117 @@
                 searchInput.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
 
                 const redesignButton = document.createElement('button');
-                redesignButton.textContent = "Generate Background";
-                redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg";
+                redesignButton.textContent = "Generate";
+                redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-lg";
                 redesignButton.onclick = () => {
                     const selectedThemePrompt = searchInput.value;
                     const selectedImageStyle = imageStyles[imageStyleSelect.value];
                     handleCreateLamination(`${selectedImageStyle.prefix} of ${selectedThemePrompt}`);
                 };
                 
-                container.appendChild(searchLabel);
-                container.appendChild(searchInput);
-                container.appendChild(redesignButton);
+                themeContainer.appendChild(searchLabel);
+                themeContainer.appendChild(searchInput);
+                themeContainer.appendChild(redesignButton);
+                container.appendChild(themeContainer);
+
+                // --- Text Styling Controls ---
+                const textControlsContainer = document.createElement('div');
+                textControlsContainer.className = "flex items-center gap-4";
+
+                // Font Family
+                const fontSelect = createSelect(['Inter', 'Calibri, sans-serif', 'Bahnschrift, system-ui', 'Dancing Script, cursive'], (e) => {
+                    textElement.style.fontFamily = e.target.value;
+                });
+                textControlsContainer.appendChild(fontSelect);
+
+                // Font Size
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'range';
+                sizeInput.min = 10;
+                sizeInput.max = 48;
+                sizeInput.value = 24;
+                sizeInput.className = "w-24";
+                sizeInput.addEventListener('input', (e) => {
+                     textElement.style.fontSize = `${e.target.value}px`;
+                });
+                textControlsContainer.appendChild(sizeInput);
+                textElement.style.fontSize = '24px'; // initial size
+
+                // Bold button
+                const boldButton = document.createElement('button');
+                boldButton.textContent = 'B';
+                boldButton.className = 'px-3 py-1 bg-gray-600 rounded font-bold';
+                boldButton.onclick = () => {
+                    const isBold = textElement.style.fontWeight === 'bold';
+                    textElement.style.fontWeight = isBold ? 'normal' : 'bold';
+                    boldButton.classList.toggle('bg-indigo-500', !isBold);
+                };
+                textControlsContainer.appendChild(boldButton);
+
+                container.appendChild(textControlsContainer);
             }
-            
+
+            function createSelect(options, onChange) {
+                const select = document.createElement('select');
+                select.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt.split(',')[0]; // Show only the primary font name
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', onChange);
+                return select;
+            }
+
+             function setupTextInteraction(target) {
+                const position = { x: 0, y: 0, angle: 0 };
+
+                interact(target)
+                    .draggable({
+                        listeners: {
+                            move(event) {
+                                position.x += event.dx;
+                                position.y += event.dy;
+                                event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`;
+                            },
+                        },
+                        modifiers: [
+                            interact.modifiers.restrictRect({
+                                restriction: 'parent'
+                            })
+                        ]
+                    })
+                    .resizable({
+                        edges: { left: true, right: true, bottom: true, top: true },
+                        listeners: {
+                            move(event) {
+                                let { x, y } = event.target.dataset;
+                                x = (parseFloat(x) || 0) + event.deltaRect.left;
+                                y = (parseFloat(y) || 0) + event.deltaRect.top;
+                                Object.assign(event.target.style, {
+                                    width: `${event.rect.width}px`,
+                                    height: `${event.rect.height}px`,
+                                });
+                                Object.assign(event.target.dataset, { x, y });
+                            }
+                        },
+                        modifiers: [
+                           interact.modifiers.restrictSize({
+                              min: { width: 100, height: 50 }
+                           })
+                        ],
+                    })
+                    .gesturable({
+                         listeners: {
+                            move (event) {
+                              position.angle += event.da
+                              event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`
+                            },
+                          }
+                    });
+            }
+
             // --- UI & Display ---
 
             function updateUIFromHistory() {
@@ -786,20 +875,35 @@
                 URL.revokeObjectURL(url);
             }
             
-            function saveElementAsPng(element, filename) {
-                htmlToImage.toPng(element)
-                    .then(function (dataUrl) {
-                        const a = document.createElement('a');
-                        a.href = dataUrl;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    })
-                    .catch(function (error) {
-                        console.error('oops, something went wrong!', error);
-                        displaySystemMessage('Could not save image.', 'error');
-                    });
+             function saveElementAsPng(element, filename) {
+                const textOverlay = element.querySelector('#lamination-text-overlay');
+                if (textOverlay) {
+                    textOverlay.classList.add('hide-borders');
+                }
+
+                htmlToImage.toPng(element, { 
+                    fontEmbedCss: `@font-face {
+                        font-family: 'Dancing Script';
+                        src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
+                    }`
+                })
+                .then(function (dataUrl) {
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                })
+                .catch(function (error) {
+                    console.error('Image saving error:', error);
+                    displaySystemMessage('Could not save image.', 'error');
+                })
+                .finally(() => {
+                    if (textOverlay) {
+                        textOverlay.classList.remove('hide-borders');
+                    }
+                });
             }
 
             // --- History & State Management ---
@@ -942,7 +1046,7 @@
             saveStoryBtn.addEventListener('click', handleSaveStory);
             saveWeaverBtn.addEventListener('click', saveWeaver);
             savePromptsBtn.addEventListener('click', savePrompts);
-            saveLaminationBtn.addEventListener('click', () => saveElementAsPng(document.querySelector('#lamination-creator > div'), 'lamination.png'));
+            saveLaminationBtn.addEventListener('click', () => saveElementAsPng(document.getElementById('lamination-image-container'), 'lamination.png'));
             saveNarrationBtn.addEventListener('click', () => {
                 const narrationBlocks = document.querySelectorAll('.ai-paragraph');
                 const lastNarration = Array.from(narrationBlocks).pop();
