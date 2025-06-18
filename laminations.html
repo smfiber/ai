@@ -7,7 +7,7 @@
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html-to-image library for PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIIm9D6McV2Rk1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIm9D6McV2Rk1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- interact.js for drag, resize, rotate -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
@@ -81,39 +81,60 @@
             width: 8px;
         }
         #display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track {
-            background: #1f2937;
+            background: rgba(127, 29, 29, 0.2); /* Red-900 at 20% opacity */
         }
         #display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb {
-            background: #4b5563;
+            background: rgba(220, 38, 38, 0.5); /* Red-600 at 50% opacity */
             border-radius: 4px;
         }
         #display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
+            background: rgba(239, 68, 68, 0.7); /* Red-500 at 70% opacity */
         }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
     <div id="app-container" class="w-full max-w-5xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
-        <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
+        <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-red-500">
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     Lamination Creator
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.0</span>
+                    <!-- Ladybug SVG -->
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline-block mx-1">
+                        <path d="M12 2C8.686 2 6 4.686 6 8V12C6 15.314 8.686 18 12 18C15.314 18 18 15.314 18 12V8C18 4.686 15.314 2 12 2Z" fill="#DC2626"/>
+                        <circle cx="9" cy="7" r="1.5" fill="black"/>
+                        <circle cx="15" cy="7" r="1.5" fill="black"/>
+                        <path d="M12 18C12 19.1046 11.1046 20 10 20H8C6.89543 20 6 19.1046 6 18C6 16.8954 6.89543 16 8 16H10C11.1046 16 12 16.8954 12 18Z" fill="#3B0764"/>
+                        <path d="M12 18C12 19.1046 12.8954 20 14 20H16C17.1046 20 18 19.1046 18 18C18 16.8954 17.1046 16 16 16H14C12.8954 16 12 16.8954 12 18Z" fill="#3B0764"/>
+                        <path d="M12 12V18C12 18.5523 11.5523 19 11 19H7C6.44772 19 6 18.5523 6 18V12" fill="#DC2626"/>
+                        <path d="M12 12V18C12 18.5523 12.4477 19 13 19H17C17.5523 19 18 18.5523 18 18V12" fill="#DC2626"/>
+                        <circle cx="12" cy="15" r="1.5" fill="black"/>
+                        <circle cx="9" cy="10" r="1.5" fill="black"/>
+                        <circle cx="15" cy="10" r="1.5" fill="black"/>
+                        <circle cx="9" cy="13" r="1.5" fill="black"/>
+                        <circle cx="15" cy="13" r="1.5" fill="black"/>
+                    </svg>
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.04</span>
                     <button id="help-icon" title="How to Use">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                             <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
                         </svg>
                     </button>
                 </h1>
-                <p class="text-xs text-gray-400 mt-1 max-w-xs">Create custom laminations by combining your text with AI-generated backgrounds. Drag, resize, and style your text for the perfect design.</p>
+                <p class="text-xs text-red-300 mt-1 max-w-xs">Create custom laminations by combining your text with AI-generated backgrounds. Drag, resize, and style your text for the perfect design.</p>
             </div>
             
             <div class="flex-grow flex flex-col items-end gap-2 mt-4 sm:mt-0">
                 <div class="flex flex-wrap justify-end gap-2">
-                    <button id="save-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Lamination</button>
-                    <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">New Lamination</button>
+                    <button id="save-lamination-btn" class="bg-red-900/20 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span>Save Lamination</span>
+                    </button>
+                    <button id="reset-app-btn" class="bg-red-900/20 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-ccw"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.76 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.76-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>
+                        <span>New Lamination</span>
+                    </button>
                 </div>
             </div>
         </header>
@@ -122,12 +143,12 @@
         <main id="display-area" class="flex-grow w-full min-h-0 overflow-y-auto p-4 flex flex-col items-center justify-center"></main>
         
         <!-- User Input Area -->
-        <footer class="mt-4 pt-4 border-t border-gray-700">
-            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter text for your lamination..."></textarea>
+        <footer class="mt-4 pt-4 border-t border-red-500">
+            <textarea id="prompt-input" class="w-full bg-red-900/20 text-white rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter text for your lamination..."></textarea>
             <div class="flex justify-end items-center mt-2 gap-4">
-                 <button id="create-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                    Create Lamination
-                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                 <button id="create-lamination-btn" class="bg-red-900/20 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center space-x-2">
+                    <span>Create Lamination</span>
+                    <svg id="loading-spinner" class="animate-spin h-6 w-6 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -138,9 +159,9 @@
     
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
+        <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Lamination Creator</h2>
-            <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
+            <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-red-200 space-y-4">
                 <div class="prose prose-invert">
                     <h3 class="font-semibold text-white">Getting Started</h3>
                     <ul class="list-disc pl-5 space-y-1">
@@ -175,20 +196,20 @@
                 </div>
             </div>
             <div class="flex justify-end mt-6">
-                <button id="close-instructions-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+                <button id="close-instructions-modal-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
             </div>
         </div>
     </div>
     
     <!-- Lamination Save Options Modal -->
     <div id="lamination-save-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+        <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
             <h3 class="text-xl font-bold mb-4">Save Lamination As...</h3>
             <div class="flex justify-center gap-4">
-                <button id="save-4up-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">4-Up Print Sheet</button>
-                <button id="save-full-png-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Full Size PNG</button>
+                <button id="save-4up-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">4-Up Print Sheet</button>
+                <button id="save-full-png-btn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg">Full Size PNG</button>
             </div>
-             <button id="close-save-modal-btn" class="mt-6 text-sm text-gray-400 hover:text-white">Cancel</button>
+             <button id="close-save-modal-btn" class="mt-6 text-sm text-red-300 hover:text-white">Cancel</button>
         </div>
     </div>
 
@@ -245,8 +266,8 @@
 
                 laminationImageContainer = document.createElement('div');
                 laminationImageContainer.id = "lamination-image-container";
-                laminationImageContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-gray-700 rounded-lg flex items-center justify-center'; // 16:9 aspect ratio via padding-top
-                laminationImageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-gray-700 text-center p-4 absolute inset-0"><svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+                laminationImageContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-red-900/20 rounded-lg flex items-center justify-center'; // 16:9 aspect ratio via padding-top
+                laminationImageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-red-900/20 text-center p-4 absolute inset-0"><svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
                 laminationCreatorEl.appendChild(laminationImageContainer);
 
                 const controlsContainer = document.createElement('div');
@@ -297,18 +318,18 @@
                 
                 const searchLabel = document.createElement('label');
                 searchLabel.textContent = "Background Theme:";
-                searchLabel.className = "text-sm text-gray-400 flex-shrink-0";
+                searchLabel.className = "text-sm text-red-300 flex-shrink-0";
                 backgroundRow.appendChild(searchLabel);
 
                 const searchInput = document.createElement('input');
                 searchInput.type = "text";
                 searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
-                searchInput.className = "flex-grow p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                searchInput.className = "flex-grow p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
                 backgroundRow.appendChild(searchInput);
 
                 const redesignButton = document.createElement('button');
                 redesignButton.textContent = "Generate Background";
-                redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-lg flex-shrink-0";
+                redesignButton.className = "bg-red-900/20 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg flex-shrink-0";
                 redesignButton.onclick = () => handleCreateLamination(searchInput.value);
                 backgroundRow.appendChild(redesignButton);
 
@@ -327,11 +348,11 @@
                 ].sort();
 
                 const fontSelect = createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
-                fontSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white max-w-[180px]";
+                fontSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white max-w-[180px]";
                 fontRow.appendChild(fontSelect);
 
                 const sizeSelect = document.createElement('select');
-                sizeSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                sizeSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
                 for(let i = 8; i <= 72; i += 2) {
                     const option = document.createElement('option');
                     option.value = i;
@@ -346,12 +367,12 @@
                 const colorInput = document.createElement('input');
                 colorInput.type = 'color';
                 colorInput.value = '#FFFFFF'; // Default text color
-                colorInput.className = "w-10 h-10 p-1 bg-gray-600 rounded border-0 cursor-pointer";
+                colorInput.className = "w-10 h-10 p-1 bg-red-900/20 rounded border-0 cursor-pointer";
                 colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
                 fontRow.appendChild(colorInput);
 
                 const styleButtonWrapper = document.createElement('div');
-                styleButtonWrapper.className = 'flex items-center bg-gray-600 rounded-lg overflow-hidden'; // Ensure rounded corners apply to children
+                styleButtonWrapper.className = 'flex items-center bg-red-900/20 rounded-lg overflow-hidden'; // Ensure rounded corners apply to children
                 
                 const boldButton = createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
                 const italicButton = createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
@@ -368,17 +389,17 @@
             function createStyleButton(text, styleClass, onClick) {
                 const button = document.createElement('button');
                 button.textContent = text;
-                button.classList.add('px-3', 'py-1', styleClass, 'text-white', 'transition-colors', 'duration-200', 'hover:bg-indigo-700', 'focus:outline-none');
+                button.classList.add('px-3', 'py-1', styleClass, 'text-white', 'transition-colors', 'duration-200', 'hover:bg-red-600', 'focus:outline-none');
                 button.addEventListener('click', () => {
                     onClick();
-                    button.classList.toggle('bg-indigo-500'); // Toggle active state visual
+                    button.classList.toggle('bg-red-900/60'); // Toggle active state visual
                 });
                 return button;
             }
 
             function createSelect(options, onChange) {
                 const select = document.createElement('select');
-                select.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
+                select.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
                 options.forEach(opt => {
                     const option = document.createElement('option');
                     option.value = opt;
@@ -417,7 +438,7 @@
                         modifiers: [
                             interact.modifiers.restrictRect({
                                 restriction: 'parent', // Keep within the image container
-                                // Removed 'endOnly: true' to enforce restriction during the drag
+                                elementRect: { left: 0, top: 0, right: 1, bottom: 1 } // Restrict the entire element
                             })
                         ]
                     })
@@ -462,7 +483,7 @@
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add(
                     'p-4', 'rounded-lg', 'font-bold', 'max-w-md', 'mx-auto', 'my-4', // Common styles
-                    type === 'error' ? 'bg-red-700 text-red-100' : 'bg-blue-700 text-blue-100' // Type-specific styles
+                    type === 'error' ? 'bg-red-900/40 text-red-100' : 'bg-red-900/30 text-red-100' // Type-specific styles
                 );
                 messageWrapper.textContent = text;
                 displayArea.appendChild(messageWrapper);
