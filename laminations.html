@@ -7,7 +7,7 @@
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html-to-image library for PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIm9D6McV2R1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <!-- interact.js for drag, resize, rotate -->
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <style>
@@ -44,10 +44,9 @@
 
         /* Styles for the interactive text overlay */
         .resizable-text-box {
-            position: absolute;
-            /* Changed top from 50% to 25% for initial placement */
-            left: 50%;
-            transform: translate(-50%, -50%); /* Still centers horizontally and vertically adjusts from new top */
+            position: absolute; /* Interact.js will manage transform for positioning */
+            top: 0;
+            left: 0;
             min-height: 50px;
             width: 70%;
             display: flex;
@@ -81,14 +80,14 @@
             width: 8px;
         }
         #display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track {
-            background: rgba(127, 29, 29, 0.2); /* Red-900 at 20% opacity */
+            background: rgba(127, 29, 29, 0.2);
         }
         #display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb {
-            background: rgba(220, 38, 38, 0.5); /* Red-600 at 50% opacity */
+            background: rgba(220, 38, 38, 0.5);
             border-radius: 4px;
         }
         #display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover {
-            background: rgba(239, 68, 68, 0.7); /* Red-500 at 70% opacity */
+            background: rgba(239, 68, 68, 0.7);
         }
     </style>
 </head>
@@ -97,10 +96,8 @@
         <!-- Header Section -->
         <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-red-500">
             <div class="flex-shrink-0 mr-6">
-                <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
-                    Lamination Creator
-                    <!-- Ladybug SVG -->
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="inline-block mx-1">
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
                         <path d="M12 2C8.686 2 6 4.686 6 8V12C6 15.314 8.686 18 12 18C15.314 18 18 15.314 18 12V8C18 4.686 15.314 2 12 2Z" fill="#DC2626"/>
                         <circle cx="9" cy="7" r="1.5" fill="black"/>
                         <circle cx="15" cy="7" r="1.5" fill="black"/>
@@ -114,11 +111,13 @@
                         <circle cx="9" cy="13" r="1.5" fill="black"/>
                         <circle cx="15" cy="13" r="1.5" fill="black"/>
                     </svg>
-                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.06</span>
+                    Lamination Creator
+                    <!-- NOTE: Remember to increment the version number for each revision. -->
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.12</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.94-.584 0-1.009.388-1.009.94z"/>
                         </svg>
                     </button>
                 </h1>
@@ -176,7 +175,7 @@
                             <ul class="list-disc pl-5 space-y-1 mt-2">
                                 <li><strong>Drag:</strong> Click and drag the text box to move it anywhere on the image.</li>
                                 <li><strong>Resize:</strong> Drag the edges or corners of the text box to change its size.</li>
-                                <li><strong>Rotate:</strong> On touch devices, use a two-finger rotation gesture. With a mouse, try dragging outside the corners while resizing or if a specific rotation handle appears (behavior may vary slightly depending on device).</li>
+                                <li><strong>Rotate:</strong> On touch devices, use a two-finger rotation gesture. With a mouse, drag outside the corners while holding shift to rotate.</li>
                             </ul>
                         </li>
                     </ul>
@@ -215,504 +214,399 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Element References ---
-            const displayArea = document.getElementById('display-area');
-            const promptInput = document.getElementById('prompt-input');
-            const createLaminationBtn = document.getElementById('create-lamination-btn');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const resetAppBtn = document.getElementById('reset-app-btn');
-            const saveLaminationBtn = document.getElementById('save-lamination-btn');
-            const helpIcon = document.getElementById('help-icon');
-            const instructionsModal = document.getElementById('instructions-modal');
-            const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
-            const laminationSaveModal = document.getElementById('lamination-save-modal');
-            const save4UpBtn = document.getElementById('save-4up-btn');
-            const saveFullPngBtn = document.getElementById('save-full-png-btn');
-            const closeSaveModalBtn = document.getElementById('close-save-modal-btn');
 
-            // --- Application State ---
-            let isBusy = false;
-            let currentLaminationText = '';
-            let laminationImageContainer = null; // Reference to the div holding the image and text overlay
+            const LaminationApp = {
+                // --- STATE ---
+                state: {
+                    isBusy: false,
+                    currentLaminationText: '',
+                    laminationImageContainer: null,
+                    fontsReady: false,
+                },
 
-            // --- Core Functions ---
+                // --- ELEMENTS ---
+                elements: {
+                    displayArea: document.getElementById('display-area'),
+                    promptInput: document.getElementById('prompt-input'),
+                    createLaminationBtn: document.getElementById('create-lamination-btn'),
+                    loadingSpinner: document.getElementById('loading-spinner'),
+                    resetAppBtn: document.getElementById('reset-app-btn'),
+                    saveLaminationBtn: document.getElementById('save-lamination-btn'),
+                    helpIcon: document.getElementById('help-icon'),
+                    instructionsModal: document.getElementById('instructions-modal'),
+                    closeInstructionsModalBtn: document.getElementById('close-instructions-modal-btn'),
+                    laminationSaveModal: document.getElementById('lamination-save-modal'),
+                    save4UpBtn: document.getElementById('save-4up-btn'),
+                    saveFullPngBtn: document.getElementById('save-full-png-btn'),
+                    closeSaveModalBtn: document.getElementById('close-save-modal-btn'),
+                },
 
-            function initializeApp() {
-                resetApp();
-            }
-
-            function resetApp() {
-                displayArea.innerHTML = '';
-                currentLaminationText = '';
-                laminationImageContainer = null;
-                promptInput.value = '';
-                promptInput.focus();
-                updateButtonStates();
-            }
-            
-            async function handleCreateLamination(themePrompt = '') {
-                // If a new lamination is being created from the main button, get text from input
-                if (!themePrompt) {
-                     currentLaminationText = promptInput.value.trim();
-                     if (!currentLaminationText) {
-                        displaySystemMessage("Please enter some text for your lamination.", 'error');
-                        return;
+                // --- INITIALIZATION ---
+                init() {
+                    // Bind the 'this' context for all handler and helper functions to the LaminationApp object.
+                    // This prevents context-related errors when functions call each other.
+                    for (const key in this.handlers) {
+                        if (typeof this.handlers[key] === 'function') {
+                            this.handlers[key] = this.handlers[key].bind(this);
+                        }
                     }
-                }
-               
-                setLoading(true);
-                displayArea.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
-                const laminationCreatorEl = document.getElementById('lamination-creator');
+                    for (const key in this.helpers) {
+                        if (typeof this.helpers[key] === 'function') {
+                            this.helpers[key] = this.helpers[key].bind(this);
+                        }
+                    }
 
-                laminationImageContainer = document.createElement('div');
-                laminationImageContainer.id = "lamination-image-container";
-                laminationImageContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-red-900/20 rounded-lg flex items-center justify-center'; // 16:9 aspect ratio via padding-top
-                laminationImageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-red-900/20 text-center p-4 absolute inset-0"><svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
-                laminationCreatorEl.appendChild(laminationImageContainer);
-
-                const controlsContainer = document.createElement('div');
-                controlsContainer.id = "lamination-controls";
-                controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
-                laminationCreatorEl.appendChild(controlsContainer);
-                
-                const imagePrompt = `Photorealistic image, 4k, high resolution: ${themePrompt || 'a beautiful, serene background, subtle, minimalist'}`; // Default background
-
-                try {
-                    const imageUrl = await generateImage(imagePrompt);
-                    laminationImageContainer.innerHTML = ''; // Clear loading spinner
+                    this.helpers.bindEvents();
+                    this.helpers.resetApp();
                     
-                    const img = new Image();
-                    img.crossOrigin = "anonymous"; // Important for canvas saving
-                    img.src = imageUrl;
-                    img.className = 'absolute top-0 left-0 w-full h-full object-cover rounded-lg';
-                    laminationImageContainer.appendChild(img);
-                    
-                    const textOverlay = document.createElement('div');
-                    textOverlay.id = 'lamination-text-overlay';
-                    textOverlay.className = 'resizable-text-box';
-                    textOverlay.innerHTML = `<p>${currentLaminationText}</p>`;
-                    // Set initial position for interact.js to upper middle
-                    textOverlay.style.top = '25%'; // Position it at 25% from the top
-                    textOverlay.setAttribute('data-x', 0); // These will be dynamically updated by interact.js
-                    textOverlay.setAttribute('data-y', 0);
-                    textOverlay.setAttribute('data-angle', 0);
-
-                    laminationImageContainer.appendChild(textOverlay);
-
-                    setupTextInteraction(textOverlay);
-                    renderLaminationControls(controlsContainer, textOverlay);
-
-                } catch (error) {
-                    console.error("Error creating lamination:", error);
-                    laminationImageContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed. Please try again.</p>`;
-                } finally {
-                    setLoading(false);
-                }
-            }
-            
-            function renderLaminationControls(container, textElement) {
-                container.innerHTML = ''; // Clear existing controls
-
-                // Background Theme Row
-                const backgroundRow = document.createElement('div');
-                backgroundRow.className = "w-full flex items-center justify-center gap-2 mb-4";
+                    document.fonts.ready.then(() => {
+                        this.state.fontsReady = true;
+                        console.log("All fonts loaded and ready.");
+                        this.helpers.updateButtonStates();
+                    });
+                },
                 
-                const searchLabel = document.createElement('label');
-                searchLabel.textContent = "Background Theme:";
-                searchLabel.className = "text-sm text-red-300 flex-shrink-0";
-                backgroundRow.appendChild(searchLabel);
-
-                const searchInput = document.createElement('input');
-                searchInput.type = "text";
-                searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
-                searchInput.className = "flex-grow p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
-                backgroundRow.appendChild(searchInput);
-
-                const redesignButton = document.createElement('button');
-                redesignButton.textContent = "Generate Background";
-                redesignButton.className = "bg-red-900/20 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg flex-shrink-0";
-                redesignButton.onclick = () => handleCreateLamination(searchInput.value);
-                backgroundRow.appendChild(redesignButton);
-
-                container.appendChild(backgroundRow);
-
-                // Font Styling Row
-                const fontRow = document.createElement('div');
-                fontRow.className = "w-full flex flex-wrap items-center justify-center gap-4";
-                
-                const fontList = [
-                    'Inter, sans-serif', 'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif',
-                    'Courier New, monospace', 'Lucida Console, monospace', 'Impact, sans-serif', 
-                    'Comic Sans MS, cursive', 'Trebuchet MS, sans-serif', 'Palatino Linotype, book antiqua, palatino, serif',
-                    'Dancing Script, cursive', 'Lobster, cursive', 'Pacifico, cursive', 'Great Vibes, cursive', 'Sacramento, cursive',
-                    'Calibri, sans-serif', 'Bahnschrift, system-ui'
-                ].sort();
-
-                const fontSelect = createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
-                fontSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white max-w-[180px]";
-                fontRow.appendChild(fontSelect);
-
-                const sizeSelect = document.createElement('select');
-                sizeSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
-                for(let i = 8; i <= 72; i += 2) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${i}px`;
-                    sizeSelect.appendChild(option);
-                }
-                sizeSelect.value = 24; // Default font size
-                textElement.style.fontSize = '24px';
-                sizeSelect.addEventListener('change', (e) => { textElement.style.fontSize = `${e.target.value}px`; });
-                fontRow.appendChild(sizeSelect);
-                
-                const colorInput = document.createElement('input');
-                colorInput.type = 'color';
-                colorInput.value = '#FFFFFF'; // Default text color
-                colorInput.className = "w-10 h-10 p-1 bg-red-900/20 rounded border-0 cursor-pointer";
-                colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
-                fontRow.appendChild(colorInput);
-
-                const styleButtonWrapper = document.createElement('div');
-                styleButtonWrapper.className = 'flex items-center bg-red-900/20 rounded-lg overflow-hidden'; // Ensure rounded corners apply to children
-                
-                const boldButton = createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
-                const italicButton = createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
-                const underlineButton = createStyleButton('U', 'underline', () => { textElement.style.textDecoration = textElement.style.textDecoration === 'underline' ? 'none' : 'underline'; });
-
-                styleButtonWrapper.appendChild(boldButton);
-                styleButtonWrapper.appendChild(italicButton);
-                styleButtonWrapper.appendChild(underlineButton);
-                fontRow.appendChild(styleButtonWrapper);
-
-                container.appendChild(fontRow);
-            }
-
-            function createStyleButton(text, styleClass, onClick) {
-                const button = document.createElement('button');
-                button.textContent = text;
-                button.classList.add('px-3', 'py-1', styleClass, 'text-white', 'transition-colors', 'duration-200', 'hover:bg-red-600', 'focus:outline-none');
-                button.addEventListener('click', () => {
-                    onClick();
-                    button.classList.toggle('bg-red-900/60'); // Toggle active state visual
-                });
-                return button;
-            }
-
-            function createSelect(options, onChange) {
-                const select = document.createElement('select');
-                select.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
-                options.forEach(opt => {
-                    const option = document.createElement('option');
-                    option.value = opt;
-                    option.textContent = opt.split(',')[0]; // Display just the font name
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', onChange);
-                return select;
-            }
-
-            // Interact.js setup for dragging, resizing, rotating text overlay
-             function setupTextInteraction(target) {
-                // Read initial position and angle from data attributes, default to 0
-                let x = parseFloat(target.dataset.x) || 0;
-                let y = parseFloat(target.dataset.y) || 0;
-                let angle = parseFloat(target.dataset.angle) || 0;
-
-                // Set initial transform
-                target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-
-                interact(target)
-                    .draggable({
-                        listeners: {
-                            start (event) {
-                                // On drag start, ensure our internal x, y, angle match the element's current state
-                                x = parseFloat(event.target.dataset.x) || 0;
-                                y = parseFloat(event.target.dataset.y) || 0;
-                                angle = parseFloat(event.target.dataset.angle) || 0;
-                            },
-                            move(event) {
-                                x += event.dx;
-                                y += event.dy;
-                                event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-                                // Update dataset attributes to persist the position
-                                Object.assign(event.target.dataset, { x, y });
-                            },
-                        },
-                        modifiers: [
-                            interact.modifiers.restrictRect({
-                                restriction: 'parent', // Keep within the image container
-                                elementRect: { left: 0, top: 0, right: 1, bottom: 1 } // Restrict the entire element
-                            })
-                        ]
-                    })
-                    .resizable({
-                        edges: { left: true, right: true, bottom: true, top: true }, // Enable all edges for resizing
-                        listeners: {
-                            move(event) {
-                                // Resizing can also change effective x/y if top/left edges are dragged
-                                x = (parseFloat(event.target.dataset.x) || 0) + event.deltaRect.left;
-                                y = (parseFloat(event.target.dataset.y) || 0) + event.deltaRect.top;
-                                
-                                Object.assign(event.target.style, {
-                                    width: `${event.rect.width}px`,
-                                    height: `${event.rect.height}px`,
-                                    transform: `translate(${x}px, ${y}px) rotate(${angle}deg)`, // Re-apply all transforms
-                                });
-                                // Update the dataset attributes
-                                Object.assign(event.target.dataset, { x, y });
+                // --- HANDLERS ---
+                handlers: {
+                    async handleCreateLamination(themePrompt = '') {
+                        if (!themePrompt) {
+                             this.state.currentLaminationText = this.elements.promptInput.value.trim();
+                             if (!this.state.currentLaminationText) {
+                                this.helpers.displaySystemMessage("Please enter some text for your lamination.", 'error');
+                                return;
                             }
-                        },
-                        modifiers: [
-                           interact.modifiers.restrictEdges({
-                             outer: 'parent' // Restrict resizing within the parent
-                           }),
-                           interact.modifiers.restrictSize({
-                              min: { width: 100, height: 50 } // Minimum size for the text box
-                           })
-                        ],
-                    })
-                    .gesturable({ // Enable gestures for rotation
-                         listeners: {
-                            move (event) {
-                              angle += event.da; // 'da' is the change in angle
-                              event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
-                              // Update dataset attribute for angle
-                              event.target.dataset.angle = angle;
-                            },
-                          }
-                    });
-            }
+                        }
+                       
+                        this.helpers.setLoading(true);
+                        this.elements.displayArea.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
+                        const laminationCreatorEl = document.getElementById('lamination-creator');
 
-            // --- UI & Display ---
+                        this.state.laminationImageContainer = document.createElement('div');
+                        this.state.laminationImageContainer.id = "lamination-image-container";
+                        this.state.laminationImageContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-red-900/20 rounded-lg flex items-center justify-center';
+                        this.state.laminationImageContainer.innerHTML = `<div class="loading-placeholder flex items-center justify-center bg-red-900/20 text-center p-4 absolute inset-0"><svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+                        laminationCreatorEl.appendChild(this.state.laminationImageContainer);
 
-            function displaySystemMessage(text, type = 'system-message') {
-                // Remove existing system/error messages to prevent clutter
-                displayArea.querySelectorAll('.system-message-paragraph, .error-paragraph').forEach(el => el.remove());
-                const messageWrapper = document.createElement('div');
-                messageWrapper.classList.add(
-                    'p-4', 'rounded-lg', 'font-bold', 'max-w-md', 'mx-auto', 'my-4', // Common styles
-                    type === 'error' ? 'bg-red-900/40 text-red-100' : 'bg-red-900/30 text-red-100' // Type-specific styles
-                );
-                messageWrapper.textContent = text;
-                displayArea.appendChild(messageWrapper);
-                displayArea.scrollTop = displayArea.scrollHeight;
-            }
+                        const controlsContainer = document.createElement('div');
+                        controlsContainer.id = "lamination-controls";
+                        controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
+                        laminationCreatorEl.appendChild(controlsContainer);
+                        
+                        const imagePrompt = `Photorealistic image, 4k, high resolution: ${themePrompt || 'a beautiful, serene background, subtle, minimalist'}`;
 
-            // --- Saving & Export ---
+                        try {
+                            const imageUrl = await this.api.generateImage(imagePrompt);
+                            this.state.laminationImageContainer.innerHTML = '';
+                            
+                            const img = new Image();
+                            img.crossOrigin = "anonymous";
+                            img.src = imageUrl;
+                            img.className = 'absolute top-0 left-0 w-full h-full object-cover rounded-lg';
+                            this.state.laminationImageContainer.appendChild(img);
+                            
+                            const textOverlay = document.createElement('div');
+                            textOverlay.id = 'lamination-text-overlay';
+                            textOverlay.className = 'resizable-text-box';
+                            textOverlay.innerHTML = `<p>${this.state.currentLaminationText}</p>`;
+                            this.state.laminationImageContainer.appendChild(textOverlay);
 
-            async function saveContentAsPng(elementToSave, filename) {
-                setLoading(true);
-                const filter = (node) => {
-                    // Filter out UI controls that shouldn't be part of the final image
-                    if (node.id === 'lamination-controls') return false; 
-                    return true;
-                };
+                            img.onload = () => {
+                                const containerWidth = this.state.laminationImageContainer.offsetWidth;
+                                const containerHeight = this.state.laminationImageContainer.offsetHeight;
+                                const textOverlayWidth = textOverlay.offsetWidth;
+                                const textOverlayHeight = textOverlay.offsetHeight;
+                                const initialX = (containerWidth / 2) - (textOverlayWidth / 2);
+                                const initialY = (containerHeight * 0.25) - (textOverlayHeight / 2);
+                                textOverlay.setAttribute('data-x', initialX);
+                                textOverlay.setAttribute('data-y', initialY);
+                                textOverlay.setAttribute('data-angle', 0);
+                                textOverlay.style.transform = `translate(${initialX}px, ${initialY}px) rotate(0deg)`;
+                                this.helpers.setupTextInteraction(textOverlay);
+                                this.helpers.renderLaminationControls(controlsContainer, textOverlay);
+                            };
 
-                const options = {
-                    quality: 0.98,
-                    backgroundColor: '#00000000', // Transparent background
-                    filter: filter,
-                    pixelRatio: 2, // Increase resolution for better quality
-                };
+                        } catch (error) {
+                            console.error("Error creating lamination:", error);
+                            this.state.laminationImageContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed: ${error.message}. Please try a different prompt or try again later.</p>`;
+                        } finally {
+                            this.helpers.setLoading(false);
+                        }
+                    },
+                },
 
-                const textOverlay = elementToSave.querySelector('.resizable-text-box');
-                if (textOverlay) {
-                    textOverlay.classList.add('hide-borders'); // Hide interact.js borders during capture
-                }
-
-                try {
-                    const dataUrl = await htmlToImage.toPng(elementToSave, options);
-                    const a = document.createElement('a');
-                    a.href = dataUrl;
-                    a.download = filename;
-                    a.click();
-                } catch (error) {
-                    console.error('Error saving content as PNG:', error);
-                    displaySystemMessage('Could not save image. It might be too large or complex.', 'error');
-                } finally {
-                    if (textOverlay) {
-                        textOverlay.classList.remove('hide-borders'); // Restore borders
-                    }
-                    setLoading(false);
-                }
-            }
-
-
-             async function saveLaminationSheet(element, filename) {
-                setLoading(true);
-                const textOverlay = element.querySelector('#lamination-text-overlay');
-                 const options = {
-                    quality: 0.98,
-                    backgroundColor: '#00000000', // Transparent for sheet context
-                    pixelRatio: 2
-                };
-
-                if (textOverlay) {
-                    textOverlay.classList.add('hide-borders'); // Hide interact.js borders during capture
-                }
-
-                try {
-                    const dataUrl = await htmlToImage.toPng(element, options);
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const DPI = 150; // Dots per inch for print quality
-                    canvas.width = 8.5 * DPI; // Standard US Letter width
-                    canvas.height = 11 * DPI; // Standard US Letter height
-
-                    ctx.fillStyle = 'white'; // White background for the print sheet
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // --- HELPERS ---
+                helpers: {
+                    bindEvents() {
+                        this.elements.createLaminationBtn.addEventListener('click', this.handlers.handleCreateLamination);
+                        this.elements.promptInput.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                this.handlers.handleCreateLamination();
+                            }
+                        });
+                        this.elements.resetAppBtn.addEventListener('click', this.helpers.resetApp);
+                        this.elements.saveLaminationBtn.addEventListener('click', () => { this.elements.laminationSaveModal.classList.remove('hidden'); });
+                        this.elements.closeSaveModalBtn.addEventListener('click', () => { this.elements.laminationSaveModal.classList.add('hidden'); });
+                        this.elements.save4UpBtn.addEventListener('click', () => {
+                            this.helpers.saveLaminationSheet(this.state.laminationImageContainer, 'lamination-sheet.png');
+                            this.elements.laminationSaveModal.classList.add('hidden');
+                        });
+                        this.elements.saveFullPngBtn.addEventListener('click', () => {
+                            this.helpers.saveContentAsPng(this.state.laminationImageContainer, 'lamination-full.png');
+                            this.elements.laminationSaveModal.classList.add('hidden');
+                        });
+                        this.elements.helpIcon.addEventListener('click', () => { this.elements.instructionsModal.classList.remove('hidden'); });
+                        this.elements.closeInstructionsModalBtn.addEventListener('click', () => { this.elements.instructionsModal.classList.add('hidden'); });
+                        this.elements.instructionsModal.addEventListener('click', (e) => {
+                            if (e.target === this.elements.instructionsModal) {
+                                this.elements.instructionsModal.classList.add('hidden');
+                            }
+                        });
+                    },
                     
-                    const singleImage = new Image();
-                    singleImage.crossOrigin = "anonymous";
-                    const imageLoadPromise = new Promise((resolve, reject) => {
-                        singleImage.onload = resolve;
-                        singleImage.onerror = reject;
-                        singleImage.src = dataUrl;
-                    });
+                    resetApp() {
+                        this.elements.displayArea.innerHTML = '';
+                        this.state.currentLaminationText = '';
+                        this.state.laminationImageContainer = null;
+                        this.elements.promptInput.value = '';
+                        this.elements.promptInput.focus();
+                        this.helpers.updateButtonStates();
+                        this.helpers.displaySystemMessage("Welcome! Enter some text below and click 'Create Lamination' to start.", "info");
+                    },
                     
-                    await imageLoadPromise;
+                    renderLaminationControls(container, textElement) {
+                        container.innerHTML = ''; 
+                        const backgroundRow = this.helpers.createBackgroundControls();
+                        container.appendChild(backgroundRow);
+                        const fontRow = this.helpers.createFontControls(textElement);
+                        container.appendChild(fontRow);
+                    },
 
-                    const margin = 0.5 * DPI; // Half-inch margin
-                    const sheetW = canvas.width - 2 * margin;
-                    const sheetH = canvas.height - 2 * margin;
-                    const colWidth = sheetW / 2;
-                    const rowHeight = sheetH / 2;
-                    const padding = 0.125 * DPI; // Padding between the 4 images
+                    createBackgroundControls() {
+                        const backgroundRow = document.createElement('div');
+                        backgroundRow.className = "w-full flex items-center justify-center gap-2 mb-4";
+                        const searchLabel = document.createElement('label');
+                        searchLabel.textContent = "Background Theme:";
+                        searchLabel.className = "text-sm text-red-300 flex-shrink-0";
+                        backgroundRow.appendChild(searchLabel);
+                        const searchInput = document.createElement('input');
+                        searchInput.type = "text";
+                        searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
+                        searchInput.className = "flex-grow p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
+                        backgroundRow.appendChild(searchInput);
+                        const redesignButton = document.createElement('button');
+                        redesignButton.textContent = "Generate Background";
+                        redesignButton.className = "bg-red-900/20 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg flex-shrink-0";
+                        redesignButton.onclick = () => this.handlers.handleCreateLamination(searchInput.value);
+                        backgroundRow.appendChild(redesignButton);
+                        return backgroundRow;
+                    },
 
-                    const aspect = singleImage.width / singleImage.height;
-                    let w, h;
-                    // Calculate image dimensions to fit within a quadrant with padding, maintaining aspect ratio
-                    if( (colWidth - padding) / (rowHeight - padding) > aspect) {
-                        h = rowHeight - padding;
-                        w = h * aspect;
-                    } else {
-                        w = colWidth - padding;
-                        h = w / aspect;
+                    createFontControls(textElement) {
+                        const fontRow = document.createElement('div');
+                        fontRow.className = "w-full flex flex-wrap items-center justify-center gap-4";
+                        const fontList = [ 'Inter, sans-serif', 'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif', 'Courier New, monospace', 'Lucida Console, monospace', 'Impact, sans-serif', 'Comic Sans MS, cursive', 'Trebuchet MS, sans-serif', 'Palatino Linotype, book antiqua, palatino, serif', 'Dancing Script, cursive', 'Lobster, cursive', 'Pacifico, cursive', 'Great Vibes, cursive', 'Sacramento, cursive', 'Calibri, sans-serif', 'Bahnschrift, system-ui' ].sort();
+                        const fontSelect = this.helpers.createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
+                        fontSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white max-w-[180px]";
+                        fontRow.appendChild(fontSelect);
+                        const sizeSelect = this.helpers.createFontSizeSelect(textElement);
+                        fontRow.appendChild(sizeSelect);
+                        const colorInput = this.helpers.createColorInput(textElement);
+                        fontRow.appendChild(colorInput);
+                        const styleButtons = this.helpers.createStyleButtons(textElement);
+                        fontRow.appendChild(styleButtons);
+                        return fontRow;
+                    },
+
+                    createSelect(options, onChange) {
+                        const select = document.createElement('select');
+                        options.forEach(opt => {
+                            const option = document.createElement('option');
+                            option.value = opt;
+                            option.textContent = opt.split(',')[0];
+                            select.appendChild(option);
+                        });
+                        select.addEventListener('change', onChange);
+                        return select;
+                    },
+
+                    createFontSizeSelect(textElement) {
+                        const select = document.createElement('select');
+                        select.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white";
+                        for(let i = 8; i <= 72; i += 2) {
+                            const option = document.createElement('option');
+                            option.value = i;
+                            option.textContent = `${i}px`;
+                            select.appendChild(option);
+                        }
+                        select.value = 24; // Default
+                        textElement.style.fontSize = '24px';
+                        select.addEventListener('change', (e) => { textElement.style.fontSize = `${e.target.value}px`; });
+                        return select;
+                    },
+
+                    createColorInput(textElement) {
+                        const colorInput = document.createElement('input');
+                        colorInput.type = 'color';
+                        colorInput.value = '#FFFFFF';
+                        colorInput.className = "w-10 h-10 p-1 bg-red-900/20 rounded border-0 cursor-pointer";
+                        colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
+                        return colorInput;
+                    },
+
+                    createStyleButtons(textElement) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'flex items-center bg-red-900/20 rounded-lg overflow-hidden';
+                        const boldButton = this.helpers.createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
+                        const italicButton = this.helpers.createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
+                        const underlineButton = this.helpers.createStyleButton('U', 'underline', () => { textElement.style.textDecoration = textElement.style.textDecoration === 'underline' ? 'none' : 'underline'; });
+                        wrapper.appendChild(boldButton);
+                        wrapper.appendChild(italicButton);
+                        wrapper.appendChild(underlineButton);
+                        return wrapper;
+                    },
+
+                    createStyleButton(text, styleClass, onClick) {
+                        const button = document.createElement('button');
+                        button.textContent = text;
+                        button.classList.add('px-3', 'py-1', styleClass, 'text-white', 'transition-colors', 'duration-200', 'hover:bg-red-600', 'focus:outline-none');
+                        button.addEventListener('click', () => {
+                            onClick();
+                            button.classList.toggle('bg-red-900/60');
+                        });
+                        return button;
+                    },
+
+                    setupTextInteraction(target) {
+                        let x = parseFloat(target.dataset.x) || 0;
+                        let y = parseFloat(target.dataset.y) || 0;
+                        let angle = parseFloat(target.dataset.angle) || 0;
+                        interact(target).draggable({ listeners: { move(event) { x += event.dx; y += event.dy; event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`; Object.assign(event.target.dataset, { x, y }); } }, modifiers: [ interact.modifiers.restrictRect({ restriction: 'parent', elementRect: { left: 0, top: 0, right: 1, bottom: 1 } }) ] }).resizable({ edges: { left: true, right: true, bottom: true, top: true }, listeners: { move(event) { x = (parseFloat(event.target.dataset.x) || 0) + event.deltaRect.left; y = (parseFloat(event.target.dataset.y) || 0) + event.deltaRect.top; Object.assign(event.target.style, { width: `${event.rect.width}px`, height: `${event.rect.height}px`, transform: `translate(${x}px, ${y}px) rotate(${angle}deg)`, }); Object.assign(event.target.dataset, { x, y }); } }, modifiers: [ interact.modifiers.restrictEdges({ outer: 'parent' }), interact.modifiers.restrictSize({ min: { width: 100, height: 50 } }) ], }).gesturable({ listeners: { move (event) { angle += event.da; event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`; event.target.dataset.angle = angle; }, } });
+                    },
+
+                    displaySystemMessage(text, type = 'info') {
+                        this.elements.displayArea.querySelectorAll('.system-message').forEach(el => el.remove());
+                        const messageWrapper = document.createElement('div');
+                        const typeClasses = { error: 'bg-red-900/40 text-red-100', success: 'bg-green-900/40 text-green-100', info: 'bg-blue-900/40 text-blue-100' };
+                        messageWrapper.className = `system-message p-4 rounded-lg font-bold max-w-md mx-auto my-4 text-center transition-opacity duration-300 ${typeClasses[type] || typeClasses.info}`;
+                        messageWrapper.textContent = text;
+                        this.elements.displayArea.appendChild(messageWrapper);
+                        this.elements.displayArea.scrollTop = this.elements.displayArea.scrollHeight;
+                        if (type !== 'error') { setTimeout(() => { messageWrapper.style.opacity = '0'; setTimeout(() => messageWrapper.remove(), 300); }, 4000); }
+                    },
+
+                    async saveContentAsPng(elementToSave, filename) {
+                        if (!elementToSave) { this.helpers.displaySystemMessage('Nothing to save.', 'error'); return; }
+                        this.helpers.setLoading(true);
+                        this.helpers.displaySystemMessage('Preparing full size PNG...', 'info');
+                        const options = { quality: 0.98, backgroundColor: '#00000000', pixelRatio: 2 };
+                        const textOverlay = elementToSave.querySelector('.resizable-text-box');
+                        if (textOverlay) textOverlay.classList.add('hide-borders');
+                        try {
+                            const dataUrl = await htmlToImage.toPng(elementToSave, options);
+                            const a = document.createElement('a');
+                            a.href = dataUrl;
+                            a.download = filename;
+                            a.click();
+                            this.helpers.displaySystemMessage('PNG saved successfully!', 'success');
+                        } catch (error) {
+                            console.error('Error saving content as PNG:', error);
+                            this.helpers.displaySystemMessage('Could not save image. It might be too large.', 'error');
+                        } finally {
+                            if (textOverlay) textOverlay.classList.remove('hide-borders');
+                            this.helpers.setLoading(false);
+                        }
+                    },
+
+                    async saveLaminationSheet(element, filename) {
+                        if (!element) { this.helpers.displaySystemMessage('Nothing to save.', 'error'); return; }
+                        this.helpers.setLoading(true);
+                        this.helpers.displaySystemMessage('Generating 4-up print sheet...', 'info');
+                        const options = { quality: 0.98, backgroundColor: '#00000000', pixelRatio: 2 };
+                        const textOverlay = element.querySelector('#lamination-text-overlay');
+                        if (textOverlay) textOverlay.classList.add('hide-borders');
+                        try {
+                            const dataUrl = await htmlToImage.toPng(element, options);
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const DPI = 150;
+                            canvas.width = 8.5 * DPI;
+                            canvas.height = 11 * DPI;
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            const singleImage = await new Promise((resolve, reject) => { const img = new Image(); img.crossOrigin = "anonymous"; img.onload = () => resolve(img); img.onerror = reject; img.src = dataUrl; });
+                            const margin = 0.5 * DPI;
+                            const sheetW = canvas.width - 2 * margin;
+                            const sheetH = canvas.height - 2 * margin;
+                            const colWidth = sheetW / 2;
+                            const rowHeight = sheetH / 2;
+                            const padding = 0.125 * DPI;
+                            const aspect = singleImage.width / singleImage.height;
+                            let w = (colWidth - padding * 2);
+                            let h = w / aspect;
+                            if (h > (rowHeight - padding * 2)) { h = rowHeight - padding * 2; w = h * aspect; }
+                            const positions = [ { x: margin + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 }, { x: margin + colWidth + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 }, { x: margin + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 }, { x: margin + colWidth + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 } ];
+                            positions.forEach(pos => ctx.drawImage(singleImage, pos.x, pos.y, w, h));
+                            const finalImageDataUrl = canvas.toDataURL('image/png');
+                            const a = document.createElement('a');
+                            a.href = finalImageDataUrl;
+                            a.download = filename;
+                            a.click();
+                            this.helpers.displaySystemMessage('Print sheet saved successfully!', 'success');
+                        } catch (error) {
+                            console.error('Lamination sheet saving error:', error);
+                            this.helpers.displaySystemMessage('Could not save lamination sheet.', 'error');
+                        } finally {
+                            if (textOverlay) textOverlay.classList.remove('hide-borders');
+                            this.helpers.setLoading(false);
+                        }
+                    },
+                    
+                    setLoading(isLoading) {
+                        this.state.isBusy = isLoading;
+                        this.elements.loadingSpinner.classList.toggle('hidden', !isLoading);
+                        this.elements.createLaminationBtn.disabled = isLoading;
+                        this.elements.promptInput.disabled = isLoading;
+                        this.helpers.updateButtonStates();
+                    },
+
+                    updateButtonStates() {
+                        const hasLamination = this.state.laminationImageContainer !== null && this.state.laminationImageContainer.querySelector('img') !== null;
+                        this.elements.saveLaminationBtn.disabled = this.state.isBusy || !hasLamination || !this.state.fontsReady;
+                        if(this.elements.saveLaminationBtn.disabled && !this.state.isBusy && hasLamination) {
+                            this.elements.saveLaminationBtn.title = "Please wait for fonts to load before saving.";
+                        } else {
+                            this.elements.saveLaminationBtn.title = "";
+                        }
+                        this.elements.promptInput.placeholder = this.state.isBusy ? "Generating lamination..." : "Enter text for your lamination...";
+                    },
+                },
+
+                // --- API ---
+                api: {
+                     async generateImage(prompt) {
+                        const apiKey = "";
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                        const payload = { instances: [{ "prompt": prompt }], parameters: { "sampleCount": 1 } };
+                        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error("Image generation API error:", errorText);
+                            try { const errorData = JSON.parse(errorText); throw new Error(errorData?.error?.message || `API request failed with status: ${response.status}`); } catch (e) { throw new Error(errorText || `API request failed with status: ${response.status}`); }
+                        }
+                        const result = await response.json();
+                        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                            return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        } else {
+                            console.error("Unexpected image generation response:", result);
+                            throw new Error('Could not retrieve image from the API response.');
+                        }
                     }
-
-                    // Define positions for the four images
-                    const positions = [
-                        { x: margin + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
-                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
-                        { x: margin + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 },
-                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 }
-                    ];
-
-                    // Draw the image four times
-                    positions.forEach(pos => ctx.drawImage(singleImage, pos.x, pos.y, w, h));
-
-                    const finalImageDataUrl = canvas.toDataURL('image/png');
-                    const a = document.createElement('a');
-                    a.href = finalImageDataUrl;
-                    a.download = filename;
-                    a.click();
-
-                } catch (error) {
-                    console.error('Lamination sheet saving error:', error);
-                    displaySystemMessage('Could not save lamination sheet.', 'error');
-                } finally {
-                    if (textOverlay) {
-                        textOverlay.classList.remove('hide-borders'); // Restore borders
-                    }
-                    setLoading(false);
                 }
-            }
+            };
 
-
-            // --- State Management ---
-            
-            function setLoading(isLoading) {
-                isBusy = isLoading;
-                loadingSpinner.classList.toggle('hidden', !isLoading);
-                createLaminationBtn.disabled = isLoading;
-                promptInput.disabled = isLoading;
-                updateButtonStates();
-            }
-
-            function updateButtonStates() {
-                const hasLamination = laminationImageContainer !== null && laminationImageContainer.querySelector('img') !== null;
-                saveLaminationBtn.disabled = isBusy || !hasLamination;
-                promptInput.placeholder = isBusy ? "Generating lamination..." : "Enter text for your lamination...";
-            }
-            
-            // --- API Calls ---
-
-             async function generateImage(prompt) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // User provided API key
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                
-                const payload = {
-                    instances: [{ "prompt": prompt }],
-                    parameters: { "sampleCount": 1 }
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("Image generation API error:", errorText);
-                    const errorData = JSON.parse(errorText || "{}");
-                    throw new Error(errorData?.error?.message || `Image generation failed with status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                } else {
-                    console.error("Unexpected image generation response:", result);
-                    throw new Error('Could not retrieve image from API response.');
-                }
-            }
-            
-            // --- Event Listeners ---
-            createLaminationBtn.addEventListener('click', () => handleCreateLamination());
-            promptInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleCreateLamination();
-                }
-            });
-            
-            resetAppBtn.addEventListener('click', resetApp);
-            
-            saveLaminationBtn.addEventListener('click', () => {
-                laminationSaveModal.classList.remove('hidden');
-            });
-            closeSaveModalBtn.addEventListener('click', () => {
-                 laminationSaveModal.classList.add('hidden');
-            });
-            save4UpBtn.addEventListener('click', () => {
-                if (laminationImageContainer) {
-                    saveLaminationSheet(laminationImageContainer, 'lamination-sheet.png');
-                } else {
-                    displaySystemMessage('No lamination to save as sheet.', 'error');
-                }
-                laminationSaveModal.classList.add('hidden');
-            });
-            saveFullPngBtn.addEventListener('click', () => {
-                if (laminationImageContainer) {
-                    saveContentAsPng(laminationImageContainer, 'lamination-full.png');
-                } else {
-                    displaySystemMessage('No lamination to save as full PNG.', 'error');
-                }
-                laminationSaveModal.classList.add('hidden');
-            });
-
-            helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
-            closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
-            instructionsModal.addEventListener('click', (e) => {
-                if (e.target === instructionsModal) {
-                    instructionsModal.classList.add('hidden');
-                }
-            });
-
-            // --- Initialization ---
-            initializeApp();
+            // --- App Initialization ---
+            LaminationApp.init();
         });
     </script>
 </body>
