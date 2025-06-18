@@ -17,23 +17,24 @@
         .error-paragraph, .system-message-paragraph { align-self: center; text-align: center; padding: 1rem; border-radius: 0.5rem; font-weight: bold; max-width: 80%; }
         .error-paragraph { background-color: #dc2626; color: #fee2e2; }
         .system-message-paragraph { background-color: #374151; color: #a78bfa; white-space: pre-wrap; }
-        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar, #style-dropdown-content::-webkit-scrollbar { width: 8px; }
-        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track, #style-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
-        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb, #style-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover, #style-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        #story-container::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar, .custom-dropdown-content::-webkit-scrollbar { width: 8px; }
+        #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track, .custom-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
+        #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb, .custom-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 56.25%; /* 16:9 Aspect Ratio */ border-radius: 0.5rem; overflow: hidden; }
         .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         
-        .style-checkbox-label {
+        .dropdown-label {
             display: block;
             padding: 0.5rem 1rem;
             cursor: pointer;
             transition: background-color 0.2s;
+            white-space: nowrap;
         }
-        .style-checkbox-label:hover {
+        .dropdown-label:hover {
             background-color: #374151;
         }
-        .style-checkbox-label input {
+        .dropdown-label input {
             margin-right: 0.75rem;
         }
     </style>
@@ -41,61 +42,57 @@
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
     <div id="app-container" class="w-full max-w-6xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
-        <header class="flex flex-col sm:flex-row justify-between items-start w-full mb-4 pb-4 border-b border-gray-700">
-            <div class="flex-shrink-0 mr-6">
-                <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
-                    AI Story Weaver
-                    <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.01</span>
-                    <button id="help-icon" title="How to Use">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
-                        </svg>
-                    </button>
-                </h1>
-                <p class="text-xs text-gray-400 mt-1 max-w-xs">Collaboratively write stories with an AI partner. Guide the narrative, add your own insights, and illustrate your scenes.</p>
-            </div>
-            
-            <div class="flex-grow flex flex-col items-end gap-2 mt-4 sm:mt-0">
-                <div class="flex flex-col sm:flex-row gap-4 w-full justify-end">
-                    <div class="flex-1 min-w-[150px] max-w-xs">
-                        <label for="persona-select" class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
-                        <select id="persona-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+        <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
+            <div class="flex justify-between items-center w-full mb-4">
+                 <div class="flex-shrink-0">
+                    <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
+                        AI Story Weaver
+                        <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.05</span>
+                        <button id="help-icon" title="How to Use">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                            </svg>
+                        </button>
+                    </h1>
+                     <p class="text-sm text-gray-400 mt-1 max-w-xs">Collaboratively write stories with an AI partner.</p>
+                </div>
+                <div class="flex items-end gap-4">
+                    <div class="w-48 relative">
+                        <label class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
+                        <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
+                            <span>Select Persona</span>
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-dropdown-content"></div>
                     </div>
-                    <div class="flex-1 min-w-[150px] max-w-xs">
+                    <div class="w-48">
                         <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Story Tone:</label>
                         <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                     <div class="flex-1 min-w-[250px] max-w-sm relative">
+                     <div class="w-48 relative">
                         <label class="block mb-1 text-gray-400 text-sm">Image Style:</label>
                         <button id="style-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center">
                             <span>Select Styles (0)</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div id="style-dropdown-content" class="hidden absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                           <!-- Checkboxes will be populated here by JavaScript -->
-                        </div>
+                        <div id="style-dropdown-content" class="hidden absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-dropdown-content"></div>
                     </div>
-                     <div class="flex-1 min-w-[120px] max-w-xs">
+                     <div class="w-32">
                         <label for="sentence-length-select" class="block mb-1 text-gray-400 text-sm">Sentences:</label>
                         <select id="sentence-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-2 mt-2">
-                    <!-- Row 1: Save buttons -->
-                    <div class="flex flex-wrap justify-end gap-2">
-                        <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story (HTML)</button>
-                        <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Weaver</button>
-                        <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Prompts</button>
-                    </div>
-                    <!-- Row 2: Action buttons -->
-                    <div class="flex flex-wrap justify-end gap-2">
-                         <button id="undo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Undo</button>
-                         <button id="redo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Redo</button>
-                         <button id="reset-story-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">New Story</button>
-                    </div>
-                </div>
+            </div>
+             <div class="flex items-center justify-end gap-2 mt-3 w-full">
+                <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story</button>
+                <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Weaver</button>
+                <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Prompts</button>
+                <span class="border-l border-gray-600 h-4 mx-2"></span>
+                <button id="undo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Undo</button>
+                <button id="redo-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Redo</button>
+                <button id="reset-story-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">New Story</button>
             </div>
         </header>
 
@@ -131,7 +128,7 @@
                     </ul>
                     <h3 class="font-semibold text-white mt-4">Creative Direction</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>AI Persona:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
+                        <li><strong>AI Persona:</strong> Choose the AI's personality from the searchable dropdown menu. This sets the overall narrative style and voice. Changing this will start a new story.</li>
                         <li><strong>Story Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
                         <li><strong>Image Style:</strong> Click the button to open a dropdown where you can select one or more artistic styles for the illustrations you generate.</li>
                         <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences, or Unlimited for a longer response).</li>
@@ -177,7 +174,8 @@
             const continueBtn = document.getElementById('continue-btn');
             const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
-            const personaSelect = document.getElementById('persona-select');
+            const personaDropdownButton = document.getElementById('persona-dropdown-button');
+            const personaDropdownContent = document.getElementById('persona-dropdown-content');
             const toneSelect = document.getElementById('tone-select');
             const styleDropdownButton = document.getElementById('style-dropdown-button');
             const styleDropdownContent = document.getElementById('style-dropdown-content');
@@ -210,27 +208,52 @@
 
             // --- Persona, Tone, Style & Length Data (Sorted) ---
              const personas = [
-                { name: "The Hero/Heroine", systemPrompt: "You are The Hero/Heroine. Generate narrative from the perspective of a protagonist on a journey, facing challenges, and achieving a goal." },
-                { name: "The Mentor/Sage", systemPrompt: "You are The Mentor/Sage. Generate narrative as a wise guide who offers advice, training, or magical aid to the hero." },
-                { name: "The Villain/Antagonist", systemPrompt: "You are The Villain/Antagonist. Generate narrative as the opposing force, creating conflict and obstacles for the hero." },
-                { name: "The Trickster", systemPrompt: "You are The Trickster. Generate narrative as a mischievous character who causes disruption, often for their own amusement or to teach a lesson." },
-                { name: "The Innocent", systemPrompt: "You are The Innocent. Generate narrative as a pure, optimistic character who often serves as a moral compass or a source of wonder." },
-                { name: "The Explorer", systemPrompt: "You are The Explorer. Generate narrative as a character driven by curiosity and a desire for discovery, often embarking on literal or metaphorical journeys." },
-                { name: "The Lover", systemPrompt: "You are The Lover. Generate narrative focusing on themes of romance, intimacy, passion, and emotional connection." },
-                { name: "The Rebel/Outlaw", systemPrompt: "You are The Rebel/Outlaw. Generate narrative as a character who challenges societal norms, authority, or established systems." },
-                { name: "The Everyman/Everywoman", systemPrompt: "You are The Everyman/Everywoman. Generate narrative as a relatable, ordinary character whose struggles and triumphs reflect common human experiences." },
-                { name: "The Caregiver", systemPrompt: "You are The Caregiver. Generate narrative as a nurturing, protective, and compassionate character, often putting others' needs before their own." },
-                { name: "The Lore Master/World-Builder", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
-                { name: "The Idea Generator/Creative Muse", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
-                { name: "The Genre Specialist", systemPrompt: "You are The Genre Specialist. Generate stories adhering strictly to the conventions of a specific genre (e.g., 'Hard Sci-Fi,' 'Cozy Mystery,' 'Gritty Noir')." },
+                { name: "The Ally/Companion", systemPrompt: "You are The Ally/Companion. A loyal friend or supporter to the protagonist who offers aid, comic relief, or serves as a moral sounding board." },
+                { name: "The Archetype Bender/Deconstructor", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
+                { name: "The Beat Poet", systemPrompt: "You are The Beat Poet. Rebellious, improvisational, and rhythmic, exploring themes of freedom, existentialism, and counter-culture." },
+                { name: "The Caregiver", systemPrompt: "You are The Caregiver. A selfless, compassionate, and nurturing figure driven to protect and help others." },
+                { name: "The Cosmic Horror Protagonist", systemPrompt: "You are The Cosmic Horror Protagonist. An ordinary academic who stumbles upon a terrifying, incomprehensible truth about the universe. The narrative is one of psychological unraveling." },
+                { name: "The Creator/Artist", systemPrompt: "You are The Creator/Artist. Fueled by imagination and innovation, driven to bring new ideas and visions into existence." },
                 { name: "The Dialogue Writer", systemPrompt: "You are The Dialogue Writer. Specialize in generating realistic, character-driven dialogue for specific personas or scenes." },
                 { name: "The Emotional Instigator", systemPrompt: "You are The Emotional Instigator. Explore complex emotions, psychological states, and character motivations, often for dramatic effect." },
                 { name: "The Ethical Dilemma Presenter", systemPrompt: "You are The Ethical Dilemma Presenter. Craft narratives that explore moral ambiguities, difficult choices, and their consequences." },
-                { name: "The Data-Driven Storyteller", systemPrompt: "You are The Data-Driven Storyteller. Weave factual information, statistics, or historical events into a compelling story." },
+                { name: "The Everyman/Everywoman", systemPrompt: "You are The Orphan/Everyman. A relatable, down-to-earth individual who seeks belonging and connection. They often feel unprivileged or like an outcast but have a strong sense of empathy and resilience." },
+                { name: "The Explorer", systemPrompt: "You are The Explorer. Driven by curiosity, a thirst for discovery, and a desire to push boundaries and experience the unknown." },
+                { name: "The Femme Fatale", systemPrompt: "You are The Femme Fatale. A mysterious and alluring woman who leads men into dangerous or compromising situations. She is often cynical and has her own hidden agenda." },
+                { name: "The Friendly Children's Storyteller", systemPrompt: "You are The Friendly Children's Storyteller. A warm, whimsical, and reassuring voice that uses simple language, repetition, and clear moral lessons." },
+                { name: "The Game Master (GM)", systemPrompt: "You are The Tabletop Game Master (GM). A master of exposition and improvisation who sets scenes vividly, introduces characters (NPCs) with distinct voices, and presents challenges, often in the second person ('You enter the tavern...')." },
+                { name: "The Gentle Guide", systemPrompt: "You are The Gentle Guide. Empathetic, validating, and patient. This persona focuses on emotional exploration and self-discovery, often asking gentle, probing questions." },
+                { name: "The Genre Specialist", systemPrompt: "You are The Genre Specialist. Generate stories adhering strictly to the conventions of a specific genre (e.g., 'Hard Sci-Fi,' 'Cozy Mystery,' 'Gritty Noir')." },
+                { name: "The Hardboiled Detective", systemPrompt: "You are The Hardboiled Detective. Cynical, world-weary, direct, and observant, with terse dialogue and vivid descriptions of urban grit and crime." },
+                { name: "The Healer", systemPrompt: "You are The Healer. Focused on mending what is broken—physically, spiritually, or psychologically. Possesses specialized knowledge or an innate gift for restoration." },
+                { name: "The Herald", systemPrompt: "You are The Herald. A character who delivers a message or announcement that signals a coming change or a call to adventure." },
+                { name: "The Hero", systemPrompt: "You are The Hero. Driven by courage and a desire to prove their worth, the Hero embarks on a journey, faces challenges, and makes sacrifices for a greater good." },
+                { name: "The Idea Generator/Creative Muse", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
+                { name: "The Innocent", systemPrompt: "You are The Innocent. Embodies purity, optimism, simplicity, and a desire for happiness and safety. This archetype is often naive and vulnerable but possesses an unwavering faith and moral compass." },
                 { name: "The Interactive Story Guide", systemPrompt: "You are The Interactive Story Guide. Facilitate choose-your-own-adventure style narratives, adapting the story based on user choices." },
-                { name: "The Archetype Bender/Deconstructor", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
-                { name: "The Style Mimic", systemPrompt: "You are The Style Mimic. Generate stories in the style of a specific author, literary movement, or historical period." }
-            ].sort((a, b) => a.name.localeCompare(b.name));
+                { name: "The Investigative Journalist", systemPrompt: "You are The Investigative Journalist. Factual, objective, and curious. This persona presents information in a structured, evidence-based manner." },
+                { name: "The Jester/Fool", systemPrompt: "You are The Jester/Fool. Lives in the moment, using humor and wit to break tension, provide comic relief, or subtly expose truths." },
+                { name: "The Judge/Arbiter", systemPrompt: "You are The Judge/Arbiter. Embodies impartiality, reason, and the quest for justice. The Judge weighs evidence, makes difficult decisions, and restores balance." },
+                { name: "The Lore Master/World-Builder", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
+                { name: "The Lover", systemPrompt: "You are The Lover. Guided by passion, intimacy, and a desire for unity. The Lover can be romantic and idealistic but is also prone to irrationality or obsession." },
+                { name: "The Magician", systemPrompt: "You are The Magician. Transforms reality by harnessing knowledge and intuition, creating impactful change and wonder." },
+                { name: "The Maiden", systemPrompt: "You are The Maiden. Represents purity, beauty, and new beginnings. She is often in need of rescue but can also be a catalyst for change." },
+                { name: "The Martyr", systemPrompt: "You are The Martyr. Willingly suffers or sacrifices their life for a cause, a belief, or for the sake of others." },
+                { name: "The Mentor/Sage", systemPrompt: "You are The Sage/Mentor. Embodies wisdom, insight, and profound understanding. The Sage guides the protagonist, providing crucial knowledge or skills." },
+                { name: "The Mindfulness Guide", systemPrompt: "You are The Mindfulness Guide. The voice is calm, present, and observational, using simple language and sensory details to draw focus to the 'now'." },
+                { name: "The Motivational Coach", systemPrompt: "You are The Motivational Coach. Energetic, direct, and empowering. This persona uses positive affirmations and speaks directly to the reader to build confidence." },
+                { name: "The Mystical Poet", systemPrompt: "You are The Mystical Poet. Inspired by devotional poets like Rumi or Hafiz, this persona uses ecstatic, metaphorical, and often paradoxical language to explore themes of divine love and transcendence." },
+                { name: "The Productivity Hacker", systemPrompt: "You are The Productivity Hacker. A data-driven, efficient, and methodical voice that uses frameworks, bullet points, and clear, concise language." },
+                { name: "The Rebel/Outlaw", systemPrompt: "You are The Rebel/Outlaw. Challenges the status quo, embraces rebellion, and seeks radical change or vengeance." },
+                { name: "The Ruler", systemPrompt: "You are The Ruler. Values control, order, and leadership, striving to create a stable and successful environment." },
+                { name: "The Shadow", systemPrompt: "You are The Shadow. Represents the repressed, darker impulses or unacknowledged aspects of a protagonist's personality." },
+                { name: "The Southern Gothic Voice", systemPrompt: "You are The Southern Gothic Voice. Atmospheric and melancholic, this voice explores decay, grotesque elements, and dark secrets within a specific regional setting." },
+                { name: "The Stoic Philosopher", systemPrompt: "You are The Stoic Philosopher. A voice of reason, resilience, and self-control. This persona writes with clarity and logic, focusing on what we can and cannot control." },
+                { name: "The Style Mimic", systemPrompt: "You are The Style Mimic. Generate stories in the style of a specific author, literary movement, or historical period." },
+                { name: "The Temptress/Seducer", systemPrompt: "You are The Temptress/Seducer. Uses beauty, charm, or promises of pleasure and power to manipulate or lead others astray." },
+                { name: "The Trickster", systemPrompt: "You are The Trickster. A chaotic, mischievous, and often amoral figure who delights in deception and subverting expectations." },
+                { name: "The Villain", systemPrompt: "You are The Villain. The primary antagonist who actively seeks to harm or oppose the protagonist, driven by malice, greed, power, or ideology." }
+             ].sort((a, b) => a.name.localeCompare(b.name));
 
             const tones = [
                 { name: "Informative/Explanatory", description: "an informative and explanatory" },
@@ -334,9 +357,9 @@
                 populateImageStyleSelect();
                 populateSentenceLengthSelect();
                 
-                currentPersonaIndex = personas.findIndex(p => p.name === "The Hero/Heroine");
+                currentPersonaIndex = personas.findIndex(p => p.name === "The Hero");
                 currentToneIndex = tones.findIndex(t => t.name === "Descriptive/Evocative");
-                personaSelect.value = currentPersonaIndex;
+                updatePersonaButton(currentPersonaIndex);
                 toneSelect.value = currentToneIndex;
                 sentenceLengthSelect.value = 2;
 
@@ -347,7 +370,6 @@
             function addEventListeners() {
                 const primaryAction = () => {
                     if (isEditing) {
-                        // Show confirmation modal instead of directly executing
                         confirmUpdateModal.classList.remove('hidden');
                     } else {
                         handleAddNewPart();
@@ -386,7 +408,6 @@
                 helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
                 closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
                 
-                // Confirmation Modal Listeners
                 confirmUpdateBtn.addEventListener('click', () => {
                     confirmUpdateModal.classList.add('hidden');
                     handleUpdateAndRegenerate();
@@ -395,19 +416,23 @@
                      confirmUpdateModal.classList.add('hidden');
                 });
                 
-                // Dropdown Listeners
                 styleDropdownButton.addEventListener('click', () => {
                     styleDropdownContent.classList.toggle('hidden');
+                });
+
+                personaDropdownButton.addEventListener('click', () => {
+                    personaDropdownContent.classList.toggle('hidden');
                 });
 
                 document.addEventListener('click', (event) => {
                     if (!styleDropdownButton.contains(event.target) && !styleDropdownContent.contains(event.target)) {
                         styleDropdownContent.classList.add('hidden');
                     }
+                    if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) {
+                        personaDropdownContent.classList.add('hidden');
+                    }
                 });
 
-
-                personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
                 toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
                 sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
             }
@@ -446,15 +471,46 @@
                 });
             }
 
-            function populatePersonaSelect() { populateSelect(personaSelect, personas); }
             function populateToneSelect() { populateSelect(toneSelect, tones); }
             function populateSentenceLengthSelect() { populateSelect(sentenceLengthSelect, sentenceLengths); }
             
+            function populatePersonaSelect() {
+                personaDropdownContent.innerHTML = '';
+                personas.forEach((persona, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'dropdown-label';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'persona';
+                    radio.value = index;
+                    radio.className = 'accent-indigo-500';
+                    if (index === currentPersonaIndex) {
+                        radio.checked = true;
+                    }
+
+                    radio.addEventListener('change', () => {
+                        currentPersonaIndex = parseInt(radio.value);
+                        updatePersonaButton(currentPersonaIndex);
+                        personaDropdownContent.classList.add('hidden');
+                        resetApp();
+                    });
+
+                    label.appendChild(radio);
+                    label.append(persona.name);
+                    personaDropdownContent.appendChild(label);
+                });
+            }
+
+            function updatePersonaButton(index) {
+                personaDropdownButton.querySelector('span').textContent = personas[index].name;
+            }
+
             function populateImageStyleSelect() {
                 styleDropdownContent.innerHTML = '';
                 imageStyles.forEach((style, index) => {
                     const label = document.createElement('label');
-                    label.className = 'style-checkbox-label';
+                    label.className = 'dropdown-label';
                     
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -476,7 +532,7 @@
             function getSelectedImageStylesPrefix() {
                 const selectedCheckboxes = styleDropdownContent.querySelectorAll('input[type="checkbox"]:checked');
                 if (selectedCheckboxes.length === 0) {
-                    return "A photorealistic, cinematic, 4k, high-resolution photograph of {placeholder}"; // Default
+                    return "A photorealistic, cinematic, 4k, high-resolution photograph of {placeholder}";
                 }
                 const prefixes = Array.from(selectedCheckboxes).map(cb => {
                     return imageStyles[parseInt(cb.value)].prefix;
@@ -521,20 +577,18 @@
 
                 setLoading(true);
 
-                // Update the history and cut off the old subsequent parts
                 storyHistory[editingParagraphIndex].parts[0].text = userPrompt;
                 storyHistory.splice(editingParagraphIndex + 1);
 
                 promptInput.value = '';
                 isEditing = false;
                 editingParagraphIndex = null;
-                updateUIFromHistory(); // Show the user's edit immediately
+                updateUIFromHistory();
 
                 try {
-                    // Get the AI to respond to the updated history
                     const aiResponseText = await getAIResponse(storyHistory, getSystemInstructionString());
                     storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
-                    pushToHistory(); // Save this new state
+                    pushToHistory(); 
                 } catch (error) {
                    console.error("Error regenerating story:", error);
                    displaySystemMessage(error.message, 'error');
@@ -544,8 +598,6 @@
                 }
             }
 
-
-            // --- UI & Display ---
 
             function updateUIFromHistory() {
                 storyContainer.innerHTML = '';
@@ -628,8 +680,6 @@
                 storyContainer.scrollTop = storyContainer.scrollHeight;
             }
 
-            // --- Edit, Regenerate, Illustrate ---
-
             function enterEditMode(index, text) {
                 if(isAITurn) return;
                 isEditing = true;
@@ -697,8 +747,6 @@
                     setLoading(false);
                  }
             }
-            
-            // --- Saving & Export ---
 
             function saveAsTxt(textContent, filename) {
                 const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
@@ -753,8 +801,6 @@
                 a.click();
                 URL.revokeObjectURL(url);
             }
-
-            // --- History & State Management ---
 
             function pushToHistory() {
                 historyStack = historyStack.slice(0, historyPointer + 1);
@@ -821,8 +867,6 @@
                 continueBtn.disabled = isLoading;
                 updateButtonStates();
             }
-
-            // --- API Calls ---
             
             async function getAIResponse(chatHistory, systemInstruction) {
                 const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
