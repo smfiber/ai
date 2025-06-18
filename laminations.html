@@ -113,7 +113,7 @@
                     </svg>
                     Lamination Creator
                     <!-- NOTE: Remember to increment the version number for each revision. -->
-                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.13</span>
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.14</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -268,15 +268,31 @@
                 
                 // --- HANDLERS ---
                 handlers: {
-                    async handleCreateLamination(themePrompt = '') {
-                        if (!themePrompt) {
-                             this.state.currentLaminationText = this.elements.promptInput.value.trim();
-                             if (!this.state.currentLaminationText) {
-                                this.helpers.displaySystemMessage("Please enter some text for your lamination.", 'error');
-                                return;
-                            }
+                    // Handles the creation of a brand new lamination from the main prompt input
+                    handleCreateNewLamination() {
+                        const text = this.elements.promptInput.value.trim();
+                        if (!text) {
+                            this.helpers.displaySystemMessage("Please enter some text for your lamination.", 'error');
+                            return;
                         }
-                       
+                        this.state.currentLaminationText = text;
+                        this.helpers._renderLamination(); // Render with no specific theme to get a default background
+                    },
+
+                    // Handles changing the background of an existing lamination
+                    handleChangeBackground(themePrompt) {
+                        if (!this.state.currentLaminationText) {
+                            this.helpers.displaySystemMessage("Please create a lamination first before changing the background.", 'error');
+                            return;
+                        }
+                        this.helpers._renderLamination(themePrompt); // Re-render with the new theme
+                    },
+                },
+
+                // --- HELPERS ---
+                helpers: {
+                    // Core rendering function, assumes text is already in state
+                    async _renderLamination(themePrompt = '') {
                         this.helpers.setLoading(true);
                         this.elements.displayArea.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
                         const laminationCreatorEl = document.getElementById('lamination-creator');
@@ -332,16 +348,13 @@
                             this.helpers.setLoading(false);
                         }
                     },
-                },
 
-                // --- HELPERS ---
-                helpers: {
                     bindEvents() {
-                        this.elements.createLaminationBtn.addEventListener('click', this.handlers.handleCreateLamination);
+                        this.elements.createLaminationBtn.addEventListener('click', this.handlers.handleCreateNewLamination);
                         this.elements.promptInput.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
-                                this.handlers.handleCreateLamination();
+                                this.handlers.handleCreateNewLamination();
                             }
                         });
                         this.elements.resetAppBtn.addEventListener('click', this.helpers.resetApp);
@@ -397,7 +410,7 @@
                         const redesignButton = document.createElement('button');
                         redesignButton.textContent = "Generate Background";
                         redesignButton.className = "bg-red-900/20 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg flex-shrink-0";
-                        redesignButton.onclick = () => this.handlers.handleCreateLamination(searchInput.value);
+                        redesignButton.onclick = () => this.handlers.handleChangeBackground(searchInput.value);
                         backgroundRow.appendChild(redesignButton);
                         return backgroundRow;
                     },
