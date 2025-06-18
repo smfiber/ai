@@ -34,7 +34,7 @@
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
                     <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.98</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.99</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -109,6 +109,7 @@
                     <h3 class="font-semibold text-white">Core Controls</h3>
                     <ul class="list-disc pl-5 space-y-1">
                         <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative. This is the main way to build your story turn-by-turn.</li>
+                        <li><strong>Update:</strong> After clicking "Edit" on one of your prompts, this button will appear. It saves your changes and regenerates the story from that point onward.</li>
                     </ul>
                     <h3 class="font-semibold text-white mt-4">Creative Direction</h3>
                     <ul class="list-disc pl-5 space-y-1">
@@ -119,7 +120,7 @@
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Edit:</strong> Appears next to your prompts. Click to modify your text.</li>
+                        <li><strong>Edit:</strong> Appears next to your prompts. Click to modify your text. The main button will change to "Update".</li>
                         <li><strong>Regen:</strong> Appears next to AI-generated paragraphs. Click to ask the AI for a different response based on the same preceding text.</li>
                         <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
                          <li><strong>Undo/Redo:</strong> Step backward or forward through your story's history.</li>
@@ -265,6 +266,59 @@
                 sentenceLengthSelect.value = 2;
 
                 resetApp();
+                addEventListeners();
+            }
+
+            function addEventListeners() {
+                const primaryAction = () => {
+                    if (isEditing) {
+                        handleUpdateAndRegenerate();
+                    } else {
+                        handleAddNewPart();
+                    }
+                };
+
+                continueBtn.addEventListener('click', primaryAction);
+                promptInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        primaryAction();
+                    }
+                });
+            
+                resetStoryBtn.addEventListener('click', resetApp);
+                saveStoryBtn.addEventListener('click', saveStoryAsHtml);
+                saveWeaverBtn.addEventListener('click', () => {
+                    const weaverText = storyHistory
+                        .map(p => {
+                            let author = p.role === 'user' ? 'You' : 'AI Story Weaver';
+                            return `[${author}]:\n${p.parts[0].text}`
+                        })
+                        .join('\n\n');
+                    saveAsTxt(weaverText, 'Weaver-Chat.txt');
+                });
+                savePromptsBtn.addEventListener('click', () => {
+                    const promptsText = storyHistory
+                        .filter(p => p.role === 'user')
+                        .map((p, i) => `Prompt ${i + 1}:\n${p.parts[0].text}`)
+                        .join('\n\n---\n\n');
+                    saveAsTxt(promptsText, 'My-Prompts.txt');
+                });
+
+                undoBtn.addEventListener('click', handleUndo);
+                redoBtn.addEventListener('click', handleRedo);
+                helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
+                closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
+                instructionsModal.addEventListener('click', (e) => {
+                    if (e.target === instructionsModal) {
+                        instructionsModal.classList.add('hidden');
+                    }
+                });
+
+                personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
+                toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
+                imageStyleSelect.addEventListener('change', (e) => { currentImageStyleIndex = parseInt(e.target.value); });
+                sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
             }
 
             function resetApp() {
@@ -306,22 +360,14 @@
             function populateImageStyleSelect() { populateSelect(imageStyleSelect, imageStyles); }
             function populateSentenceLengthSelect() { populateSelect(sentenceLengthSelect, sentenceLengths); }
 
-            async function handleContinueStory() {
+            async function handleAddNewPart() {
                 const userPrompt = promptInput.value.trim();
                 if (!userPrompt || isAITurn || (getUserPromptCount() >= MAX_PROMPTS && currentSentenceLength !== 0)) return;
 
                 setLoading(true);
-
-                if (isEditing) {
-                    storyHistory[editingParagraphIndex].parts[0].text = userPrompt;
-                    storyHistory.splice(editingParagraphIndex + 1);
-                } else {
-                    storyHistory.push({ role: 'user', parts: [{ text: userPrompt }] });
-                }
+                storyHistory.push({ role: 'user', parts: [{ text: userPrompt }] });
                 
                 promptInput.value = '';
-                isEditing = false;
-                editingParagraphIndex = null;
                 updateUIFromHistory();
 
                 try {
@@ -341,6 +387,36 @@
                     updateUIFromHistory();
                 }
             }
+
+            async function handleUpdateAndRegenerate() {
+                const userPrompt = promptInput.value.trim();
+                if (!userPrompt || isAITurn || editingParagraphIndex === null) return;
+
+                setLoading(true);
+
+                // Update the history and cut off the old subsequent parts
+                storyHistory[editingParagraphIndex].parts[0].text = userPrompt;
+                storyHistory.splice(editingParagraphIndex + 1);
+
+                promptInput.value = '';
+                isEditing = false;
+                editingParagraphIndex = null;
+                updateUIFromHistory(); // Show the user's edit immediately
+
+                try {
+                    // Get the AI to respond to the updated history
+                    const aiResponseText = await getAIResponse(storyHistory, getSystemInstructionString());
+                    storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
+                    pushToHistory(); // Save this new state
+                } catch (error) {
+                   console.error("Error regenerating story:", error);
+                   displaySystemMessage(error.message, 'error');
+                } finally {
+                    setLoading(false);
+                    updateUIFromHistory();
+                }
+            }
+
 
             // --- UI & Display ---
 
@@ -432,7 +508,6 @@
                 isEditing = true;
                 editingParagraphIndex = index;
                 promptInput.value = text;
-                btnText.textContent = 'Update';
                 promptInput.focus();
                 updateButtonStates();
             }
@@ -588,7 +663,7 @@
                 
                 const isBusy = isAITurn;
                 
-                continueBtn.disabled = isBusy || isStoryComplete || isEditing;
+                continueBtn.disabled = isBusy || isStoryComplete; // The `isEditing` check is handled by the button's text content now
                 
                 if(isEditing) {
                     btnText.textContent = 'Update';
@@ -699,51 +774,6 @@
                 }
             }
             
-            // --- Event Listeners ---
-            continueBtn.addEventListener('click', handleContinueStory);
-            promptInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleContinueStory();
-                }
-            });
-            
-            resetStoryBtn.addEventListener('click', resetApp);
-            
-            saveStoryBtn.addEventListener('click', () => saveStoryAsHtml());
-            saveWeaverBtn.addEventListener('click', () => {
-                const weaverText = storyHistory
-                    .map(p => {
-                        let author = p.role === 'user' ? 'You' : 'AI Story Weaver';
-                        return `[${author}]:\n${p.parts[0].text}`
-                    })
-                    .join('\n\n');
-                saveAsTxt(weaverText, 'Weaver-Chat.txt');
-            });
-             savePromptsBtn.addEventListener('click', () => {
-                const promptsText = storyHistory
-                    .filter(p => p.role === 'user')
-                    .map((p, i) => `Prompt ${i + 1}:\n${p.parts[0].text}`)
-                    .join('\n\n---\n\n');
-                saveAsTxt(promptsText, 'My-Prompts.txt');
-            });
-
-            undoBtn.addEventListener('click', handleUndo);
-            redoBtn.addEventListener('click', handleRedo);
-            helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
-            closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
-            instructionsModal.addEventListener('click', (e) => {
-                if (e.target === instructionsModal) {
-                    instructionsModal.classList.add('hidden');
-                }
-            });
-
-            personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
-            toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
-            imageStyleSelect.addEventListener('change', (e) => { currentImageStyleIndex = parseInt(e.target.value); });
-            sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
-
-
             // --- Initialization ---
             initializeApp();
         });
