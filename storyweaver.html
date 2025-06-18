@@ -6,43 +6,10 @@
     <title>AI Story Weaver</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- html-to-image library for PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" xintegrity="sha512-7tWCg0J26Mk+c9J3nZq+pKS2i/Jq2K3QdDaeI2o2PzMA+d4wWd/6TqL/iUnKxYIIm9D6McV2Rk1Ts1A/1S/2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- interact.js for drag, resize, rotate -->
-    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <!-- html-to-image library for PNG export (for illustrations) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <style>
-        /* Embedded Google Fonts to prevent CORS issues with html-to-image */
-        @font-face {
-          font-family: 'Inter';
-          font-style: normal;
-          font-weight: 400;
-          font-display: swap;
-          src: url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2) format('woff2');
-        }
-         @font-face {
-            font-family: 'Dancing Script';
-            src: url(https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMg.woff2) format('woff2');
-        }
-        @font-face {
-            font-family: 'Lobster';
-            src: url(https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9_oU-pA.woff2) format('woff2');
-        }
-         @font-face {
-            font-family: 'Pacifico';
-            src: url(https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBpA.woff2) format('woff2');
-        }
-        @font-face {
-            font-family: 'Great Vibes';
-            src: url(https://fonts.gstatic.com/s/greatvibes/v15/6q1c0ofG6NKsEhAc2eh-3Y4v_w.woff2) format('woff2');
-        }
-        @font-face {
-            font-family: 'Sacramento';
-            src: url(https://fonts.gstatic.com/s/sacramento/v11/buEzpo6gcdjy0EiZMBUG0CoV_w.woff2) format('woff2');
-        }
-
-
         body { font-family: 'Inter', sans-serif; }
-
         .story-paragraph-wrapper { opacity: 0; transform: translateY(20px); animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
         .user-paragraph { background-image: linear-gradient(to right, #374151, #2f3743); }
@@ -57,41 +24,6 @@
         #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 56.25%; /* 16:9 Aspect Ratio */ border-radius: 0.5rem; overflow: hidden; }
         .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-
-        /* Styles for the interactive text overlay */
-        .resizable-text-box {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            min-height: 50px;
-            width: 70%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-            background-color: rgba(0,0,0,0.5);
-            border: 2px dashed #fff;
-            border-radius: 0.5rem;
-            color: white;
-            touch-action: none; /* prevent default browser actions */
-            box-sizing: border-box;
-            cursor: move;
-            z-index: 10;
-        }
-        .resizable-text-box.hide-borders {
-            border: none;
-            background-color: transparent;
-        }
-        .resizable-text-box p {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-            text-align: center;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
@@ -101,7 +33,8 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.95</span>
+                    <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.98</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -137,8 +70,6 @@
                         <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story (HTML)</button>
                         <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Weaver</button>
                         <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Prompts</button>
-                        <button id="save-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Lamination</button>
-                        <button id="save-last-content-btn" class="bg-teal-600 hover:bg-teal-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Last Content</button>
                     </div>
                     <!-- Row 2: Action buttons -->
                     <div class="flex flex-wrap justify-end gap-2">
@@ -157,12 +88,6 @@
         <footer class="mt-4 pt-4 border-t border-gray-700">
             <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Add the next part of the story..."></textarea>
             <div class="flex justify-end items-center mt-2 gap-4">
-                 <button id="create-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                    Create Lamination
-                </button>
-                 <button id="create-content-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    Create Content
-                </button>
                 <button id="continue-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     <span id="btn-text">Add to Story</span>
                     <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -177,14 +102,13 @@
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
+            <!-- NOTE TO DEVS: Remember to update this modal's content with any feature changes. -->
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use AI Story Weaver</h2>
             <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
                 <div class="prose prose-invert">
                     <h3 class="font-semibold text-white">Core Controls</h3>
                     <ul class="list-disc pl-5 space-y-1">
                         <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative. This is the main way to build your story turn-by-turn.</li>
-                        <li><strong>Create Content:</strong> Uses your text to generate various types of social media content (e.g., Quote Cards, Key Takeaways).</li>
-                        <li><strong>Create Lamination:</strong> Takes the text in the prompt box and generates a single, shareable image with the text overlaid on a themed background.</li>
                     </ul>
                     <h3 class="font-semibold text-white mt-4">Creative Direction</h3>
                     <ul class="list-disc pl-5 space-y-1">
@@ -195,27 +119,16 @@
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Edit:</strong> Appears next to your prompts and insights. Click to modify your text.</li>
+                        <li><strong>Edit:</strong> Appears next to your prompts. Click to modify your text.</li>
                         <li><strong>Regen:</strong> Appears next to AI-generated paragraphs. Click to ask the AI for a different response based on the same preceding text.</li>
-                        <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs and your insights. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
+                        <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
                          <li><strong>Undo/Redo:</strong> Step backward or forward through your story's history.</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Saving Your Work</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Save Story (HTML):</strong> Saves the full story, including dialogue and images, as a self-contained HTML file.</li>
+                        <li><strong>Save Story (HTML):</strong> Saves the full story, including dialogue and images, as a self-contained HTML file with a generated title.</li>
                         <li><strong>Save Weaver:</strong> Saves the complete back-and-forth dialogue between you and the AI as a .txt file.</li>
                         <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
-                        <li><strong>Save Last Content:</strong> Saves the last piece of content you created (e.g., Quote Card, Key Takeaways) as a single PNG image.</li>
-                        <li><strong>Save Lamination:</strong> Opens a dialog to save the current lamination as a 4-up sheet for printing or as a single full-size PNG for social media.</li>
-                    </ul>
-                     <h3 class="font-semibold text-white mt-4">Lamination Text Editing</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li>Once a lamination is created, a new set of controls appears.</li>
-                        <li><strong>Font Family:</strong> Choose from a wide variety of fonts, including several cursive styles.</li>
-                        <li><strong>Font Size:</strong> Select a size from a dropdown list.</li>
-                        <li><strong>Font Color:</strong> Pick a custom color for your text.</li>
-                        <li><strong>Styling:</strong> Toggle Bold, Italic, and Underline formatting.</li>
-                        <li><strong>Interaction:</strong> You can drag, resize, and rotate the text box directly on the image to position it perfectly.</li>
                     </ul>
                 </div>
             </div>
@@ -225,40 +138,12 @@
         </div>
     </div>
     
-    <!-- Lamination Save Options Modal -->
-    <div id="lamination-save-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
-            <h3 class="text-xl font-bold mb-4">Save Lamination As...</h3>
-            <div class="flex justify-center gap-4">
-                <button id="save-4up-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">4-Up Print Sheet</button>
-                <button id="save-full-png-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Full Size PNG</button>
-            </div>
-             <button id="close-save-modal-btn" class="mt-6 text-sm text-gray-400 hover:text-white">Cancel</button>
-        </div>
-    </div>
-
-    <!-- Content Format Selection Modal (New) -->
-    <div id="content-format-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl text-center">
-            <h3 class="text-xl font-bold mb-4 text-white">Choose Content Format</h3>
-            <div class="flex flex-wrap justify-center gap-4">
-                <button id="format-quote-card-btn" class="format-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Quote Card</button>
-                <button id="format-key-takeaways-btn" class="format-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Key Takeaways</button>
-                <button id="format-inspirational-btn" class="format-btn bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Inspirational</button>
-            </div>
-            <button id="close-content-format-modal-btn" class="mt-6 text-sm text-gray-400 hover:text-white">Cancel</button>
-        </div>
-    </div>
-
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Element References ---
             const storyContainer = document.getElementById('story-container');
             const promptInput = document.getElementById('prompt-input');
             const continueBtn = document.getElementById('continue-btn');
-            const createContentBtn = document.getElementById('create-content-btn'); // Renamed
-            const createLaminationBtn = document.getElementById('create-lamination-btn');
             const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
             const personaSelect = document.getElementById('persona-select');
@@ -269,23 +154,11 @@
             const saveStoryBtn = document.getElementById('save-story-btn');
             const saveWeaverBtn = document.getElementById('save-weaver-btn');
             const savePromptsBtn = document.getElementById('save-prompts-btn');
-            const saveLaminationBtn = document.getElementById('save-lamination-btn');
-            const saveLastContentBtn = document.getElementById('save-last-content-btn'); // Renamed
             const undoBtn = document.getElementById('undo-btn');
             const redoBtn = document.getElementById('redo-btn');
             const helpIcon = document.getElementById('help-icon');
             const instructionsModal = document.getElementById('instructions-modal');
             const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
-            const laminationSaveModal = document.getElementById('lamination-save-modal');
-            const save4UpBtn = document.getElementById('save-4up-btn');
-            const saveFullPngBtn = document.getElementById('save-full-png-btn');
-            const closeSaveModalBtn = document.getElementById('close-save-modal-btn');
-            const contentFormatModal = document.getElementById('content-format-modal'); // New
-            const closeContentFormatModalBtn = document.getElementById('close-content-format-modal-btn'); // New
-            const formatQuoteCardBtn = document.getElementById('format-quote-card-btn'); // New
-            const formatKeyTakeawaysBtn = document.getElementById('format-key-takeaways-btn'); // New
-            const formatInspirationalBtn = document.getElementById('format-inspirational-btn'); // New
-
 
             // --- Application State ---
             const MAX_PROMPTS = 10;
@@ -296,9 +169,6 @@
             let currentToneIndex = 0;
             let currentImageStyleIndex = 0;
             let currentSentenceLength = 2;
-            let isLaminationMode = false;
-            let currentLaminationText = '';
-            let lastGeneratedContentElement = null; // To store the element for "Save Last Content"
 
             let storyHistory = [];
             let historyStack = [];
@@ -318,11 +188,11 @@
                 { name: "The Caregiver", systemPrompt: "You are The Caregiver. Generate narrative as a nurturing, protective, and compassionate character, often putting others' needs before their own." },
                 { name: "The Lore Master/World-Builder", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
                 { name: "The Idea Generator/Creative Muse", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
-                { name: "The Genre Specialist", systemPrompt: "You are The Genre Specialist. Generate stories adhering strictly to the conventions of a specific genre (e.g., 'Hard Sci-Fi Narrator,' 'Cozy Mystery Solver,' 'Gritty Noir Detective')." },
+                { name: "The Genre Specialist", systemPrompt: "You are The Genre Specialist. Generate stories adhering strictly to the conventions of a specific genre (e.g., 'Hard Sci-Fi,' 'Cozy Mystery,' 'Gritty Noir')." },
                 { name: "The Dialogue Writer", systemPrompt: "You are The Dialogue Writer. Specialize in generating realistic, character-driven dialogue for specific personas or scenes." },
                 { name: "The Emotional Instigator", systemPrompt: "You are The Emotional Instigator. Explore complex emotions, psychological states, and character motivations, often for dramatic effect." },
                 { name: "The Ethical Dilemma Presenter", systemPrompt: "You are The Ethical Dilemma Presenter. Craft narratives that explore moral ambiguities, difficult choices, and their consequences." },
-                { name: "The Data-Driven Narrator", systemPrompt: "You are The Data-Driven Narrator. Weave factual information, statistics, or historical events into a compelling narrative." },
+                { name: "The Data-Driven Storyteller", systemPrompt: "You are The Data-Driven Storyteller. Weave factual information, statistics, or historical events into a compelling story." },
                 { name: "The Interactive Story Guide", systemPrompt: "You are The Interactive Story Guide. Facilitate choose-your-own-adventure style narratives, adapting the story based on user choices." },
                 { name: "The Archetype Bender/Deconstructor", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
                 { name: "The Style Mimic", systemPrompt: "You are The Style Mimic. Generate stories in the style of a specific author, literary movement, or historical period." }
@@ -388,8 +258,8 @@
                 populateImageStyleSelect();
                 populateSentenceLengthSelect();
                 
-                currentPersonaIndex = personas.findIndex(p => p.name === "The Hero/Heroine"); // Updated default persona
-                currentToneIndex = tones.findIndex(t => t.name === "Informative/Explanatory"); // Updated default tone
+                currentPersonaIndex = personas.findIndex(p => p.name === "The Hero/Heroine");
+                currentToneIndex = tones.findIndex(t => t.name === "Descriptive/Evocative");
                 personaSelect.value = currentPersonaIndex;
                 toneSelect.value = currentToneIndex;
                 sentenceLengthSelect.value = 2;
@@ -398,22 +268,18 @@
             }
 
             function resetApp() {
-                storyContainer.classList.remove('hidden');
-                isLaminationMode = false;
                 storyContainer.innerHTML = '';
-                storyHistory = [ ]; // Start with a clean slate
+                storyHistory = [ ];
                 historyStack = [ JSON.parse(JSON.stringify(storyHistory)) ];
                 historyPointer = 0;
                 isEditing = false;
                 editingParagraphIndex = null;
-                lastGeneratedContentElement = null; // Clear last generated content
                 
                 updateUIFromHistory();
                 displaySystemMessage("Provide a prompt to begin your story.", 'system-message');
                 promptInput.focus();
             }
             
-            // This function now generates the system instruction string
             function getSystemInstructionString() {
                 const selectedPersona = personas[currentPersonaIndex];
                 const selectedTone = tones[currentToneIndex];
@@ -424,45 +290,21 @@
                 return `${selectedPersona.systemPrompt} Continue the story based on the user's prompt. The story should have ${selectedTone.description} tone. ${lengthConstraint}`;
             }
 
-            function populatePersonaSelect() {
-                personaSelect.innerHTML = ''; // Clear existing options
-                personas.forEach((persona, index) => {
+            function populateSelect(selectElement, dataArray) {
+                selectElement.innerHTML = '';
+                dataArray.forEach((item, index) => {
                     const option = document.createElement('option');
                     option.value = index;
-                    option.textContent = persona.name;
-                    personaSelect.appendChild(option);
+                    option.textContent = item.name || item;
+                    if(item === 0) option.textContent = "Unlimited";
+                    selectElement.appendChild(option);
                 });
             }
 
-            function populateToneSelect() {
-                toneSelect.innerHTML = ''; // Clear existing options
-                tones.forEach((tone, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = tone.name;
-                    toneSelect.appendChild(option);
-                });
-            }
-            
-             function populateImageStyleSelect() {
-                imageStyleSelect.innerHTML = ''; // Clear existing options
-                imageStyles.forEach((style, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = style.name;
-                    imageStyleSelect.appendChild(option);
-                });
-            }
-
-            function populateSentenceLengthSelect() {
-                 sentenceLengthSelect.innerHTML = ''; // Clear existing options
-                 sentenceLengths.forEach(length => {
-                    const option = document.createElement('option');
-                    option.value = length;
-                    option.textContent = length === 0 ? "Unlimited" : length;
-                    sentenceLengthSelect.appendChild(option);
-                });
-            }
+            function populatePersonaSelect() { populateSelect(personaSelect, personas); }
+            function populateToneSelect() { populateSelect(toneSelect, tones); }
+            function populateImageStyleSelect() { populateSelect(imageStyleSelect, imageStyles); }
+            function populateSentenceLengthSelect() { populateSelect(sentenceLengthSelect, sentenceLengths); }
 
             async function handleContinueStory() {
                 const userPrompt = promptInput.value.trim();
@@ -483,7 +325,6 @@
                 updateUIFromHistory();
 
                 try {
-                    // Pass the system instruction string separately
                     const aiResponseText = await getAIResponse(storyHistory, getSystemInstructionString());
                     storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
                     pushToHistory();
@@ -494,316 +335,16 @@
                     } else {
                         displaySystemMessage(error.message, 'error');
                     }
-                    storyHistory.pop(); // Remove the user prompt if AI response fails
+                    storyHistory.pop();
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
                 }
             }
 
-            // New function to handle "Create Content"
-            async function handleCreateContent() {
-                currentLaminationText = promptInput.value.trim();
-                if (!currentLaminationText || isAITurn) return;
-
-                contentFormatModal.classList.remove('hidden');
-            }
-
-            // Function to generate content based on format
-            async function generateContent(format) {
-                contentFormatModal.classList.add('hidden');
-                storyContainer.classList.remove('hidden');
-                isLaminationMode = true; // Enter content creation mode
-                storyContainer.innerHTML = ''; // Clear story display
-                setLoading(true);
-
-                const contentDisplayArea = document.createElement('div');
-                contentDisplayArea.id = "content-display-area";
-                contentDisplayArea.className = 'w-full max-w-2xl relative pt-[75%] bg-gray-700 rounded-lg flex flex-col items-center justify-center p-8 text-white text-center shadow-lg';
-                contentDisplayArea.style.overflow = 'hidden'; // Ensure content doesn't spill
-                storyContainer.appendChild(contentDisplayArea);
-                lastGeneratedContentElement = contentDisplayArea; // Set this for saving
-
-                const loadingSvg = `<svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-
-                try {
-                    // Generate a relevant background image
-                    const imagePromptBase = imageStyles[currentImageStyleIndex].prefix.replace('{placeholder}', currentLaminationText);
-                    const imageUrl = await generateImage(imagePromptBase + ", subtle background");
-                    
-                    contentDisplayArea.style.backgroundImage = `url('${imageUrl}')`;
-                    contentDisplayArea.style.backgroundSize = 'cover';
-                    contentDisplayArea.style.backgroundPosition = 'center';
-                    contentDisplayArea.style.position = 'relative'; // For text overlay positioning
-
-                    let contentHtml = '';
-                    switch(format) {
-                        case 'quote-card':
-                            const quote = currentLaminationText.split('—');
-                            const quoteText = quote[0].trim();
-                            const author = quote.length > 1 ? `— ${quote[1].trim()}` : '';
-                            contentHtml = `
-                                <div class="relative z-10 p-4 bg-black bg-opacity-60 rounded-lg max-w-[80%]">
-                                    <p class="text-3xl font-serif italic mb-2 leading-tight">${quoteText}</p>
-                                    ${author ? `<p class="text-xl font-semibold">${author}</p>` : ''}
-                                </div>
-                            `;
-                            break;
-                        case 'key-takeaways':
-                            // Use AI to format into a list
-                            const listPrompt = `Based on the following text, extract 3-5 concise key takeaways as a bulleted list:\n\n${currentLaminationText}\n\nFormat as: - Point 1\n- Point 2`;
-                            const aiListResponse = await getAIResponse([{ role: 'user', parts: [{ text: listPrompt }] }], "You are a concise summarizer. Respond only with the bulleted list.");
-                            const listItems = aiListResponse.split('\n').filter(line => line.startsWith('-')).map(line => line.substring(1).trim());
-
-                            contentHtml = `
-                                <div class="relative z-10 p-6 bg-blue-900 bg-opacity-70 rounded-xl max-w-[80%] text-left">
-                                    <h3 class="text-2xl font-bold mb-4">Key Takeaways</h3>
-                                    <ul class="list-none space-y-3">
-                                        ${listItems.map(item => `
-                                            <li class="flex items-start gap-3">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="flex-shrink-0 w-6 h-6 text-blue-300 mt-1" viewBox="0 0 16 16">
-                                                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.08z"/>
-                                                </svg>
-                                                <span>${item}</span>
-                                            </li>`).join('')}
-                                    </ul>
-                                </div>
-                            `;
-                            break;
-                        case 'inspirational':
-                            // Let AI rephrase into an inspirational thought
-                            const inspirationalPrompt = `Rephrase the following text as a short, uplifting, and inspirational thought for social media:\n\n"${currentLaminationText}"`;
-                            const aiInspirationalResponse = await getAIResponse([{ role: 'user', parts: [{ text: inspirationalPrompt }] }], "You are an inspirational content creator. Keep it concise and positive.");
-                            contentHtml = `
-                                <div class="relative z-10 p-6 bg-gradient-to-br from-purple-800 to-pink-800 bg-opacity-80 rounded-full max-w-[80%] flex items-center justify-center text-center aspect-square flex-col shadow-2xl">
-                                    <p class="text-2xl font-bold leading-snug">${aiInspirationalResponse}</p>
-                                </div>
-                            `;
-                            break;
-                    }
-                    contentDisplayArea.innerHTML = contentHtml; // Place generated content
-                    setupTextInteraction(contentDisplayArea.querySelector('.resizable-text-box') || contentDisplayArea.querySelector('p, div')); // Make text draggable/resizable if applicable
-                    renderLaminationControls(contentDisplayArea, contentDisplayArea.querySelector('.resizable-text-box') || contentDisplayArea.querySelector('p, div')); // Add controls if needed
-                } catch (error) {
-                    console.error("Error creating content:", error);
-                    contentDisplayArea.innerHTML = `<p class="text-red-400 text-center p-4">Error creating content: ${error.message}</p>`;
-                } finally {
-                    setLoading(false);
-                }
-            }
-
-
-             async function handleCreateLamination(themePrompt) {
-                if(!themePrompt) { 
-                     currentLaminationText = promptInput.value.trim();
-                     if (!currentLaminationText || isAITurn) return;
-                     isLaminationMode = true;
-                     storyContainer.innerHTML = ''; 
-                }
-               
-                setLoading(true);
-                storyContainer.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
-                const laminationCreatorEl = document.getElementById('lamination-creator');
-                lastGeneratedContentElement = laminationCreatorEl; // Set this for saving
-
-                const imageDisplayContainer = document.createElement('div');
-                imageDisplayContainer.id = "lamination-image-container";
-                imageDisplayContainer.className = 'w-full max-w-2xl relative pt-[75%] bg-gray-700 rounded-lg flex items-center justify-center';
-                imageDisplayContainer.innerHTML = `<svg class="animate-spin h-8 w-8 text-white absolute" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-                laminationCreatorEl.appendChild(imageDisplayContainer);
-
-                const controlsContainer = document.createElement('div');
-                controlsContainer.id = "lamination-controls";
-                controlsContainer.className = "flex flex-wrap items-center justify-center gap-4 mt-4";
-                laminationCreatorEl.appendChild(controlsContainer);
-                
-                const imagePrompt = `Photorealistic image, 4k, high resolution: ${themePrompt || 'a beautiful, serene background'}`;
-
-                try {
-                    const imageUrl = await generateImage(imagePrompt);
-                    imageDisplayContainer.innerHTML = ''; 
-                    
-                    const img = new Image();
-                    img.crossOrigin = "anonymous"; // Important for canvas saving
-                    img.src = imageUrl;
-                    img.className = 'absolute top-0 left-0 w-full h-full object-cover rounded-lg';
-                    imageDisplayContainer.appendChild(img);
-                    
-                    const textOverlay = document.createElement('div');
-                    textOverlay.id = 'lamination-text-overlay';
-                    textOverlay.className = 'resizable-text-box';
-                    textOverlay.innerHTML = `<p>${currentLaminationText}</p>`;
-                    textOverlay.setAttribute('data-x', 0);
-                    textOverlay.setAttribute('data-y', 0);
-                    textOverlay.setAttribute('data-angle', 0);
-
-                    imageDisplayContainer.appendChild(textOverlay);
-
-                    setupTextInteraction(textOverlay);
-                    renderLaminationControls(controlsContainer, textOverlay);
-
-                } catch (error) {
-                    console.error("Error creating lamination:", error);
-                    imageDisplayContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed. Please try again.</p>`;
-                } finally {
-                    setLoading(false);
-                }
-            }
-            
-            function renderLaminationControls(container, textElement) {
-                container.innerHTML = ''; 
-
-                const backgroundRow = document.createElement('div');
-                backgroundRow.className = "w-full flex items-center justify-center gap-2 mb-2";
-                
-                const searchLabel = document.createElement('label');
-                searchLabel.textContent = "Background:";
-                searchLabel.className = "text-sm text-gray-400";
-                backgroundRow.appendChild(searchLabel);
-
-                const searchInput = document.createElement('input');
-                searchInput.type = "text";
-                searchInput.placeholder = "e.g., 'a field of wildflowers at dawn'";
-                searchInput.className = "flex-grow p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
-                backgroundRow.appendChild(searchInput);
-
-                const redesignButton = document.createElement('button');
-                redesignButton.textContent = "Generate";
-                redesignButton.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-lg";
-                redesignButton.onclick = () => handleCreateLamination(searchInput.value);
-                backgroundRow.appendChild(redesignButton);
-
-                container.appendChild(backgroundRow);
-
-                const fontRow = document.createElement('div');
-                fontRow.className = "w-full flex flex-wrap items-center justify-center gap-4";
-                
-                const fontList = [
-                    'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif',
-                    'Courier New, monospace', 'Lucida Console, monospace', 'Impact, sans-serif', 
-                    'Comic Sans MS, cursive', 'Trebuchet MS, sans-serif', 'Palatino Linotype, book antiqua, palatino, serif',
-                    'Dancing Script, cursive', 'Lobster, cursive', 'Pacifico, cursive', 'Great Vibes, cursive', 'Sacramento, cursive',
-                    'Calibri, sans-serif', 'Bahnschrift, system-ui'
-                ].sort();
-
-                const fontSelect = createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
-                fontSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white max-w-[150px]";
-                fontRow.appendChild(fontSelect);
-
-                const sizeSelect = document.createElement('select');
-                sizeSelect.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
-                for(let i = 8; i <= 72; i += 2) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${i}px`;
-                    sizeSelect.appendChild(option);
-                }
-                sizeSelect.value = 24;
-                textElement.style.fontSize = '24px';
-                sizeSelect.addEventListener('change', (e) => { textElement.style.fontSize = `${e.target.value}px`; });
-                fontRow.appendChild(sizeSelect);
-                
-                const colorInput = document.createElement('input');
-                colorInput.type = 'color';
-                colorInput.value = '#FFFFFF';
-                colorInput.className = "w-10 h-10 p-1 bg-gray-600 rounded border-0 cursor-pointer";
-                colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
-                fontRow.appendChild(colorInput);
-
-                const styleButtonWrapper = document.createElement('div');
-                styleButtonWrapper.className = 'flex items-center bg-gray-600 rounded-lg';
-                
-                const boldButton = createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
-                const italicButton = createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
-                const underlineButton = createStyleButton('U', 'underline', () => { textElement.style.textDecoration = textElement.style.textDecoration === 'underline' ? 'none' : 'underline'; });
-
-                styleButtonWrapper.appendChild(boldButton);
-                styleButtonWrapper.appendChild(italicButton);
-                styleButtonWrapper.appendChild(underlineButton);
-                fontRow.appendChild(styleButtonWrapper);
-
-                container.appendChild(fontRow);
-            }
-
-            function createStyleButton(text, styleClass, onClick) {
-                const button = document.createElement('button');
-                button.textContent = text;
-                button.classList.add('px-3', 'py-1', styleClass, 'text-white', 'transition-colors', 'duration-200', 'rounded-lg');
-                button.addEventListener('click', () => {
-                    onClick();
-                    button.classList.toggle('bg-indigo-500');
-                });
-                return button;
-            }
-
-            function createSelect(options, onChange) {
-                const select = document.createElement('select');
-                select.className = "p-2 bg-gray-600 border border-gray-500 rounded-lg text-white";
-                options.forEach(opt => {
-                    const option = document.createElement('option');
-                    option.value = opt;
-                    option.textContent = opt.split(',')[0];
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', onChange);
-                return select;
-            }
-
-             function setupTextInteraction(target) {
-                const position = { x: 0, y: 0, angle: 0 };
-
-                interact(target)
-                    .draggable({
-                        listeners: {
-                            move(event) {
-                                position.x += event.dx;
-                                position.y += event.dy;
-                                event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`;
-                            },
-                        },
-                        modifiers: [
-                            interact.modifiers.restrictRect({
-                                restriction: 'parent'
-                            })
-                        ]
-                    })
-                    .resizable({
-                        edges: { left: true, right: true, bottom: true, top: true },
-                        listeners: {
-                            move(event) {
-                                let { x, y } = event.target.dataset;
-                                x = (parseFloat(x) || 0) + event.deltaRect.left;
-                                y = (parseFloat(y) || 0) + event.deltaRect.top;
-                                Object.assign(event.target.style, {
-                                    width: `${event.rect.width}px`,
-                                    height: `${event.rect.height}px`,
-                                });
-                                Object.assign(event.target.dataset, { x, y });
-                            }
-                        },
-                        modifiers: [
-                           interact.modifiers.restrictEdges({
-                             outer: 'parent'
-                           }),
-                           interact.modifiers.restrictSize({
-                              min: { width: 100, height: 50 }
-                           })
-                        ],
-                    })
-                    .gesturable({
-                         listeners: {
-                            move (event) {
-                              position.angle += event.da
-                              event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`
-                            },
-                          }
-                    });
-            }
-
             // --- UI & Display ---
 
             function updateUIFromHistory() {
-                if (isLaminationMode) return; // Don't update story UI if in lamination/content mode
                 storyContainer.innerHTML = '';
                 storyHistory.forEach((part, i) => {
                     addParagraphToUI(part, i);
@@ -852,19 +393,12 @@
                     controlsContainer.appendChild(editBtn);
                     wrapper.appendChild(paragraphContent);
                     wrapper.appendChild(controlsContainer);
-                } else { // Handles 'model' and 'insight'
+                } else {
                     wrapper.classList.add('justify-end');
-                    paragraphContent.classList.add('rounded-br-none');
+                    paragraphContent.classList.add('ai-paragraph', 'rounded-br-none');
                     
-                    if (role === 'insight') { // Original insight is kept for story history
-                        paragraphContent.classList.add('insight-paragraph');
-                        const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
-                        controlsContainer.appendChild(editBtn);
-                    } else { // 'model'
-                        paragraphContent.classList.add('ai-paragraph');
-                        const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
-                        controlsContainer.appendChild(regenBtn);
-                    }
+                    const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
+                    controlsContainer.appendChild(regenBtn);
 
                     const illustrateBtn = createControlButton('Illustrate', () => handleIllustration(index));
                     controlsContainer.appendChild(illustrateBtn);
@@ -883,7 +417,6 @@
             }
 
             function displaySystemMessage(text, type = 'system-message') {
-                // Remove existing system/error messages to prevent clutter
                 storyContainer.querySelectorAll('.system-message-paragraph, .error-paragraph').forEach(el => el.remove());
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('story-paragraph-wrapper', type === 'error' ? 'error-paragraph' : 'system-message-paragraph');
@@ -908,11 +441,9 @@
                 if (isAITurn) return;
                 setLoading(true);
                 
-                // Find the user prompt that came before this AI response.
                 const historyForRegen = storyHistory.slice(0, index);
                 
                 try {
-                    // Pass the system instruction string separately
                     const newAiResponse = await getAIResponse(historyForRegen, getSystemInstructionString());
                     storyHistory[index].parts[0].text = newAiResponse;
                     storyHistory.splice(index + 1);
@@ -959,11 +490,7 @@
                     pushToHistory();
                  } catch(error) {
                     console.error("Error generating image:", error);
-                    if (error.message && error.message.includes("billed an account")) {
-                        imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.<br>This feature requires a billed Google Cloud account.</p>`;
-                    } else {
-                        imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.</p>`;
-                    }
+                    imageContainer.innerHTML = `<p class="text-red-400 text-center p-2">Image generation failed.</p>`;
                  } finally {
                     setLoading(false);
                  }
@@ -983,100 +510,30 @@
                 URL.revokeObjectURL(url);
             }
 
-            function saveStoryAsHtml() {
+            async function saveStoryAsHtml() {
+                setLoading(true);
+                displaySystemMessage("Generating story title...", "system-message");
+                let storyTitle = "My AI-Woven Story";
+                try {
+                    const titlePrompt = "Based on the following story, provide a short, creative title. Respond with only the title text, without any quotation marks or labels.";
+                    storyTitle = await getAIResponse(storyHistory, titlePrompt);
+                } catch (error) {
+                    console.error("Could not generate a title, using default.", error);
+                }
+
+                setLoading(false);
+                displaySystemMessage("Saving story...", "system-message");
+                
                 const personaName = personas[currentPersonaIndex].name;
                 const toneName = tones[currentToneIndex].name;
 
                 let storyHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Woven Story</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            background-color: #111827; /* bg-gray-900 */
-            color: #f9fafb; /* text-gray-50 */
-            padding: 2rem;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-        h1, h2 {
-            color: #e5e7eb; /* text-gray-200 */
-            border-bottom: 1px solid #374151; /* border-gray-700 */
-            padding-bottom: 0.5rem;
-        }
-        h1 { font-size: 2.25rem; }
-        h2 { font-size: 1.5rem; margin-top: 2rem; }
-        .meta-info {
-            background-color: #1f2937; /* bg-gray-800 */
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-            color: #d1d5db; /* text-gray-300 */
-        }
-        .story-part {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 0.75rem;
-            max-width: 90%;
-            display: flex;
-            flex-direction: column;
-        }
-        .story-part p {
-            margin: 0;
-            white-space: pre-wrap; /* Preserve line breaks */
-        }
-        .story-part img {
-            max-width: 100%;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            object-fit: contain;
-            align-self: center;
-        }
-        .user-paragraph {
-            background-color: #374151; /* bg-gray-700 */
-            margin-right: auto;
-            border-bottom-left-radius: 0;
-        }
-        .ai-paragraph, .insight-paragraph {
-            margin-left: auto;
-            align-items: flex-end;
-            text-align: left;
-            border-bottom-right-radius: 0;
-        }
-        .ai-paragraph {
-             background-color: #1e293b; /* bg-gray-800 */
-        }
-        .insight-paragraph {
-            background-color: #134e4a; /* bg-teal-900 */
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Your AI-Woven Story</h1>
-        <div class="meta-info">
-            <strong>AI Persona:</strong> ${personaName}<br>
-            <strong>Story Tone:</strong> ${toneName}
-        </div>
-        <h2>The Story</h2>
-`;
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${storyTitle}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";background-color:#111827;color:#f9fafb;padding:2rem;line-height:1.6}.container{max-width:800px;margin:auto}h1,h2{color:#e5e7eb;border-bottom:1px solid #374151;padding-bottom:.5rem}h1{font-size:2.25rem}h2{font-size:1.5rem;margin-top:2rem}.meta-info{background-color:#1f2937;padding:1rem;border-radius:.5rem;margin-bottom:2rem;font-size:.9rem;color:#d1d5db}.story-part{padding:1rem;margin-bottom:1rem;border-radius:.75rem;max-width:90%;display:flex;flex-direction:column}.story-part p{margin:0;white-space:pre-wrap}.story-part img{max-width:100%;border-radius:.5rem;margin-bottom:1rem;object-fit:contain;align-self:center}.user-paragraph{background-color:#374151;margin-right:auto;border-bottom-left-radius:0}.ai-paragraph{background-color:#1e293b;margin-left:auto;align-items:flex-end;text-align:left;border-bottom-right-radius:0}</style></head><body><div class="container"><h1>${storyTitle}</h1><div class="meta-info"><strong>AI Persona:</strong> ${personaName}<br><strong>Story Tone:</strong> ${toneName}</div><h2>The Story</h2>`;
 
-                storyHistory.forEach(part => {
+                storyHistory.forEach((part) => {
                     const { role, parts, imageUrl } = part;
                     const text = parts[0].text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    let roleClass = '';
-                    if (role === 'user') roleClass = 'user-paragraph';
-                    if (role === 'model') roleClass = 'ai-paragraph';
-                    if (role === 'insight') roleClass = 'insight-paragraph';
-
+                    let roleClass = role === 'user' ? 'user-paragraph' : 'ai-paragraph';
                     storyHtml += `<div class="story-part ${roleClass}">`;
                     if (imageUrl) {
                         storyHtml += `<img src="${imageUrl}" alt="Story illustration">`;
@@ -1084,141 +541,16 @@
                     storyHtml += `<p>${text}</p></div>`;
                 });
 
-                storyHtml += `
-    </div>
-</body>
-</html>`;
+                storyHtml += `</div></body></html>`;
 
                 const blob = new Blob([storyHtml], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'ai-woven-story.html';
-                document.body.appendChild(a);
+                a.download = `${storyTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
                 a.click();
-                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }
-
-            async function saveContentAsPng(elementToSave, filename, isLamination = false) {
-                setLoading(true);
-                const filter = (node) => {
-                    // Filter out UI controls that shouldn't be part of the final image
-                    if (node.classList && node.classList.contains('flex-shrink-0')) {
-                        return false;
-                    }
-                    // For content creation, we might have specific elements we don't want to include
-                    if (node.id === 'lamination-controls') return false; // Controls for text editing
-                    return true;
-                };
-
-                const options = {
-                    quality: 0.98,
-                    backgroundColor: isLamination ? null : '#1f2937', // Transparent background for lamination/content
-                    filter: filter,
-                    pixelRatio: 2,
-                };
-
-                const textOverlay = elementToSave.querySelector('.resizable-text-box');
-                if (textOverlay) {
-                    textOverlay.classList.add('hide-borders');
-                }
-
-                try {
-                    const dataUrl = await htmlToImage.toPng(elementToSave, options);
-                    const a = document.createElement('a');
-                    a.href = dataUrl;
-                    a.download = filename;
-                    a.click();
-                } catch (error) {
-                    console.error('Error saving content as PNG:', error);
-                    displaySystemMessage('Could not save image. It might be too large or complex.', 'error');
-                } finally {
-                    if (textOverlay) {
-                        textOverlay.classList.remove('hide-borders');
-                    }
-                    setLoading(false);
-                }
-            }
-
-
-             async function saveLaminationSheet(element, filename) {
-                setLoading(true);
-                const textOverlay = element.querySelector('#lamination-text-overlay');
-                 const options = {
-                    quality: 0.98,
-                    backgroundColor: '#00000000', // Transparent for sheet context
-                    pixelRatio: 2
-                };
-
-                if (textOverlay) {
-                    textOverlay.classList.add('hide-borders');
-                }
-
-                try {
-                    const dataUrl = await htmlToImage.toPng(element, options);
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const DPI = 150; 
-                    canvas.width = 8.5 * DPI;
-                    canvas.height = 11 * DPI;
-
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    const singleImage = new Image();
-                    singleImage.crossOrigin = "anonymous";
-                    const imageLoadPromise = new Promise((resolve, reject) => {
-                        singleImage.onload = resolve;
-                        singleImage.onerror = reject;
-                        singleImage.src = dataUrl;
-                    });
-                    
-                    await imageLoadPromise;
-
-                    const margin = 0.5 * DPI;
-                    const sheetW = canvas.width - 2 * margin;
-                    const sheetH = canvas.height - 2 * margin;
-                    const colWidth = sheetW / 2;
-                    const rowHeight = sheetH / 2;
-                    const padding = 0.125 * DPI;
-
-                    const aspect = singleImage.width / singleImage.height;
-                    let w, h;
-                    if( (colWidth - padding) / (rowHeight - padding) > aspect) {
-                        h = rowHeight - padding;
-                        w = h * aspect;
-                    } else {
-                        w = colWidth - padding;
-                        h = w / aspect;
-                    }
-
-                    const positions = [
-                        { x: margin + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
-                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + (rowHeight - h) / 2 },
-                        { x: margin + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 },
-                        { x: margin + colWidth + (colWidth - w) / 2, y: margin + rowHeight + (rowHeight - h) / 2 }
-                    ];
-
-                    positions.forEach(pos => ctx.drawImage(singleImage, pos.x, pos.y, w, h));
-
-                    const finalImageDataUrl = canvas.toDataURL('image/png');
-                    const a = document.createElement('a');
-                    a.href = finalImageDataUrl;
-                    a.download = filename;
-                    a.click();
-
-                } catch (error) {
-                    console.error('Lamination sheet saving error:', error);
-                    displaySystemMessage('Could not save lamination sheet.', 'error');
-                } finally {
-                    if (textOverlay) {
-                        textOverlay.classList.remove('hide-borders');
-                    }
-                    setLoading(false);
-                }
-            }
-
 
             // --- History & State Management ---
 
@@ -1257,7 +589,6 @@
                 const isBusy = isAITurn;
                 
                 continueBtn.disabled = isBusy || isStoryComplete || isEditing;
-                createContentBtn.disabled = isBusy || isEditing; // Enable/disable Create Content
                 
                 if(isEditing) {
                     btnText.textContent = 'Update';
@@ -1280,40 +611,41 @@
                 saveStoryBtn.disabled = isBusy || !canSaveStory;
                 saveWeaverBtn.disabled = isBusy || storyHistory.length < 1;
                 savePromptsBtn.disabled = isBusy || promptCount < 1;
-                saveLaminationBtn.disabled = isBusy || !isLaminationMode || !document.getElementById('lamination-image-container'); // Only enable if in lamination mode and lamination exists
-                saveLastContentBtn.disabled = isBusy || !isLaminationMode || !lastGeneratedContentElement; // Only enable if in content mode and content exists
             }
             
             function setLoading(isLoading) {
                 isAITurn = isLoading;
                 loadingSpinner.classList.toggle('hidden', !isLoading);
-                // Disable/enable main action buttons directly while busy
                 continueBtn.disabled = isLoading;
-                createContentBtn.disabled = isLoading;
-                createLaminationBtn.disabled = isLoading;
-                // Update general button states based on all conditions
                 updateButtonStates();
             }
 
-            // Modified getAIResponse to handle system instructions
+            // --- API Calls ---
+            
             async function getAIResponse(chatHistory, systemInstruction) {
                 const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
-                // Create a copy of the chat history to modify for the API call
                 const messagesForAPI = chatHistory.map(({role, parts}) => ({role, parts}));
 
-                // Prepend system instruction to the first user message
-                // Find the first user message
-                const firstUserMessageIndex = messagesForAPI.findIndex(msg => msg.role === 'user');
-                if (firstUserMessageIndex !== -1) {
-                    // Prepend the system instruction to the text of the first user message
-                    messagesForAPI[firstUserMessageIndex].parts[0].text = 
-                        `${systemInstruction}\n\n${messagesForAPI[firstUserMessageIndex].parts[0].text}`;
+                // Use a different approach for the title generation to not modify the history
+                if (systemInstruction.includes("provide a short, creative title")) {
+                    const titleGenerationPayload = {
+                        contents: [...messagesForAPI, {role: 'user', parts: [{text: systemInstruction}]}]
+                    };
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(titleGenerationPayload) });
+                    if (!response.ok) { throw new Error("API request for title failed."); }
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "Untitled Story";
+
                 } else {
-                    // If there's no user message yet (e.g., first turn for content generation without initial prompt)
-                    // prepend the system instruction as a new user message.
-                    messagesForAPI.unshift({ role: 'user', parts: [{ text: systemInstruction }] });
+                     const firstUserMessageIndex = messagesForAPI.findIndex(msg => msg.role === 'user');
+                    if (firstUserMessageIndex !== -1) {
+                        messagesForAPI[firstUserMessageIndex].parts[0].text = 
+                            `${systemInstruction}\n\n${messagesForAPI[firstUserMessageIndex].parts[0].text}`;
+                    } else {
+                        messagesForAPI.unshift({ role: 'user', parts: [{ text: systemInstruction }] });
+                    }
                 }
 
                 const payload = { contents: messagesForAPI };
@@ -1369,49 +701,25 @@
             
             // --- Event Listeners ---
             continueBtn.addEventListener('click', handleContinueStory);
-            createContentBtn.addEventListener('click', handleCreateContent); // Updated listener
-            createLaminationBtn.addEventListener('click', () => handleCreateLamination());
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    // If in lamination mode, hitting enter might trigger content update
-                    if (isLaminationMode && currentLaminationText) { // Assuming currentLaminationText means we're editing a lamination
-                        // This logic needs to be tied to re-rendering content,
-                        // for now, it's safer to only trigger 'Add to Story'
-                         handleContinueStory();
-                    } else if (!isLaminationMode) {
-                        handleContinueStory();
-                    }
+                    handleContinueStory();
                 }
             });
             
             resetStoryBtn.addEventListener('click', resetApp);
             
             saveStoryBtn.addEventListener('click', () => saveStoryAsHtml());
-
-            saveLastContentBtn.addEventListener('click', () => { // Updated listener
-                if (lastGeneratedContentElement) {
-                    // Pass true for isLamination because content creation shares properties with lamination saving
-                    saveContentAsPng(lastGeneratedContentElement, 'my-social-content.png', true);
-                } else {
-                    displaySystemMessage('No content to save. Create some content first!', 'error');
-                }
-            });
-
-
             saveWeaverBtn.addEventListener('click', () => {
                 const weaverText = storyHistory
                     .map(p => {
-                        let author = 'Unknown';
-                        if(p.role === 'user') author = 'You';
-                        else if (p.role === 'model') author = 'AI Story Weaver';
-                        else if (p.role === 'insight') author = 'Insight'; // Kept for historical "insight" entries
+                        let author = p.role === 'user' ? 'You' : 'AI Story Weaver';
                         return `[${author}]:\n${p.parts[0].text}`
                     })
                     .join('\n\n');
                 saveAsTxt(weaverText, 'Weaver-Chat.txt');
             });
-
              savePromptsBtn.addEventListener('click', () => {
                 const promptsText = storyHistory
                     .filter(p => p.role === 'user')
@@ -1419,40 +727,6 @@
                     .join('\n\n---\n\n');
                 saveAsTxt(promptsText, 'My-Prompts.txt');
             });
-
-            saveLaminationBtn.addEventListener('click', () => {
-                laminationSaveModal.classList.remove('hidden');
-            });
-            closeSaveModalBtn.addEventListener('click', () => {
-                 laminationSaveModal.classList.add('hidden');
-            });
-            save4UpBtn.addEventListener('click', () => {
-                const laminationContainer = document.getElementById('lamination-image-container');
-                if (laminationContainer) {
-                    saveLaminationSheet(laminationContainer, 'lamination-sheet.png');
-                } else {
-                    displaySystemMessage('No lamination to save as sheet.', 'error');
-                }
-                laminationSaveModal.classList.add('hidden');
-            });
-            saveFullPngBtn.addEventListener('click', () => {
-                const laminationContainer = document.getElementById('lamination-image-container');
-                if (laminationContainer) {
-                    saveContentAsPng(laminationContainer, 'lamination-full.png', true);
-                } else {
-                    displaySystemMessage('No lamination to save as full PNG.', 'error');
-                }
-                laminationSaveModal.classList.add('hidden');
-            });
-
-            // Content format modal listeners
-            closeContentFormatModalBtn.addEventListener('click', () => {
-                contentFormatModal.classList.add('hidden');
-            });
-            formatQuoteCardBtn.addEventListener('click', () => generateContent('quote-card'));
-            formatKeyTakeawaysBtn.addEventListener('click', () => generateContent('key-takeaways'));
-            formatInspirationalBtn.addEventListener('click', () => generateContent('inspirational'));
-
 
             undoBtn.addEventListener('click', handleUndo);
             redoBtn.addEventListener('click', handleRedo);
@@ -1463,7 +737,6 @@
                     instructionsModal.classList.add('hidden');
                 }
             });
-
 
             personaSelect.addEventListener('change', (e) => { currentPersonaIndex = parseInt(e.target.value); resetApp() });
             toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
