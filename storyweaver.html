@@ -101,7 +101,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.92</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.94</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -287,40 +287,49 @@
 
             // --- Persona, Tone, Style & Length Data (Sorted) ---
              const personas = [
-                { name: "Classic Storyteller", systemPrompt: "You are a master storyteller in the classic tradition. Continue the story based on the user's prompt." },
-                { name: "Cosmic Dreamer", systemPrompt: "You are a Cosmic Dreamer. Continue the story with a sense of wonder, exploring space, the universe, and philosophical questions about existence." },
-                { name: "Cyberpunk Netrunner", systemPrompt: "You are a Cyberpunk Netrunner. Continue the story with a high-tech, gritty, and futuristic feel. Use slang and concepts from the cyberpunk genre." },
-                { name: "Gothic Novelist", systemPrompt: "You are a Gothic Novelist. Continue the story in a dark, mysterious, and atmospheric style, focusing on themes of horror, romance, and the sublime." },
-                { name: "Haiku Poet", systemPrompt: "You are a Haiku Poet. Respond to the user's prompt by continuing the narrative in a short, three-phrase block structured with a 5, 7, 5 syllable pattern." },
-                { name: "Mythic Chronicler", systemPrompt: "You are a Mythic Chronicler. Continue the story in an epic, mythological style, with heroic deeds and legendary events." },
-                { name: "Nature Documentarian", systemPrompt: "You are a Nature Documentarian. Continue the story by describing the scene with the clinical yet awe-filled detail of a nature documentary." },
-                { name: "Noir Detective", systemPrompt: "You are a Noir Detective. Continue the story in a hardboiled, cynical, and stylish manner, filled with witty one-liners and a sense of moral ambiguity." },
-                { name: "Stoic Philosopher", systemPrompt: "You are a Stoic Philosopher. Continue the story with a focus on logic, virtue, and acceptance of fate." },
-                { name: "Taoist Sage", systemPrompt: "You are a Taoist Sage. Continue the story embodying effortless flow (wu wei) and the beauty of nature's path." },
-                { name: "Zen Master", systemPrompt: "You are a Zen Master storyteller. Continue the story with profound wisdom, focusing on simplicity and enlightenment." }
+                { name: "The Hero/Heroine", systemPrompt: "You are The Hero/Heroine. Generate narrative from the perspective of a protagonist on a journey, facing challenges, and achieving a goal." },
+                { name: "The Mentor/Sage", systemPrompt: "You are The Mentor/Sage. Generate narrative as a wise guide who offers advice, training, or magical aid to the hero." },
+                { name: "The Villain/Antagonist", systemPrompt: "You are The Villain/Antagonist. Generate narrative as the opposing force, creating conflict and obstacles for the hero." },
+                { name: "The Trickster", systemPrompt: "You are The Trickster. Generate narrative as a mischievous character who causes disruption, often for their own amusement or to teach a lesson." },
+                { name: "The Innocent", systemPrompt: "You are The Innocent. Generate narrative as a pure, optimistic character who often serves as a moral compass or a source of wonder." },
+                { name: "The Explorer", systemPrompt: "You are The Explorer. Generate narrative as a character driven by curiosity and a desire for discovery, often embarking on literal or metaphorical journeys." },
+                { name: "The Lover", systemPrompt: "You are The Lover. Generate narrative focusing on themes of romance, intimacy, passion, and emotional connection." },
+                { name: "The Rebel/Outlaw", systemPrompt: "You are The Rebel/Outlaw. Generate narrative as a character who challenges societal norms, authority, or established systems." },
+                { name: "The Everyman/Everywoman", systemPrompt: "You are The Everyman/Everywoman. Generate narrative as a relatable, ordinary character whose struggles and triumphs reflect common human experiences." },
+                { name: "The Caregiver", systemPrompt: "You are The Caregiver. Generate narrative as a nurturing, protective, and compassionate character, often putting others' needs before their own." },
+                { name: "The Lore Master/World-Builder", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
+                { name: "The Idea Generator/Creative Muse", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
+                { name: "The Genre Specialist", systemPrompt: "You are The Genre Specialist. Generate stories adhering strictly to the conventions of a specific genre (e.g., 'Hard Sci-Fi Narrator,' 'Cozy Mystery Solver,' 'Gritty Noir Detective')." },
+                { name: "The Dialogue Writer", systemPrompt: "You are The Dialogue Writer. Specialize in generating realistic, character-driven dialogue for specific personas or scenes." },
+                { name: "The Emotional Instigator", systemPrompt: "You are The Emotional Instigator. Explore complex emotions, psychological states, and character motivations, often for dramatic effect." },
+                { name: "The Ethical Dilemma Presenter", systemPrompt: "You are The Ethical Dilemma Presenter. Craft narratives that explore moral ambiguities, difficult choices, and their consequences." },
+                { name: "The Data-Driven Narrator", systemPrompt: "You are The Data-Driven Narrator. Weave factual information, statistics, or historical events into a compelling narrative." },
+                { name: "The Interactive Story Guide", systemPrompt: "You are The Interactive Story Guide. Facilitate choose-your-own-adventure style narratives, adapting the story based on user choices." },
+                { name: "The Archetype Bender/Deconstructor", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
+                { name: "The Style Mimic", systemPrompt: "You are The Style Mimic. Generate stories in the style of a specific author, literary movement, or historical period." }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             const tones = [
-                { name: "Acerbic", description: "an acerbic, witty, and sarcastic" },
-                { name: "Awestruck", description: "an awestruck and amazed" },
-                { name: "Clinical", description: "a clinical, detached, and precise" },
-                { name: "Comforting", description: "a comforting, gentle, and warm" },
-                { name: "Cynical", description: "a cynical and distrustful" },
-                { name: "Dramatic", description: "a dramatic and intense" },
-                { name: "Eerie", description: "an eerie, strange, and frightening" },
-                { name: "Empathetic", description: "an empathetic, understanding, and compassionate" },
-                { name: "Euphoric", description: "a euphoric, intensely happy, and excited" },
-                { name: "Factual", description: "a factual and descriptive" },
-                { name: "Humorous", description: "a funny and lighthearted" },
-                { name: "Magical", description: "a magical and enchanting" },
-                { name: "Mysterious", description: "a mysterious and suspenseful" },
-                { name: "Newscast", description: "a formal and journalistic" },
-                { name: "Nostalgic", description: "a nostalgic and sentimental" },
-                { name: "Optimistic", description: "an optimistic and uplifting" },
-                { name: "Poetic", description: "a poetic and lyrical" },
-                { name: "Romantic", description: "a romantic and tender" },
-                { name: "Scholarly", description: "a scholarly, academic, and formal" },
-                { name: "Whimsical", description: "a whimsical and fantastical" }
+                { name: "Informative/Explanatory", description: "an informative and explanatory" },
+                { name: "Neutral/Objective", description: "a neutral and objective" },
+                { name: "Formal", description: "a formal" },
+                { name: "Enthusiastic/Optimistic", description: "an enthusiastic and optimistic" },
+                { name: "Descriptive/Evocative", description: "a descriptive and evocative" },
+                { name: "Mysterious/Suspenseful", description: "a mysterious and suspenseful" },
+                { name: "Whimsical/Fantastical", description: "a whimsical and fantastical" },
+                { name: "Melancholic/Somber", description: "a melancholic and somber" },
+                { name: "Humorous/Playful", description: "a humorous and playful" },
+                { name: "Dramatic/Intense", description: "a dramatic and intense" },
+                { name: "Sarcastic/Ironic", description: "a sarcastic and ironic" },
+                { name: "Cynical/Skeptical", description: "a cynical and skeptical" },
+                { name: "Nostalgic", description: "a nostalgic" },
+                { name: "Urgent/Pressing", description: "an urgent and pressing" },
+                { name: "Philosophical/Reflective", description: "a philosophical and reflective" },
+                { name: "Gritty/Realistic", description: "a gritty and realistic" },
+                { name: "Empathetic/Compassionate", description: "an empathetic and compassionate" },
+                { name: "Authoritative/Confident", description: "an authoritative and confident" },
+                { name: "Playful/Flirty", description: "a playful and flirty" },
+                { name: "Foreboding/Ominous", description: "a foreboding and ominous" }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
              const imageStyles = [
@@ -360,8 +369,8 @@
                 populateImageStyleSelect();
                 populateSentenceLengthSelect();
                 
-                currentPersonaIndex = personas.findIndex(p => p.name === "Classic Storyteller");
-                currentToneIndex = tones.findIndex(t => t.name === "Dramatic");
+                currentPersonaIndex = personas.findIndex(p => p.name === "The Hero/Heroine"); // Updated default persona
+                currentToneIndex = tones.findIndex(t => t.name === "Informative/Explanatory"); // Updated default tone
                 personaSelect.value = currentPersonaIndex;
                 toneSelect.value = currentToneIndex;
                 sentenceLengthSelect.value = 2;
@@ -384,19 +393,19 @@
                 promptInput.focus();
             }
             
-            function getSystemPrompt() {
+            // This function now generates the system instruction string
+            function getSystemInstructionString() {
                 const selectedPersona = personas[currentPersonaIndex];
                 const selectedTone = tones[currentToneIndex];
                 let lengthConstraint = `Limit your response to exactly ${currentSentenceLength} sentence(s).`;
                 if(currentSentenceLength == 0) {
                      lengthConstraint = "There is no limit to the length of your response.";
                 }
-                const text = `${selectedPersona.systemPrompt} The story should have ${selectedTone.description}. ${lengthConstraint}`;
-                // This is a special instruction for the AI, not a message from the user role.
-                return { role: "system", parts: [{ text }] };
+                return `${selectedPersona.systemPrompt} Continue the story based on the user's prompt. The story should have ${selectedTone.description} tone. ${lengthConstraint}`;
             }
 
             function populatePersonaSelect() {
+                personaSelect.innerHTML = ''; // Clear existing options
                 personas.forEach((persona, index) => {
                     const option = document.createElement('option');
                     option.value = index;
@@ -406,6 +415,7 @@
             }
 
             function populateToneSelect() {
+                toneSelect.innerHTML = ''; // Clear existing options
                 tones.forEach((tone, index) => {
                     const option = document.createElement('option');
                     option.value = index;
@@ -415,6 +425,7 @@
             }
             
              function populateImageStyleSelect() {
+                imageStyleSelect.innerHTML = ''; // Clear existing options
                 imageStyles.forEach((style, index) => {
                     const option = document.createElement('option');
                     option.value = index;
@@ -424,6 +435,7 @@
             }
 
             function populateSentenceLengthSelect() {
+                 sentenceLengthSelect.innerHTML = ''; // Clear existing options
                  sentenceLengths.forEach(length => {
                     const option = document.createElement('option');
                     option.value = length;
@@ -451,8 +463,8 @@
                 updateUIFromHistory();
 
                 try {
-                    const messagesForAPI = [getSystemPrompt(), ...storyHistory];
-                    const aiResponseText = await getAIResponse(messagesForAPI);
+                    // Pass the system instruction string separately
+                    const aiResponseText = await getAIResponse(storyHistory, getSystemInstructionString());
                     storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
                     pushToHistory();
                 } catch (error) {
@@ -462,7 +474,7 @@
                     } else {
                         displaySystemMessage(error.message, 'error');
                     }
-                    storyHistory.pop();
+                    storyHistory.pop(); // Remove the user prompt if AI response fails
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
@@ -796,8 +808,8 @@
                 const historyForRegen = storyHistory.slice(0, index);
                 
                 try {
-                    const messagesForAPI = [getSystemPrompt(), ...historyForRegen];
-                    const newAiResponse = await getAIResponse(messagesForAPI);
+                    // Pass the system instruction string separately
+                    const newAiResponse = await getAIResponse(historyForRegen, getSystemInstructionString());
                     storyHistory[index].parts[0].text = newAiResponse;
                     storyHistory.splice(index + 1);
                     pushToHistory();
@@ -1174,11 +1186,30 @@
                 updateButtonStates();
             }
 
-            async function getAIResponse(history) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
+            // Modified getAIResponse to handle system instructions
+            async function getAIResponse(chatHistory, systemInstruction) {
+                const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
-                const payload = { contents: history.map(({role, parts}) => ({role, parts})) };
+                // Create a copy of the chat history to modify for the API call
+                const messagesForAPI = chatHistory.map(({role, parts}) => ({role, parts}));
+
+                // Prepend system instruction to the first user message
+                // Find the first user message
+                const firstUserMessageIndex = messagesForAPI.findIndex(msg => msg.role === 'user');
+                if (firstUserMessageIndex !== -1) {
+                    // Prepend the system instruction to the text of the first user message
+                    messagesForAPI[firstUserMessageIndex].parts[0].text = 
+                        `${systemInstruction}\n\n${messagesForAPI[firstUserMessageIndex].parts[0].text}`;
+                } else {
+                    // If there's no user message yet (unlikely in this flow, but good for robustness),
+                    // you might consider adding a dummy user message or handling this case
+                    // based on your application's logic. For now, we assume a user message will exist.
+                    console.warn("No user message found to attach system instruction to.");
+                    throw new Error("No user message to apply system instruction.");
+                }
+
+                const payload = { contents: messagesForAPI };
                 
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
@@ -1199,7 +1230,7 @@
             }
             
              async function generateImage(prompt) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 
                 const payload = {
