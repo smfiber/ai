@@ -417,7 +417,7 @@
                         modifiers: [
                             interact.modifiers.restrictRect({
                                 restriction: 'parent', // Keep within the image container
-                                endOnly: true // Apply restriction only at the end of the move
+                                // Removed 'endOnly: true' to enforce restriction during the drag
                             })
                         ]
                     })
