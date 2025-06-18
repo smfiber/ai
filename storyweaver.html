@@ -47,7 +47,7 @@
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
         .user-paragraph { background-image: linear-gradient(to right, #374151, #2f3743); }
         .ai-paragraph { background-image: linear-gradient(to left, #1e293b, #1a222f); }
-        .narrator-paragraph { background-image: linear-gradient(to left, #0f766e, #134e4a); color: #f0fdfa; }
+        .insight-paragraph { background-image: linear-gradient(to left, #0f766e, #134e4a); color: #f0fdfa; }
         .error-paragraph, .system-message-paragraph { align-self: center; text-align: center; padding: 1rem; border-radius: 0.5rem; font-weight: bold; max-width: 80%; }
         .error-paragraph { background-color: #dc2626; color: #fee2e2; }
         .system-message-paragraph { background-color: #374151; color: #a78bfa; white-space: pre-wrap; }
@@ -55,8 +55,8 @@
         #story-container::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track { background: #1f2937; }
         #story-container::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
         #story-container::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 75%; border-radius: 0.5rem; overflow: hidden; }
-        .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        .illustration-container { margin-bottom: 1rem; position: relative; width: 100%; padding-top: 56.25%; /* 16:9 Aspect Ratio */ border-radius: 0.5rem; overflow: hidden; }
+        .illustration-container img, .illustration-container .loading-placeholder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 
         /* Styles for the interactive text overlay */
         .resizable-text-box {
@@ -101,7 +101,7 @@
             <div class="flex-shrink-0 mr-6">
                 <h1 class="text-xl font-bold text-white flex items-baseline gap-2">
                     AI Story Weaver
-                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.89</span>
+                    <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.92</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -109,24 +109,24 @@
                         </svg>
                     </button>
                 </h1>
-                <p class="text-xs text-gray-400 mt-1 max-w-xs">Guide the AI with prompts, add your own narration, illustrate scenes, and fine-tune the story with powerful editing controls.</p>
+                <p class="text-xs text-gray-400 mt-1 max-w-xs">Collaboratively write stories with an AI partner. Guide the narrative, add your own insights, and illustrate your scenes.</p>
             </div>
             
             <div class="flex-grow flex flex-col items-end gap-2 mt-4 sm:mt-0">
                 <div class="flex flex-col sm:flex-row gap-4 w-full justify-end">
                     <div class="flex-1 min-w-[150px] max-w-xs">
-                        <label for="persona-select" class="block mb-1 text-gray-400 text-sm">Story Weaver:</label>
+                        <label for="persona-select" class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
                         <select id="persona-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                     <div class="flex-1 min-w-[150px] max-w-xs">
-                        <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Tone:</label>
+                        <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Story Tone:</label>
                         <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                      <div class="flex-1 min-w-[150px] max-w-xs">
                         <label for="image-style-select" class="block mb-1 text-gray-400 text-sm">Image Style:</label>
                         <select id="image-style-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                    <div class="flex-1 min-w-[120px] max-w-xs">
+                     <div class="flex-1 min-w-[120px] max-w-xs">
                         <label for="sentence-length-select" class="block mb-1 text-gray-400 text-sm">Sentences:</label>
                         <select id="sentence-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
@@ -134,11 +134,11 @@
                 <div class="flex flex-col items-end gap-2 mt-2">
                     <!-- Row 1: Save buttons -->
                     <div class="flex flex-wrap justify-end gap-2">
-                        <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story</button>
+                        <button id="save-story-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Story (HTML)</button>
                         <button id="save-weaver-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Weaver</button>
                         <button id="save-prompts-btn" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Prompts</button>
                         <button id="save-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Lamination</button>
-                        <button id="save-narration-btn" class="bg-teal-600 hover:bg-teal-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Narration</button>
+                        <button id="save-insight-btn" class="bg-teal-600 hover:bg-teal-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save Last Insight</button>
                     </div>
                     <!-- Row 2: Action buttons -->
                     <div class="flex flex-wrap justify-end gap-2">
@@ -160,8 +160,8 @@
                  <button id="create-lamination-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                     Create Lamination
                 </button>
-                 <button id="add-narration-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    Add as Narration
+                 <button id="add-insight-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Add Insight
                 </button>
                 <button id="continue-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     <span id="btn-text">Add to Story</span>
@@ -182,28 +182,30 @@
                 <div class="prose prose-invert">
                     <h3 class="font-semibold text-white">Core Controls</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative.</li>
-                        <li><strong>Add as Narration:</strong> Inserts your text directly into the story without AI generation. This is useful for adding your own voice, descriptions, or transitions.</li>
+                        <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative. This is the main way to build your story turn-by-turn.</li>
+                        <li><strong>Add Insight:</strong> Inserts your text directly into the story without AI generation. This is useful for adding your own voice, descriptions, or transitions. The AI will see these insights when it writes the next part of the story.</li>
                         <li><strong>Create Lamination:</strong> Takes the text in the prompt box and generates a single, shareable image with the text overlaid on a themed background.</li>
                     </ul>
                     <h3 class="font-semibold text-white mt-4">Creative Direction</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Story Weaver:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
-                        <li><strong>Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
+                        <li><strong>AI Persona:</strong> Choose the AI's personality. This sets the overall narrative style and voice. Changing this will start a new story.</li>
+                        <li><strong>Story Tone:</strong> Select the emotional mood of the AI's writing. Changing this will also start a new story.</li>
                         <li><strong>Image Style:</strong> Pick an artistic style for the illustrations you generate.</li>
                         <li><strong>Sentences:</strong> Control the length of the AI's response (1-5 sentences, or Unlimited for a longer response).</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Editing & Refining</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Edit:</strong> Appears next to your prompts and narrations. Click to modify your text.</li>
+                        <li><strong>Edit:</strong> Appears next to your prompts and insights. Click to modify your text.</li>
                         <li><strong>Regen:</strong> Appears next to AI-generated paragraphs. Click to ask the AI for a different response based on the same preceding text.</li>
-                        <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs and your narrations. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
+                        <li><strong>Illustrate:</strong> Appears next to AI-generated paragraphs and your insights. Click to generate an image based on the text of that paragraph. You can re-click to get a new image.</li>
                          <li><strong>Undo/Redo:</strong> Step backward or forward through your story's history.</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Saving Your Work</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Save Story / Save Narration:</strong> Saves the full story or the last narration block as a full-page PNG image, perfect for social media.</li>
-                        <li><strong>Save Weaver / Save Prompts:</strong> Saves the dialogue or your prompts as a .txt file.</li>
+                        <li><strong>Save Story (HTML):</strong> Saves the full story, including dialogue and images, as a self-contained HTML file.</li>
+                        <li><strong>Save Weaver:</strong> Saves the complete back-and-forth dialogue between you and the AI as a .txt file.</li>
+                        <li><strong>Save Prompts:</strong> Saves only your prompts as a .txt file.</li>
+                        <li><strong>Save Last Insight:</strong> Saves the last insight you added as a single PNG image.</li>
                         <li><strong>Save Lamination:</strong> Opens a dialog to save the current lamination as a 4-up sheet for printing or as a single full-size PNG for social media.</li>
                     </ul>
                      <h3 class="font-semibold text-white mt-4">Lamination Text Editing</h3>
@@ -242,7 +244,7 @@
             const storyContainer = document.getElementById('story-container');
             const promptInput = document.getElementById('prompt-input');
             const continueBtn = document.getElementById('continue-btn');
-            const addNarrationBtn = document.getElementById('add-narration-btn');
+            const addInsightBtn = document.getElementById('add-insight-btn');
             const createLaminationBtn = document.getElementById('create-lamination-btn');
             const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
@@ -255,7 +257,7 @@
             const saveWeaverBtn = document.getElementById('save-weaver-btn');
             const savePromptsBtn = document.getElementById('save-prompts-btn');
             const saveLaminationBtn = document.getElementById('save-lamination-btn');
-            const saveNarrationBtn = document.getElementById('save-narration-btn');
+            const saveInsightBtn = document.getElementById('save-insight-btn');
             const undoBtn = document.getElementById('undo-btn');
             const redoBtn = document.getElementById('redo-btn');
             const helpIcon = document.getElementById('help-icon');
@@ -269,14 +271,13 @@
 
             // --- Application State ---
             const MAX_PROMPTS = 10;
-            const MIN_PROMPTS_FOR_SAVE = 1;
             let isAITurn = false;
             let isEditing = false;
             let editingParagraphIndex = null;
             let currentPersonaIndex = 0;
             let currentToneIndex = 0;
             let currentImageStyleIndex = 0;
-            let currentSentenceLength = 2; // Default
+            let currentSentenceLength = 2;
             let isLaminationMode = false;
             let currentLaminationText = '';
             
@@ -285,27 +286,18 @@
             let historyPointer = -1;
 
             // --- Persona, Tone, Style & Length Data (Sorted) ---
-            const personas = [
-                { name: "Ask me anything", systemPrompt: "You are a helpful and factual assistant. Answer the user's question directly and concisely." },
-                { name: "Ayurveda Alchemist (Balance)", systemPrompt: "You are the Ayurveda Alchemist. Based on the user's prompts, continue the narrative focusing on holistic well-being and balance." },
-                { name: "Bodhi Tree Chronicler (Awakening)", systemPrompt: "You are the Bodhi Tree Chronicler. Based on the user's prompts, continue the narrative telling stories of awakening and compassionate understanding." },
-                { name: "Chakra Oracle (Energy)", systemPrompt: "You are the Chakra Oracle. Based on the user's prompts, continue the narrative exploring energy centers and emotional landscapes." },
-                { name: "Cosmic Dreamer", systemPrompt: "You are a Cosmic Dreamer. Based on the user's prompts, continue the narrative with a sense of wonder, exploring space, the universe, and philosophical questions about existence." },
-                { name: "Cyberpunk Netrunner", systemPrompt: "You are a Cyberpunk Netrunner. Based on the user's prompts, continue the narrative with a high-tech, gritty, and futuristic feel. Use slang and concepts from the cyberpunk genre." },
-                { name: "Dharma Protector (Justice)", systemPrompt: "You are the Dharma Protector. Based on the user's prompts, continue the narrative where justice and righteousness are central." },
-                { name: "Gothic Novelist", systemPrompt: "You are a Gothic Novelist. Based on the user's prompts, continue the narrative in a dark, mysterious, and atmospheric style, focusing on themes of horror, romance, and the sublime." },
+             const personas = [
+                { name: "Classic Storyteller", systemPrompt: "You are a master storyteller in the classic tradition. Continue the story based on the user's prompt." },
+                { name: "Cosmic Dreamer", systemPrompt: "You are a Cosmic Dreamer. Continue the story with a sense of wonder, exploring space, the universe, and philosophical questions about existence." },
+                { name: "Cyberpunk Netrunner", systemPrompt: "You are a Cyberpunk Netrunner. Continue the story with a high-tech, gritty, and futuristic feel. Use slang and concepts from the cyberpunk genre." },
+                { name: "Gothic Novelist", systemPrompt: "You are a Gothic Novelist. Continue the story in a dark, mysterious, and atmospheric style, focusing on themes of horror, romance, and the sublime." },
                 { name: "Haiku Poet", systemPrompt: "You are a Haiku Poet. Respond to the user's prompt by continuing the narrative in a short, three-phrase block structured with a 5, 7, 5 syllable pattern." },
-                { name: "Karma Weaver (Dharma)", systemPrompt: "You are a Karma Weaver storyteller. Based on the user's prompts, continue the narrative exploring themes of cause and effect, and duty (dharma)." },
-                { name: "Mandala Architect (Pattern)", systemPrompt: "You are the Mandala Architect. Based on the user's prompts, continue the narrative revealing intricate patterns and interconnectedness." },
-                { name: "Mythic Chronicler", systemPrompt: "You are a Mythic Chronicler. Based on the user's prompts, continue the narrative in an epic, mythological style, with heroic deeds and legendary events." },
-                { name: "Nature Documentarian", systemPrompt: "You are a Nature Documentarian. Based on the user's prompts, describe the scene with the clinical yet awe-filled detail of a nature documentary." },
-                { name: "Noir Detective", systemPrompt: "You are a Noir Detective. Based on the user's prompts, continue the narrative in a hardboiled, cynical, and stylish manner, filled with witty one-liners and a sense of moral ambiguity." },
-                { name: "Sankalpa Seeker (Intention)", systemPrompt: "You are the Sankalpa Seeker. Based on the user's prompts, continue the narrative around the power of intention and resolve." },
-                { name: "Stoic Philosopher", systemPrompt: "You are a Stoic Philosopher. Based on the user's prompts, continue the narrative with a focus on logic, virtue, and acceptance of fate." },
-                { name: "Taoist Sage (Flow)", systemPrompt: "You are a Taoist Sage. Based on the user's prompts, continue the narrative embodying effortless flow (wu wei) and the beauty of nature's path." },
-                { name: "Vedic Scholar", systemPrompt: "You are a Vedic Scholar. Based on the user's prompts, continue the narrative by weaving in themes from the Vedas and ancient Indian philosophy." },
-                { name: "Yoga Sutra Guide (Unity)", systemPrompt: "You are a Yoga Sutra Guide. Based on the user's prompts, continue the narrative focusing on the journey towards union (yoga) and harmony of mind and body." },
-                { name: "Zen Master (Wisdom)", systemPrompt: "You are a Zen Master storyteller. Based on the user's prompts, continue the narrative with profound wisdom, focusing on simplicity and enlightenment." }
+                { name: "Mythic Chronicler", systemPrompt: "You are a Mythic Chronicler. Continue the story in an epic, mythological style, with heroic deeds and legendary events." },
+                { name: "Nature Documentarian", systemPrompt: "You are a Nature Documentarian. Continue the story by describing the scene with the clinical yet awe-filled detail of a nature documentary." },
+                { name: "Noir Detective", systemPrompt: "You are a Noir Detective. Continue the story in a hardboiled, cynical, and stylish manner, filled with witty one-liners and a sense of moral ambiguity." },
+                { name: "Stoic Philosopher", systemPrompt: "You are a Stoic Philosopher. Continue the story with a focus on logic, virtue, and acceptance of fate." },
+                { name: "Taoist Sage", systemPrompt: "You are a Taoist Sage. Continue the story embodying effortless flow (wu wei) and the beauty of nature's path." },
+                { name: "Zen Master", systemPrompt: "You are a Zen Master storyteller. Continue the story with profound wisdom, focusing on simplicity and enlightenment." }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             const tones = [
@@ -368,11 +360,11 @@
                 populateImageStyleSelect();
                 populateSentenceLengthSelect();
                 
-                currentPersonaIndex = personas.findIndex(p => p.name === "Ask me anything");
-                currentToneIndex = tones.findIndex(t => t.name === "Factual");
+                currentPersonaIndex = personas.findIndex(p => p.name === "Classic Storyteller");
+                currentToneIndex = tones.findIndex(t => t.name === "Dramatic");
                 personaSelect.value = currentPersonaIndex;
                 toneSelect.value = currentToneIndex;
-                sentenceLengthSelect.value = 2; // Default to 2 sentences
+                sentenceLengthSelect.value = 2;
 
                 resetApp();
             }
@@ -381,7 +373,7 @@
                 storyContainer.classList.remove('hidden');
                 isLaminationMode = false;
                 storyContainer.innerHTML = '';
-                storyHistory = [ getSystemPrompt() ];
+                storyHistory = [ ]; // Start with a clean slate
                 historyStack = [ JSON.parse(JSON.stringify(storyHistory)) ];
                 historyPointer = 0;
                 isEditing = false;
@@ -394,12 +386,14 @@
             
             function getSystemPrompt() {
                 const selectedPersona = personas[currentPersonaIndex];
+                const selectedTone = tones[currentToneIndex];
                 let lengthConstraint = `Limit your response to exactly ${currentSentenceLength} sentence(s).`;
                 if(currentSentenceLength == 0) {
                      lengthConstraint = "There is no limit to the length of your response.";
                 }
-                const text = `${selectedPersona.systemPrompt} ${lengthConstraint}`;
-                return { role: "user", parts: [{ text }] };
+                const text = `${selectedPersona.systemPrompt} The story should have ${selectedTone.description}. ${lengthConstraint}`;
+                // This is a special instruction for the AI, not a message from the user role.
+                return { role: "system", parts: [{ text }] };
             }
 
             function populatePersonaSelect() {
@@ -454,9 +448,11 @@
                 promptInput.value = '';
                 isEditing = false;
                 editingParagraphIndex = null;
+                updateUIFromHistory();
 
                 try {
-                    const aiResponseText = await getAIResponse(storyHistory);
+                    const messagesForAPI = [getSystemPrompt(), ...storyHistory];
+                    const aiResponseText = await getAIResponse(messagesForAPI);
                     storyHistory.push({ role: 'model', parts: [{ text: aiResponseText }] });
                     pushToHistory();
                 } catch (error) {
@@ -473,11 +469,11 @@
                 }
             }
 
-            function handleAddNarration() {
+            function handleAddInsight() {
                 const userText = promptInput.value.trim();
                 if (!userText || isAITurn) return;
 
-                storyHistory.push({ role: 'narrator', parts: [{ text: userText }] });
+                storyHistory.push({ role: 'insight', parts: [{ text: userText }] });
                 pushToHistory();
                 promptInput.value = '';
                 updateUIFromHistory();
@@ -695,7 +691,6 @@
                 if (isLaminationMode) return;
                 storyContainer.innerHTML = '';
                 storyHistory.forEach((part, i) => {
-                    if (i === 0) return;
                     addParagraphToUI(part, i);
                 });
                 storyContainer.scrollTop = storyContainer.scrollHeight;
@@ -711,10 +706,10 @@
 
                 const wrapper = document.createElement('div');
                 wrapper.classList.add('story-paragraph-wrapper', 'flex', 'items-start', 'gap-4');
-                wrapper.dataset.role = role; // Add role for easier selection later
+                wrapper.dataset.role = role; 
                 
                 const paragraphContent = document.createElement('div');
-                paragraphContent.classList.add('flex-grow', 'p-4', 'rounded-lg');
+                paragraphContent.classList.add('flex-grow', 'p-4', 'rounded-lg', 'w-full');
                 
                 if (imageUrl) {
                     const imageContainer = document.createElement('div');
@@ -742,18 +737,18 @@
                     controlsContainer.appendChild(editBtn);
                     wrapper.appendChild(paragraphContent);
                     wrapper.appendChild(controlsContainer);
-                } else if (role === 'model' || role === 'narrator') {
+                } else { // Handles 'model' and 'insight'
                     wrapper.classList.add('justify-end');
                     paragraphContent.classList.add('rounded-br-none');
-
-                    if(role === 'narrator'){
-                         paragraphContent.classList.add('narrator-paragraph');
-                         const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
-                         controlsContainer.appendChild(editBtn);
+                    
+                    if (role === 'insight') {
+                        paragraphContent.classList.add('insight-paragraph');
+                        const editBtn = createControlButton('Edit', () => enterEditMode(index, text));
+                        controlsContainer.appendChild(editBtn);
                     } else { // 'model'
-                         paragraphContent.classList.add('ai-paragraph');
-                         const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
-                         controlsContainer.appendChild(regenBtn);
+                        paragraphContent.classList.add('ai-paragraph');
+                        const regenBtn = createControlButton('Regen', () => handleRegenerate(index));
+                        controlsContainer.appendChild(regenBtn);
                     }
 
                     const illustrateBtn = createControlButton('Illustrate', () => handleIllustration(index));
@@ -797,9 +792,12 @@
                 if (isAITurn) return;
                 setLoading(true);
                 
+                // Find the user prompt that came before this AI response.
                 const historyForRegen = storyHistory.slice(0, index);
+                
                 try {
-                    const newAiResponse = await getAIResponse(historyForRegen);
+                    const messagesForAPI = [getSystemPrompt(), ...historyForRegen];
+                    const newAiResponse = await getAIResponse(messagesForAPI);
                     storyHistory[index].parts[0].text = newAiResponse;
                     storyHistory.splice(index + 1);
                     pushToHistory();
@@ -817,7 +815,7 @@
                  setLoading(true);
                  
                  const sceneText = storyHistory[index].parts[0].text;
-                 const paragraphWrapper = storyContainer.children[index - 1];
+                 const paragraphWrapper = storyContainer.children[index];
                  const paragraphContent = paragraphWrapper.querySelector('.flex-grow');
 
                  let imageContainer = paragraphContent.querySelector('.illustration-container');
@@ -845,9 +843,7 @@
                     pushToHistory();
                  } catch(error) {
                     console.error("Error generating image:", error);
-                    const errorText = await error.text();
-                    console.error("Image generation API error:", errorText);
-                    if (errorText && errorText.includes("billed an account")) {
+                    if (error.message && error.message.includes("billed an account")) {
                         imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.<br>This feature requires a billed Google Cloud account.</p>`;
                     } else {
                         imageContainer.innerHTML = `<p class="text-red-400 text-center">Image generation failed.</p>`;
@@ -871,35 +867,146 @@
                 URL.revokeObjectURL(url);
             }
 
+            function saveStoryAsHtml() {
+                const personaName = personas[currentPersonaIndex].name;
+                const toneName = tones[currentToneIndex].name;
+
+                let storyHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Woven Story</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #111827; /* bg-gray-900 */
+            color: #f9fafb; /* text-gray-50 */
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        h1, h2 {
+            color: #e5e7eb; /* text-gray-200 */
+            border-bottom: 1px solid #374151; /* border-gray-700 */
+            padding-bottom: 0.5rem;
+        }
+        h1 { font-size: 2.25rem; }
+        h2 { font-size: 1.5rem; margin-top: 2rem; }
+        .meta-info {
+            background-color: #1f2937; /* bg-gray-800 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: #d1d5db; /* text-gray-300 */
+        }
+        .story-part {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.75rem;
+            max-width: 90%;
+            display: flex;
+            flex-direction: column;
+        }
+        .story-part p {
+            margin: 0;
+            white-space: pre-wrap; /* Preserve line breaks */
+        }
+        .story-part img {
+            max-width: 100%;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            object-fit: contain;
+            align-self: center;
+        }
+        .user-paragraph {
+            background-color: #374151; /* bg-gray-700 */
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        .ai-paragraph, .insight-paragraph {
+            margin-left: auto;
+            align-items: flex-end;
+            text-align: left;
+            border-bottom-right-radius: 0;
+        }
+        .ai-paragraph {
+             background-color: #1e293b; /* bg-gray-800 */
+        }
+        .insight-paragraph {
+            background-color: #134e4a; /* bg-teal-900 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your AI-Woven Story</h1>
+        <div class="meta-info">
+            <strong>AI Persona:</strong> ${personaName}<br>
+            <strong>Story Tone:</strong> ${toneName}
+        </div>
+        <h2>The Story</h2>
+`;
+
+                storyHistory.forEach(part => {
+                    const { role, parts, imageUrl } = part;
+                    const text = parts[0].text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    let roleClass = '';
+                    if (role === 'user') roleClass = 'user-paragraph';
+                    if (role === 'model') roleClass = 'ai-paragraph';
+                    if (role === 'insight') roleClass = 'insight-paragraph';
+
+                    storyHtml += `<div class="story-part ${roleClass}">`;
+                    if (imageUrl) {
+                        storyHtml += `<img src="${imageUrl}" alt="Story illustration">`;
+                    }
+                    storyHtml += `<p>${text}</p></div>`;
+                });
+
+                storyHtml += `
+    </div>
+</body>
+</html>`;
+
+                const blob = new Blob([storyHtml], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ai-woven-story.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
             async function saveContentAsPng(elementToSave, filename, isLamination = false) {
                 setLoading(true);
-                // The filter function will be used to exclude elements from the final image.
                 const filter = (node) => {
-                    // For story/narration, exclude the edit/regen/illustrate buttons.
                     if (!isLamination && node.classList && node.classList.contains('flex-shrink-0')) {
                         return false;
                     }
                     return true;
                 };
 
-                // Options for html-to-image
                 const options = {
                     quality: 0.98,
-                    backgroundColor: isLamination ? null : '#1f2937', // Story container bg: #1f2937
+                    backgroundColor: isLamination ? null : '#1f2937',
                     filter: filter,
-                    pixelRatio: 2, // Higher resolution
+                    pixelRatio: 2,
                 };
 
-                // For lamination, we want to hide the interactive border before capture.
                 const textOverlay = isLamination ? elementToSave.querySelector('#lamination-text-overlay') : null;
                 if (textOverlay) {
                     textOverlay.classList.add('hide-borders');
                 }
 
                 try {
-                    // Directly capture the intended element.
                     const dataUrl = await htmlToImage.toPng(elementToSave, options);
-
                     const a = document.createElement('a');
                     a.href = dataUrl;
                     a.download = filename;
@@ -908,7 +1015,6 @@
                     console.error('Error saving content as PNG:', error);
                     displaySystemMessage('Could not save image. It might be too large or complex.', 'error');
                 } finally {
-                    // Restore the border if it was hidden.
                     if (textOverlay) {
                         textOverlay.classList.remove('hide-borders');
                     }
@@ -922,7 +1028,7 @@
                 const textOverlay = element.querySelector('#lamination-text-overlay');
                  const options = {
                     quality: 0.98,
-                    backgroundColor: '#00000000', // Capture with transparent BG
+                    backgroundColor: '#00000000',
                     pixelRatio: 2
                 };
 
@@ -931,10 +1037,7 @@
                 }
 
                 try {
-                    // 1. Capture the single lamination image as a data URL
                     const dataUrl = await htmlToImage.toPng(element, options);
-
-                    // 2. Create the 4-up canvas
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     const DPI = 150; 
@@ -959,7 +1062,7 @@
                     const sheetH = canvas.height - 2 * margin;
                     const colWidth = sheetW / 2;
                     const rowHeight = sheetH / 2;
-                    const padding = 0.125 * DPI; // Padding between images
+                    const padding = 0.125 * DPI;
 
                     const aspect = singleImage.width / singleImage.height;
                     let w, h;
@@ -980,7 +1083,6 @@
 
                     positions.forEach(pos => ctx.drawImage(singleImage, pos.x, pos.y, w, h));
 
-                    // 3. Download the final sheet
                     const finalImageDataUrl = canvas.toDataURL('image/png');
                     const a = document.createElement('a');
                     a.href = finalImageDataUrl;
@@ -1025,18 +1127,18 @@
             }
 
             function getUserPromptCount() {
-                return storyHistory.filter(p => p.role === 'user').length - 1; // Subtract system prompt
+                return storyHistory.filter(p => p.role === 'user').length;
             }
 
             function updateButtonStates() {
                 const promptCount = getUserPromptCount();
                 const isStoryComplete = promptCount >= MAX_PROMPTS && currentSentenceLength !== 0;
-                const canSave = storyHistory.length > 1;
+                const canSave = storyHistory.length > 0;
                 
                 const isBusy = isAITurn;
                 
                 continueBtn.disabled = isBusy || isStoryComplete || isEditing;
-                addNarrationBtn.disabled = isBusy || isEditing;
+                addInsightBtn.disabled = isBusy || isEditing;
                 
                 if(isEditing) {
                     btnText.textContent = 'Update';
@@ -1057,28 +1159,27 @@
                 redoBtn.disabled = isBusy || historyPointer >= historyStack.length - 1;
                 
                 saveStoryBtn.disabled = isBusy || !canSave;
-                saveWeaverBtn.disabled = isBusy || storyHistory.length <= 1;
+                saveWeaverBtn.disabled = isBusy || storyHistory.length < 1;
                 savePromptsBtn.disabled = isBusy || promptCount < 1;
                 saveLaminationBtn.disabled = isBusy || !isLaminationMode;
-                saveNarrationBtn.disabled = isBusy || !storyHistory.some(p => p.role === 'narrator');
+                saveInsightBtn.disabled = isBusy || !storyHistory.some(p => p.role === 'insight');
             }
             
             function setLoading(isLoading) {
                 isAITurn = isLoading;
                 loadingSpinner.classList.toggle('hidden', !isLoading);
                 continueBtn.disabled = isLoading;
-                addNarrationBtn.disabled = isLoading;
+                addInsightBtn.disabled = isLoading;
                 createLaminationBtn.disabled = isLoading;
                 updateButtonStates();
             }
 
             async function getAIResponse(history) {
                 const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
-                const cleanHistory = history.map(({role, parts}) => ({role, parts}));
-
-                const payload = { contents: cleanHistory };
+                const payload = { contents: history.map(({role, parts}) => ({role, parts})) };
+                
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
                 if (!response.ok) {
@@ -1130,7 +1231,7 @@
             
             // --- Event Listeners ---
             continueBtn.addEventListener('click', handleContinueStory);
-            addNarrationBtn.addEventListener('click', handleAddNarration);
+            addInsightBtn.addEventListener('click', handleAddInsight);
             createLaminationBtn.addEventListener('click', () => handleCreateLamination());
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -1141,25 +1242,24 @@
             
             resetStoryBtn.addEventListener('click', resetApp);
             
-            saveStoryBtn.addEventListener('click', () => saveContentAsPng(storyContainer, 'story.png', false));
+            saveStoryBtn.addEventListener('click', () => saveStoryAsHtml());
 
-            saveNarrationBtn.addEventListener('click', () => {
-                const narrationParagraphs = storyContainer.querySelectorAll('[data-role="narrator"]');
-                if (narrationParagraphs.length > 0) {
-                    const lastNarration = narrationParagraphs[narrationParagraphs.length - 1];
-                    saveContentAsPng(lastNarration, 'narration.png', false);
+            saveInsightBtn.addEventListener('click', () => {
+                const insightParagraphs = storyContainer.querySelectorAll('[data-role="insight"]');
+                if (insightParagraphs.length > 0) {
+                    const lastInsight = insightParagraphs[insightParagraphs.length - 1];
+                    saveContentAsPng(lastInsight, 'insight.png', false);
                 }
             });
 
 
             saveWeaverBtn.addEventListener('click', () => {
                 const weaverText = storyHistory
-                    .slice(1)
                     .map(p => {
                         let author = 'Unknown';
                         if(p.role === 'user') author = 'You';
-                        else if (p.role === 'model') author = 'Story Weaver';
-                        else if (p.role === 'narrator') author = 'Narration';
+                        else if (p.role === 'model') author = 'AI Story Weaver';
+                        else if (p.role === 'insight') author = 'Insight';
                         return `[${author}]:\n${p.parts[0].text}`
                     })
                     .join('\n\n');
@@ -1168,7 +1268,7 @@
 
              savePromptsBtn.addEventListener('click', () => {
                 const promptsText = storyHistory
-                    .filter(p => p.role === 'user' && p.parts[0].text !== getSystemPrompt().parts[0].text)
+                    .filter(p => p.role === 'user')
                     .map((p, i) => `Prompt ${i + 1}:\n${p.parts[0].text}`)
                     .join('\n\n---\n\n');
                 saveAsTxt(promptsText, 'My-Prompts.txt');
