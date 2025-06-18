@@ -114,7 +114,7 @@
                         <circle cx="9" cy="13" r="1.5" fill="black"/>
                         <circle cx="15" cy="13" r="1.5" fill="black"/>
                     </svg>
-                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.04</span>
+                    <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">1.05</span>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -412,27 +412,29 @@
 
             // Interact.js setup for dragging, resizing, rotating text overlay
              function setupTextInteraction(target) {
-                const position = { x: 0, y: 0, angle: 0 }; // Initial position relative to its parent's center
+                // Read initial position and angle from data attributes, default to 0
+                let x = parseFloat(target.dataset.x) || 0;
+                let y = parseFloat(target.dataset.y) || 0;
+                let angle = parseFloat(target.dataset.angle) || 0;
+
+                // Set initial transform
+                target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
 
                 interact(target)
                     .draggable({
                         listeners: {
                             start (event) {
-                                // On drag start, ensure current transformation is captured
-                                const rect = event.target.getBoundingClientRect();
-                                const parentRect = event.target.parentNode.getBoundingClientRect();
-                                position.x = rect.left - parentRect.left + (rect.width / 2) - (parentRect.width / 2);
-                                position.y = rect.top - parentRect.top + (rect.height / 2) - (parentRect.height / 2);
-                                
-                                const style = window.getComputedStyle(event.target);
-                                const matrix = new WebKitCSSMatrix(style.transform);
-                                // Extract rotation from current transform matrix
-                                position.angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+                                // On drag start, ensure our internal x, y, angle match the element's current state
+                                x = parseFloat(event.target.dataset.x) || 0;
+                                y = parseFloat(event.target.dataset.y) || 0;
+                                angle = parseFloat(event.target.dataset.angle) || 0;
                             },
                             move(event) {
-                                position.x += event.dx;
-                                position.y += event.dy;
-                                event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`;
+                                x += event.dx;
+                                y += event.dy;
+                                event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
+                                // Update dataset attributes to persist the position
+                                Object.assign(event.target.dataset, { x, y });
                             },
                         },
                         modifiers: [
@@ -446,13 +448,16 @@
                         edges: { left: true, right: true, bottom: true, top: true }, // Enable all edges for resizing
                         listeners: {
                             move(event) {
-                                let { x, y } = event.target.dataset;
-                                x = (parseFloat(x) || 0) + event.deltaRect.left;
-                                y = (parseFloat(y) || 0) + event.deltaRect.top;
+                                // Resizing can also change effective x/y if top/left edges are dragged
+                                x = (parseFloat(event.target.dataset.x) || 0) + event.deltaRect.left;
+                                y = (parseFloat(event.target.dataset.y) || 0) + event.deltaRect.top;
+                                
                                 Object.assign(event.target.style, {
                                     width: `${event.rect.width}px`,
                                     height: `${event.rect.height}px`,
+                                    transform: `translate(${x}px, ${y}px) rotate(${angle}deg)`, // Re-apply all transforms
                                 });
+                                // Update the dataset attributes
                                 Object.assign(event.target.dataset, { x, y });
                             }
                         },
@@ -468,8 +473,10 @@
                     .gesturable({ // Enable gestures for rotation
                          listeners: {
                             move (event) {
-                              position.angle += event.da; // 'da' is the change in angle
-                              event.target.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${position.angle}deg)`;
+                              angle += event.da; // 'da' is the change in angle
+                              event.target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
+                              // Update dataset attribute for angle
+                              event.target.dataset.angle = angle;
                             },
                           }
                     });
