@@ -40,15 +40,15 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
-    <div id="app-container" class="w-full max-w-6xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
+    <div id="app-container" class="w-full max-w-7xl h-[95vh] flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
         <!-- Header Section -->
         <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
-            <div class="flex justify-between items-center w-full mb-4">
+            <div class="flex justify-between items-start w-full mb-4">
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         AI Story Weaver
                         <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.05</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.09</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -59,19 +59,26 @@
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Collaboratively write stories with an AI partner.</p>
                 </div>
                 <div class="flex items-end gap-4">
-                    <div class="w-48 relative">
+                    <div class="w-56 relative">
                         <label class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
                         <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
                             <span>Select Persona</span>
                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
-                        <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-dropdown-content"></div>
+                        <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                           <input type="text" id="persona-search-input" placeholder="Search personas..." class="sticky top-0 w-full p-2 bg-gray-900 border-b border-gray-600 focus:outline-none">
+                           <div id="persona-list-area" class="max-h-56 overflow-y-auto custom-dropdown-content"></div>
+                        </div>
                     </div>
-                    <div class="w-48">
-                        <label for="tone-select" class="block mb-1 text-gray-400 text-sm">Story Tone:</label>
-                        <select id="tone-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    <div class="w-56 relative">
+                        <label class="block mb-1 text-gray-400 text-sm">Story Tone:</label>
+                        <button id="tone-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
+                            <span>Select Tone</span>
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="tone-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-dropdown-content"></div>
                     </div>
-                     <div class="w-48 relative">
+                     <div class="w-56 relative">
                         <label class="block mb-1 text-gray-400 text-sm">Image Style:</label>
                         <button id="style-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center">
                             <span>Select Styles (0)</span>
@@ -79,7 +86,7 @@
                         </button>
                         <div id="style-dropdown-content" class="hidden absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-dropdown-content"></div>
                     </div>
-                     <div class="w-32">
+                     <div class="w-40">
                         <label for="sentence-length-select" class="block mb-1 text-gray-400 text-sm">Sentences:</label>
                         <select id="sentence-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
@@ -176,7 +183,9 @@
             const loadingSpinner = document.getElementById('loading-spinner');
             const personaDropdownButton = document.getElementById('persona-dropdown-button');
             const personaDropdownContent = document.getElementById('persona-dropdown-content');
-            const toneSelect = document.getElementById('tone-select');
+            const personaSearchInput = document.getElementById('persona-search-input');
+            const toneDropdownButton = document.getElementById('tone-dropdown-button');
+            const toneDropdownContent = document.getElementById('tone-dropdown-content');
             const styleDropdownButton = document.getElementById('style-dropdown-button');
             const styleDropdownContent = document.getElementById('style-dropdown-content');
             const sentenceLengthSelect = document.getElementById('sentence-length-select');
@@ -208,16 +217,16 @@
 
             // --- Persona, Tone, Style & Length Data (Sorted) ---
              const personas = [
-                { name: "The Ally/Companion", systemPrompt: "You are The Ally/Companion. A loyal friend or supporter to the protagonist who offers aid, comic relief, or serves as a moral sounding board." },
-                { name: "The Archetype Bender/Deconstructor", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
+                { name: "The Ally", systemPrompt: "You are The Ally/Companion. A loyal friend or supporter to the protagonist who offers aid, comic relief, or serves as a moral sounding board." },
+                { name: "The Archetype Bender", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
                 { name: "The Beat Poet", systemPrompt: "You are The Beat Poet. Rebellious, improvisational, and rhythmic, exploring themes of freedom, existentialism, and counter-culture." },
                 { name: "The Caregiver", systemPrompt: "You are The Caregiver. A selfless, compassionate, and nurturing figure driven to protect and help others." },
                 { name: "The Cosmic Horror Protagonist", systemPrompt: "You are The Cosmic Horror Protagonist. An ordinary academic who stumbles upon a terrifying, incomprehensible truth about the universe. The narrative is one of psychological unraveling." },
-                { name: "The Creator/Artist", systemPrompt: "You are The Creator/Artist. Fueled by imagination and innovation, driven to bring new ideas and visions into existence." },
+                { name: "The Creator", systemPrompt: "You are The Creator/Artist. Fueled by imagination and innovation, driven to bring new ideas and visions into existence." },
                 { name: "The Dialogue Writer", systemPrompt: "You are The Dialogue Writer. Specialize in generating realistic, character-driven dialogue for specific personas or scenes." },
                 { name: "The Emotional Instigator", systemPrompt: "You are The Emotional Instigator. Explore complex emotions, psychological states, and character motivations, often for dramatic effect." },
                 { name: "The Ethical Dilemma Presenter", systemPrompt: "You are The Ethical Dilemma Presenter. Craft narratives that explore moral ambiguities, difficult choices, and their consequences." },
-                { name: "The Everyman/Everywoman", systemPrompt: "You are The Orphan/Everyman. A relatable, down-to-earth individual who seeks belonging and connection. They often feel unprivileged or like an outcast but have a strong sense of empathy and resilience." },
+                { name: "The Everyman", systemPrompt: "You are The Orphan/Everyman. A relatable, down-to-earth individual who seeks belonging and connection. They often feel unprivileged or like an outcast but have a strong sense of empathy and resilience." },
                 { name: "The Explorer", systemPrompt: "You are The Explorer. Driven by curiosity, a thirst for discovery, and a desire to push boundaries and experience the unknown." },
                 { name: "The Femme Fatale", systemPrompt: "You are The Femme Fatale. A mysterious and alluring woman who leads men into dangerous or compromising situations. She is often cynical and has her own hidden agenda." },
                 { name: "The Friendly Children's Storyteller", systemPrompt: "You are The Friendly Children's Storyteller. A warm, whimsical, and reassuring voice that uses simple language, repetition, and clear moral lessons." },
@@ -228,54 +237,62 @@
                 { name: "The Healer", systemPrompt: "You are The Healer. Focused on mending what is broken—physically, spiritually, or psychologically. Possesses specialized knowledge or an innate gift for restoration." },
                 { name: "The Herald", systemPrompt: "You are The Herald. A character who delivers a message or announcement that signals a coming change or a call to adventure." },
                 { name: "The Hero", systemPrompt: "You are The Hero. Driven by courage and a desire to prove their worth, the Hero embarks on a journey, faces challenges, and makes sacrifices for a greater good." },
-                { name: "The Idea Generator/Creative Muse", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
+                { name: "The Idea Generator", systemPrompt: "You are The Idea Generator/Creative Muse. Focus on brainstorming plot twists, character concepts, unique settings, or overcoming writer's block." },
                 { name: "The Innocent", systemPrompt: "You are The Innocent. Embodies purity, optimism, simplicity, and a desire for happiness and safety. This archetype is often naive and vulnerable but possesses an unwavering faith and moral compass." },
                 { name: "The Interactive Story Guide", systemPrompt: "You are The Interactive Story Guide. Facilitate choose-your-own-adventure style narratives, adapting the story based on user choices." },
                 { name: "The Investigative Journalist", systemPrompt: "You are The Investigative Journalist. Factual, objective, and curious. This persona presents information in a structured, evidence-based manner." },
-                { name: "The Jester/Fool", systemPrompt: "You are The Jester/Fool. Lives in the moment, using humor and wit to break tension, provide comic relief, or subtly expose truths." },
-                { name: "The Judge/Arbiter", systemPrompt: "You are The Judge/Arbiter. Embodies impartiality, reason, and the quest for justice. The Judge weighs evidence, makes difficult decisions, and restores balance." },
-                { name: "The Lore Master/World-Builder", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
+                { name: "The Jester", systemPrompt: "You are The Jester/Fool. Lives in the moment, using humor and wit to break tension, provide comic relief, or subtly expose truths." },
+                { name: "The Judge", systemPrompt: "You are The Judge/Arbiter. Embodies impartiality, reason, and the quest for justice. The Judge weighs evidence, makes difficult decisions, and restores balance." },
+                { name: "The Lore Master", systemPrompt: "You are The Lore Master/World-Builder. Your role is to help users develop intricate world details, histories, and background lore for their stories." },
                 { name: "The Lover", systemPrompt: "You are The Lover. Guided by passion, intimacy, and a desire for unity. The Lover can be romantic and idealistic but is also prone to irrationality or obsession." },
                 { name: "The Magician", systemPrompt: "You are The Magician. Transforms reality by harnessing knowledge and intuition, creating impactful change and wonder." },
                 { name: "The Maiden", systemPrompt: "You are The Maiden. Represents purity, beauty, and new beginnings. She is often in need of rescue but can also be a catalyst for change." },
                 { name: "The Martyr", systemPrompt: "You are The Martyr. Willingly suffers or sacrifices their life for a cause, a belief, or for the sake of others." },
-                { name: "The Mentor/Sage", systemPrompt: "You are The Sage/Mentor. Embodies wisdom, insight, and profound understanding. The Sage guides the protagonist, providing crucial knowledge or skills." },
+                { name: "The Mentor", systemPrompt: "You are The Sage/Mentor. Embodies wisdom, insight, and profound understanding. The Sage guides the protagonist, providing crucial knowledge or skills." },
                 { name: "The Mindfulness Guide", systemPrompt: "You are The Mindfulness Guide. The voice is calm, present, and observational, using simple language and sensory details to draw focus to the 'now'." },
                 { name: "The Motivational Coach", systemPrompt: "You are The Motivational Coach. Energetic, direct, and empowering. This persona uses positive affirmations and speaks directly to the reader to build confidence." },
                 { name: "The Mystical Poet", systemPrompt: "You are The Mystical Poet. Inspired by devotional poets like Rumi or Hafiz, this persona uses ecstatic, metaphorical, and often paradoxical language to explore themes of divine love and transcendence." },
                 { name: "The Productivity Hacker", systemPrompt: "You are The Productivity Hacker. A data-driven, efficient, and methodical voice that uses frameworks, bullet points, and clear, concise language." },
-                { name: "The Rebel/Outlaw", systemPrompt: "You are The Rebel/Outlaw. Challenges the status quo, embraces rebellion, and seeks radical change or vengeance." },
+                { name: "The Rebel", systemPrompt: "You are The Rebel/Outlaw. Challenges the status quo, embraces rebellion, and seeks radical change or vengeance." },
                 { name: "The Ruler", systemPrompt: "You are The Ruler. Values control, order, and leadership, striving to create a stable and successful environment." },
                 { name: "The Shadow", systemPrompt: "You are The Shadow. Represents the repressed, darker impulses or unacknowledged aspects of a protagonist's personality." },
                 { name: "The Southern Gothic Voice", systemPrompt: "You are The Southern Gothic Voice. Atmospheric and melancholic, this voice explores decay, grotesque elements, and dark secrets within a specific regional setting." },
                 { name: "The Stoic Philosopher", systemPrompt: "You are The Stoic Philosopher. A voice of reason, resilience, and self-control. This persona writes with clarity and logic, focusing on what we can and cannot control." },
                 { name: "The Style Mimic", systemPrompt: "You are The Style Mimic. Generate stories in the style of a specific author, literary movement, or historical period." },
-                { name: "The Temptress/Seducer", systemPrompt: "You are The Temptress/Seducer. Uses beauty, charm, or promises of pleasure and power to manipulate or lead others astray." },
+                { name: "The Seducer", systemPrompt: "You are The Temptress/Seducer. Uses beauty, charm, or promises of pleasure and power to manipulate or lead others astray." },
                 { name: "The Trickster", systemPrompt: "You are The Trickster. A chaotic, mischievous, and often amoral figure who delights in deception and subverting expectations." },
                 { name: "The Villain", systemPrompt: "You are The Villain. The primary antagonist who actively seeks to harm or oppose the protagonist, driven by malice, greed, power, or ideology." }
              ].sort((a, b) => a.name.localeCompare(b.name));
 
             const tones = [
-                { name: "Informative/Explanatory", description: "an informative and explanatory" },
-                { name: "Neutral/Objective", description: "a neutral and objective" },
-                { name: "Formal", description: "a formal" },
-                { name: "Enthusiastic/Optimistic", description: "an enthusiastic and optimistic" },
-                { name: "Descriptive/Evocative", description: "a descriptive and evocative" },
-                { name: "Mysterious/Suspenseful", description: "a mysterious and suspenseful" },
-                { name: "Whimsical/Fantastical", description: "a whimsical and fantastical" },
-                { name: "Melancholic/Somber", description: "a melancholic and somber" },
-                { name: "Humorous/Playful", description: "a humorous and playful" },
-                { name: "Dramatic/Intense", description: "a dramatic and intense" },
-                { name: "Sarcastic/Ironic", description: "a sarcastic and ironic" },
-                { name: "Cynical/Skeptical", description: "a cynical and skeptical" },
-                { name: "Nostalgic", description: "a nostalgic" },
-                { name: "Urgent/Pressing", description: "an urgent and pressing" },
-                { name: "Philosophical/Reflective", description: "a philosophical and reflective" },
-                { name: "Gritty/Realistic", description: "a gritty and realistic" },
-                { name: "Empathetic/Compassionate", description: "an empathetic and compassionate" },
-                { name: "Authoritative/Confident", description: "an authoritative and confident" },
-                { name: "Playful/Flirty", description: "a playful and flirty" },
-                { name: "Foreboding/Ominous", description: "a foreboding and ominous" }
+                { name: "Absurdist / Nonsensical", description: "Use an absurdist and nonsensical tone. Create a dialogue where the characters speak past each other about unrelated topics. Describe situations that defy the laws of physics or logic but are treated as perfectly normal by the characters." },
+                { name: "Alienated / Detached", description: "Write with an alienated and detached tone. The narrator should observe social interactions from a distance, as if they are a spectator watching a play. Focus on their feelings of being unseen, misunderstood, or fundamentally different from those around them." },
+                { name: "Ambivalent", description: "Use an ambivalent tone to describe the character's feelings about [subject]. Show their internal conflict by using contrasting descriptions and phrases like, 'A part of me felt relief, while another was gripped by a familiar dread.'" },
+                { name: "Atmospheric", description: "Generate a purely atmospheric description of a location. Focus on the sensory details of the place before introducing any characters or plot to establish the mood." },
+                { name: "Clinical / Analytical", description: "Write with a clinical and analytical tone, like a psychological assessment or an autopsy report. Describe emotionally charged events using precise, detached, and technical language." },
+                { name: "Confessional", description: "Adopt a confessional tone, as if the narrator is writing in a private diary. Have them address the reader directly or indirectly as a confidant. Focus on revealing deep personal truths, regrets, or hidden desires." },
+                { name: "Didactic / Instructive", description: "Adopt a didactic tone. The narrator should explicitly state the moral or lesson of the events. Use allegory or have a mentor character clearly explain what the protagonist should learn." },
+                { name: "Dreamlike / Surreal", description: "Use a dreamlike and surreal tone. Describe a scene where the logic is associative, not linear. Use fluid transitions between unrelated ideas and incorporate sensory blending (synesthesia)." },
+                { name: "Foreboding / Ominous", description: "Adopt a foreboding and ominous tone. Use foreshadowing and unsettling imagery (e.g., a sudden chill, a dead bird on the path). Personify the environment as threatening." },
+                { name: "Formal / Objective", description: "Write with a formal and objective tone, like a scientific report or a historical document. Avoid emotional adjectives and adverbs. Use precise, technical language." },
+                { name: "Hardboiled / Gritty", description: "Adopt a hardboiled, gritty tone. Use short, punchy sentences and terse dialogue. The narrator should be world-weary and make cynical observations." },
+                { name: "Hopeful / Optimistic", description: "Adopt a hopeful and optimistic tone. Focus on imagery of light, growth, and new beginnings. Have the narrator emphasize characters' strengths and their potential to overcome challenges." },
+                { name: "Horrific / Terrifying", description: "Write with a horrific and terrifying tone. Focus on the character's visceral, physical reactions to fear. Use short, punchy, fragmented sentences during moments of panic." },
+                { name: "Kinetic", description: "Describe a scene by focusing entirely on movement and action. This is great for creating a sense of energy, chaos, or urgency." },
+                { name: "Melancholic / Mournful", description: "Use a melancholic and mournful tone. Focus on imagery of rain, dusk, shadows, and decay. Slow the pace with longer, more complex sentences." },
+                { name: "Mythic / Archaic", description: "Adopt a mythic, archaic tone, like an ancient scripture or legend. Use formal sentence structures and consider incorporating archaic vocabulary." },
+                { name: "Nostalgic / Sentimental", description: "Write with a nostalgic and sentimental tone. Describe a memory from the character's past, focusing on specific sensory details—the scent of old books, the feel of a worn-out sweater, the sound of a familiar song." },
+                { name: "Olfactory", description: "Describe the scene using olfactory world-building. Focus on the scents to make the setting incredibly vivid and unique." },
+                { name: "Paranoid / Conspiratorial", description: "Write with a paranoid and conspiratorial tone. The narrator should feel that they are being watched or that they have uncovered a hidden truth no one else sees." },
+                { name: "Pessimistic / Cynical", description: "Write in a cynical and pessimistic tone. The narrator should constantly question characters' motives, highlight flaws in society, and use verbal irony." },
+                { name: "Propagandistic / Biased", description: "Adopt a propagandistic tone from the perspective of a specific faction or ideology. Use emotionally charged and biased language to describe events." },
+                { name: "Reverent / Awe-Filled", description: "Adopt a tone of reverence and awe. Describe the subject using powerful, majestic imagery. Focus on the feeling of being small in the face of something vast and magnificent." },
+                { name: "Sarcastic / Ironic", description: "Adopt a sarcastic and ironic tone for the narrator. Have them make statements that are clearly contradicted by the context." },
+                { name: "Satirical", description: "Write a satirical scene. Exaggerate the behaviors and language of the characters to absurd levels to mock them. The tone should be humorous but with a clear critical edge." },
+                { name: "Solemn / Grave", description: "Use a solemn and grave tone to describe an event. The pacing should be slow and deliberate. Use formal language and focus on the significance of the moment." },
+                { name: "Tense / Suspenseful", description: "Create a tense and suspenseful tone. Focus on the character's internal anxiety and sensory details—the sound of a floorboard creaking, the feeling of being watched." },
+                { name: "Urgent / Frantic", description: "Write with an urgent and frantic tone. Use short, clipped sentences and sentence fragments. Focus on action verbs and immediate sensory input." },
+                { name: "Whimsical / Playful", description: "Use a whimsical and playful tone. Personify inanimate objects, use fanciful metaphors, and create a sense of lighthearted wonder." }
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             const imageStyles = [
@@ -358,9 +375,9 @@
                 populateSentenceLengthSelect();
                 
                 currentPersonaIndex = personas.findIndex(p => p.name === "The Hero");
-                currentToneIndex = tones.findIndex(t => t.name === "Descriptive/Evocative");
+                currentToneIndex = tones.findIndex(t => t.name === "Hopeful / Optimistic");
                 updatePersonaButton(currentPersonaIndex);
-                toneSelect.value = currentToneIndex;
+                updateToneButton(currentToneIndex);
                 sentenceLengthSelect.value = 2;
 
                 resetApp();
@@ -424,6 +441,12 @@
                     personaDropdownContent.classList.toggle('hidden');
                 });
 
+                toneDropdownButton.addEventListener('click', () => {
+                    toneDropdownContent.classList.toggle('hidden');
+                });
+                
+                personaSearchInput.addEventListener('input', filterPersonas);
+
                 document.addEventListener('click', (event) => {
                     if (!styleDropdownButton.contains(event.target) && !styleDropdownContent.contains(event.target)) {
                         styleDropdownContent.classList.add('hidden');
@@ -431,9 +454,11 @@
                     if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) {
                         personaDropdownContent.classList.add('hidden');
                     }
+                     if (!toneDropdownButton.contains(event.target) && !toneDropdownContent.contains(event.target)) {
+                        toneDropdownContent.classList.add('hidden');
+                    }
                 });
 
-                toneSelect.addEventListener('change', (e) => { currentToneIndex = parseInt(e.target.value); resetApp() });
                 sentenceLengthSelect.addEventListener('change', (e) => { currentSentenceLength = parseInt(e.target.value); resetApp(); });
             }
 
@@ -457,7 +482,7 @@
                 if(currentSentenceLength == 0) {
                      lengthConstraint = "There is no limit to the length of your response.";
                 }
-                return `${selectedPersona.systemPrompt} Continue the story based on the user's prompt. The story should have ${selectedTone.description} tone. ${lengthConstraint}`;
+                return `${selectedPersona.systemPrompt} The story should have a tone that is ${selectedTone.name.toLowerCase()}. Specifically: "${selectedTone.description}" Continue the story based on the user's prompt. ${lengthConstraint}`;
             }
 
             function populateSelect(selectElement, dataArray) {
@@ -471,11 +496,13 @@
                 });
             }
 
-            function populateToneSelect() { populateSelect(toneSelect, tones); }
             function populateSentenceLengthSelect() { populateSelect(sentenceLengthSelect, sentenceLengths); }
             
             function populatePersonaSelect() {
-                personaDropdownContent.innerHTML = '';
+                const listArea = document.createElement('div');
+                listArea.id = 'persona-list-area';
+                listArea.className = 'max-h-56 overflow-y-auto custom-dropdown-content';
+
                 personas.forEach((persona, index) => {
                     const label = document.createElement('label');
                     label.className = 'dropdown-label';
@@ -498,12 +525,64 @@
 
                     label.appendChild(radio);
                     label.append(persona.name);
-                    personaDropdownContent.appendChild(label);
+                    listArea.appendChild(label);
+                });
+                
+                // Clear and rebuild the content
+                while (personaDropdownContent.childNodes.length > 1) {
+                    personaDropdownContent.removeChild(personaDropdownContent.lastChild);
+                }
+                personaDropdownContent.appendChild(listArea);
+            }
+            
+            function filterPersonas() {
+                const filter = personaSearchInput.value.toUpperCase();
+                const labels = personaDropdownContent.querySelectorAll('#persona-list-area label');
+                labels.forEach(label => {
+                    const txtValue = label.textContent || label.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        label.style.display = "";
+                    } else {
+                        label.style.display = "none";
+                    }
                 });
             }
 
             function updatePersonaButton(index) {
                 personaDropdownButton.querySelector('span').textContent = personas[index].name;
+            }
+            
+            function populateToneSelect() {
+                toneDropdownContent.innerHTML = '';
+                tones.forEach((tone, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'dropdown-label';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'tone';
+                    radio.value = index;
+                    radio.className = 'accent-indigo-500';
+                    if (index === currentToneIndex) {
+                        radio.checked = true;
+                    }
+
+                    radio.addEventListener('change', () => {
+                        currentToneIndex = parseInt(radio.value);
+                        updateToneButton(currentToneIndex);
+                        toneDropdownContent.classList.add('hidden');
+                        resetApp();
+                    });
+
+                    label.appendChild(radio);
+                    // Clean up the name for display
+                    label.append(tone.name.split('/')[0].trim());
+                    toneDropdownContent.appendChild(label);
+                });
+            }
+
+            function updateToneButton(index) {
+                toneDropdownButton.querySelector('span').textContent = tones[index].name.split('/')[0].trim();
             }
 
             function populateImageStyleSelect() {
