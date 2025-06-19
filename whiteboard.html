@@ -34,7 +34,8 @@
         #chat-input {
             flex-grow: 1; background: #374151; border: 1px solid #4b5563;
             color: white; padding: 0.5rem; border-radius: 0.5rem; 
-            outline: none; resize: none; height: 4rem; width: 100%; margin-bottom: 0.5rem;
+            outline: none; resize: none; height: 8rem; /* Increased height */
+            width: 100%; margin-bottom: 0.5rem;
         }
         .chat-btn { background: #4f46e5; color: white; padding: 0 1rem; border-radius: 0.5rem; border: none; cursor: pointer; height: 2.5rem; display: flex; align-items: center; justify-content: center;}
         .chat-btn:hover { background: #4338ca; }
@@ -107,7 +108,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.33</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.36</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -192,7 +193,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.33</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.36</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -235,7 +236,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = appId;
-        const apiKey = ""; // API Key will be injected by the environment
+        const apiKey = "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc"; 
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -276,6 +277,7 @@
         let localChatHistory = [];
         let confirmCallback = null;
         const userAvatars = new Map();
+        let areAiFeaturesEnabled = true; // Gracefully handle API errors
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 2, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
@@ -298,6 +300,7 @@
         function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
 
         async function getOrGenerateAvatar(uid) {
+            if (!areAiFeaturesEnabled) return null; // Don't try if API is known to be blocked
             if (userAvatars.has(uid) && userAvatars.get(uid).url) {
                 return userAvatars.get(uid).url;
             }
@@ -365,8 +368,15 @@
                     throw new Error("Invalid or empty content in API response.");
                 }
             } catch (error) {
-                console.error(`Failed to generate avatar for ${uid}. No fallback will be used.`, error);
-                return null;
+                console.error(`Failed to generate avatar for ${uid}.`, error);
+                // Check if it's the specific permission error and disable future calls
+                if (error.message.includes("403")) {
+                    if (areAiFeaturesEnabled) { // Only log this message once
+                        console.warn("AI features (Avatar & Image Generation) have been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
+                        areAiFeaturesEnabled = false;
+                    }
+                }
+                return null; // Return null to use fallback
             }
         }
 
@@ -585,6 +595,8 @@
         // --- UI & Event Functions ---
         async function sendChatMessage(text, type = 'text', url = null) {
             const content = text.trim();
+            // For easier debugging, let's log the attempt
+            console.log(`Attempting to send chat. UserID: ${userId}, Content: "${content}"`);
             if ((content || url) && userId) {
                 try {
                     const messageData = { author: userId, timestamp: serverTimestamp(), type: type };
@@ -852,10 +864,18 @@
 
         async function generateAiImage() {
             const promptInput = document.getElementById('ai-image-prompt-input');
-            const prompt = promptInput.value;
-            if(!prompt) return;
             const resultsContainer = document.getElementById('ai-image-results');
             const promptArea = document.getElementById('ai-image-prompt-area');
+            
+            if (!areAiFeaturesEnabled) {
+                resultsContainer.innerHTML = `<span class="text-red-400">AI features are disabled due to a configuration error. Please check the developer console for more details.</span>`;
+                promptArea.style.display = 'block';
+                return;
+            }
+
+            const prompt = promptInput.value;
+            if(!prompt) return;
+            
             const generateBtn = document.getElementById('ai-image-generate-btn');
             promptArea.style.display = 'none';
             resultsContainer.innerHTML = `<div class="flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Generating...</span></div>`;
@@ -883,6 +903,12 @@
                 } else { console.error("Invalid response structure from AI image API:", result); throw new Error('Invalid response structure from AI image API.'); }
             } catch (error) { 
                 console.error("AI Image Generation Error:", error); 
+                if (error.message.includes("403")) {
+                    if (areAiFeaturesEnabled) {
+                        console.warn("AI features (Avatar & Image Generation) have been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
+                        areAiFeaturesEnabled = false;
+                    }
+                }
                 resultsContainer.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
                 promptArea.style.display = 'block';
             } finally { 
