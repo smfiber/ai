@@ -107,7 +107,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.29</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.33</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -179,7 +179,7 @@
                 <button id="close-help-btn" class="text-2xl">&times;</button>
             </div>
             <h3>Core Concepts</h3>
-            <p>Welcome to a space of inspiration! The title and description of this board change daily to provide a new creative spark. Every user is assigned a unique, yogic-themed avatar.</p>
+            <p>Welcome to a space of inspiration! The title and description of this board change daily to provide a new creative spark.</p>
             <h4 class="font-bold mt-4 mb-2">Features</h4>
             <ul class="list-disc list-inside space-y-2">
                 <li><b>Real-time Whiteboard:</b> Draw freely with various tools (pen, shapes, text), colors, and brush sizes. The pen tool uses smoothing for better results.</li>
@@ -192,7 +192,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.29</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.33</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -235,7 +235,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = appId;
-        const API_KEY = ""; // API Key will be injected by the environment
+        const apiKey = ""; // API Key will be injected by the environment
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -306,7 +306,7 @@
             const avatarDoc = await getDoc(avatarDocRef);
             const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
-            if (avatarDoc.exists() && avatarDoc.data().generatedAt.toMillis() > oneDayAgo) {
+            if (avatarDoc.exists() && avatarDoc.data().generatedAt?.toMillis() > oneDayAgo) {
                 const url = avatarDoc.data().imageUrl;
                 userAvatars.set(uid, { url });
                 return url;
@@ -324,7 +324,7 @@
                     maxOutputTokens: 2048,
                 }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -340,11 +340,19 @@
 
                 const result = await response.json();
                 
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0 && result.candidates[0].content.parts[0].text) {
-                    
-                    let svgText = result.candidates[0].content.parts[0].text;
+                const candidate = result.candidates && result.candidates[0];
+                if (!candidate) {
+                    console.error("No candidates in API response.", result);
+                    throw new Error("No candidates in API response.");
+                }
+
+                if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                    console.error(`Avatar generation finished for a non-ideal reason: ${candidate.finishReason}`, result);
+                    throw new Error(`Avatar generation failed: ${candidate.finishReason}`);
+                }
+                
+                if (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) {
+                    let svgText = candidate.content.parts[0].text;
                     svgText = svgText.replace(/```svg/g, '').replace(/```/g, '').trim();
 
                     const svgDataUrl = `data:image/svg+xml;base64,${btoa(svgText)}`;
@@ -353,15 +361,12 @@
                     userAvatars.set(uid, { url: svgDataUrl });
                     return svgDataUrl;
                 } else {
-                    console.error("Invalid or empty response structure from SVG generation API.", result);
-                    throw new Error("Invalid or empty response structure from SVG generation API.");
+                    console.error("Invalid or empty content in API response.", result);
+                    throw new Error("Invalid or empty content in API response.");
                 }
             } catch (error) {
-                console.error(`Failed to generate avatar for ${uid}`, error);
-                const fallbackUrl = `https://placehold.co/128x128/1f2937/a5b4fc?text=${nickname.charAt(0)}`;
-                setDoc(avatarDocRef, { imageUrl: fallbackUrl, generatedAt: serverTimestamp() });
-                userAvatars.set(uid, { url: fallbackUrl });
-                return fallbackUrl;
+                console.error(`Failed to generate avatar for ${uid}. No fallback will be used.`, error);
+                return null;
             }
         }
 
@@ -856,11 +861,19 @@
             resultsContainer.innerHTML = `<div class="flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Generating...</span></div>`;
             generateBtn.disabled = true;
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    let errorDetails = response.statusText;
+                    try {
+                       const parsedError = JSON.parse(errorBody);
+                       errorDetails = parsedError.error?.message || errorBody;
+                    } catch(e) { /* ignore parsing error */ }
+                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
+                }
                 const result = await response.json();
-                if (!response.ok) { const errorDetails = result.error?.message || response.statusText; throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`); }
                 if (result.error) { throw new Error(`AI Service Error: ${result.error.message}`); }
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
                     const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
@@ -868,7 +881,13 @@
                     document.getElementById('send-ai-image-btn').addEventListener('click', async () => { await sendChatMessage(`"${prompt}"`, 'image', imageUrl); hideModal(aiImageModalOverlay); resetAiModal(); });
                     document.getElementById('try-again-ai-image-btn').addEventListener('click', resetAiModal);
                 } else { console.error("Invalid response structure from AI image API:", result); throw new Error('Invalid response structure from AI image API.'); }
-            } catch (error) { console.error("AI Image Generation Error:", error); resultsContainer.innerHTML = `<span class="text-red-500">${error.message}</span>`; promptArea.style.display = 'block'; } finally { generateBtn.disabled = false; }
+            } catch (error) { 
+                console.error("AI Image Generation Error:", error); 
+                resultsContainer.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
+                promptArea.style.display = 'block';
+            } finally { 
+                generateBtn.disabled = false; 
+            }
         }
 
         // --- App Initialization ---
