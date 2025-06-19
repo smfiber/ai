@@ -108,7 +108,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.36</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.37</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -193,7 +193,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.36</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.37</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -234,9 +234,9 @@
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = appId;
-        const apiKey = "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc"; 
+        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
