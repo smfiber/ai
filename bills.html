@@ -332,7 +332,8 @@
 
             const totalIncomeMonth = incomeHistory.filter(i => monthlyFilter(i, 'date')).reduce((total, i) => total + i.amount, 0);
             const totalDueMonth = upcomingBills.filter(b => monthlyFilter(b, 'dueDate')).reduce((s,b) => s + b.amount, 0);
-            const netCashMonth = totalIncomeMonth - totalDueMonth;
+            const totalChecking = sumAmounts(checking);
+            const netCashMonth = totalChecking + totalIncomeMonth - totalDueMonth;
             
             totalIncomeMonthEl.textContent = formatCurrency(totalIncomeMonth);
             totalDueEl.textContent = formatCurrency(totalDueMonth);
@@ -340,7 +341,6 @@
             netCashMonthEl.classList.toggle('text-green-400', netCashMonth >= 0);
             netCashMonthEl.classList.toggle('text-red-400', netCashMonth < 0);
             
-            const totalChecking = sumAmounts(checking);
             checkingBalanceEl.textContent = formatCurrency(totalChecking);
             checkingBalanceEl.classList.toggle('text-green-400', totalChecking >= 0);
             checkingBalanceEl.classList.toggle('text-red-400', totalChecking < 0);
