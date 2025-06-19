@@ -79,13 +79,14 @@
         <main>
             <!-- Dashboard Screen -->
             <div id="dashboard-screen" class="hidden">
-                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-6 mb-6">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     <div class="bg-yellow-600/20 border-2 border-yellow-500 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-yellow-300">Checking Balance</p><p id="checking-balance" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-cash-register text-4xl text-yellow-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Income This Month</p><p id="total-income-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-money-bill-wave text-4xl text-cyan-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Due This Month</p><p id="total-due" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-dollar-sign text-4xl text-red-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Cash This Month</p><p id="net-cash-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-balance-scale-right text-4xl text-blue-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Savings</p><p id="total-savings" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-piggy-bank text-4xl text-green-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Investments</p><p id="total-investments" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-chart-pie text-4xl text-indigo-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Assets</p><p id="total-assets" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-building text-4xl text-teal-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Debts</p><p id="total-debts" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-credit-card text-4xl text-orange-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Worth</p><p id="net-worth" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-landmark text-4xl text-purple-400"></i></div>
                 </div>
@@ -222,6 +223,7 @@
         const totalDueEl = document.getElementById('total-due');
         const totalSavingsEl = document.getElementById('total-savings');
         const totalInvestmentsEl = document.getElementById('total-investments');
+        const totalAssetsEl = document.getElementById('total-assets');
         const totalDebtsEl = document.getElementById('total-debts');
         const checkingBalanceEl = document.getElementById('checking-balance');
         const totalIncomeMonthEl = document.getElementById('total-income-month');
@@ -348,6 +350,7 @@
 
             totalSavingsEl.textContent = formatCurrency(sumAmounts(savings));
             totalInvestmentsEl.textContent = formatCurrency(sumAmounts(investments));
+            totalAssetsEl.textContent = formatCurrency(sumAmounts(assets));
             totalDebtsEl.textContent = formatCurrency(sumAmounts(debts));
 
             const currentNetWorth = sumAmounts(assets) + sumAmounts(savings) + sumAmounts(investments) + totalChecking - sumAmounts(debts);
