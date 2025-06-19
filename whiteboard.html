@@ -37,8 +37,10 @@
             outline: none; resize: none; height: 8rem; /* Increased height */
             width: 100%; margin-bottom: 0.5rem;
         }
-        .chat-btn { background: #4f46e5; color: white; padding: 0 1rem; border-radius: 0.5rem; border: none; cursor: pointer; height: 2.5rem; display: flex; align-items: center; justify-content: center;}
+        #chat-input:disabled { background-color: #4b5563; cursor: not-allowed; }
+        .chat-btn { background: #4f46e5; color: white; padding: 0 1rem; border-radius: 0.5rem; border: none; cursor: pointer; height: 2.5rem; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
         .chat-btn:hover { background: #4338ca; }
+        .chat-btn:disabled { background: #374151; opacity: 0.5; cursor: not-allowed; }
         
         /* Whiteboard Styles */
         #app-container { width: 100%; height: 100%; display: flex; flex-direction: column; background-color: #111827; padding: 1rem; }
@@ -89,10 +91,10 @@
             </div>
             <div id="chat-messages" class="flex-grow"></div>
             <div id="chat-input-area">
-                <textarea id="chat-input" placeholder="Say something... (Shift+Enter for new line)"></textarea>
+                <textarea id="chat-input" placeholder="Connecting to chat..." disabled></textarea>
                 <div class="flex justify-between w-full">
-                    <button id="ai-image-btn" class="chat-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> &nbsp; AI Image</button>
-                    <button id="chat-send-btn" class="chat-btn"><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
+                    <button id="ai-image-btn" class="chat-btn" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> &nbsp; AI Image</button>
+                    <button id="chat-send-btn" class="chat-btn" disabled><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
                 </div>
             </div>
         </div>
@@ -108,7 +110,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.37</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.38</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -193,7 +195,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.37</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.38</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -595,8 +597,6 @@
         // --- UI & Event Functions ---
         async function sendChatMessage(text, type = 'text', url = null) {
             const content = text.trim();
-            // For easier debugging, let's log the attempt
-            console.log(`Attempting to send chat. UserID: ${userId}, Content: "${content}"`);
             if ((content || url) && userId) {
                 try {
                     const messageData = { author: userId, timestamp: serverTimestamp(), type: type };
@@ -927,6 +927,13 @@
                 if (user) { 
                     userId = user.uid; 
                     document.getElementById('userId').textContent = getUserDisplayName(userId); 
+
+                    // --- Enable Chat Controls ---
+                    chatInput.disabled = false;
+                    chatSendBtn.disabled = false;
+                    aiImageBtn.disabled = false;
+                    chatInput.placeholder = 'Say something... (Shift+Enter for new line)';
+
                     await getOrGenerateAvatar(userId); 
                     setupStateListener(); 
                     setupEventsListener(); 
