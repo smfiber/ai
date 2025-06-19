@@ -66,7 +66,7 @@
         /* Effects & Modals */
         #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; pointer-events: none; opacity: 0; animation: flash-animation 0.8s ease-out forwards; }
         @keyframes flash-animation { 0% { opacity: 0; } 25% { opacity: 0.7; } 50% { opacity: 0; } 75% { opacity: 0.7; } 100% { opacity: 0; } }
-        .effect-particle { position: absolute; pointer-events: none; z-index: 9999; animation: float-up 5s linear forwards; font-size: 2rem; background-color: transparent; }
+        .effect-particle { position: absolute; pointer-events: none; z-index: 9999; animation: float-up 5s linear forwards; font-size: 2rem; background-color: transparent !important; }
         @keyframes float-up { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100vh); opacity: 0; } }
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -107,8 +107,8 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.22</span></div>
-                         <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.25</span></div>
+                         <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
                 <!-- Toolbar -->
@@ -192,7 +192,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.22</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.25</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -223,6 +223,7 @@
         // --- App Configuration ---
         const firebaseConfig = { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = "google-sites-whiteboard-advanced";
+        const API_KEY = "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc";
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -298,11 +299,19 @@
             const prompt = `A cool and artistic avatar for a user named '${nickname}'. Vibrant colors, modern digital art, abstract.`;
 
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                 if (!response.ok) {
+                    const errorBody = await response.text();
+                    let errorDetails = errorBody;
+                    try {
+                        const errorJson = JSON.parse(errorBody);
+                        errorDetails = errorJson.error?.message || errorBody;
+                    } catch (e) { /* Not a JSON error */ }
+                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
+                }
                 const result = await response.json();
                 if (result.predictions && result.predictions[0].bytesBase64Encoded) {
                     const base64 = result.predictions[0].bytesBase64Encoded;
@@ -449,13 +458,13 @@
             textInput.value = '';
             textInput.focus();
 
-            const removeListeners = () => {
-                document.removeEventListener('mousedown', handleClickOutside);
-                textInput.removeEventListener('keydown', handleKeyDown);
-            };
+            const finish = async (shouldAddText) => {
+                if (!state.isTexting) return;
+                state.isTexting = false;
+                
+                textInput.onblur = null;
+                document.removeEventListener('mousedown', handleClickOutside, true);
 
-            const finishText = async (shouldAddText) => {
-                removeListeners();
                 if (shouldAddText) {
                     const text = textInput.value.trim();
                     if (text) {
@@ -468,27 +477,21 @@
                 }
                 textInput.value = '';
                 textInputContainer.style.display = 'none';
-                state.isTexting = false;
-            };
+            }
             
             const handleClickOutside = (event) => {
                 if (!textInputContainer.contains(event.target)) {
-                    finishText(true);
+                    finish(true);
                 }
             };
 
-            const handleKeyDown = (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    finishText(true);
-                } else if (e.key === 'Escape') {
-                    finishText(false);
-                }
+            textInput.onkeydown = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+                else if (e.key === 'Escape') { finish(false); }
             };
 
             setTimeout(() => {
-                document.addEventListener('mousedown', handleClickOutside);
-                textInput.addEventListener('keydown', handleKeyDown);
+                 document.addEventListener('mousedown', handleClickOutside, true);
             }, 0);
         }
 
@@ -532,8 +535,7 @@
             generateBtn.disabled = true;
 
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-            const apiKey = ""; // Will be handled by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
 
             try {
                 const response = await fetch(apiUrl, {
