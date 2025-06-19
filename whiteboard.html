@@ -74,8 +74,14 @@
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal { background-color: #1f2937; color: white; padding: 2rem; border-radius: 1rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal { background-color: #1f2937; color: white; padding: 2rem; border-radius: 1rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
         #image-viewer-modal img { max-width: 90vw; max-height: 90vh; }
+        
+        /* GIF Search Modal */
+        #gif-search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; margin-top: 1rem; overflow-y: auto; max-height: 60vh; }
+        #gif-search-results img { width: 100%; height: 100px; object-fit: cover; border-radius: 0.5rem; cursor: pointer; transition: transform 0.2s; }
+        #gif-search-results img:hover { transform: scale(1.05); }
+
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
@@ -93,7 +99,7 @@
             <div id="chat-input-area">
                 <textarea id="chat-input" placeholder="Connecting to chat..." disabled></textarea>
                 <div class="flex justify-between w-full">
-                    <button id="ai-image-btn" class="chat-btn" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> &nbsp; AI Image</button>
+                    <button id="gif-search-btn" class="chat-btn" disabled><i class="fa-solid fa-photo-film"></i> &nbsp; GIF</button>
                     <button id="chat-send-btn" class="chat-btn" disabled><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
                 </div>
             </div>
@@ -110,7 +116,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.38</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.39</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -189,31 +195,33 @@
                 <li><b>Grid & Snapping:</b> Toggle a background grid and snap-to-grid for precise alignment of objects.</li>
                 <li><b>Undo/Redo:</b> Easily undo and redo your actions on the canvas using the dedicated buttons.</li>
                 <li><b>Live Chat:</b> Communicate with others on the board in real-time.</li>
-                <li><b>AI Image Generation:</b> Click the "AI Image" button to create and share unique images from a text description. You can preview the image before sending or try again.</li>
+                <li><b>GIF Search:</b> Click the "GIF" button to search for and share GIFs from Tenor directly into the chat.</li>
                 <li><b>Object Manipulation:</b> Select objects to move, duplicate, delete, or bring to the front. Use the corner handles to resize and the top handle to rotate.</li>
                 <li><b>Save & Export:</b> Save the whiteboard canvas as a PNG image and export the chat history as a text file.</li>
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.38</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.39</p>
         </div>
     </div>
-    <div id="ai-image-modal-overlay" class="modal-overlay">
-        <div id="ai-image-modal" class="modal">
-             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">Generate AI Image</h2>
-                <button id="close-ai-image-btn" class="text-2xl">&times;</button>
+
+    <div id="gif-search-modal-overlay" class="modal-overlay">
+        <div id="gif-search-modal" class="modal">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Search for a GIF</h2>
+                <button id="close-gif-search-btn" class="text-2xl">&times;</button>
             </div>
-            <p class="text-gray-400 mb-4">Describe the image you want to create. Be as descriptive as you like!</p>
-            <div id="ai-image-prompt-area">
+            <p class="text-gray-400 mb-4">Find the perfect GIF to share in the chat.</p>
+            <div id="gif-search-area">
                 <div class="flex gap-2">
-                    <input type="text" id="ai-image-prompt-input" class="w-full bg-gray-700 p-2 rounded" placeholder="e.g., a happy cat wearing a party hat">
-                    <button id="ai-image-generate-btn" class="chat-btn">Generate</button>
+                    <input type="text" id="gif-search-input" class="w-full bg-gray-700 p-2 rounded" placeholder="e.g., happy cat">
+                    <button id="gif-search-execute-btn" class="chat-btn">Search</button>
                 </div>
             </div>
-            <div id="ai-image-results" class="mt-4 text-center"></div>
+            <div id="gif-search-results" class="mt-4"></div>
         </div>
     </div>
+
      <div id="image-viewer-overlay" class="modal-overlay">
         <img id="image-viewer-content" src="" alt="Full size image" />
     </div>
@@ -236,9 +244,9 @@
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
+        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // User-provided API key
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: apiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = appId;
-        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -260,8 +268,12 @@
         const clearCanvasBtn = document.getElementById('clear-canvas-btn');
         const clearChatBtn = document.getElementById('clear-chat-btn');
         const saveChatBtn = document.getElementById('save-chat-btn');
-        const aiImageBtn = document.getElementById('ai-image-btn');
-        const aiImageModalOverlay = document.getElementById('ai-image-modal-overlay');
+        const gifSearchBtn = document.getElementById('gif-search-btn');
+        const gifSearchModalOverlay = document.getElementById('gif-search-modal-overlay');
+        const closeGifSearchBtn = document.getElementById('close-gif-search-btn');
+        const gifSearchInput = document.getElementById('gif-search-input');
+        const gifSearchExecuteBtn = document.getElementById('gif-search-execute-btn');
+        const gifSearchResults = document.getElementById('gif-search-results');
         const imageViewerOverlay = document.getElementById('image-viewer-overlay');
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
@@ -279,7 +291,7 @@
         let localChatHistory = [];
         let confirmCallback = null;
         const userAvatars = new Map();
-        let areAiFeaturesEnabled = true; // Gracefully handle API errors
+        let areGenAiFeaturesEnabled = true; // For avatar generation
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 2, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
@@ -302,7 +314,7 @@
         function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
 
         async function getOrGenerateAvatar(uid) {
-            if (!areAiFeaturesEnabled) return null; // Don't try if API is known to be blocked
+            if (!areGenAiFeaturesEnabled) return null; // Don't try if API is known to be blocked
             if (userAvatars.has(uid) && userAvatars.get(uid).url) {
                 return userAvatars.get(uid).url;
             }
@@ -346,36 +358,24 @@
                 const result = await response.json();
                 
                 const candidate = result.candidates && result.candidates[0];
-                if (!candidate) {
-                    console.error("No candidates in API response.", result);
-                    throw new Error("No candidates in API response.");
-                }
-
-                if (candidate.finishReason && candidate.finishReason !== "STOP") {
-                    console.error(`Avatar generation finished for a non-ideal reason: ${candidate.finishReason}`, result);
-                    throw new Error(`Avatar generation failed: ${candidate.finishReason}`);
-                }
+                if (!candidate) throw new Error("No candidates in API response.");
+                if (candidate.finishReason && candidate.finishReason !== "STOP") throw new Error(`Avatar generation failed: ${candidate.finishReason}`);
                 
-                if (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) {
-                    let svgText = candidate.content.parts[0].text;
-                    svgText = svgText.replace(/```svg/g, '').replace(/```/g, '').trim();
-
+                if (candidate.content?.parts?.[0]?.text) {
+                    let svgText = candidate.content.parts[0].text.replace(/```svg/g, '').replace(/```/g, '').trim();
                     const svgDataUrl = `data:image/svg+xml;base64,${btoa(svgText)}`;
-                    
                     await setDoc(avatarDocRef, { imageUrl: svgDataUrl, generatedAt: serverTimestamp() });
                     userAvatars.set(uid, { url: svgDataUrl });
                     return svgDataUrl;
                 } else {
-                    console.error("Invalid or empty content in API response.", result);
                     throw new Error("Invalid or empty content in API response.");
                 }
             } catch (error) {
                 console.error(`Failed to generate avatar for ${uid}.`, error);
-                // Check if it's the specific permission error and disable future calls
                 if (error.message.includes("403")) {
-                    if (areAiFeaturesEnabled) { // Only log this message once
-                        console.warn("AI features (Avatar & Image Generation) have been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
-                        areAiFeaturesEnabled = false;
+                    if (areGenAiFeaturesEnabled) {
+                        console.warn("Avatar generation has been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
+                        areGenAiFeaturesEnabled = false;
                     }
                 }
                 return null; // Return null to use fallback
@@ -412,19 +412,21 @@
                     const avatarUrl = await getOrGenerateAvatar(msg.author);
                     const displayName = getUserDisplayName(msg.author);
                     let textHtml = '';
-                    let imageHtml = '';
+                    let mediaHtml = '';
 
                     if (msg.text) {
                         const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                         textHtml = `<div class="chat-text">${sanitizedText}</div>`;
                     }
-
-                    if (msg.url && msg.type === 'image') {
-                        const imageMargin = msg.text ? 'mt-2' : '';
-                        imageHtml = `<img src="${msg.url}" class="chat-image ${imageMargin}" data-full-src="${msg.url}" alt="AI generated image">`;
+                    
+                    const mediaMargin = msg.text ? 'mt-2' : '';
+                    if (msg.type === 'image') {
+                        mediaHtml = `<img src="${msg.url}" class="chat-image ${mediaMargin}" data-full-src="${msg.url}" alt="AI generated image">`;
+                    } else if (msg.type === 'gif') {
+                        mediaHtml = `<img src="${msg.url}" class="chat-image ${mediaMargin}" data-full-src="${msg.url}" alt="User-selected GIF">`;
                     }
                     
-                    const contentHtml = textHtml + imageHtml;
+                    const contentHtml = textHtml + mediaHtml;
                     const finalAvatarUrl = avatarUrl || 'https://placehold.co/40x40/4b5563/FFFFFF?text=?';
 
                     messagesHtml += `
@@ -596,7 +598,7 @@
         
         // --- UI & Event Functions ---
         async function sendChatMessage(text, type = 'text', url = null) {
-            const content = text.trim();
+            const content = text ? text.trim() : '';
             if ((content || url) && userId) {
                 try {
                     const messageData = { author: userId, timestamp: serverTimestamp(), type: type };
@@ -611,7 +613,7 @@
         function triggerEffect(type) { const container = document.getElementById('whiteboard-wrapper'); if (type === 'random-flash') { const flash = document.createElement('div'); flash.id = 'flash-overlay'; const randomColor = `rgba(${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, 0.7)`; flash.style.backgroundColor = randomColor; document.body.appendChild(flash); setTimeout(() => flash.remove(), 800); } else if (['hearts', 'rain', 'pickles'].includes(type)) { let emoji = '❤️'; if (type === 'rain') emoji = '💧'; if (type === 'pickles') emoji = '🥒'; for (let i = 0; i < 25; i++) { const particle = document.createElement('div'); particle.className = 'effect-particle'; particle.textContent = emoji; particle.style.left = `${Math.random() * 100}%`; particle.style.animationDelay = `${Math.random() * 2}s`; container.appendChild(particle); setTimeout(() => particle.remove(), 5000); } } }
         async function clearAllDrawings() { await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, {merge: true}); }
         async function clearAllChat() { const batch = writeBatch(db); localChatHistory.forEach(msg => { const docRef = doc(db, `artifacts/${whiteboardId}/public/data/chat`, msg.id); batch.delete(docRef); }); await batch.commit(); }
-        function saveChatHistory() { let chatText = `Chat History for Whiteboard: ${whiteboardTitleEl.textContent}\nSaved on: ${new Date().toLocaleString()}\n\n`; localChatHistory.forEach(msg => { const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : '...'; const author = getUserDisplayName(msg.author); let content = msg.type === 'image' ? `[Image: ${msg.url}]` : msg.text; chatText += `[${time}] ${author}: ${content}\n`; }); const blob = new Blob([chatText], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'chat-history.txt'; link.click(); }
+        function saveChatHistory() { let chatText = `Chat History for Whiteboard: ${whiteboardTitleEl.textContent}\nSaved on: ${new Date().toLocaleString()}\n\n`; localChatHistory.forEach(msg => { const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : '...'; const author = getUserDisplayName(msg.author); let content = msg.text || ''; if (msg.type === 'image' || msg.type === 'gif') { content += ` [Media: ${msg.url}]`; } chatText += `[${time}] ${author}: ${content.trim()}\n`; }); const blob = new Blob([chatText], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'chat-history.txt'; link.click(); }
         function setDailyContent() { const today = new Date(); const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)); const titleIndex = dayOfYear % dailyTitles.length; const quoteIndex = dayOfYear % dailyQuotes.length; whiteboardTitleEl.textContent = dailyTitles[titleIndex]; whiteboardDescriptionEl.textContent = dailyQuotes[quoteIndex]; }
         
         // --- Mouse and Event Handlers ---
@@ -853,7 +855,7 @@
         // --- Modal Functions ---
         function showModal(modal) { modal.classList.add('visible'); }
         function hideModal(modal) { modal.classList.remove('visible'); }
-        function resetAiModal() { const resultsContainer = document.getElementById('ai-image-results'); const promptArea = document.getElementById('ai-image-prompt-area'); const promptInput = document.getElementById('ai-image-prompt-input'); resultsContainer.innerHTML = ''; promptInput.value = ''; promptArea.style.display = 'block'; }
+        function resetGifModal() { gifSearchResults.innerHTML = ''; gifSearchInput.value = ''; }
         
         function showConfirmationModal(title, text, onConfirm) {
             confirmModalTitle.textContent = title;
@@ -862,59 +864,54 @@
             showModal(confirmModalOverlay);
         }
 
-        async function generateAiImage() {
-            const promptInput = document.getElementById('ai-image-prompt-input');
-            const resultsContainer = document.getElementById('ai-image-results');
-            const promptArea = document.getElementById('ai-image-prompt-area');
-            
-            if (!areAiFeaturesEnabled) {
-                resultsContainer.innerHTML = `<span class="text-red-400">AI features are disabled due to a configuration error. Please check the developer console for more details.</span>`;
-                promptArea.style.display = 'block';
-                return;
-            }
+        async function searchTenorGifs() {
+            const query = gifSearchInput.value.trim();
+            if (!query) return;
 
-            const prompt = promptInput.value;
-            if(!prompt) return;
+            gifSearchExecuteBtn.disabled = true;
+            gifSearchResults.innerHTML = `<div class="col-span-full flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Searching...</span></div>`;
+
+            const clientKey = "collaborative-whiteboard-app";
+            const limit = 24;
+            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&client_key=${clientKey}&limit=${limit}`;
             
-            const generateBtn = document.getElementById('ai-image-generate-btn');
-            promptArea.style.display = 'none';
-            resultsContainer.innerHTML = `<div class="flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Generating...</span></div>`;
-            generateBtn.disabled = true;
-            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
             try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch(apiUrl);
                 if (!response.ok) {
-                    const errorBody = await response.text();
-                    let errorDetails = response.statusText;
-                    try {
-                       const parsedError = JSON.parse(errorBody);
-                       errorDetails = parsedError.error?.message || errorBody;
-                    } catch(e) { /* ignore parsing error */ }
-                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
+                    const errorText = await response.text();
+                    throw new Error(`Tenor API error! Status: ${response.status}. Details: ${errorText}`);
                 }
                 const result = await response.json();
-                if (result.error) { throw new Error(`AI Service Error: ${result.error.message}`); }
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                    resultsContainer.innerHTML = `<img src="${imageUrl}" class="max-w-full rounded-lg mx-auto" alt="AI generated preview"><div class="flex justify-center gap-4 mt-4"><button id="send-ai-image-btn" class="chat-btn bg-green-600 hover:bg-green-700">Send to Chat</button><button id="try-again-ai-image-btn" class="chat-btn bg-gray-500 hover:bg-gray-600">Try Again</button></div>`;
-                    document.getElementById('send-ai-image-btn').addEventListener('click', async () => { await sendChatMessage(`"${prompt}"`, 'image', imageUrl); hideModal(aiImageModalOverlay); resetAiModal(); });
-                    document.getElementById('try-again-ai-image-btn').addEventListener('click', resetAiModal);
-                } else { console.error("Invalid response structure from AI image API:", result); throw new Error('Invalid response structure from AI image API.'); }
-            } catch (error) { 
-                console.error("AI Image Generation Error:", error); 
-                if (error.message.includes("403")) {
-                    if (areAiFeaturesEnabled) {
-                        console.warn("AI features (Avatar & Image Generation) have been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
-                        areAiFeaturesEnabled = false;
-                    }
+
+                gifSearchResults.innerHTML = '';
+                if (result.results && result.results.length > 0) {
+                    result.results.forEach(gif => {
+                        const previewUrl = gif.media_formats.tinygif.url;
+                        const fullUrl = gif.media_formats.gif.url;
+                        
+                        const img = document.createElement('img');
+                        img.src = previewUrl;
+                        img.alt = gif.content_description;
+                        img.dataset.fullUrl = fullUrl;
+                        
+                        img.addEventListener('click', () => {
+                            sendChatMessage(null, 'gif', fullUrl);
+                            hideModal(gifSearchModalOverlay);
+                        });
+                        gifSearchResults.appendChild(img);
+                    });
+                } else {
+                    gifSearchResults.innerHTML = `<p class="col-span-full text-center text-gray-400">No GIFs found for "${query}".</p>`;
                 }
-                resultsContainer.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
-                promptArea.style.display = 'block';
-            } finally { 
-                generateBtn.disabled = false; 
+
+            } catch (error) {
+                console.error("Error searching for GIFs:", error);
+                gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to load GIFs. Please check the API key and console for errors.</p>`;
+            } finally {
+                gifSearchExecuteBtn.disabled = false;
             }
         }
+
 
         // --- App Initialization ---
         window.addEventListener('load', () => {
@@ -931,7 +928,7 @@
                     // --- Enable Chat Controls ---
                     chatInput.disabled = false;
                     chatSendBtn.disabled = false;
-                    aiImageBtn.disabled = false;
+                    gifSearchBtn.disabled = false;
                     chatInput.placeholder = 'Say something... (Shift+Enter for new line)';
 
                     await getOrGenerateAvatar(userId); 
@@ -971,19 +968,23 @@
             document.getElementById('close-help-btn').addEventListener('click', () => hideModal(helpModalOverlay));
             document.getElementById('help-btn').addEventListener('click', () => showModal(helpModalOverlay));
 
-            aiImageBtn.addEventListener('click', () => { resetAiModal(); showModal(aiImageModalOverlay); });
-            document.getElementById('close-ai-image-btn').addEventListener('click', () => hideModal(aiImageModalOverlay));
-            aiImageModalOverlay.addEventListener('click', (e) => { if(e.target === aiImageModalOverlay) hideModal(aiImageModalOverlay); });
-            document.getElementById('ai-image-generate-btn').addEventListener('click', generateAiImage);
-            document.getElementById('ai-image-prompt-input').addEventListener('keydown', (e) => {if(e.key === 'Enter') generateAiImage()});
-            
+            // GIF Search Modal Listeners
+            gifSearchBtn.addEventListener('click', () => { resetGifModal(); showModal(gifSearchModalOverlay); });
+            closeGifSearchBtn.addEventListener('click', () => hideModal(gifSearchModalOverlay));
+            gifSearchModalOverlay.addEventListener('click', (e) => { if(e.target === gifSearchModalOverlay) hideModal(gifSearchModalOverlay); });
+            gifSearchExecuteBtn.addEventListener('click', searchTenorGifs);
+            gifSearchInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') searchTenorGifs(); });
+
+            // Confirmation Modal Listeners
             confirmModalConfirmBtn.addEventListener('click', () => { if (typeof confirmCallback === 'function') { confirmCallback(); } hideModal(confirmModalOverlay); confirmCallback = null; });
             confirmModalCancelBtn.addEventListener('click', () => { hideModal(confirmModalOverlay); confirmCallback = null; });
             confirmModalOverlay.addEventListener('click', (e) => { if (e.target === confirmModalOverlay) { hideModal(confirmModalOverlay); confirmCallback = null;} });
 
+            // Image Viewer Listeners
             imageViewerOverlay.addEventListener('click', () => hideModal(imageViewerOverlay));
             chatMessagesContainer.addEventListener('click', (e) => { if(e.target.classList.contains('chat-image')) { document.getElementById('image-viewer-content').src = e.target.dataset.fullSrc; showModal(imageViewerOverlay); } });
 
+            // Whiteboard Listeners
             deleteBtn.addEventListener('click', deleteSelectedObject); frontBtn.addEventListener('click', bringToFront); duplicateBtn.addEventListener('click', duplicateSelectedObject);
             undoBtn.addEventListener('click', handleUndo);
             redoBtn.addEventListener('click', handleRedo);
