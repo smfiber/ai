@@ -18,7 +18,7 @@
 
         /* Main Layout */
         #main-layout { display: flex; height: 100vh; width: 100vw; }
-        #chat-container { width: 700px; flex-shrink: 0; background-color: #1f2937; display: flex; flex-direction: column; padding: 1rem; border-right: 2px solid #374151; }
+        #chat-container { width: 350px; flex-shrink: 0; background-color: #1f2937; display: flex; flex-direction: column; padding: 1rem; border-right: 2px solid #374151; }
         #whiteboard-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         
         /* Chat Box Styles */
@@ -107,7 +107,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.25</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.29</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -150,10 +150,10 @@
                         <div class="dropdown">
                             <button class="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white" title="Screen Effects"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                             <div id="effects-dropdown" class="dropdown-content flex flex-col items-start gap-1 p-2 rounded-md bg-gray-600 shadow-lg">
-                                <button data-effect="random-flash" class="tool-btn p-2 w-full text-left">flashes screen in random colors</button>
-                                <button data-effect="hearts" class="tool-btn p-2 w-full text-left">abundance of hearts</button>
-                                <button data-effect="rain" class="tool-btn p-2 w-full text-left">wet for you</button>
-                                <button data-effect="pickles" class="tool-btn p-2 w-full text-left">big pickles</button>
+                                <button data-effect="random-flash" class="tool-btn p-2 w-full text-left">Random Flash</button>
+                                <button data-effect="hearts" class="tool-btn p-2 w-full text-left">Hearts</button>
+                                <button data-effect="rain" class="tool-btn p-2 w-full text-left">Rain</button>
+                                <button data-effect="pickles" class="tool-btn p-2 w-full text-left">Pickles</button>
                             </div>
                         </div>
                         <button id="save-btn" class="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white" title="Save as PNG"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg></button>
@@ -187,12 +187,12 @@
                 <li><b>Undo/Redo:</b> Easily undo and redo your actions on the canvas using the dedicated buttons.</li>
                 <li><b>Live Chat:</b> Communicate with others on the board in real-time.</li>
                 <li><b>AI Image Generation:</b> Click the "AI Image" button to create and share unique images from a text description. You can preview the image before sending or try again.</li>
-                <li><b>Object Manipulation:</b> Select, move, resize, duplicate, delete, and bring objects to the front.</li>
+                <li><b>Object Manipulation:</b> Select objects to move, duplicate, delete, or bring to the front. Use the corner handles to resize and the top handle to rotate.</li>
                 <li><b>Save & Export:</b> Save the whiteboard canvas as a PNG image and export the chat history as a text file.</li>
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.25</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.29</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -214,16 +214,28 @@
      <div id="image-viewer-overlay" class="modal-overlay">
         <img id="image-viewer-content" src="" alt="Full size image" />
     </div>
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal-overlay" class="modal-overlay">
+        <div id="confirm-modal" class="modal">
+            <h2 id="confirm-modal-title" class="text-xl font-bold mb-4">Are you sure?</h2>
+            <p id="confirm-modal-text" class="mb-6">This action cannot be undone.</p>
+            <div class="flex justify-end gap-4">
+                <button id="confirm-modal-cancel-btn" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 rounded-lg font-semibold">Cancel</button>
+                <button id="confirm-modal-confirm-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">Confirm</button>
+            </div>
+        </div>
+    </div>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, orderBy, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
-        const firebaseConfig = { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
-        const whiteboardId = "google-sites-whiteboard-advanced";
-        const API_KEY = "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
+        const whiteboardId = appId;
+        const API_KEY = ""; // API Key will be injected by the environment
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -252,16 +264,22 @@
         const redoBtn = document.getElementById('redo-btn');
         const toggleGridBtn = document.getElementById('toggle-grid-btn');
         const toggleSnapBtn = document.getElementById('toggle-snap-btn');
+        const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+        const confirmModalTitle = document.getElementById('confirm-modal-title');
+        const confirmModalText = document.getElementById('confirm-modal-text');
+        const confirmModalCancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const confirmModalConfirmBtn = document.getElementById('confirm-modal-confirm-btn');
 
         // --- Firebase & State Globals ---
         let db, userId, auth;
         let unsubscribeFromDrawings, unsubscribeFromState, unsubscribeFromEvents, unsubscribeFromChat;
         let localChatHistory = [];
+        let confirmCallback = null;
         const userAvatars = new Map();
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 2, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
-            tempDrawing: null, resizeHandle: null, isTexting: false, isShiftDown: false,
+            tempDrawing: null, transformHandle: null, isTexting: false, isShiftDown: false,
             undoStack: [], redoStack: [],
             isGridVisible: true, isSnapEnabled: true, gridSize: 20,
         };
@@ -284,7 +302,7 @@
                 return userAvatars.get(uid).url;
             }
 
-            const avatarDocRef = doc(db, `whiteboards/${whiteboardId}/avatars`, uid);
+            const avatarDocRef = doc(db, `artifacts/${whiteboardId}/public/data/avatars`, uid);
             const avatarDoc = await getDoc(avatarDocRef);
             const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
@@ -294,58 +312,63 @@
                 return url;
             }
 
-            // Generate a new one
             const nickname = getUserDisplayName(uid);
-            const prompt = `A cool and artistic avatar for a user named '${nickname}'. Vibrant colors, modern digital art, abstract.`;
+            const prompt = `Create a unique, simple, modern, abstract, and colorful SVG avatar for a user named '${nickname}'. The SVG must be exactly 100x100 pixels. Use clean geometric shapes and interesting color palettes. Do not include any text, raster images, or font dependencies. The background should be a solid color. Return ONLY the raw SVG code, starting with "<svg" and ending with "</svg>".`;
 
-            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.8,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 2048,
+                }
+            };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
             try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                 if (!response.ok) {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
                     const errorBody = await response.text();
-                    let errorDetails = errorBody;
-                    try {
-                        const errorJson = JSON.parse(errorBody);
-                        errorDetails = errorJson.error?.message || errorBody;
-                    } catch (e) { /* Not a JSON error */ }
-                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
+                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorBody}`);
                 }
+
                 const result = await response.json();
-                if (result.predictions && result.predictions[0].bytesBase64Encoded) {
-                    const base64 = result.predictions[0].bytesBase64Encoded;
-                    const img = new Image();
-                    const promise = new Promise((resolve, reject) => {
-                         img.onload = async () => {
-                            const maxDimension = 128;
-                            const scale = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
-                            const tempCanvas = document.createElement('canvas');
-                            tempCanvas.width = img.width * scale;
-                            tempCanvas.height = img.height * scale;
-                            const tempCtx = tempCanvas.getContext('2d');
-                            tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-                            const compressedUrl = tempCanvas.toDataURL('image/jpeg', 0.8);
-                            
-                            await setDoc(avatarDocRef, { imageUrl: compressedUrl, generatedAt: serverTimestamp() });
-                            userAvatars.set(uid, { url: compressedUrl });
-                            resolve(compressedUrl);
-                         };
-                         img.onerror = reject;
-                    });
-                    img.src = `data:image/png;base64,${base64}`;
-                    return promise;
+                
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0 && result.candidates[0].content.parts[0].text) {
+                    
+                    let svgText = result.candidates[0].content.parts[0].text;
+                    svgText = svgText.replace(/```svg/g, '').replace(/```/g, '').trim();
+
+                    const svgDataUrl = `data:image/svg+xml;base64,${btoa(svgText)}`;
+                    
+                    await setDoc(avatarDocRef, { imageUrl: svgDataUrl, generatedAt: serverTimestamp() });
+                    userAvatars.set(uid, { url: svgDataUrl });
+                    return svgDataUrl;
+                } else {
+                    console.error("Invalid or empty response structure from SVG generation API.", result);
+                    throw new Error("Invalid or empty response structure from SVG generation API.");
                 }
             } catch (error) {
-                console.error("Failed to generate avatar for", uid, error);
+                console.error(`Failed to generate avatar for ${uid}`, error);
+                const fallbackUrl = `https://placehold.co/128x128/1f2937/a5b4fc?text=${nickname.charAt(0)}`;
+                setDoc(avatarDocRef, { imageUrl: fallbackUrl, generatedAt: serverTimestamp() });
+                userAvatars.set(uid, { url: fallbackUrl });
+                return fallbackUrl;
             }
-            return ''; // Fallback
         }
 
 
         // --- Firebase Listeners ---
         function setupStateListener() { 
-            const stateDocPath = `whiteboards/${whiteboardId}/state/main`; 
+            const stateDocPath = `artifacts/${whiteboardId}/public/data/state/main`; 
             if(unsubscribeFromState) unsubscribeFromState(); 
             unsubscribeFromState = onSnapshot(doc(db, stateDocPath), (docSnapshot) => { 
                 const boardState = docSnapshot.data() || {};
@@ -356,19 +379,19 @@
                 } 
             }); 
         }
-        function setupDrawingsListener() { if (state.currentEpoch === 0) return; if (unsubscribeFromDrawings) unsubscribeFromDrawings(); state.allDrawings.clear(); state.selectedObjectId = null; redrawCanvas(); const drawingsCollectionPath = `whiteboards/${whiteboardId}/drawings`; const q = query(collection(db, drawingsCollectionPath), where("epoch", "==", state.currentEpoch)); unsubscribeFromDrawings = onSnapshot(q, (snapshot) => { snapshot.docChanges().forEach((change) => { const docData = change.doc.data(); if (change.type === 'removed' || docData.isDeleted) { state.allDrawings.delete(change.doc.id); } else { state.allDrawings.set(change.doc.id, { id: change.doc.id, ...docData }); } }); state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); redrawCanvas(); }); }
-        function setupEventsListener() { const eventsCollectionPath = `whiteboards/${whiteboardId}/events`; const q = query(collection(db, eventsCollectionPath), where("timestamp", ">", new Date(Date.now() - 10000))); if(unsubscribeFromEvents) unsubscribeFromEvents(); unsubscribeFromEvents = onSnapshot(q, (snapshot) => { snapshot.docChanges().forEach((change) => { if (change.type === "added") { const eventData = change.doc.data(); if (eventData.author !== userId) { triggerEffect(eventData.type); } } }); }); }
+        function setupDrawingsListener() { if (state.currentEpoch === 0) return; if (unsubscribeFromDrawings) unsubscribeFromDrawings(); state.allDrawings.clear(); state.selectedObjectId = null; redrawCanvas(); const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`; const q = query(collection(db, drawingsCollectionPath), where("epoch", "==", state.currentEpoch)); unsubscribeFromDrawings = onSnapshot(q, (snapshot) => { let shouldRedraw = false; snapshot.docChanges().forEach((change) => { shouldRedraw = true; const docData = change.doc.data(); if (change.type === 'removed' || docData.isDeleted) { state.allDrawings.delete(change.doc.id); } else { state.allDrawings.set(change.doc.id, { id: change.doc.id, ...docData }); } }); if(shouldRedraw) { state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); redrawCanvas(); } }); }
+        function setupEventsListener() { const eventsCollectionPath = `artifacts/${whiteboardId}/public/data/events`; const q = query(collection(db, eventsCollectionPath), where("timestamp", ">", new Date(Date.now() - 10000))); if(unsubscribeFromEvents) unsubscribeFromEvents(); unsubscribeFromEvents = onSnapshot(q, (snapshot) => { snapshot.docChanges().forEach((change) => { if (change.type === "added") { const eventData = change.doc.data(); if (eventData.author !== userId) { triggerEffect(eventData.type); } } }); }); }
         
         async function setupChatListener() {
-            const chatCollectionPath = `whiteboards/${whiteboardId}/chat`;
-            const q = query(collection(db, chatCollectionPath), orderBy("timestamp", "asc"));
+            const chatCollectionPath = `artifacts/${whiteboardId}/public/data/chat`;
+            const q = query(collection(db, chatCollectionPath));
             if (unsubscribeFromChat) unsubscribeFromChat();
             unsubscribeFromChat = onSnapshot(q, async (snapshot) => {
-                localChatHistory = [];
+                const messages = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                messages.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                localChatHistory = messages;
                  let messagesHtml = '';
-                for(const doc of snapshot.docs) {
-                    const msg = {id: doc.id, ...doc.data()};
-                    localChatHistory.push(msg);
+                for(const msg of messages) {
                     const avatarUrl = await getOrGenerateAvatar(msg.author);
                     const displayName = getUserDisplayName(msg.author);
                     let textHtml = '';
@@ -404,49 +427,364 @@
         
         // --- Drawing & Core Logic ---
         function drawGrid() { if (!state.isGridVisible) return; ctx.save(); ctx.strokeStyle = '#374151'; /* gray-700 */ ctx.lineWidth = 0.5; for (let x = 0; x < canvas.width; x += state.gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } for (let y = 0; y < canvas.height; y += state.gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } ctx.restore(); }
-        function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = document.getElementById('main-content').getBoundingClientRect(); [canvas, overlayCanvas].forEach(c => { if (c.width !== rect.width * dpr || c.height !== rect.height * dpr) { c.width = rect.width * dpr; c.height = rect.height * dpr; if (c.style) { c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; } c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
+        function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = document.getElementById('main-content').getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { if (c.width !== rect.width * dpr || c.height !== rect.height * dpr) { c.width = rect.width * dpr; c.height = rect.height * dpr; if (c.style) { c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; } c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
         function drawOverlay() { overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); if (state.tempDrawing) { drawObject(overlayCtx, state.tempDrawing); } const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { drawSelectionBox(selectedObject); deleteBtn.disabled = false; frontBtn.disabled = false; duplicateBtn.disabled = false; } else { deleteBtn.disabled = true; frontBtn.disabled = true; duplicateBtn.disabled = true; } }
-        function drawObject(context, data) { if (!data) return; context.save(); const bounds = getObjectBounds(data); if(!bounds) { context.restore(); return; } context.strokeStyle = data.color; context.fillStyle = data.color; context.lineWidth = data.lineWidth || 2; context.lineCap = 'round'; context.lineJoin = 'round'; switch(data.type) { case 'path': if (!data.points || data.points.length < 1) break; context.beginPath(); if (data.points.length < 3) { context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) { context.lineTo(data.points[i].x, data.points[i].y); } } else { context.moveTo(data.points[0].x, data.points[0].y); for (var i = 1; i < data.points.length - 2; i++) { var c = (data.points[i].x + data.points[i + 1].x) / 2; var d = (data.points[i].y + data.points[i + 1].y) / 2; context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d); } context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y); } context.stroke(); break; case 'line': if (!data.points || data.points.length < 2) break; context.beginPath(); context.moveTo(data.points[0].x, data.points[0].y); context.lineTo(data.points[1].x, data.points[1].y); context.stroke(); break; case 'rectangle': context.strokeRect(data.x, data.y, data.width, data.height); break; case 'circle': context.beginPath(); context.arc(data.cx, data.cy, data.radius, 0, 2 * Math.PI); context.stroke(); break; case 'triangle': if (!data.points || data.points.length < 3) break; context.beginPath(); context.moveTo(data.points[0].x, data.points[0].y); context.lineTo(data.points[1].x, data.points[1].y); context.lineTo(data.points[2].x, data.points[2].y); context.closePath(); context.stroke(); break; case 'text': context.font = `${data.fontSize}px Inter`; context.textBaseline = 'top'; context.fillText(data.text, data.x, data.y); break; } context.restore(); }
-        function drawSelectionBox(obj) { const bounds = getObjectBounds(obj); if (!bounds) return; overlayCtx.save(); overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 1; overlayCtx.setLineDash([4, 4]); overlayCtx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10); overlayCtx.setLineDash([]); const handles = getResizeHandles(bounds); overlayCtx.fillStyle = '#4f46e5'; for (const key in handles) { const handle = handles[key]; overlayCtx.fillRect(handle.x - 4, handle.y - 4, 8, 8); } overlayCtx.restore(); }
-        function getResizeHandles(bounds) { return { tl: { x: bounds.x - 5, y: bounds.y - 5, cursor: 'nwse-resize' }, tr: { x: bounds.x + bounds.width + 5, y: bounds.y - 5, cursor: 'nesw-resize' }, bl: { x: bounds.x - 5, y: bounds.y + bounds.height + 5, cursor: 'nesw-resize' }, br: { x: bounds.x + bounds.width + 5, y: bounds.y + bounds.height + 5, cursor: 'nwse-resize' } }; }
-        function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.cx - obj.radius, y: obj.cy - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x, y: obj.y, width: metrics.width, height: height || obj.fontSize }; case 'path': case 'line': case 'triangle': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; default: return null; } }
+        
+        function drawObject(context, data) {
+            if (!data) return;
+            context.save();
+
+            const center = getObjectCenter(data);
+            context.translate(center.x, center.y);
+            context.rotate(data.rotation || 0);
+
+            context.strokeStyle = data.color;
+            context.fillStyle = data.color;
+            context.lineWidth = data.lineWidth || 2;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+
+            switch(data.type) {
+                case 'path':
+                    if (!data.points || data.points.length < 1) break;
+                    const pathCenter = getObjectCenter({type:'path', points: data.points});
+                    context.translate(-pathCenter.x, -pathCenter.y);
+                    context.beginPath();
+                    if (data.points.length < 3) {
+                        context.moveTo(data.points[0].x, data.points[0].y);
+                        for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y);
+                    } else {
+                        context.moveTo(data.points[0].x, data.points[0].y);
+                        for (var i = 1; i < data.points.length - 2; i++) {
+                            var c = (data.points[i].x + data.points[i + 1].x) / 2;
+                            var d = (data.points[i].y + data.points[i + 1].y) / 2;
+                            context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d);
+                        }
+                        context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y);
+                    }
+                    context.stroke();
+                    break;
+                case 'line':
+                    if (!data.points || data.points.length < 2) break;
+                    const halfWidth = (data.points[1].x - data.points[0].x) / 2;
+                    const halfHeight = (data.points[1].y - data.points[0].y) / 2;
+                    context.beginPath();
+                    context.moveTo(-halfWidth, -halfHeight);
+                    context.lineTo(halfWidth, halfHeight);
+                    context.stroke();
+                    break;
+                case 'rectangle':
+                    context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height);
+                    break;
+                case 'circle':
+                    context.beginPath();
+                    context.arc(0, 0, data.radius, 0, 2 * Math.PI);
+                    context.stroke();
+                    break;
+                case 'triangle':
+                    if (!data.points || data.points.length < 3) break;
+                    const triCenter = getObjectCenter({ type: 'triangle', points: data.points });
+                    const p1 = { x: data.points[0].x - triCenter.x, y: data.points[0].y - triCenter.y };
+                    const p2 = { x: data.points[1].x - triCenter.x, y: data.points[1].y - triCenter.y };
+                    const p3 = { x: data.points[2].x - triCenter.x, y: data.points[2].y - triCenter.y };
+                    context.beginPath();
+                    context.moveTo(p1.x, p1.y);
+                    context.lineTo(p2.x, p2.y);
+                    context.lineTo(p3.x, p3.y);
+                    context.closePath();
+                    context.stroke();
+                    break;
+                case 'text':
+                    context.font = `${data.fontSize}px Inter`;
+                    context.textBaseline = 'middle';
+                    context.textAlign = 'center';
+                    context.fillText(data.text, 0, 0);
+                    break;
+            }
+            context.restore();
+        }
+        
+        function drawSelectionBox(obj) {
+            const handles = getTransformHandles(obj);
+            if (!handles) return;
+            overlayCtx.save();
+            
+            overlayCtx.strokeStyle = '#4f46e5';
+            overlayCtx.lineWidth = 1;
+            overlayCtx.setLineDash([4, 4]);
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(handles.tl.x, handles.tl.y);
+            overlayCtx.lineTo(handles.tr.x, handles.tr.y);
+            overlayCtx.lineTo(handles.br.x, handles.br.y);
+            overlayCtx.lineTo(handles.bl.x, handles.bl.y);
+            overlayCtx.closePath();
+            overlayCtx.stroke();
+            overlayCtx.setLineDash([]);
+            
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(handles.tm.x, handles.tm.y);
+            overlayCtx.lineTo(handles.rot.x, handles.rot.y);
+            overlayCtx.stroke();
+            overlayCtx.fillStyle = '#4f46e5';
+            overlayCtx.beginPath();
+            overlayCtx.arc(handles.rot.x, handles.rot.y, 6, 0, 2*Math.PI);
+            overlayCtx.fill();
+
+            Object.values(handles).forEach(handle => {
+                if(handle.type === 'resize'){
+                    overlayCtx.fillStyle = 'white';
+                    overlayCtx.strokeStyle = '#4f46e5';
+                    overlayCtx.lineWidth = 2;
+                    overlayCtx.fillRect(handle.x - 5, handle.y - 5, 10, 10);
+                    overlayCtx.strokeRect(handle.x - 5, handle.y - 5, 10, 10);
+                }
+            });
+            overlayCtx.restore();
+        }
+
+        // --- Geometry & Transformation Helpers ---
+        function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.x - obj.radius, y: obj.y - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x - metrics.width / 2, y: obj.y - height / 2, width: metrics.width, height: height || obj.fontSize }; case 'path': case 'line': case 'triangle': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; default: return null; } }
+        function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
+        function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
+        function getTransformHandles(obj) {
+            const bounds = getObjectBounds(obj);
+            if (!bounds) return null;
+            const center = getObjectCenter(obj);
+            const w = bounds.width;
+            const h = bounds.height;
+            const angle = obj.rotation || 0;
+
+            const corners = {
+                tl: {x: center.x - w/2, y: center.y - h/2},
+                tr: {x: center.x + w/2, y: center.y - h/2},
+                bl: {x: center.x - w/2, y: center.y + h/2},
+                br: {x: center.x + w/2, y: center.y + h/2}
+            };
+            
+            const rotationHandleOffset = 30;
+            const topMid = { x: center.x, y: center.y - h/2 };
+            const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset };
+
+            const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
+
+            return {
+                tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'},
+                tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'},
+                bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'},
+                br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'},
+                tm: rotatePoint(topMid, center, angle), 
+                rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`}
+            };
+        }
         
         // --- UI & Event Functions ---
         async function sendChatMessage(text, type = 'text', url = null) {
             const content = text.trim();
             if ((content || url) && userId) {
                 try {
-                    const messageData = {
-                        author: userId,
-                        timestamp: serverTimestamp(),
-                        type: type,
-                    };
+                    const messageData = { author: userId, timestamp: serverTimestamp(), type: type };
                     if (content) messageData.text = content;
                     if (url) messageData.url = url;
-
-                    await addDoc(collection(db, `whiteboards/${whiteboardId}/chat`), messageData);
+                    await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/chat`), messageData);
                     chatInput.value = '';
-                } catch (error) {
-                    console.error("Error sending chat message:", error);
-                }
+                } catch (error) { console.error("Error sending chat message:", error); }
             }
         }
-        async function sendEffectToFirestore(effectType) { if(!userId) return; await addDoc(collection(db, `whiteboards/${whiteboardId}/events`), { type: effectType, author: userId, timestamp: new Date() }); triggerEffect(effectType); }
+        async function sendEffectToFirestore(effectType) { if(!userId) return; await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/events`), { type: effectType, author: userId, timestamp: new Date() }); triggerEffect(effectType); }
         function triggerEffect(type) { const container = document.getElementById('whiteboard-wrapper'); if (type === 'random-flash') { const flash = document.createElement('div'); flash.id = 'flash-overlay'; const randomColor = `rgba(${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, 0.7)`; flash.style.backgroundColor = randomColor; document.body.appendChild(flash); setTimeout(() => flash.remove(), 800); } else if (['hearts', 'rain', 'pickles'].includes(type)) { let emoji = '❤️'; if (type === 'rain') emoji = '💧'; if (type === 'pickles') emoji = '🥒'; for (let i = 0; i < 25; i++) { const particle = document.createElement('div'); particle.className = 'effect-particle'; particle.textContent = emoji; particle.style.left = `${Math.random() * 100}%`; particle.style.animationDelay = `${Math.random() * 2}s`; container.appendChild(particle); setTimeout(() => particle.remove(), 5000); } } }
-        async function clearAllDrawings() { await setDoc(doc(db, `whiteboards/${whiteboardId}/state/main`), { epoch: Date.now() }, {merge: true}); }
-        async function clearAllChat() { const batch = writeBatch(db); localChatHistory.forEach(msg => { const docRef = doc(db, `whiteboards/${whiteboardId}/chat`, msg.id); batch.delete(docRef); }); await batch.commit(); }
-        function saveChatHistory() { let chatText = `Chat History for Whiteboard: ${whiteboardTitleEl.textContent}\nSaved on: ${new Date().toLocaleString()}\n\n`; localChatHistory.forEach(msg => { const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : '...'; const author = msg.author.substring(0,8); let content = msg.type === 'image' ? `[Image: ${msg.url}]` : msg.text; chatText += `[${time}] ${author}: ${content}\n`; }); const blob = new Blob([chatText], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'chat-history.txt'; link.click(); }
+        async function clearAllDrawings() { await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, {merge: true}); }
+        async function clearAllChat() { const batch = writeBatch(db); localChatHistory.forEach(msg => { const docRef = doc(db, `artifacts/${whiteboardId}/public/data/chat`, msg.id); batch.delete(docRef); }); await batch.commit(); }
+        function saveChatHistory() { let chatText = `Chat History for Whiteboard: ${whiteboardTitleEl.textContent}\nSaved on: ${new Date().toLocaleString()}\n\n`; localChatHistory.forEach(msg => { const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : '...'; const author = getUserDisplayName(msg.author); let content = msg.type === 'image' ? `[Image: ${msg.url}]` : msg.text; chatText += `[${time}] ${author}: ${content}\n`; }); const blob = new Blob([chatText], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'chat-history.txt'; link.click(); }
         function setDailyContent() { const today = new Date(); const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)); const titleIndex = dayOfYear % dailyTitles.length; const quoteIndex = dayOfYear % dailyQuotes.length; whiteboardTitleEl.textContent = dailyTitles[titleIndex]; whiteboardDescriptionEl.textContent = dailyQuotes[quoteIndex]; }
         
         // --- Mouse and Event Handlers ---
         function snapToGrid(pos) { if (!state.isSnapEnabled) return pos; return { x: Math.round(pos.x / state.gridSize) * state.gridSize, y: Math.round(pos.y / state.gridSize) * state.gridSize, }; }
         function getMousePos(evt) { const rect = eventCaptureLayer.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
-        function handleMouseDown(e) { if (state.isTexting) return; const pos = getMousePos(e); state.startPos = snapToGrid(pos); state.action = 'none'; if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const bounds = getObjectBounds(selectedObject); const handles = getResizeHandles(bounds); for (const key in handles) { const handle = handles[key]; if (Math.abs(pos.x - handle.x) < 5 && Math.abs(pos.y - handle.y) < 5) { state.action = 'resizing'; state.resizeHandle = key; return; } } } const clickedObjectId = findClickedObject(pos.x, pos.y); if (clickedObjectId) { state.selectedObjectId = clickedObjectId; state.action = 'moving'; const obj = state.allDrawings.get(clickedObjectId); const bounds = getObjectBounds(obj); state.dragOffset = { x: pos.x - bounds.x, y: pos.y - bounds.y }; } else { state.selectedObjectId = null; } drawOverlay(); } else if (state.currentTool === 'text') { startTextEntry(state.startPos); } else { state.action = 'drawing'; state.tempDrawing = createPreviewObject(state.startPos, state.startPos); } }
-        function handleMouseMove(e) { if (!state.startPos) return; let pos = getMousePos(e); if (state.isSnapEnabled) { pos = snapToGrid(pos); } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(state.startPos, pos); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const snappedPos = state.isSnapEnabled ? snapToGrid({ x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }) : { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const obj = state.allDrawings.get(state.selectedObjectId); moveObject(obj, snappedPos.x, snappedPos.y); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const obj = state.allDrawings.get(state.selectedObjectId); const bounds = getObjectBounds(obj); let {x, y, width, height} = bounds; switch(state.resizeHandle) { case 'br': width = pos.x - x; height = pos.y - y; break; case 'bl': width = (x + width) - pos.x; x = pos.x; height = pos.y - y; break; case 'tr': width = pos.x - x; height = (y + height) - pos.y; y = pos.y; break; case 'tl': width = (x + width) - pos.x; height = (y + height) - pos.y; x = pos.x; y = pos.y; break; } const updatedData = { ...obj, x, y, width: Math.max(1, width), height: Math.max(1, height) }; state.tempDrawing = updatedData; drawOverlay(); } else if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const bounds = getObjectBounds(selectedObject); const handles = getResizeHandles(bounds); let cursor = 'move'; for (const key in handles) { const handle = handles[key]; if (Math.abs(pos.x - handle.x) < 5 && Math.abs(pos.y - handle.y) < 5) { cursor = handle.cursor; break; } } eventCaptureLayer.style.cursor = cursor; } else { eventCaptureLayer.style.cursor = 'default'; } } }
-        async function handleMouseUp(e) { if (!state.startPos) return; if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); } } } else if (state.action === 'moving' && state.selectedObjectId) { const obj = state.allDrawings.get(state.selectedObjectId); updateObjectInFirestore(state.selectedObjectId, obj); } else if (state.action === 'resizing' && state.selectedObjectId && state.tempDrawing) { const { id, ...dataToUpdate } = state.tempDrawing; updateObjectInFirestore(id, dataToUpdate); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.resizeHandle = null; redrawCanvas(); }
-        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch }; const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [start, end] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', cx: x1, cy: y1, radius: Math.sqrt(width*width + height*height) }; case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: (x1+x2)/2, y: y1}, {x: x2, y: y2} ] }; default: return null; } }
-        function findClickedObject(x, y) { for (let i = state.sortedDrawings.length - 1; i >= 0; i--) { const obj = state.sortedDrawings[i]; const bounds = getObjectBounds(obj); if (bounds && x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) { return obj.id; } } return null; }
-        function moveObject(obj, newX, newY) { const bounds = getObjectBounds(obj); const dx = newX - bounds.x; const dy = newY - bounds.y; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else if (obj.type === 'circle') { obj.cx += dx; obj.cy += dy; } else { obj.x = newX; obj.y = newY; } }
+        
+        function handleMouseDown(e) {
+            if (state.isTexting) return;
+            const pos = getMousePos(e);
+            state.startPos = pos;
+            state.action = 'none';
+
+            if (state.currentTool === 'select') {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                if (selectedObject) {
+                    const handles = getTransformHandles(selectedObject);
+                    for (const key in handles) {
+                        const handle = handles[key];
+                        if (Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { 
+                            state.action = handle.type; 
+                            state.transformHandle = key;
+                            state.originalObjectState = JSON.parse(JSON.stringify(selectedObject));
+                            state.originalObjectState.center = getObjectCenter(selectedObject);
+                            return;
+                        }
+                    }
+                }
+                
+                const clickedObjectId = findClickedObject(pos.x, pos.y);
+                if (clickedObjectId) {
+                    state.selectedObjectId = clickedObjectId;
+                    state.action = 'moving';
+                    const obj = state.allDrawings.get(clickedObjectId);
+                    const center = getObjectCenter(obj);
+                    state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y };
+                } else {
+                    state.selectedObjectId = null;
+                }
+                drawOverlay();
+            } else if (state.currentTool === 'text') {
+                startTextEntry(snapToGrid(pos));
+            } else {
+                state.action = 'drawing';
+                state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
+            }
+        }
+        
+        function handleMouseMove(e) {
+            let pos = getMousePos(e);
+            
+            // Set cursor style based on context
+            let cursor = 'default';
+            if (state.action !== 'none') {
+                if(state.action === 'moving') cursor = 'grabbing';
+                const selObj = state.allDrawings.get(state.selectedObjectId);
+                if (selObj) {
+                   const handles = getTransformHandles(selObj);
+                   if (state.action === 'rotating') cursor = handles.rot.cursor;
+                   if (state.action === 'resizing') cursor = handles[state.transformHandle].cursor;
+                }
+            } else if (state.currentTool === 'select') {
+                 const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                 if (selectedObject) {
+                     const handles = getTransformHandles(selectedObject);
+                     let onHandle = false;
+                     for (const key in handles) {
+                        const handle = handles[key];
+                        if (Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
+                            cursor = handle.cursor;
+                            onHandle = true;
+                            break;
+                        }
+                     }
+                     if(!onHandle && findClickedObject(pos.x, pos.y)) cursor = 'grab';
+                 } else if(findClickedObject(pos.x, pos.y)) {
+                     cursor = 'grab';
+                 }
+            } else if (state.currentTool !== 'select') {
+                cursor = state.currentTool === 'text' ? 'text' : 'crosshair';
+            }
+            eventCaptureLayer.style.cursor = cursor;
+            
+            if (!state.startPos) return;
+
+            if (state.action === 'drawing') {
+                if (state.currentTool === 'pen') {
+                    state.tempDrawing.points.push(pos); 
+                } else {
+                    state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
+                }
+                drawOverlay();
+            } else if (state.action === 'moving' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y };
+                const snappedCenter = snapToGrid(newCenter);
+                moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y);
+                drawOverlay();
+            } else if (state.action === 'rotating' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const center = state.originalObjectState.center;
+                const angle = Math.atan2(pos.y - center.y, pos.x - center.x) + Math.PI / 2;
+                selectedObject.rotation = angle;
+                drawOverlay();
+            } else if (state.action === 'resizing' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const center = state.originalObjectState.center;
+                
+                const angle = -state.originalObjectState.rotation || 0;
+                const localPos = rotatePoint(pos, center, angle);
+                const localStartPos = rotatePoint(state.startPos, center, angle);
+
+                const origBounds = getObjectBounds(state.originalObjectState);
+                let newWidth = Math.abs(localPos.x - center.x) * 2;
+                let newHeight = Math.abs(localPos.y - center.y) * 2;
+                
+                if (selectedObject.type === 'rectangle') {
+                    selectedObject.width = newWidth;
+                    selectedObject.height = newHeight;
+                    selectedObject.x = center.x - newWidth / 2;
+                    selectedObject.y = center.y - newHeight / 2;
+                } else if (selectedObject.type === 'circle') {
+                    selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y);
+                } else if (selectedObject.type === 'text') {
+                    const origFontSize = state.originalObjectState.fontSize;
+                    const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y);
+                    const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y);
+                    if(origDist > 0) {
+                       const scale = newDist / origDist;
+                       selectedObject.fontSize = Math.max(5, origFontSize * scale);
+                    }
+                }
+                drawOverlay();
+            }
+        }
+
+        async function handleMouseUp(e) {
+            if (!state.startPos) return;
+            const objToUpdate = state.allDrawings.get(state.selectedObjectId);
+
+            if (state.action === 'drawing' && state.tempDrawing) {
+                if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) {
+                    const newDocRef = await addObjectToFirestore(state.tempDrawing);
+                    if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); }
+                }
+            } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate) {
+                const {id, ...data} = objToUpdate; 
+                updateObjectInFirestore(id, data, state.originalObjectState);
+            }
+            state.action = 'none';
+            state.startPos = null;
+            state.tempDrawing = null;
+            state.transformHandle = null;
+            state.originalObjectState = null;
+            redrawCanvas(); 
+        }
+
+        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [start, end] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: cx, y: y1}, {x: x2, y: y2} ] }; default: return null; } }
+        
+        function findClickedObject(x, y) {
+            for (let i = state.sortedDrawings.length - 1; i >= 0; i--) {
+                const obj = state.sortedDrawings[i];
+                const center = getObjectCenter(obj);
+                const angle = obj.rotation || 0;
+                
+                const localClick = rotatePoint({x,y}, center, -angle);
+                
+                const bounds = getObjectBounds(obj);
+                const fuzz = (obj.lineWidth || 0) + 5;
+                if (localClick.x >= bounds.x - fuzz && localClick.x <= bounds.x + bounds.width + fuzz &&
+                    localClick.y >= bounds.y - fuzz && localClick.y <= bounds.y + bounds.height + fuzz) {
+                    return obj.id;
+                }
+            }
+            return null;
+        }
+
+        function moveObjectTo(obj, newCenterX, newCenterY) {
+            const bounds = getObjectBounds(obj);
+            const oldCenterX = bounds.x + bounds.width / 2;
+            const oldCenterY = bounds.y + bounds.height / 2;
+            const dx = newCenterX - oldCenterX;
+            const dy = newCenterY - oldCenterY;
+
+            if (obj.points) {
+                obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+            } else { 
+                obj.x += dx;
+                obj.y += dy;
+            }
+        }
         
         function startTextEntry(pos) {
             state.isTexting = true;
@@ -462,149 +800,76 @@
                 if (!state.isTexting) return;
                 state.isTexting = false;
                 
-                textInput.onblur = null;
                 document.removeEventListener('mousedown', handleClickOutside, true);
 
                 if (shouldAddText) {
                     const text = textInput.value.trim();
                     if (text) {
-                        const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: state.currentBrushSize * 5 + 12, author: userId, epoch: state.currentEpoch };
+                        const fontSize = state.currentBrushSize * 5 + 12;
+                        const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: fontSize, author: userId, epoch: state.currentEpoch, rotation: 0 };
                         const newDocRef = await addObjectToFirestore(textData);
-                        if (newDocRef) {
-                            pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }});
-                        }
+                        if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }}); }
                     }
                 }
                 textInput.value = '';
                 textInputContainer.style.display = 'none';
             }
             
-            const handleClickOutside = (event) => {
-                if (!textInputContainer.contains(event.target)) {
-                    finish(true);
-                }
-            };
-
-            textInput.onkeydown = (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-                else if (e.key === 'Escape') { finish(false); }
-            };
-
-            setTimeout(() => {
-                 document.addEventListener('mousedown', handleClickOutside, true);
-            }, 0);
+            const handleClickOutside = (event) => { if (!textInputContainer.contains(event.target)) { finish(true); } };
+            textInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { finish(false); } };
+            setTimeout(() => { document.addEventListener('mousedown', handleClickOutside, true); }, 0);
         }
 
         // --- Firestore Actions ---
-        async function addObjectToFirestore(objData) { try { const docRef = await addDoc(collection(db, `whiteboards/${whiteboardId}/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
-        async function updateObjectInFirestore(docId, updatedData) { const originalObject = state.allDrawings.get(docId); if(originalObject) { pushToUndoStack({ type: 'update', payload: { id: docId, before: originalObject, after: {...originalObject, ...updatedData} }}); } try { await updateDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, docId), { ...updatedData, timestamp: serverTimestamp() }); } catch (error) { console.error("Error updating document: ", error); } }
-        async function deleteSelectedObject() { if (!state.selectedObjectId) return; const objectToDelete = state.allDrawings.get(state.selectedObjectId); if(objectToDelete) { pushToUndoStack({ type: 'delete', payload: objectToDelete }); } try { await deleteDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, state.selectedObjectId)); state.selectedObjectId = null; redrawCanvas(); } catch (error) { console.error("Error deleting document: ", error); } }
-        async function bringToFront() { if (!state.selectedObjectId) return; await updateObjectInFirestore(state.selectedObjectId, {}); }
-        async function duplicateSelectedObject() { if (!state.selectedObjectId) return; const original = state.allDrawings.get(state.selectedObjectId); const { id, timestamp, ...cloneData } = original; if (cloneData.points) { cloneData.points = cloneData.points.map(p => ({ x: p.x + 10, y: p.y + 10 })); } else if (cloneData.type === 'circle') { cloneData.cx += 10; cloneData.cy += 10; } else { cloneData.x += 10; cloneData.y += 10; } const newDocRef = await addObjectToFirestore(cloneData); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: cloneData }}); state.selectedObjectId = newDocRef.id; drawOverlay(); } }
+        async function addObjectToFirestore(objData) { try { const docRef = await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
+        async function updateObjectInFirestore(docId, updatedData, originalData) { if(originalData) { pushToUndoStack({ type: 'update', payload: { id: docId, before: originalData, after: {...originalData, ...updatedData} }}); } try { await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, docId), { ...updatedData, timestamp: serverTimestamp() }); } catch (error) { console.error("Error updating document: ", error); } }
+        async function deleteSelectedObject() { if (!state.selectedObjectId) return; const objectToDelete = state.allDrawings.get(state.selectedObjectId); if(objectToDelete) { pushToUndoStack({ type: 'delete', payload: objectToDelete }); } try { await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, state.selectedObjectId)); state.selectedObjectId = null; redrawCanvas(); } catch (error) { console.error("Error deleting document: ", error); } }
+        async function bringToFront() { if (!state.selectedObjectId) return; await updateObjectInFirestore(state.selectedObjectId, {}, state.allDrawings.get(state.selectedObjectId)); }
+        async function duplicateSelectedObject() { if (!state.selectedObjectId) return; const original = state.allDrawings.get(state.selectedObjectId); const { id, timestamp, ...cloneData } = original; const center = getObjectCenter(cloneData); moveObjectTo(cloneData, center.x + 10, center.y + 10); const newDocRef = await addObjectToFirestore(cloneData); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: cloneData }}); state.selectedObjectId = newDocRef.id; drawOverlay(); } }
         
         // --- Undo/Redo Logic ---
         function updateUndoRedoButtons() { undoBtn.disabled = state.undoStack.length === 0; redoBtn.disabled = state.redoStack.length === 0; }
         function pushToUndoStack(action) { state.undoStack.push(action); state.redoStack = []; updateUndoRedoButtons(); }
-        async function handleUndo() { if (state.undoStack.length === 0) return; const action = state.undoStack.pop(); state.redoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': await deleteDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, action.payload.id)); break; case 'delete': const { id: delId, ...delData } = action.payload; await setDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, delId), delData); break; case 'update': const { id: updId, before: beforeData } = action.payload; const { id: ignoredId, ...updData } = beforeData; await updateDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
-        async function handleRedo() { if (state.redoStack.length === 0) return; const action = state.redoStack.pop(); state.undoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': const { id: addId, data: addData } = action.payload; await setDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, addId), addData); break; case 'delete': await deleteDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, action.payload.id)); break; case 'update': const { id: updId, after: afterData } = action.payload; const { id: ignoredId, ...updData } = afterData; await updateDoc(doc(db, `whiteboards/${whiteboardId}/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
+        async function handleUndo() { if (state.undoStack.length === 0) return; const action = state.undoStack.pop(); state.redoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, action.payload.id)); break; case 'delete': const { id: delId, ...delData } = action.payload; await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, delId), delData); break; case 'update': const { id: updId, before: beforeData } = action.payload; const { id: ignoredId, ...updData } = beforeData; await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
+        async function handleRedo() { if (state.redoStack.length === 0) return; const action = state.redoStack.pop(); state.undoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': const { id: addId, data: addData } = action.payload; await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, addId), addData); break; case 'delete': await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, action.payload.id)); break; case 'update': const { id: updId, after: afterData } = action.payload; const { id: ignoredId, ...updData } = afterData; await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
 
-        // --- AI Image Modal Functions ---
+        // --- Modal Functions ---
         function showModal(modal) { modal.classList.add('visible'); }
         function hideModal(modal) { modal.classList.remove('visible'); }
+        function resetAiModal() { const resultsContainer = document.getElementById('ai-image-results'); const promptArea = document.getElementById('ai-image-prompt-area'); const promptInput = document.getElementById('ai-image-prompt-input'); resultsContainer.innerHTML = ''; promptInput.value = ''; promptArea.style.display = 'block'; }
         
-        function resetAiModal() {
-            const resultsContainer = document.getElementById('ai-image-results');
-            const promptArea = document.getElementById('ai-image-prompt-area');
-            const promptInput = document.getElementById('ai-image-prompt-input');
-            resultsContainer.innerHTML = '';
-            promptInput.value = '';
-            promptArea.style.display = 'block';
+        function showConfirmationModal(title, text, onConfirm) {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmCallback = onConfirm;
+            showModal(confirmModalOverlay);
         }
 
         async function generateAiImage() {
             const promptInput = document.getElementById('ai-image-prompt-input');
             const prompt = promptInput.value;
             if(!prompt) return;
-
             const resultsContainer = document.getElementById('ai-image-results');
             const promptArea = document.getElementById('ai-image-prompt-area');
             const generateBtn = document.getElementById('ai-image-generate-btn');
-            
             promptArea.style.display = 'none';
             resultsContainer.innerHTML = `<div class="flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Generating...</span></div>`;
             generateBtn.disabled = true;
-
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
-
+            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const result = await response.json();
-
-                if (!response.ok) {
-                    const errorDetails = result.error?.message || response.statusText;
-                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
-                }
-                
-                if (result.error) {
-                    throw new Error(`AI Service Error: ${result.error.message}`);
-                }
-
+                if (!response.ok) { const errorDetails = result.error?.message || response.statusText; throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`); }
+                if (result.error) { throw new Error(`AI Service Error: ${result.error.message}`); }
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    const originalBase64 = result.predictions[0].bytesBase64Encoded;
-                    
-                    const img = new Image();
-                    img.onload = async () => {
-                        const maxDimension = 512;
-                        const scale = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = img.width * scale;
-                        tempCanvas.height = img.height * scale;
-                        const tempCtx = tempCanvas.getContext('2d');
-                        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-                        const compressedImageUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
-                        
-                        // Display preview and action buttons
-                        resultsContainer.innerHTML = `
-                            <img src="${compressedImageUrl}" class="max-w-full rounded-lg mx-auto" alt="AI generated preview">
-                            <div class="flex justify-center gap-4 mt-4">
-                                <button id="send-ai-image-btn" class="chat-btn bg-green-600 hover:bg-green-700">Send to Chat</button>
-                                <button id="try-again-ai-image-btn" class="chat-btn bg-gray-500 hover:bg-gray-600">Try Again</button>
-                            </div>
-                        `;
-                        
-                        document.getElementById('send-ai-image-btn').addEventListener('click', async () => {
-                            await sendChatMessage(`"${prompt}"`, 'image', compressedImageUrl);
-                            hideModal(aiImageModalOverlay);
-                            resetAiModal();
-                        });
-
-                        document.getElementById('try-again-ai-image-btn').addEventListener('click', resetAiModal);
-                    };
-                    img.onerror = (err) => {
-                         console.error("Failed to load generated image for compression.", err);
-                         resultsContainer.innerHTML = '<span class="text-red-500">Error processing generated image.</span>';
-                         promptArea.style.display = 'block'; // Show prompt again on error
-                    };
-                    img.src = `data:image/png;base64,${originalBase64}`;
-                } else {
-                    console.error("Invalid response structure from AI image API:", result);
-                    throw new Error('Invalid response structure from AI image API.');
-                }
-            } catch (error) {
-                console.error("AI Image Generation Error:", error);
-                resultsContainer.innerHTML = `<span class="text-red-500">${error.message}</span>`;
-                promptArea.style.display = 'block'; // Show prompt again on error
-            } finally {
-                 generateBtn.disabled = false;
-            }
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    resultsContainer.innerHTML = `<img src="${imageUrl}" class="max-w-full rounded-lg mx-auto" alt="AI generated preview"><div class="flex justify-center gap-4 mt-4"><button id="send-ai-image-btn" class="chat-btn bg-green-600 hover:bg-green-700">Send to Chat</button><button id="try-again-ai-image-btn" class="chat-btn bg-gray-500 hover:bg-gray-600">Try Again</button></div>`;
+                    document.getElementById('send-ai-image-btn').addEventListener('click', async () => { await sendChatMessage(`"${prompt}"`, 'image', imageUrl); hideModal(aiImageModalOverlay); resetAiModal(); });
+                    document.getElementById('try-again-ai-image-btn').addEventListener('click', resetAiModal);
+                } else { console.error("Invalid response structure from AI image API:", result); throw new Error('Invalid response structure from AI image API.'); }
+            } catch (error) { console.error("AI Image Generation Error:", error); resultsContainer.innerHTML = `<span class="text-red-500">${error.message}</span>`; promptArea.style.display = 'block'; } finally { generateBtn.disabled = false; }
         }
-
 
         // --- App Initialization ---
         window.addEventListener('load', () => {
@@ -612,19 +877,25 @@
             auth = getAuth(app);
             db = getFirestore(app);
             setDailyContent();
+
             onAuthStateChanged(auth, async (user) => { 
                 if (user) { 
                     userId = user.uid; 
                     document.getElementById('userId').textContent = getUserDisplayName(userId); 
-                    await getOrGenerateAvatar(userId);
+                    await getOrGenerateAvatar(userId); 
                     setupStateListener(); 
                     setupEventsListener(); 
                     setupChatListener(); 
                 } else { 
                     try { 
-                        await signInAnonymously(auth); 
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth); 
+                        }
                     } catch (error) { 
                         console.error("Sign-in error", error); 
+                        document.getElementById('userId').textContent = 'Auth Error';
                     } 
                 } 
             });
@@ -640,30 +911,26 @@
             chatSendBtn.addEventListener('click', () => sendChatMessage(chatInput.value));
             chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(chatInput.value); }});
             
-            clearCanvasBtn.addEventListener('click', () => { clearAllDrawings(); });
-            clearChatBtn.addEventListener('click', () => { if(confirm("Are you sure you want to delete the entire chat history for everyone? This cannot be undone.")) { clearAllChat(); } });
+            clearCanvasBtn.addEventListener('click', () => showConfirmationModal("Clear Canvas?", "This will clear the canvas for everyone and cannot be undone.", clearAllDrawings));
+            clearChatBtn.addEventListener('click', () => showConfirmationModal("Clear Chat?", "This will delete the chat history for everyone and cannot be undone.", clearAllChat));
             saveChatBtn.addEventListener('click', saveChatHistory);
             
             helpModalOverlay.addEventListener('click', (e) => { if(e.target === helpModalOverlay) hideModal(helpModalOverlay); });
             document.getElementById('close-help-btn').addEventListener('click', () => hideModal(helpModalOverlay));
             document.getElementById('help-btn').addEventListener('click', () => showModal(helpModalOverlay));
 
-            aiImageBtn.addEventListener('click', () => {
-                resetAiModal();
-                showModal(aiImageModalOverlay);
-            });
+            aiImageBtn.addEventListener('click', () => { resetAiModal(); showModal(aiImageModalOverlay); });
             document.getElementById('close-ai-image-btn').addEventListener('click', () => hideModal(aiImageModalOverlay));
             aiImageModalOverlay.addEventListener('click', (e) => { if(e.target === aiImageModalOverlay) hideModal(aiImageModalOverlay); });
             document.getElementById('ai-image-generate-btn').addEventListener('click', generateAiImage);
             document.getElementById('ai-image-prompt-input').addEventListener('keydown', (e) => {if(e.key === 'Enter') generateAiImage()});
+            
+            confirmModalConfirmBtn.addEventListener('click', () => { if (typeof confirmCallback === 'function') { confirmCallback(); } hideModal(confirmModalOverlay); confirmCallback = null; });
+            confirmModalCancelBtn.addEventListener('click', () => { hideModal(confirmModalOverlay); confirmCallback = null; });
+            confirmModalOverlay.addEventListener('click', (e) => { if (e.target === confirmModalOverlay) { hideModal(confirmModalOverlay); confirmCallback = null;} });
 
             imageViewerOverlay.addEventListener('click', () => hideModal(imageViewerOverlay));
-            chatMessagesContainer.addEventListener('click', (e) => {
-                if(e.target.classList.contains('chat-image')) {
-                    document.getElementById('image-viewer-content').src = e.target.dataset.fullSrc;
-                    showModal(imageViewerOverlay);
-                }
-            });
+            chatMessagesContainer.addEventListener('click', (e) => { if(e.target.classList.contains('chat-image')) { document.getElementById('image-viewer-content').src = e.target.dataset.fullSrc; showModal(imageViewerOverlay); } });
 
             deleteBtn.addEventListener('click', deleteSelectedObject); frontBtn.addEventListener('click', bringToFront); duplicateBtn.addEventListener('click', duplicateSelectedObject);
             undoBtn.addEventListener('click', handleUndo);
@@ -671,7 +938,7 @@
             toggleGridBtn.addEventListener('click', () => { state.isGridVisible = !state.isGridVisible; toggleGridBtn.classList.toggle('selected', state.isGridVisible); redrawCanvas(); });
             toggleSnapBtn.addEventListener('click', () => { state.isSnapEnabled = !state.isSnapEnabled; toggleSnapBtn.classList.toggle('selected', state.isSnapEnabled); });
             document.querySelectorAll('#effects-dropdown .tool-btn').forEach(btn => { btn.addEventListener('click', (e) => { sendEffectToFirestore(e.currentTarget.dataset.effect); }); });
-            document.getElementById('save-btn').addEventListener('click', () => { const link = document.createElement('a'); link.download = `${whiteboardTitleEl.textContent.trim()}-whiteboard.png`; link.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"); link.click(); });
+            document.getElementById('save-btn').addEventListener('click', () => { const link = document.createElement('a'); link.download = `${whiteboardTitleEl.textContent.trim()}-whiteboard.png`; link.href = canvas.toDataURL("image/png"); link.click(); });
             eventCaptureLayer.addEventListener('mousedown', handleMouseDown); eventCaptureLayer.addEventListener('mousemove', handleMouseMove); eventCaptureLayer.addEventListener('mouseup', handleMouseUp); eventCaptureLayer.addEventListener('mouseleave', handleMouseUp);
             window.addEventListener('resize', redrawCanvas, { passive: true }); window.addEventListener('keydown', (e) => { if(e.key === 'Shift') state.isShiftDown = true; }); window.addEventListener('keyup', (e) => { if(e.key === 'Shift') state.isShiftDown = false; });
             redrawCanvas();
