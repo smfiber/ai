@@ -83,10 +83,10 @@
                     <div class="bg-yellow-600/20 border-2 border-yellow-500 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-yellow-300">Checking Balance</p><p id="checking-balance" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-cash-register text-4xl text-yellow-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Income This Month</p><p id="total-income-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-money-bill-wave text-4xl text-cyan-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Due This Month</p><p id="total-due" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-dollar-sign text-4xl text-red-400"></i></div>
-                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Cash This Month</p><p id="net-cash-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-balance-scale-right text-4xl text-blue-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Savings</p><p id="total-savings" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-piggy-bank text-4xl text-green-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Investments</p><p id="total-investments" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-chart-pie text-4xl text-indigo-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Assets</p><p id="total-assets" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-building text-4xl text-teal-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Cash This Month</p><p id="net-cash-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-balance-scale-right text-4xl text-blue-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Debts</p><p id="total-debts" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-credit-card text-4xl text-orange-400"></i></div>
                     <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Worth</p><p id="net-worth" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-landmark text-4xl text-purple-400"></i></div>
                 </div>
@@ -194,7 +194,7 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, writeBatch, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State & Constants ---
-        const APP_VERSION = "1.37";
+        const APP_VERSION = "1.38";
         const firebaseConfig = {
           apiKey: "AIzaSyBrYRupvSHuIOWMQObQN_-UawbzCb4HfMQ",
           authDomain: "bills-fa2ff.firebaseapp.com",
