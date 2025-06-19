@@ -133,7 +133,7 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State & Constants ---
-        const APP_VERSION = "1.33";
+        const APP_VERSION = "1.34";
         const firebaseConfig = {
           apiKey: "AIzaSyBrYRupvSHuIOWMQObQN_-UawbzCb4HfMQ",
           authDomain: "bills-fa2ff.firebaseapp.com",
@@ -202,9 +202,10 @@
 
         // --- Utility & Render Functions ---
         const sumAmounts = (arr) => arr.reduce((sum, item) => sum + item.amount, 0);
+        const formatCurrency = (num) => '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         function getBillStatus(bill) { const today = new Date(); today.setHours(0,0,0,0); const dueDate = new Date(bill.dueDate + 'T00:00:00'); return dueDate < today ? 'Overdue' : 'Unpaid'; }
         function sortBills() { upcomingBills.sort((a,b)=>{ let c=0; if(sortState.key==='dueDate')c=new Date(a.dueDate)-new Date(b.dueDate);else if(typeof a[sortState.key]==='string')c=a[sortState.key].localeCompare(b[sortState.key]);else c=a[sortState.key]-b[sortState.key]; return sortState.direction==='asc'?c:-c;});}
-        function createBillRow(b) { const r=document.createElement('tr');r.className='border-b border-gray-700 hover:bg-gray-700/50 transition-colors'; const status=getBillStatus(b); const s=status==='Unpaid'?{p:'status-unpaid',i:'far fa-clock'}:{p:'status-overdue',i:'fas fa-exclamation-circle'}; const d=new Date(b.dueDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); const i=b.recurringTemplateId?`<i class="fas fa-sync-alt text-blue-400 ml-2 text-xs" title="Recurring Monthly"></i>`:''; r.innerHTML=`<td class="p-4 font-semibold text-white flex items-center">${b.name}${i}</td><td class="p-4 text-right text-white">$${b.amount.toFixed(2)}</td><td class="p-4 text-center">${d}</td><td class="p-4 text-center"><span class="status-pill ${s.p}"><i class="${s.i} mr-2"></i>${status}</span></td><td class="p-4 text-center"><button data-bill-id="${b.id}" class="pay-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-4 rounded-lg transition-colors text-sm">Pay</button></td>`; return r;}
+        function createBillRow(b) { const r=document.createElement('tr');r.className='border-b border-gray-700 hover:bg-gray-700/50 transition-colors'; const status=getBillStatus(b); const s=status==='Unpaid'?{p:'status-unpaid',i:'far fa-clock'}:{p:'status-overdue',i:'fas fa-exclamation-circle'}; const d=new Date(b.dueDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); const i=b.recurringTemplateId?`<i class="fas fa-sync-alt text-blue-400 ml-2 text-xs" title="Recurring Monthly"></i>`:''; r.innerHTML=`<td class="p-4 font-semibold text-white flex items-center">${b.name}${i}</td><td class="p-4 text-right text-white">${formatCurrency(b.amount)}</td><td class="p-4 text-center">${d}</td><td class="p-4 text-center"><span class="status-pill ${s.p}"><i class="${s.i} mr-2"></i>${status}</span></td><td class="p-4 text-center"><button data-bill-id="${b.id}" class="pay-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-4 rounded-lg transition-colors text-sm">Pay</button></td>`; return r;}
         
         function renderCalendar() {
             calendarGrid.innerHTML = '';
@@ -243,7 +244,7 @@
                     const pill = document.createElement('div');
                     pill.className = 'bill-pill bg-cyan-800 text-cyan-300';
                     pill.textContent = inc.name;
-                    pill.title = `Income: ${inc.name} - $${inc.amount.toFixed(2)}`;
+                    pill.title = `Income: ${inc.name} - ${formatCurrency(inc.amount)}`;
                     dayCell.appendChild(pill);
                 });
 
@@ -259,7 +260,7 @@
                     }
                     pill.className = pillClass;
                     pill.textContent = bill.name;
-                    pill.title = `Bill: ${bill.name} - $${bill.amount.toFixed(2)}`;
+                    pill.title = `Bill: ${bill.name} - ${formatCurrency(bill.amount)}`;
                     dayCell.appendChild(pill);
                 });
                 
@@ -288,29 +289,29 @@
             const totalDueMonth = upcomingBills.filter(b => monthlyFilter(b, 'dueDate')).reduce((s,b) => s + b.amount, 0);
             const netCashMonth = totalIncomeMonth - totalDueMonth;
             
-            totalIncomeMonthEl.textContent = `$${totalIncomeMonth.toFixed(2)}`;
-            totalDueEl.textContent=`$${totalDueMonth.toFixed(2)}`;
-            netCashMonthEl.textContent = `$${netCashMonth.toFixed(2)}`;
+            totalIncomeMonthEl.textContent = formatCurrency(totalIncomeMonth);
+            totalDueEl.textContent = formatCurrency(totalDueMonth);
+            netCashMonthEl.textContent = formatCurrency(netCashMonth);
             netCashMonthEl.classList.toggle('text-green-400', netCashMonth >= 0);
             netCashMonthEl.classList.toggle('text-red-400', netCashMonth < 0);
             
-            totalSavingsEl.textContent = `$${sumAmounts(savings).toFixed(2)}`;
-            totalInvestmentsEl.textContent = `$${sumAmounts(investments).toFixed(2)}`;
-            totalDebtsEl.textContent = `$${sumAmounts(debts).toFixed(2)}`;
+            totalSavingsEl.textContent = formatCurrency(sumAmounts(savings));
+            totalInvestmentsEl.textContent = formatCurrency(sumAmounts(investments));
+            totalDebtsEl.textContent = formatCurrency(sumAmounts(debts));
 
             const currentNetWorth = sumAmounts(assets) + sumAmounts(savings) + sumAmounts(investments) - sumAmounts(debts);
-            netWorthEl.textContent = `$${currentNetWorth.toFixed(2)}`;
+            netWorthEl.textContent = formatCurrency(currentNetWorth);
             
             updateSortIcons();
         }
 
-        function renderFullPaidHistoryPage() { fullPaidHistoryTableBodyEl.innerHTML=''; const s=paidBillsHistory.sort((a,b)=>new Date(b.paidDate)-new Date(a.paidDate)); s.forEach(b=>{const r=document.createElement('tr');r.className='border-b border-gray-700';const d=new Date(b.paidDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});r.innerHTML=`<td class="p-4 font-semibold text-white">${b.name}</td><td class="p-4 text-right text-white">$${b.amount.toFixed(2)}</td><td class="p-4 text-center">${d}</td>`;fullPaidHistoryTableBodyEl.appendChild(r);});}
-        function renderRecurringBillsPage() { recurringBillsTableBodyEl.innerHTML = ''; recurringBillTemplates.sort((a,b) => a.name.localeCompare(b.name)).forEach(t => {const r=document.createElement('tr');r.className='border-b border-gray-700'; r.innerHTML=`<td class="p-4 font-semibold text-white">${t.name}</td><td class="p-4 text-right text-white">$${t.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-template-id="${t.id}" class="edit-recurring-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-template-id="${t.id}" class="delete-recurring-btn text-red-400 hover:text-red-300">Delete</button></td>`; recurringBillsTableBodyEl.appendChild(r);});}
-        function renderIncomePage() { incomeTableBody.innerHTML = ''; incomeHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; const d = new Date(i.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); r.innerHTML = `<td class="p-4 font-semibold text-white">${i.name}</td><td class="p-4">${d}</td><td class="p-4 text-right text-green-400 font-bold">$${i.amount.toFixed(2)}</td>`; incomeTableBody.appendChild(r); }); }
-        function renderAssetsPage() { assetsTableBody.innerHTML = ''; assets.sort((a,b) => a.description.localeCompare(b.description)).forEach(a => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${a.description}</td><td class="p-4 text-right text-teal-400 font-bold">$${a.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-asset-id="${a.id}" class="edit-asset-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-asset-id="${a.id}" class="delete-asset-btn text-red-400 hover:text-red-300">Delete</button></td>`; assetsTableBody.appendChild(r); });}
-        function renderSavingsPage() { savingsTableBody.innerHTML = ''; savings.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${s.name}</td><td class="p-4 text-right text-green-400 font-bold">$${s.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-savings-id="${s.id}" class="edit-savings-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-savings-id="${s.id}" class="delete-savings-btn text-red-400 hover:text-red-300">Delete</button></td>`; savingsTableBody.appendChild(r); });}
-        function renderInvestmentsPage() { investmentsTableBody.innerHTML = ''; investments.sort((a,b) => a.description.localeCompare(b.description)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${i.description}</td><td class="p-4 text-right text-indigo-400 font-bold">$${i.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-investment-id="${i.id}" class="edit-investment-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-investment-id="${i.id}" class="delete-investment-btn text-red-400 hover:text-red-300">Delete</button></td>`; investmentsTableBody.appendChild(r); });}
-        function renderDebtsPage() { debtsTableBody.innerHTML = ''; debts.sort((a,b) => a.description.localeCompare(b.description)).forEach(d => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${d.description}</td><td class="p-4 text-right text-orange-400 font-bold">$${d.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-debt-id="${d.id}" class="edit-debt-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-debt-id="${d.id}" class="delete-debt-btn text-red-400 hover:text-red-300">Delete</button></td>`; debtsTableBody.appendChild(r); });}
+        function renderFullPaidHistoryPage() { fullPaidHistoryTableBodyEl.innerHTML=''; const s=paidBillsHistory.sort((a,b)=>new Date(b.paidDate)-new Date(a.paidDate)); s.forEach(b=>{const r=document.createElement('tr');r.className='border-b border-gray-700';const d=new Date(b.paidDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});r.innerHTML=`<td class="p-4 font-semibold text-white">${b.name}</td><td class="p-4 text-right text-white">${formatCurrency(b.amount)}</td><td class="p-4 text-center">${d}</td>`;fullPaidHistoryTableBodyEl.appendChild(r);});}
+        function renderRecurringBillsPage() { recurringBillsTableBodyEl.innerHTML = ''; recurringBillTemplates.sort((a,b) => a.name.localeCompare(b.name)).forEach(t => {const r=document.createElement('tr');r.className='border-b border-gray-700'; r.innerHTML=`<td class="p-4 font-semibold text-white">${t.name}</td><td class="p-4 text-right text-white">${formatCurrency(t.amount)}</td><td class="p-4 text-center"><button data-template-id="${t.id}" class="edit-recurring-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-template-id="${t.id}" class="delete-recurring-btn text-red-400 hover:text-red-300">Delete</button></td>`; recurringBillsTableBodyEl.appendChild(r);});}
+        function renderIncomePage() { incomeTableBody.innerHTML = ''; incomeHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; const d = new Date(i.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); r.innerHTML = `<td class="p-4 font-semibold text-white">${i.name}</td><td class="p-4">${d}</td><td class="p-4 text-right text-green-400 font-bold">${formatCurrency(i.amount)}</td>`; incomeTableBody.appendChild(r); }); }
+        function renderAssetsPage() { assetsTableBody.innerHTML = ''; assets.sort((a,b) => a.description.localeCompare(b.description)).forEach(a => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${a.description}</td><td class="p-4 text-right text-teal-400 font-bold">${formatCurrency(a.amount)}</td><td class="p-4 text-center"><button data-asset-id="${a.id}" class="edit-asset-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-asset-id="${a.id}" class="delete-asset-btn text-red-400 hover:text-red-300">Delete</button></td>`; assetsTableBody.appendChild(r); });}
+        function renderSavingsPage() { savingsTableBody.innerHTML = ''; savings.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${s.name}</td><td class="p-4 text-right text-green-400 font-bold">${formatCurrency(s.amount)}</td><td class="p-4 text-center"><button data-savings-id="${s.id}" class="edit-savings-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-savings-id="${s.id}" class="delete-savings-btn text-red-400 hover:text-red-300">Delete</button></td>`; savingsTableBody.appendChild(r); });}
+        function renderInvestmentsPage() { investmentsTableBody.innerHTML = ''; investments.sort((a,b) => a.description.localeCompare(b.description)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${i.description}</td><td class="p-4 text-right text-indigo-400 font-bold">${formatCurrency(i.amount)}</td><td class="p-4 text-center"><button data-investment-id="${i.id}" class="edit-investment-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-investment-id="${i.id}" class="delete-investment-btn text-red-400 hover:text-red-300">Delete</button></td>`; investmentsTableBody.appendChild(r); });}
+        function renderDebtsPage() { debtsTableBody.innerHTML = ''; debts.sort((a,b) => a.description.localeCompare(b.description)).forEach(d => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${d.description}</td><td class="p-4 text-right text-orange-400 font-bold">${formatCurrency(d.amount)}</td><td class="p-4 text-center"><button data-debt-id="${d.id}" class="edit-debt-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-debt-id="${d.id}" class="delete-debt-btn text-red-400 hover:text-red-300">Delete</button></td>`; debtsTableBody.appendChild(r); });}
 
         // --- Navigation ---
         function showScreen(screenId) {
