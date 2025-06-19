@@ -27,7 +27,7 @@
         .chat-message { margin-bottom: 1rem; display: flex; align-items: flex-start; }
         .chat-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; background-color: #4b5563; object-fit: cover;}
         .chat-content { display: flex; flex-direction: column; max-width: calc(100% - 50px); }
-        .chat-author { font-weight: bold; color: #a5b4fc; font-size: 0.8rem; margin-bottom: 2px; }
+        .chat-author { font-weight: bold; color: #a5b4fc; font-size: 0.8rem; margin-bottom: 2px;  word-break: break-all; }
         .chat-text { word-wrap: break-word; white-space: pre-wrap; }
         .chat-image { max-width: 100%; border-radius: 0.5rem; cursor: pointer; }
         #chat-input-area { display: flex; margin-top: 1rem; flex-wrap: wrap; }
@@ -66,7 +66,7 @@
         /* Effects & Modals */
         #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998; pointer-events: none; opacity: 0; animation: flash-animation 0.8s ease-out forwards; }
         @keyframes flash-animation { 0% { opacity: 0; } 25% { opacity: 0.7; } 50% { opacity: 0; } 75% { opacity: 0.7; } 100% { opacity: 0; } }
-        .effect-particle { position: absolute; pointer-events: none; z-index: 9999; animation: float-up 5s linear forwards; font-size: 2rem; }
+        .effect-particle { position: absolute; pointer-events: none; z-index: 9999; animation: float-up 5s linear forwards; font-size: 2rem; background-color: transparent; }
         @keyframes float-up { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100vh); opacity: 0; } }
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -106,9 +106,9 @@
                         <p id="whiteboard-description" class="text-sm text-gray-400 rounded px-1"></p>
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
-                        <div>User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.19</span></div>
-                         <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500" title="Help"><i class="fa-solid fa-circle-question"></i></button>
+                        <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.22</span></div>
+                         <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
                 <!-- Toolbar -->
@@ -192,7 +192,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.19</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.22</p>
         </div>
     </div>
     <div id="ai-image-modal-overlay" class="modal-overlay">
@@ -218,7 +218,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, query, where, updateDoc, orderBy, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, orderBy, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
         const firebaseConfig = { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
@@ -256,6 +256,7 @@
         let db, userId, auth;
         let unsubscribeFromDrawings, unsubscribeFromState, unsubscribeFromEvents, unsubscribeFromChat;
         let localChatHistory = [];
+        const userAvatars = new Map();
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 2, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
@@ -269,9 +270,69 @@
             "The body benefits from movement, and the mind benefits from stillness.", "Yoga is the journey of the self, through the self, to the self.", "In the midst of movement and chaos, keep stillness inside of you.", "The longest journey of any person is the journey inward.", "Be where you are, not where you think you should be.", "The nature of yoga is to shine the light of awareness into the darkest corners of the body.", "We are not trying to escape our lives, but to return to them.", "Your task is not to seek for love, but merely to seek and find all the barriers within yourself that you have built against it.", "Let your practice be a celebration of life.", "The goal of yoga is not to be perfect, but to be whole."
         ];
         
-        const yogicAvatars = [ 'https://i.pinimg.com/564x/ee/e4/2c/eee42c5443213032d8478a87693bac30.jpg', 'https://i.pinimg.com/564x/2c/63/c9/2c63c9714449867b14a796e542b47481.jpg', 'https://i.pinimg.com/564x/a7/b4/d7/a7b4d7328d8a50615e45a557349b388b.jpg', 'https://i.pinimg.com/564x/16/e1/99/16e199999a38f36c5890c4273062c943.jpg', 'https://i.pinimg.com/564x/b8/47/f3/b847f300b0808386127cb7801362e314.jpg', 'https://i.pinimg.com/564x/ed/03/ce/ed03ce414d7b2756a59d9e4e6b54b67d.jpg' ];
-        function simpleHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = (hash << 5) - hash + char; hash &= hash; } return Math.abs(hash); }
-        function getAvatarForUser(uid) { return yogicAvatars[simpleHash(uid) % yogicAvatars.length]; }
+        const userNicknames = {
+            'lALY0TmTtaNdbtSjkt8o96NbS4z2': 'Sexy Honey Bee',
+            '4Kgf667MeLODXTwhfBkhIWERQdG3': 'White Stallion'
+        };
+
+        // --- Avatar & Name Generation ---
+        function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
+
+        async function getOrGenerateAvatar(uid) {
+            if (userAvatars.has(uid) && userAvatars.get(uid).url) {
+                return userAvatars.get(uid).url;
+            }
+
+            const avatarDocRef = doc(db, `whiteboards/${whiteboardId}/avatars`, uid);
+            const avatarDoc = await getDoc(avatarDocRef);
+            const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+            if (avatarDoc.exists() && avatarDoc.data().generatedAt.toMillis() > oneDayAgo) {
+                const url = avatarDoc.data().imageUrl;
+                userAvatars.set(uid, { url });
+                return url;
+            }
+
+            // Generate a new one
+            const nickname = getUserDisplayName(uid);
+            const prompt = `A cool and artistic avatar for a user named '${nickname}'. Vibrant colors, modern digital art, abstract.`;
+
+            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.predictions && result.predictions[0].bytesBase64Encoded) {
+                    const base64 = result.predictions[0].bytesBase64Encoded;
+                    const img = new Image();
+                    const promise = new Promise((resolve, reject) => {
+                         img.onload = async () => {
+                            const maxDimension = 128;
+                            const scale = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = img.width * scale;
+                            tempCanvas.height = img.height * scale;
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                            const compressedUrl = tempCanvas.toDataURL('image/jpeg', 0.8);
+                            
+                            await setDoc(avatarDocRef, { imageUrl: compressedUrl, generatedAt: serverTimestamp() });
+                            userAvatars.set(uid, { url: compressedUrl });
+                            resolve(compressedUrl);
+                         };
+                         img.onerror = reject;
+                    });
+                    img.src = `data:image/png;base64,${base64}`;
+                    return promise;
+                }
+            } catch (error) {
+                console.error("Failed to generate avatar for", uid, error);
+            }
+            return ''; // Fallback
+        }
+
 
         // --- Firebase Listeners ---
         function setupStateListener() { 
@@ -289,17 +350,18 @@
         function setupDrawingsListener() { if (state.currentEpoch === 0) return; if (unsubscribeFromDrawings) unsubscribeFromDrawings(); state.allDrawings.clear(); state.selectedObjectId = null; redrawCanvas(); const drawingsCollectionPath = `whiteboards/${whiteboardId}/drawings`; const q = query(collection(db, drawingsCollectionPath), where("epoch", "==", state.currentEpoch)); unsubscribeFromDrawings = onSnapshot(q, (snapshot) => { snapshot.docChanges().forEach((change) => { const docData = change.doc.data(); if (change.type === 'removed' || docData.isDeleted) { state.allDrawings.delete(change.doc.id); } else { state.allDrawings.set(change.doc.id, { id: change.doc.id, ...docData }); } }); state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); redrawCanvas(); }); }
         function setupEventsListener() { const eventsCollectionPath = `whiteboards/${whiteboardId}/events`; const q = query(collection(db, eventsCollectionPath), where("timestamp", ">", new Date(Date.now() - 10000))); if(unsubscribeFromEvents) unsubscribeFromEvents(); unsubscribeFromEvents = onSnapshot(q, (snapshot) => { snapshot.docChanges().forEach((change) => { if (change.type === "added") { const eventData = change.doc.data(); if (eventData.author !== userId) { triggerEffect(eventData.type); } } }); }); }
         
-        function setupChatListener() {
+        async function setupChatListener() {
             const chatCollectionPath = `whiteboards/${whiteboardId}/chat`;
             const q = query(collection(db, chatCollectionPath), orderBy("timestamp", "asc"));
-            if(unsubscribeFromChat) unsubscribeFromChat();
-            unsubscribeFromChat = onSnapshot(q, (snapshot) => {
+            if (unsubscribeFromChat) unsubscribeFromChat();
+            unsubscribeFromChat = onSnapshot(q, async (snapshot) => {
                 localChatHistory = [];
-                let messagesHtml = '';
-                snapshot.forEach(doc => {
+                 let messagesHtml = '';
+                for(const doc of snapshot.docs) {
                     const msg = {id: doc.id, ...doc.data()};
                     localChatHistory.push(msg);
-                    const avatarUrl = getAvatarForUser(msg.author);
+                    const avatarUrl = await getOrGenerateAvatar(msg.author);
+                    const displayName = getUserDisplayName(msg.author);
                     let textHtml = '';
                     let imageHtml = '';
 
@@ -309,22 +371,23 @@
                     }
 
                     if (msg.url && msg.type === 'image') {
-                        const imageMargin = msg.text ? 'mt-2' : ''; // Add margin if text is also present
+                        const imageMargin = msg.text ? 'mt-2' : '';
                         imageHtml = `<img src="${msg.url}" class="chat-image ${imageMargin}" data-full-src="${msg.url}" alt="AI generated image">`;
                     }
                     
                     const contentHtml = textHtml + imageHtml;
+                    const finalAvatarUrl = avatarUrl || 'https://placehold.co/40x40/4b5563/FFFFFF?text=?';
 
                     messagesHtml += `
                         <div class="chat-message" data-message-id="${msg.id}">
-                            <img src="${avatarUrl}" class="chat-avatar" onerror="this.src='https://placehold.co/40x40/4b5563/FFFFFF?text=?';">
+                            <img src="${finalAvatarUrl}" class="chat-avatar">
                             <div class="chat-content">
-                                <div class="chat-author">${msg.author.substring(0, 8)}...</div>
+                                <div class="chat-author">${displayName}</div>
                                 ${contentHtml}
                             </div>
                         </div>
                     `;
-                });
+                };
                 chatMessagesContainer.innerHTML = messagesHtml;
                 chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
             });
@@ -375,7 +438,59 @@
         function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch }; const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [start, end] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', cx: x1, cy: y1, radius: Math.sqrt(width*width + height*height) }; case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: (x1+x2)/2, y: y1}, {x: x2, y: y2} ] }; default: return null; } }
         function findClickedObject(x, y) { for (let i = state.sortedDrawings.length - 1; i >= 0; i--) { const obj = state.sortedDrawings[i]; const bounds = getObjectBounds(obj); if (bounds && x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height) { return obj.id; } } return null; }
         function moveObject(obj, newX, newY) { const bounds = getObjectBounds(obj); const dx = newX - bounds.x; const dy = newY - bounds.y; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else if (obj.type === 'circle') { obj.cx += dx; obj.cy += dy; } else { obj.x = newX; obj.y = newY; } }
-        function startTextEntry(pos) { state.isTexting = true; textInputContainer.style.left = `${pos.x}px`; textInputContainer.style.top = `${pos.y}px`; textInputContainer.style.display = 'block'; textInput.style.color = state.currentColor; textInput.style.fontSize = `${state.currentBrushSize * 5 + 12}px`; textInput.value = ''; textInput.focus(); const finishText = async () => { const text = textInput.value.trim(); if (text) { const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: state.currentBrushSize * 5 + 12, author: userId, epoch: state.currentEpoch }; const newDocRef = await addObjectToFirestore(textData); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }}); } } textInput.value = ''; textInputContainer.style.display = 'none'; state.isTexting = false; }; textInput.onblur = finishText; textInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); finishText(); } else if (e.key === 'Escape') { textInput.value = ''; finishText(); } }; }
+        
+        function startTextEntry(pos) {
+            state.isTexting = true;
+            textInputContainer.style.left = `${pos.x}px`;
+            textInputContainer.style.top = `${pos.y}px`;
+            textInputContainer.style.display = 'block';
+            textInput.style.color = state.currentColor;
+            textInput.style.fontSize = `${state.currentBrushSize * 5 + 12}px`;
+            textInput.value = '';
+            textInput.focus();
+
+            const removeListeners = () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+                textInput.removeEventListener('keydown', handleKeyDown);
+            };
+
+            const finishText = async (shouldAddText) => {
+                removeListeners();
+                if (shouldAddText) {
+                    const text = textInput.value.trim();
+                    if (text) {
+                        const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: state.currentBrushSize * 5 + 12, author: userId, epoch: state.currentEpoch };
+                        const newDocRef = await addObjectToFirestore(textData);
+                        if (newDocRef) {
+                            pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }});
+                        }
+                    }
+                }
+                textInput.value = '';
+                textInputContainer.style.display = 'none';
+                state.isTexting = false;
+            };
+            
+            const handleClickOutside = (event) => {
+                if (!textInputContainer.contains(event.target)) {
+                    finishText(true);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finishText(true);
+                } else if (e.key === 'Escape') {
+                    finishText(false);
+                }
+            };
+
+            setTimeout(() => {
+                document.addEventListener('mousedown', handleClickOutside);
+                textInput.addEventListener('keydown', handleKeyDown);
+            }, 0);
+        }
 
         // --- Firestore Actions ---
         async function addObjectToFirestore(objData) { try { const docRef = await addDoc(collection(db, `whiteboards/${whiteboardId}/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
@@ -426,11 +541,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!response.ok) {
-                    const errorBody = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
-                }
+                
                 const result = await response.json();
+
+                if (!response.ok) {
+                    const errorDetails = result.error?.message || response.statusText;
+                    throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
+                }
+                
+                if (result.error) {
+                    throw new Error(`AI Service Error: ${result.error.message}`);
+                }
 
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
                     const originalBase64 = result.predictions[0].bytesBase64Encoded;
@@ -470,11 +591,12 @@
                     };
                     img.src = `data:image/png;base64,${originalBase64}`;
                 } else {
+                    console.error("Invalid response structure from AI image API:", result);
                     throw new Error('Invalid response structure from AI image API.');
                 }
             } catch (error) {
                 console.error("AI Image Generation Error:", error);
-                resultsContainer.innerHTML = '<span class="text-red-500">Failed to generate image. Please try again.</span>';
+                resultsContainer.innerHTML = `<span class="text-red-500">${error.message}</span>`;
                 promptArea.style.display = 'block'; // Show prompt again on error
             } finally {
                  generateBtn.disabled = false;
@@ -488,7 +610,22 @@
             auth = getAuth(app);
             db = getFirestore(app);
             setDailyContent();
-            onAuthStateChanged(auth, async (user) => { if (user) { userId = user.uid; document.getElementById('userId').textContent = userId.substring(0,8) + '...'; setupStateListener(); setupEventsListener(); setupChatListener(); } else { try { await signInAnonymously(auth); } catch (error) { console.error("Sign-in error", error); } } });
+            onAuthStateChanged(auth, async (user) => { 
+                if (user) { 
+                    userId = user.uid; 
+                    document.getElementById('userId').textContent = getUserDisplayName(userId); 
+                    await getOrGenerateAvatar(userId);
+                    setupStateListener(); 
+                    setupEventsListener(); 
+                    setupChatListener(); 
+                } else { 
+                    try { 
+                        await signInAnonymously(auth); 
+                    } catch (error) { 
+                        console.error("Sign-in error", error); 
+                    } 
+                } 
+            });
             
             // --- Event Listeners Setup ---
             const allToolButtons = document.querySelectorAll('#tool-selector .tool-btn, #tool-selector .dropdown-content .tool-btn');
