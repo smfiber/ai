@@ -18,7 +18,7 @@
 
         /* Main Layout */
         #main-layout { display: flex; height: 100vh; width: 100vw; }
-        #chat-container { width: 350px; flex-shrink: 0; background-color: #1f2937; display: flex; flex-direction: column; padding: 1rem; border-right: 2px solid #374151; }
+        #chat-container { width: 700px; flex-shrink: 0; background-color: #1f2937; display: flex; flex-direction: column; padding: 1rem; border-right: 2px solid #374151; }
         #whiteboard-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         
         /* Chat Box Styles */
@@ -29,7 +29,7 @@
         .chat-content { display: flex; flex-direction: column; max-width: calc(100% - 50px); }
         .chat-author { font-weight: bold; color: #a5b4fc; font-size: 0.8rem; margin-bottom: 2px; }
         .chat-text { word-wrap: break-word; white-space: pre-wrap; }
-        .chat-image { max-width: 100%; border-radius: 0.5rem; cursor: pointer; margin-top: 4px; }
+        .chat-image { max-width: 100%; border-radius: 0.5rem; cursor: pointer; }
         #chat-input-area { display: flex; margin-top: 1rem; flex-wrap: wrap; }
         #chat-input {
             flex-grow: 1; background: #374151; border: 1px solid #4b5563;
@@ -71,9 +71,6 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
         .modal { background-color: #1f2937; color: white; padding: 2rem; border-radius: 1rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; }
-        #gif-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; max-height: 50vh; overflow-y: auto;}
-        .gif-item { cursor: pointer; border-radius: 0.5rem; overflow: hidden; }
-        .gif-item img { width: 100%; height: 100%; object-fit: cover; }
         #image-viewer-modal img { max-width: 90vw; max-height: 90vh; }
     </style>
 </head>
@@ -92,7 +89,7 @@
             <div id="chat-input-area">
                 <textarea id="chat-input" placeholder="Say something... (Shift+Enter for new line)"></textarea>
                 <div class="flex justify-between w-full">
-                    <button id="gif-btn" class="chat-btn"><i class="fa-solid fa-photo-film"></i> &nbsp; GIF</button>
+                    <button id="ai-image-btn" class="chat-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> &nbsp; AI Image</button>
                     <button id="chat-send-btn" class="chat-btn"><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
                 </div>
             </div>
@@ -109,7 +106,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.14</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.17</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -146,7 +143,7 @@
                             <div id="effects-dropdown" class="dropdown-content flex flex-col items-start gap-1 p-2 rounded-md bg-gray-600 shadow-lg">
                                 <button data-effect="random-flash" class="tool-btn p-2 w-full text-left">flashes screen in random colors</button>
                                 <button data-effect="hearts" class="tool-btn p-2 w-full text-left">abundance of hearts</button>
-                                <button data-effect="rain" class="tool-btn p-2 w-full text-left">rainfall</button>
+                                <button data-effect="rain" class="tool-btn p-2 w-full text-left">wet for you</button>
                                 <button data-effect="pickles" class="tool-btn p-2 w-full text-left">big pickles</button>
                             </div>
                         </div>
@@ -174,20 +171,33 @@
             </div>
             <h3>Core Concepts</h3>
             <p>Welcome to a space of inspiration! The title and description of this board change daily to provide a new creative spark. Every user is assigned a unique, yogic-themed avatar.</p>
-             <p class="mt-4 text-xs text-gray-400">Version: 1.14</p>
+            <h4 class="font-bold mt-4 mb-2">Features</h4>
+            <ul class="list-disc list-inside space-y-2">
+                <li><b>Real-time Whiteboard:</b> Draw freely with various tools (pen, shapes, text), colors, and brush sizes.</li>
+                <li><b>Live Chat:</b> Communicate with others on the board in real-time.</li>
+                <li><b>AI Image Generation:</b> Click the "AI Image" button to create and share unique images from a text description. You can preview the image before sending or try again.</li>
+                <li><b>Object Manipulation:</b> Select, move, resize, duplicate, delete, and bring objects to the front.</li>
+                <li><b>Save & Export:</b> Save the whiteboard canvas as a PNG image and export the chat history as a text file.</li>
+                <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
+                <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
+            </ul>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.17</p>
         </div>
     </div>
-    <div id="gif-modal-overlay" class="modal-overlay">
-        <div id="gif-modal" class="modal">
+    <div id="ai-image-modal-overlay" class="modal-overlay">
+        <div id="ai-image-modal" class="modal">
              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">Search for a GIF</h2>
-                <button id="close-gif-btn" class="text-2xl">&times;</button>
+                <h2 class="text-2xl font-bold">Generate AI Image</h2>
+                <button id="close-ai-image-btn" class="text-2xl">&times;</button>
             </div>
-            <div class="flex gap-2">
-                <input type="text" id="gif-search-input" class="w-full bg-gray-700 p-2 rounded" placeholder="e.g., happy birthday">
-                <button id="gif-search-btn" class="chat-btn">Search</button>
+            <p class="text-gray-400 mb-4">Describe the image you want to create. Be as descriptive as you like!</p>
+            <div id="ai-image-prompt-area">
+                <div class="flex gap-2">
+                    <input type="text" id="ai-image-prompt-input" class="w-full bg-gray-700 p-2 rounded" placeholder="e.g., a happy cat wearing a party hat">
+                    <button id="ai-image-generate-btn" class="chat-btn">Generate</button>
+                </div>
             </div>
-            <div id="gif-results"></div>
+            <div id="ai-image-results" class="mt-4 text-center"></div>
         </div>
     </div>
      <div id="image-viewer-overlay" class="modal-overlay">
@@ -202,7 +212,6 @@
         // --- App Configuration ---
         const firebaseConfig = { apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc", authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = "google-sites-whiteboard-advanced";
-        const GIPHY_API_KEY = 'YOUR_GIPHY_API_KEY'; // Replace with a real key for production
 
         // --- DOM Elements ---
         const whiteboardTitleEl = document.getElementById('whiteboard-title');
@@ -224,8 +233,8 @@
         const clearCanvasBtn = document.getElementById('clear-canvas-btn');
         const clearChatBtn = document.getElementById('clear-chat-btn');
         const saveChatBtn = document.getElementById('save-chat-btn');
-        const gifBtn = document.getElementById('gif-btn');
-        const gifModalOverlay = document.getElementById('gif-modal-overlay');
+        const aiImageBtn = document.getElementById('ai-image-btn');
+        const aiImageModalOverlay = document.getElementById('ai-image-modal-overlay');
         const imageViewerOverlay = document.getElementById('image-viewer-overlay');
 
         // --- Firebase & State Globals ---
@@ -272,15 +281,22 @@
                 let messagesHtml = '';
                 snapshot.forEach(doc => {
                     const msg = {id: doc.id, ...doc.data()};
-                     localChatHistory.push(msg);
+                    localChatHistory.push(msg);
                     const avatarUrl = getAvatarForUser(msg.author);
-                    let contentHtml;
-                    if(msg.type === 'image' && msg.url) {
-                         contentHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User uploaded image">`;
-                    } else {
+                    let textHtml = '';
+                    let imageHtml = '';
+
+                    if (msg.text) {
                         const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        contentHtml = `<div class="chat-text">${sanitizedText}</div>`;
+                        textHtml = `<div class="chat-text">${sanitizedText}</div>`;
                     }
+
+                    if (msg.url && msg.type === 'image') {
+                        const imageMargin = msg.text ? 'mt-2' : ''; // Add margin if text is also present
+                        imageHtml = `<img src="${msg.url}" class="chat-image ${imageMargin}" data-full-src="${msg.url}" alt="AI generated image">`;
+                    }
+                    
+                    const contentHtml = textHtml + imageHtml;
 
                     messagesHtml += `
                         <div class="chat-message" data-message-id="${msg.id}">
@@ -306,7 +322,25 @@
         function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.cx - obj.radius, y: obj.cy - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x, y: obj.y, width: metrics.width, height: height || obj.fontSize }; case 'path': case 'line': case 'triangle': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; default: return null; } }
         
         // --- UI & Event Functions ---
-        async function sendChatMessage(text, type = 'text', url = null) { const content = text.trim(); if ((content || url) && userId) { try { const messageData = { author: userId, timestamp: serverTimestamp(), type }; if(type === 'text') messageData.text = content; if(type === 'image') messageData.url = url; await addDoc(collection(db, `whiteboards/${whiteboardId}/chat`), messageData); chatInput.value = ''; } catch (error) { console.error("Error sending chat message:", error); } } }
+        async function sendChatMessage(text, type = 'text', url = null) {
+            const content = text.trim();
+            if ((content || url) && userId) {
+                try {
+                    const messageData = {
+                        author: userId,
+                        timestamp: serverTimestamp(),
+                        type: type,
+                    };
+                    if (content) messageData.text = content;
+                    if (url) messageData.url = url;
+
+                    await addDoc(collection(db, `whiteboards/${whiteboardId}/chat`), messageData);
+                    chatInput.value = '';
+                } catch (error) {
+                    console.error("Error sending chat message:", error);
+                }
+            }
+        }
         async function sendEffectToFirestore(effectType) { if(!userId) return; await addDoc(collection(db, `whiteboards/${whiteboardId}/events`), { type: effectType, author: userId, timestamp: new Date() }); triggerEffect(effectType); }
         function triggerEffect(type) { const container = document.getElementById('whiteboard-wrapper'); if (type === 'random-flash') { const flash = document.createElement('div'); flash.id = 'flash-overlay'; const randomColor = `rgba(${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, 0.7)`; flash.style.backgroundColor = randomColor; document.body.appendChild(flash); setTimeout(() => flash.remove(), 800); } else if (['hearts', 'rain', 'pickles'].includes(type)) { let emoji = '❤️'; if (type === 'rain') emoji = '💧'; if (type === 'pickles') emoji = '🥒'; for (let i = 0; i < 25; i++) { const particle = document.createElement('div'); particle.className = 'effect-particle'; particle.textContent = emoji; particle.style.left = `${Math.random() * 100}%`; particle.style.animationDelay = `${Math.random() * 2}s`; container.appendChild(particle); setTimeout(() => particle.remove(), 5000); } } }
         async function clearAllDrawings() { await setDoc(doc(db, `whiteboards/${whiteboardId}/state/main`), { epoch: Date.now() }, {merge: true}); }
@@ -331,34 +365,97 @@
         async function bringToFront() { if (!state.selectedObjectId) return; await updateObjectInFirestore(state.selectedObjectId, {}); }
         async function duplicateSelectedObject() { if (!state.selectedObjectId) return; const original = state.allDrawings.get(state.selectedObjectId); const { id, timestamp, ...cloneData } = original; if (cloneData.points) { cloneData.points = cloneData.points.map(p => ({ x: p.x + 10, y: p.y + 10 })); } else if (cloneData.type === 'circle') { cloneData.cx += 10; cloneData.cy += 10; } else { cloneData.x += 10; cloneData.y += 10; } await addObjectToFirestore(cloneData); }
         
-        // --- GIF and Image Modal Functions ---
+        // --- AI Image Modal Functions ---
         function showModal(modal) { modal.classList.add('visible'); }
         function hideModal(modal) { modal.classList.remove('visible'); }
-        async function searchGifs() {
-            const searchTerm = document.getElementById('gif-search-input').value;
-            if(!searchTerm) return;
-            const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(searchTerm)}&limit=20`;
-            const resultsContainer = document.getElementById('gif-results');
-            resultsContainer.innerHTML = 'Searching...';
+        
+        function resetAiModal() {
+            const resultsContainer = document.getElementById('ai-image-results');
+            const promptArea = document.getElementById('ai-image-prompt-area');
+            const promptInput = document.getElementById('ai-image-prompt-input');
+            resultsContainer.innerHTML = '';
+            promptInput.value = '';
+            promptArea.style.display = 'block';
+        }
+
+        async function generateAiImage() {
+            const promptInput = document.getElementById('ai-image-prompt-input');
+            const prompt = promptInput.value;
+            if(!prompt) return;
+
+            const resultsContainer = document.getElementById('ai-image-results');
+            const promptArea = document.getElementById('ai-image-prompt-area');
+            const generateBtn = document.getElementById('ai-image-generate-btn');
+            
+            promptArea.style.display = 'none';
+            resultsContainer.innerHTML = `<div class="flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Generating...</span></div>`;
+            generateBtn.disabled = true;
+
+            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1} };
+            const apiKey = ""; // Will be handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
             try {
-                const response = await fetch(url);
-                const json = await response.json();
-                resultsContainer.innerHTML = '';
-                json.data.forEach(gif => {
-                    const item = document.createElement('div');
-                    item.className = 'gif-item';
-                    item.innerHTML = `<img src="${gif.images.fixed_height.url}" alt="${gif.title}">`;
-                    item.onclick = () => {
-                        sendChatMessage('', 'image', gif.images.original.url);
-                        hideModal(gifModalOverlay);
-                    };
-                    resultsContainer.appendChild(item);
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+                }
+                const result = await response.json();
+
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const originalBase64 = result.predictions[0].bytesBase64Encoded;
+                    
+                    const img = new Image();
+                    img.onload = async () => {
+                        const maxDimension = 512;
+                        const scale = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = img.width * scale;
+                        tempCanvas.height = img.height * scale;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                        const compressedImageUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // Display preview and action buttons
+                        resultsContainer.innerHTML = `
+                            <img src="${compressedImageUrl}" class="max-w-full rounded-lg mx-auto" alt="AI generated preview">
+                            <div class="flex justify-center gap-4 mt-4">
+                                <button id="send-ai-image-btn" class="chat-btn bg-green-600 hover:bg-green-700">Send to Chat</button>
+                                <button id="try-again-ai-image-btn" class="chat-btn bg-gray-500 hover:bg-gray-600">Try Again</button>
+                            </div>
+                        `;
+                        
+                        document.getElementById('send-ai-image-btn').addEventListener('click', async () => {
+                            await sendChatMessage(`"${prompt}"`, 'image', compressedImageUrl);
+                            hideModal(aiImageModalOverlay);
+                            resetAiModal();
+                        });
+
+                        document.getElementById('try-again-ai-image-btn').addEventListener('click', resetAiModal);
+                    };
+                    img.onerror = (err) => {
+                         console.error("Failed to load generated image for compression.", err);
+                         resultsContainer.innerHTML = '<span class="text-red-500">Error processing generated image.</span>';
+                         promptArea.style.display = 'block'; // Show prompt again on error
+                    };
+                    img.src = `data:image/png;base64,${originalBase64}`;
+                } else {
+                    throw new Error('Invalid response structure from AI image API.');
+                }
             } catch (error) {
-                resultsContainer.innerHTML = 'Failed to load GIFs. API key might be missing or invalid.';
-                console.error("GIPHY API error", error);
+                console.error("AI Image Generation Error:", error);
+                resultsContainer.innerHTML = '<span class="text-red-500">Failed to generate image. Please try again.</span>';
+                promptArea.style.display = 'block'; // Show prompt again on error
+            } finally {
+                 generateBtn.disabled = false;
             }
         }
+
 
         // --- App Initialization ---
         window.addEventListener('load', () => {
@@ -378,7 +475,8 @@
             
             chatSendBtn.addEventListener('click', () => sendChatMessage(chatInput.value));
             chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(chatInput.value); }});
-            clearCanvasBtn.addEventListener('click', () => { if(confirm("Are you sure you want to clear the entire whiteboard for everyone? This cannot be undone.")) { clearAllDrawings(); } });
+            
+            clearCanvasBtn.addEventListener('click', () => { clearAllDrawings(); });
             clearChatBtn.addEventListener('click', () => { if(confirm("Are you sure you want to delete the entire chat history for everyone? This cannot be undone.")) { clearAllChat(); } });
             saveChatBtn.addEventListener('click', saveChatHistory);
             
@@ -386,11 +484,14 @@
             document.getElementById('close-help-btn').addEventListener('click', () => hideModal(helpModalOverlay));
             document.getElementById('help-btn').addEventListener('click', () => showModal(helpModalOverlay));
 
-            gifBtn.addEventListener('click', () => showModal(gifModalOverlay));
-            document.getElementById('close-gif-btn').addEventListener('click', () => hideModal(gifModalOverlay));
-            gifModalOverlay.addEventListener('click', (e) => { if(e.target === gifModalOverlay) hideModal(gifModalOverlay); });
-            document.getElementById('gif-search-btn').addEventListener('click', searchGifs);
-            document.getElementById('gif-search-input').addEventListener('keydown', (e) => {if(e.key === 'Enter') searchGifs()});
+            aiImageBtn.addEventListener('click', () => {
+                resetAiModal();
+                showModal(aiImageModalOverlay);
+            });
+            document.getElementById('close-ai-image-btn').addEventListener('click', () => hideModal(aiImageModalOverlay));
+            aiImageModalOverlay.addEventListener('click', (e) => { if(e.target === aiImageModalOverlay) hideModal(aiImageModalOverlay); });
+            document.getElementById('ai-image-generate-btn').addEventListener('click', generateAiImage);
+            document.getElementById('ai-image-prompt-input').addEventListener('keydown', (e) => {if(e.key === 'Enter') generateAiImage()});
 
             imageViewerOverlay.addEventListener('click', () => hideModal(imageViewerOverlay));
             chatMessagesContainer.addEventListener('click', (e) => {
