@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; color: #d1d5db;}
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        .status-pill { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; }
+        .status-paid { background-color: rgba(52, 211, 153, 0.1); color: #34d399; }
+        .status-unpaid { background-color: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+        .status-overdue { background-color: rgba(248, 113, 113, 0.1); color: #f87171; }
+        .sortable-header { cursor: pointer; user-select: none; }
+        .sortable-header:hover { color: #ffffff; }
+        .sort-icon { opacity: 0.5; margin-left: 8px; transition: opacity 0.2s; }
+        .sortable-header.active .sort-icon { opacity: 1; }
+        #add-bill-modal, #edit-bill-modal, #help-modal, #add-income-modal, #add-savings-modal, #edit-savings-modal, #add-investment-modal, #edit-investment-modal, #add-debt-modal, #edit-debt-modal, #add-asset-modal, #edit-asset-modal { transition: opacity 0.3s ease; }
+        .top-nav-link { border-bottom: 2px solid transparent; }
+        .top-nav-link.active { border-bottom-color: #34d399; /* emerald-400 */ color: #ffffff; font-weight: 600; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        .calendar-day { border-top: 1px solid #374151; border-left: 1px solid #374151; }
+        .calendar-grid > .calendar-day:nth-child(7n) { border-right: 1px solid #374151; }
+        .calendar-grid > .calendar-day:nth-child(n+36) { border-bottom: 1px solid #374151; }
+        .calendar-day.today { background-color: #1d4ed8; }
+        .bill-pill { padding: 2px 8px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+        #loading-overlay { z-index: 9999; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-left-color: #34d399; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex flex-col items-center justify-center">
+        <div class="spinner"></div>
+        <p class="text-white mt-4">Connecting to Database...</p>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div class="p-6 lg:p-10">
+        <!-- Header & Navigation -->
+        <header class="bg-gray-800 rounded-2xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between">
+            <div class="flex items-center space-x-2 md:space-x-4">
+                <div class="flex items-center">
+                    <i class="fas fa-wallet text-3xl text-emerald-400"></i>
+                    <h1 class="text-xl font-bold ml-3 text-white hidden sm:block">My Finances</h1>
+                </div>
+                <div class="h-8 border-l border-gray-600 hidden md:block"></div>
+                <nav class="flex items-center space-x-1 md:space-x-3 text-sm font-medium text-gray-400">
+                    <a href="#" id="nav-dashboard" class="top-nav-link p-2 transition-colors hover:text-white">Dashboard</a>
+                    <a href="#" id="nav-income" class="top-nav-link p-2 transition-colors hover:text-white">Income</a>
+                    <a href="#" id="nav-assets" class="top-nav-link p-2 transition-colors hover:text-white">Assets</a>
+                    <a href="#" id="nav-savings" class="top-nav-link p-2 transition-colors hover:text-white">Savings</a>
+                    <a href="#" id="nav-investments" class="top-nav-link p-2 transition-colors hover:text-white">Investments</a>
+                    <a href="#" id="nav-debts" class="top-nav-link p-2 transition-colors hover:text-white">Debts</a>
+                    <a href="#" id="nav-paid-bills" class="top-nav-link p-2 transition-colors hover:text-white">Paid Bills</a>
+                    <a href="#" id="nav-recurring-bills" class="top-nav-link p-2 transition-colors hover:text-white">Recurring</a>
+                    <a href="#" id="nav-calendar" class="top-nav-link p-2 transition-colors hover:text-white">Calendar</a>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                <button id="add-bill-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center">
+                    <i class="fas fa-plus mr-2"></i><span>New Bill</span>
+                </button>
+                <button id="help-btn" class="text-gray-400 hover:text-white transition-colors" title="Help & Instructions">
+                    <i class="fas fa-question-circle text-2xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Dashboard Screen -->
+            <div id="dashboard-screen" class="hidden">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6 mb-6">
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Income This Month</p><p id="total-income-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-money-bill-wave text-4xl text-cyan-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Due This Month</p><p id="total-due" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-dollar-sign text-4xl text-red-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Cash This Month</p><p id="net-cash-month" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-balance-scale-right text-4xl text-blue-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Savings</p><p id="total-savings" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-piggy-bank text-4xl text-green-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Investments</p><p id="total-investments" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-chart-pie text-4xl text-indigo-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Total Debts</p><p id="total-debts" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-credit-card text-4xl text-orange-400"></i></div>
+                    <div class="bg-gray-800 p-6 rounded-2xl flex items-center justify-between"><div><p class="text-sm text-gray-400">Net Worth</p><p id="net-worth" class="text-3xl font-bold text-white">$0.00</p></div><i class="fas fa-landmark text-4xl text-purple-400"></i></div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-2xl"><h3 class="font-bold text-xl text-white mb-4">Upcoming Bills</h3><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4 sortable-header" data-sort="name">BILL NAME <i class="fas fa-sort sort-icon"></i></th><th class="p-4 text-right sortable-header" data-sort="amount">AMOUNT <i class="fas fa-sort sort-icon"></i></th><th class="p-4 text-center sortable-header active" data-sort="dueDate">DUE DATE <i class="fas fa-sort-down sort-icon"></i></th><th class="p-4 text-center">STATUS</th><th class="p-4 text-center">ACTION</th></tr></thead><tbody id="bills-table-body"></tbody></table></div></div>
+            </div>
+            <!-- Income Screen -->
+            <div id="income-screen" class="hidden"><header class="mb-8 flex justify-between items-center"><div><h2 class="text-3xl font-bold text-white">Income History</h2><p class="text-gray-400">A record of all your received income.</p></div><button id="add-income-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Add Income</button></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">NAME</th><th class="p-4">DATE RECEIVED</th><th class="p-4 text-right">AMOUNT</th></tr></thead><tbody id="income-table-body"></tbody></table></div></div></div>
+            <!-- Assets Screen -->
+            <div id="assets-screen" class="hidden"><header class="mb-8 flex justify-between items-center"><div><h2 class="text-3xl font-bold text-white">Assets</h2><p class="text-gray-400">A list of your valuable assets.</p></div><button id="add-asset-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Add Asset</button></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">DESCRIPTION</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">ACTIONS</th></tr></thead><tbody id="assets-table-body"></tbody></table></div></div></div>
+            <!-- Savings Screen -->
+            <div id="savings-screen" class="hidden"><header class="mb-8 flex justify-between items-center"><div><h2 class="text-3xl font-bold text-white">Savings Goals</h2><p class="text-gray-400">A list of your savings accounts and goals.</p></div><button id="add-savings-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Add Savings</button></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">NAME</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">ACTIONS</th></tr></thead><tbody id="savings-table-body"></tbody></table></div></div></div>
+            <!-- Investments Screen -->
+            <div id="investments-screen" class="hidden"><header class="mb-8 flex justify-between items-center"><div><h2 class="text-3xl font-bold text-white">Investments</h2><p class="text-gray-400">A list of your current investments.</p></div><button id="add-investment-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Add Investment</button></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">DESCRIPTION</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">ACTIONS</th></tr></thead><tbody id="investments-table-body"></tbody></table></div></div></div>
+             <!-- Debts Screen -->
+            <div id="debts-screen" class="hidden"><header class="mb-8 flex justify-between items-center"><div><h2 class="text-3xl font-bold text-white">Debts</h2><p class="text-gray-400">A list of your current debts.</p></div><button id="add-debt-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Add Debt</button></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">DESCRIPTION</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">ACTIONS</th></tr></thead><tbody id="debts-table-body"></tbody></table></div></div></div>
+            <!-- Paid Bills Screen -->
+            <div id="paid-bills-screen" class="hidden"><header class="mb-8"><div><h2 class="text-3xl font-bold text-white">Paid Bills History</h2><p class="text-gray-400">A complete record of all your paid bills.</p></div></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">BILL NAME</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">PAID DATE</th></tr></thead><tbody id="full-paid-history-table-body"></tbody></table></div></div></div>
+            <!-- Calendar Screen -->
+            <div id="calendar-screen" class="hidden"><header class="flex justify-between items-center mb-8"><h2 id="calendar-month-year" class="text-3xl font-bold text-white"></h2><div class="flex space-x-2"><button id="prev-month-btn" class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"><i class="fas fa-chevron-left"></i></button><button id="next-month-btn" class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"><i class="fas fa-chevron-right"></i></button></div></header><div class="bg-gray-800 rounded-2xl p-4"><div class="grid grid-cols-7 text-center text-xs text-gray-400 font-bold uppercase pb-2 border-b border-gray-700"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div><div id="calendar-grid" class="calendar-grid"></div></div></div>
+            <!-- Recurring Bills Screen -->
+            <div id="recurring-bills-screen" class="hidden"><header class="mb-8"><h2 class="text-3xl font-bold text-white">Recurring Bill Templates</h2><p class="text-gray-400">Manage the templates for your monthly recurring bills.</p></header><div class="bg-gray-800 p-6 rounded-2xl"><div class="overflow-x-auto"><table class="w-full text-left"><thead class="border-b border-gray-700"><tr><th class="p-4">BILL NAME</th><th class="p-4 text-right">AMOUNT</th><th class="p-4 text-center">ACTIONS</th></tr></thead><tbody id="recurring-bills-table-body"></tbody></table></div></div></div>
+        </main>
+        
+        <footer class="text-center mt-10">
+            <div id="user-id-display" class="text-xs text-gray-600" title="Your unique User ID"></div>
+            <div id="app-version" class="text-xs text-gray-600 font-semibold"></div>
+        </footer>
+    </div>
+    
+    <!-- Modals -->
+    <div id="add-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add a New Bill</h2><form id="add-bill-form"><div class="space-y-4"><div><label for="bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="e.g., Internet" required></div><div><label for="bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="123.45" required></div><div><label for="bill-due-date" class="block mb-2 text-sm font-medium">Due Date (for first bill)</label><input type="date" id="bill-due-date" name="billDueDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div class="flex items-center pt-2"><input id="bill-recurring" name="billRecurring" type="checkbox" class="w-4 h-4 text-emerald-600 bg-gray-700 border-gray-600 rounded focus:ring-emerald-500"><label for="bill-recurring" class="ml-2 text-sm font-medium text-gray-300">Recurring Monthly</label></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Bill</button></div></form></div></div>
+    <div id="edit-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Recurring Bill</h2><form id="edit-bill-form"><input type="hidden" id="edit-bill-id"><div class="space-y-4"><div><label for="edit-bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="edit-bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div><label for="edit-bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-income-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Income</h2><form id="add-income-form"><div class="space-y-4"><div><label for="income-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="income-name" name="incomeName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Paycheck" required></div><div><label for="income-date" class="block mb-2 text-sm font-medium">Date Received</label><input type="date" id="income-date" name="incomeDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="income-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="income-amount" name="incomeAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="2000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Income</button></div></form></div></div>
+    <div id="add-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Asset</h2><form id="add-asset-form"><div class="space-y-4"><div><label for="asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="e.g., Real Estate" required></div><div><label for="asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="150000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Asset</button></div></form></div></div>
+    <div id="edit-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Asset</h2><form id="edit-asset-form"><input type="hidden" id="edit-asset-id"><div class="space-y-4"><div><label for="edit-asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div><div><label for="edit-asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Savings Goal</h2><form id="add-savings-form"><div class="space-y-4"><div><label for="savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="e.g., Emergency Fund" required></div><div><label for="savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="1000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Savings</button></div></form></div></div>
+    <div id="edit-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Savings Goal</h2><form id="edit-savings-form"><input type="hidden" id="edit-savings-id"><div class="space-y-4"><div><label for="edit-savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div><div><label for="edit-savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Investment</h2><form id="add-investment-form"><div class="space-y-4"><div><label for="investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g., Index Fund" required></div><div><label for="investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="5000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Investment</button></div></form></div></div>
+    <div id="edit-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Investment</h2><form id="edit-investment-form"><input type="hidden" id="edit-investment-id"><div class="space-y-4"><div><label for="edit-investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div><div><label for="edit-investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Debt</h2><form id="add-debt-form"><div class="space-y-4"><div><label for="debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="e.g., Credit Card" required></div><div><label for="debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="2500.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Debt</button></div></form></div></div>
+    <div id="edit-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Debt</h2><form id="edit-debt-form"><input type="hidden" id="edit-debt-id"><div class="space-y-4"><div><label for="edit-debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div><div><label for="edit-debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Help & Instructions</h2><button id="close-help-btn" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button></div><div class="text-gray-300 space-y-4 max-h-[70vh] overflow-y-auto pr-4"><h4 class="font-bold text-lg text-emerald-400">Navigation</h4><p>Use the links in the top navigation bar to switch between the main Dashboard, Income History, Savings Goals, Paid Bills history, your Recurring Bill templates, and the monthly Calendar view.</p><h4 class="font-bold text-lg text-emerald-400">Dashboard</h4><p>This is your main overview, showing key metrics like total savings and a table of all bills that are currently unpaid or overdue. The "Recent Payments" card shows your latest paid bills.</p><h4 class="font-bold text-lg text-emerald-400">Paying a Bill</h4><p>Click the "Pay" button on any bill in the "Upcoming Bills" table. The bill will be moved to your paid history. If it's a recurring bill, a new bill for the following month will automatically be created.</p><h4 class="font-bold text-lg text-emerald-400">Adding a New Bill, Income, or Savings Goal</h4><p>On the relevant screen, click the "Add" button to open a form. For recurring bills, a permanent template is created, and the first upcoming bill is added to your dashboard.</p><h4 class="font-bold text-lg text-emerald-400">Recurring Bills & Savings Pages</h4><p>These screens are for managing your bill templates and savings goals. You can edit the name or amount, or delete an item entirely.</p><h4 class="font-bold text-lg text-emerald-400">Data Storage</h4><p>All your financial information is saved securely in your private Firebase database, linked to your anonymous user ID shown in the footer. Your data persists between sessions.</p></div></div></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- App State & Constants ---
+        const APP_VERSION = "1.33";
+        const firebaseConfig = {
+          apiKey: "AIzaSyBrYRupvSHuIOWMQObQN_-UawbzCb4HfMQ",
+          authDomain: "bills-fa2ff.firebaseapp.com",
+          projectId: "bills-fa2ff",
+          storageBucket: "bills-fa2ff.appspot.com",
+          messagingSenderId: "755394451867",
+          appId: "1:755394451867:web:fd9553426e87542207a93e",
+          measurementId: "G-5RNYN6CFRJ"
+        };
+        let upcomingBills = [], paidBillsHistory = [], recurringBillTemplates = [], incomeHistory = [], savings = [], investments = [], debts = [], assets = [];
+        let sortState = { key: 'dueDate', direction: 'asc' };
+        let activeScreen = 'dashboard-screen', calendarDate = new Date();
+        let db, auth, userId, upcomingBillsRef, paidBillsHistoryRef, recurringTemplatesRef, incomeRef, savingsRef, investmentsRef, debtsRef, assetsRef;
+
+        // --- DOM Element Cache ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const billsTableBody = document.getElementById('bills-table-body');
+        const incomeTableBody = document.getElementById('income-table-body');
+        const assetsTableBody = document.getElementById('assets-table-body');
+        const savingsTableBody = document.getElementById('savings-table-body');
+        const investmentsTableBody = document.getElementById('investments-table-body');
+        const debtsTableBody = document.getElementById('debts-table-body');
+        const totalDueEl = document.getElementById('total-due');
+        const totalSavingsEl = document.getElementById('total-savings');
+        const totalInvestmentsEl = document.getElementById('total-investments');
+        const totalDebtsEl = document.getElementById('total-debts');
+        const totalIncomeMonthEl = document.getElementById('total-income-month');
+        const netCashMonthEl = document.getElementById('net-cash-month');
+        const netWorthEl = document.getElementById('net-worth');
+        const fullPaidHistoryTableBodyEl = document.getElementById('full-paid-history-table-body');
+        const recurringBillsTableBodyEl = document.getElementById('recurring-bills-table-body');
+        
+        const addBillModal = document.getElementById('add-bill-modal'), editBillModal = document.getElementById('edit-bill-modal'), helpModal = document.getElementById('help-modal'), addIncomeModal = document.getElementById('add-income-modal'), addAssetModal = document.getElementById('add-asset-modal'), editAssetModal = document.getElementById('edit-asset-modal'), addSavingsModal = document.getElementById('add-savings-modal'), editSavingsModal = document.getElementById('edit-savings-modal'), addInvestmentModal = document.getElementById('add-investment-modal'), editInvestmentModal = document.getElementById('edit-investment-modal'), addDebtModal = document.getElementById('add-debt-modal'), editDebtModal = document.getElementById('edit-debt-modal');
+        
+        const addBillBtn = document.getElementById('add-bill-btn'), addIncomeBtn = document.getElementById('add-income-btn'), addAssetBtn = document.getElementById('add-asset-btn'), addSavingsBtn = document.getElementById('add-savings-btn'), addInvestmentBtn = document.getElementById('add-investment-btn'), addDebtBtn = document.getElementById('add-debt-btn');
+        
+        const closeHelpBtn = document.getElementById('close-help-btn'), helpBtn = document.getElementById('help-btn');
+        
+        const addBillForm = document.getElementById('add-bill-form'), editBillForm = document.getElementById('edit-bill-form'), addIncomeForm = document.getElementById('add-income-form'), addAssetForm = document.getElementById('add-asset-form'), editAssetForm = document.getElementById('edit-asset-form'), addSavingsForm = document.getElementById('add-savings-form'), editSavingsForm = document.getElementById('edit-savings-form'), addInvestmentForm = document.getElementById('add-investment-form'), editInvestmentForm = document.getElementById('edit-investment-form'), addDebtForm = document.getElementById('add-debt-form'), editDebtForm = document.getElementById('edit-debt-form');
+        
+        const screens = {
+            'dashboard-screen': document.getElementById('dashboard-screen'),
+            'paid-bills-screen': document.getElementById('paid-bills-screen'),
+            'calendar-screen': document.getElementById('calendar-screen'),
+            'recurring-bills-screen': document.getElementById('recurring-bills-screen'),
+            'income-screen': document.getElementById('income-screen'),
+            'assets-screen': document.getElementById('assets-screen'),
+            'savings-screen': document.getElementById('savings-screen'),
+            'investments-screen': document.getElementById('investments-screen'),
+            'debts-screen': document.getElementById('debts-screen'),
+        };
+        const navLinks = {
+            'dashboard': document.getElementById('nav-dashboard'),
+            'income': document.getElementById('nav-income'),
+            'assets': document.getElementById('nav-assets'),
+            'savings': document.getElementById('nav-savings'),
+            'investments': document.getElementById('nav-investments'),
+            'debts': document.getElementById('nav-debts'),
+            'paid-bills': document.getElementById('nav-paid-bills'),
+            'recurring-bills': document.getElementById('nav-recurring-bills'),
+            'calendar': document.getElementById('nav-calendar')
+        };
+        const calendarGrid = document.getElementById('calendar-grid'), calendarMonthYear = document.getElementById('calendar-month-year');
+        const prevMonthBtn = document.getElementById('prev-month-btn'), nextMonthBtn = document.getElementById('next-month-btn');
+        const userIdDisplay = document.getElementById('user-id-display'), appVersionEl = document.getElementById('app-version');
+
+        // --- Utility & Render Functions ---
+        const sumAmounts = (arr) => arr.reduce((sum, item) => sum + item.amount, 0);
+        function getBillStatus(bill) { const today = new Date(); today.setHours(0,0,0,0); const dueDate = new Date(bill.dueDate + 'T00:00:00'); return dueDate < today ? 'Overdue' : 'Unpaid'; }
+        function sortBills() { upcomingBills.sort((a,b)=>{ let c=0; if(sortState.key==='dueDate')c=new Date(a.dueDate)-new Date(b.dueDate);else if(typeof a[sortState.key]==='string')c=a[sortState.key].localeCompare(b[sortState.key]);else c=a[sortState.key]-b[sortState.key]; return sortState.direction==='asc'?c:-c;});}
+        function createBillRow(b) { const r=document.createElement('tr');r.className='border-b border-gray-700 hover:bg-gray-700/50 transition-colors'; const status=getBillStatus(b); const s=status==='Unpaid'?{p:'status-unpaid',i:'far fa-clock'}:{p:'status-overdue',i:'fas fa-exclamation-circle'}; const d=new Date(b.dueDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); const i=b.recurringTemplateId?`<i class="fas fa-sync-alt text-blue-400 ml-2 text-xs" title="Recurring Monthly"></i>`:''; r.innerHTML=`<td class="p-4 font-semibold text-white flex items-center">${b.name}${i}</td><td class="p-4 text-right text-white">$${b.amount.toFixed(2)}</td><td class="p-4 text-center">${d}</td><td class="p-4 text-center"><span class="status-pill ${s.p}"><i class="${s.i} mr-2"></i>${status}</span></td><td class="p-4 text-center"><button data-bill-id="${b.id}" class="pay-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-4 rounded-lg transition-colors text-sm">Pay</button></td>`; return r;}
+        
+        function renderCalendar() {
+            calendarGrid.innerHTML = '';
+            const y = calendarDate.getFullYear(), m = calendarDate.getMonth();
+            calendarMonthYear.textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const firstDayOfMonth = new Date(y, m, 1).getDay();
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                calendarGrid.insertAdjacentHTML('beforeend', `<div class="calendar-day p-2 h-32"></div>`);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const today = new Date();
+                const isToday = day === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+                const dayCell = document.createElement('div');
+                dayCell.className = `calendar-day p-2 h-32 flex flex-col relative overflow-y-auto ${isToday ? 'today' : ''}`;
+                dayCell.innerHTML = `<span class="font-bold">${day}</span>`;
+
+                // Filter bills (upcoming and paid) for the current day
+                const billsForDay = [...upcomingBills, ...paidBillsHistory].filter(bill => {
+                    const billDateStr = bill.paidDate ? bill.paidDate.split('T')[0] : bill.dueDate;
+                    const billDate = new Date(billDateStr + 'T00:00:00');
+                    return billDate.getDate() === day && billDate.getMonth() === m && billDate.getFullYear() === y;
+                });
+
+                // Filter income for the current day
+                const incomeForDay = incomeHistory.filter(income => {
+                    if (!income.date) return false;
+                    const incomeDate = new Date(income.date + 'T00:00:00');
+                    return incomeDate.getDate() === day && incomeDate.getMonth() === m && incomeDate.getFullYear() === y;
+                });
+
+                // Render income pills
+                incomeForDay.forEach(inc => {
+                    const pill = document.createElement('div');
+                    pill.className = 'bill-pill bg-cyan-800 text-cyan-300';
+                    pill.textContent = inc.name;
+                    pill.title = `Income: ${inc.name} - $${inc.amount.toFixed(2)}`;
+                    dayCell.appendChild(pill);
+                });
+
+                // Render bill pills
+                billsForDay.forEach(bill => {
+                    const pill = document.createElement('div');
+                    let pillClass = 'bill-pill ';
+                    if (bill.paidDate) {
+                        pillClass += 'bg-green-800 text-green-300'; // Paid
+                    } else {
+                        const status = getBillStatus(bill);
+                        pillClass += status === 'Overdue' ? 'bg-red-800 text-red-300' : 'bg-yellow-800 text-yellow-300'; // Unpaid or Overdue
+                    }
+                    pill.className = pillClass;
+                    pill.textContent = bill.name;
+                    pill.title = `Bill: ${bill.name} - $${bill.amount.toFixed(2)}`;
+                    dayCell.appendChild(pill);
+                });
+                
+                calendarGrid.appendChild(dayCell);
+            }
+        }
+
+        function updateSortIcons() { document.querySelectorAll('.sortable-header').forEach(h=>{ const k=h.dataset.sort,i=h.querySelector('.sort-icon'); if(k===sortState.key){h.classList.add('active');i.className=`fas fa-sort-${sortState.direction==='asc'?'up':'down'} sort-icon`;}else{h.classList.remove('active');i.className='fas fa-sort sort-icon';}}); }
+        
+        function renderDashboard() { 
+            sortBills(); 
+            billsTableBody.innerHTML=''; 
+            upcomingBills.forEach(b=>billsTableBody.appendChild(createBillRow(b))); 
+            
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const monthlyFilter = (item, dateField) => {
+                if (!item[dateField]) return false;
+                const itemDate = new Date(item[dateField] + 'T00:00:00');
+                return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+            };
+
+            const totalIncomeMonth = incomeHistory.filter(i => monthlyFilter(i, 'date')).reduce((total, i) => total + i.amount, 0);
+            const totalDueMonth = upcomingBills.filter(b => monthlyFilter(b, 'dueDate')).reduce((s,b) => s + b.amount, 0);
+            const netCashMonth = totalIncomeMonth - totalDueMonth;
+            
+            totalIncomeMonthEl.textContent = `$${totalIncomeMonth.toFixed(2)}`;
+            totalDueEl.textContent=`$${totalDueMonth.toFixed(2)}`;
+            netCashMonthEl.textContent = `$${netCashMonth.toFixed(2)}`;
+            netCashMonthEl.classList.toggle('text-green-400', netCashMonth >= 0);
+            netCashMonthEl.classList.toggle('text-red-400', netCashMonth < 0);
+            
+            totalSavingsEl.textContent = `$${sumAmounts(savings).toFixed(2)}`;
+            totalInvestmentsEl.textContent = `$${sumAmounts(investments).toFixed(2)}`;
+            totalDebtsEl.textContent = `$${sumAmounts(debts).toFixed(2)}`;
+
+            const currentNetWorth = sumAmounts(assets) + sumAmounts(savings) + sumAmounts(investments) - sumAmounts(debts);
+            netWorthEl.textContent = `$${currentNetWorth.toFixed(2)}`;
+            
+            updateSortIcons();
+        }
+
+        function renderFullPaidHistoryPage() { fullPaidHistoryTableBodyEl.innerHTML=''; const s=paidBillsHistory.sort((a,b)=>new Date(b.paidDate)-new Date(a.paidDate)); s.forEach(b=>{const r=document.createElement('tr');r.className='border-b border-gray-700';const d=new Date(b.paidDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});r.innerHTML=`<td class="p-4 font-semibold text-white">${b.name}</td><td class="p-4 text-right text-white">$${b.amount.toFixed(2)}</td><td class="p-4 text-center">${d}</td>`;fullPaidHistoryTableBodyEl.appendChild(r);});}
+        function renderRecurringBillsPage() { recurringBillsTableBodyEl.innerHTML = ''; recurringBillTemplates.sort((a,b) => a.name.localeCompare(b.name)).forEach(t => {const r=document.createElement('tr');r.className='border-b border-gray-700'; r.innerHTML=`<td class="p-4 font-semibold text-white">${t.name}</td><td class="p-4 text-right text-white">$${t.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-template-id="${t.id}" class="edit-recurring-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-template-id="${t.id}" class="delete-recurring-btn text-red-400 hover:text-red-300">Delete</button></td>`; recurringBillsTableBodyEl.appendChild(r);});}
+        function renderIncomePage() { incomeTableBody.innerHTML = ''; incomeHistory.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; const d = new Date(i.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); r.innerHTML = `<td class="p-4 font-semibold text-white">${i.name}</td><td class="p-4">${d}</td><td class="p-4 text-right text-green-400 font-bold">$${i.amount.toFixed(2)}</td>`; incomeTableBody.appendChild(r); }); }
+        function renderAssetsPage() { assetsTableBody.innerHTML = ''; assets.sort((a,b) => a.description.localeCompare(b.description)).forEach(a => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${a.description}</td><td class="p-4 text-right text-teal-400 font-bold">$${a.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-asset-id="${a.id}" class="edit-asset-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-asset-id="${a.id}" class="delete-asset-btn text-red-400 hover:text-red-300">Delete</button></td>`; assetsTableBody.appendChild(r); });}
+        function renderSavingsPage() { savingsTableBody.innerHTML = ''; savings.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${s.name}</td><td class="p-4 text-right text-green-400 font-bold">$${s.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-savings-id="${s.id}" class="edit-savings-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-savings-id="${s.id}" class="delete-savings-btn text-red-400 hover:text-red-300">Delete</button></td>`; savingsTableBody.appendChild(r); });}
+        function renderInvestmentsPage() { investmentsTableBody.innerHTML = ''; investments.sort((a,b) => a.description.localeCompare(b.description)).forEach(i => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${i.description}</td><td class="p-4 text-right text-indigo-400 font-bold">$${i.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-investment-id="${i.id}" class="edit-investment-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-investment-id="${i.id}" class="delete-investment-btn text-red-400 hover:text-red-300">Delete</button></td>`; investmentsTableBody.appendChild(r); });}
+        function renderDebtsPage() { debtsTableBody.innerHTML = ''; debts.sort((a,b) => a.description.localeCompare(b.description)).forEach(d => { const r = document.createElement('tr'); r.className = 'border-b border-gray-700'; r.innerHTML = `<td class="p-4 font-semibold text-white">${d.description}</td><td class="p-4 text-right text-orange-400 font-bold">$${d.amount.toFixed(2)}</td><td class="p-4 text-center"><button data-debt-id="${d.id}" class="edit-debt-btn text-blue-400 hover:text-blue-300 mr-4">Edit</button><button data-debt-id="${d.id}" class="delete-debt-btn text-red-400 hover:text-red-300">Delete</button></td>`; debtsTableBody.appendChild(r); });}
+
+        // --- Navigation ---
+        function showScreen(screenId) {
+            activeScreen = screenId;
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            screens[screenId].classList.remove('hidden');
+
+            Object.values(navLinks).forEach(l => l.classList.remove('active'));
+            const navKey = screenId.replace('-screen', '');
+            if(navLinks[navKey]) navLinks[navKey].classList.add('active');
+
+            switch(screenId) {
+                case 'dashboard-screen': renderDashboard(); break;
+                case 'paid-bills-screen': renderFullPaidHistoryPage(); break;
+                case 'calendar-screen': renderCalendar(); break;
+                case 'recurring-bills-screen': renderRecurringBillsPage(); break;
+                case 'income-screen': renderIncomePage(); break;
+                case 'assets-screen': renderAssetsPage(); break;
+                case 'savings-screen': renderSavingsPage(); break;
+                case 'investments-screen': renderInvestmentsPage(); break;
+                case 'debts-screen': renderDebtsPage(); break;
+            }
+        }
+
+        // --- Firestore Actions ---
+        async function handlePayBill(e) { 
+            const id = e.target.dataset.billId; 
+            const billToPay = upcomingBills.find(bill => bill.id === id); 
+            if(!billToPay) return; 
+            
+            const batch = writeBatch(db);
+            
+            // Delete the paid bill from upcoming bills
+            batch.delete(doc(db, upcomingBillsRef.path, id));
+            
+            // Create a new entry in paid bills history
+            const paidBillData = {...billToPay, paidDate: new Date().toISOString()}; 
+            delete paidBillData.id; 
+            batch.set(doc(paidBillsHistoryRef, paidBillData.name + " - " + paidBillData.paidDate), paidBillData);
+            
+            // If the bill was recurring, create the next bill
+            if(billToPay.recurringTemplateId){ 
+                const template = recurringBillTemplates.find(t => t.id === billToPay.recurringTemplateId); 
+                if(template){
+                    const dueDate = new Date(billToPay.dueDate + 'T00:00:00');
+                    dueDate.setMonth(dueDate.getMonth() + 1); 
+                    const nextBill = {
+                        ...template, 
+                        dueDate: dueDate.toISOString().split('T')[0],
+                        recurringTemplateId: template.id
+                    }; 
+                    delete nextBill.id; 
+                    batch.set(doc(collection(db, upcomingBillsRef.path)), nextBill);
+                }
+            } 
+            try { 
+                await batch.commit(); 
+            } catch(err) { 
+                console.error("Error paying bill:", err);
+            }
+        }
+        async function handleAddBill(e) { e.preventDefault(); const f=new FormData(addBillForm); const isRec=f.get('billRecurring')==='on'; const amount=parseFloat(f.get('billAmount')); const name=f.get('billName'); const dueDate=f.get('billDueDate'); try{if(isRec){const tData={name,amount}; const tRef=await addDoc(recurringTemplatesRef,tData); const bData={name,amount,dueDate,recurringTemplateId:tRef.id}; await addDoc(upcomingBillsRef,bData);}else{const bData={name,amount,dueDate}; await addDoc(upcomingBillsRef,bData);} addBillForm.reset();closeModal(addBillModal);}catch(err){console.error("Error adding bill:",err);}}
+        async function handleAddIncome(e) { e.preventDefault(); const f = new FormData(addIncomeForm); const iData = { name: f.get('incomeName'), date: f.get('incomeDate'), amount: parseFloat(f.get('incomeAmount'))}; try { await addDoc(incomeRef, iData); addIncomeForm.reset(); closeModal(addIncomeModal); } catch (err) { console.error("Error adding income:", err); } }
+        async function handleAddAsset(e) { e.preventDefault(); const f = new FormData(addAssetForm); const aData = { description: f.get('assetDescription'), amount: parseFloat(f.get('assetAmount'))}; try { await addDoc(assetsRef, aData); addAssetForm.reset(); closeModal(addAssetModal); } catch (err) { console.error("Error adding asset:", err); } }
+        async function handleAddSavings(e) { e.preventDefault(); const f = new FormData(addSavingsForm); const sData = { name: f.get('savingsName'), amount: parseFloat(f.get('savingsAmount'))}; try { await addDoc(savingsRef, sData); addSavingsForm.reset(); closeModal(addSavingsModal); } catch (err) { console.error("Error adding savings:", err); } }
+        async function handleAddInvestment(e) { e.preventDefault(); const f = new FormData(addInvestmentForm); const iData = { description: f.get('investmentDescription'), amount: parseFloat(f.get('investmentAmount'))}; try { await addDoc(investmentsRef, iData); addInvestmentForm.reset(); closeModal(addInvestmentModal); } catch (err) { console.error("Error adding investment:", err); } }
+        async function handleAddDebt(e) { e.preventDefault(); const f = new FormData(addDebtForm); const dData = { description: f.get('debtDescription'), amount: parseFloat(f.get('debtAmount'))}; try { await addDoc(debtsRef, dData); addDebtForm.reset(); closeModal(addDebtModal); } catch (err) { console.error("Error adding debt:", err); } }
+        
+        async function handleDeleteTemplate(e){ const id=e.target.dataset.templateId; try{ await deleteDoc(doc(db, recurringTemplatesRef.path, id)); } catch(err){ console.error("Error deleting template:",err); } }
+        function handleEditTemplate(e){ const id=e.target.dataset.templateId; const t=recurringBillTemplates.find(tmp=>tmp.id===id); if(t){document.getElementById('edit-bill-id').value=t.id; document.getElementById('edit-bill-name').value=t.name; document.getElementById('edit-bill-amount').value=t.amount;} openModal(editBillModal);}
+        async function handleUpdateBill(e){ e.preventDefault(); const id=document.getElementById('edit-bill-id').value; const data={name:document.getElementById('edit-bill-name').value,amount:parseFloat(document.getElementById('edit-bill-amount').value)}; try { await updateDoc(doc(db, recurringTemplatesRef.path, id), data); closeModal(editBillModal); } catch(err){console.error("Error updating template:",err);}}
+
+        async function handleEditAsset(e){ const id = e.target.dataset.assetId; const a = assets.find(item => item.id === id); if(a) { document.getElementById('edit-asset-id').value = a.id; document.getElementById('edit-asset-description').value = a.description; document.getElementById('edit-asset-amount').value = a.amount; } openModal(editAssetModal); }
+        async function handleUpdateAsset(e){ e.preventDefault(); const id = document.getElementById('edit-asset-id').value; const data = { description: document.getElementById('edit-asset-description').value, amount: parseFloat(document.getElementById('edit-asset-amount').value) }; try { await updateDoc(doc(db, assetsRef.path, id), data); closeModal(editAssetModal); } catch(err) { console.error("Error updating asset:", err); } }
+        async function handleDeleteAsset(e){ const id = e.target.dataset.assetId; try { await deleteDoc(doc(db, assetsRef.path, id)); } catch(err) { console.error("Error deleting asset:", err); } }
+
+        async function handleDeleteSavings(e){ const id=e.target.dataset.savingsId; try { await deleteDoc(doc(db, savingsRef.path, id)); } catch(err) { console.error("Error deleting savings:",err); } }
+        function handleEditSavings(e){ const id=e.target.dataset.savingsId; const s=savings.find(item=>item.id===id); if(s){document.getElementById('edit-savings-id').value=s.id; document.getElementById('edit-savings-name').value=s.name; document.getElementById('edit-savings-amount').value=s.amount;} openModal(editSavingsModal);}
+        async function handleUpdateSavings(e){ e.preventDefault(); const id=document.getElementById('edit-savings-id').value; const data={name:document.getElementById('edit-savings-name').value,amount:parseFloat(document.getElementById('edit-savings-amount').value)}; try { await updateDoc(doc(db, savingsRef.path, id), data); closeModal(editSavingsModal); } catch(err) { console.error("Error updating savings:",err); } }
+        
+        async function handleDeleteInvestment(e){ const id=e.target.dataset.investmentId; try { await deleteDoc(doc(db, investmentsRef.path, id)); } catch(err) { console.error("Error deleting investment:",err); } }
+        function handleEditInvestment(e){ const id=e.target.dataset.investmentId; const i=investments.find(item=>item.id===id); if(i){document.getElementById('edit-investment-id').value=i.id; document.getElementById('edit-investment-description').value=i.description; document.getElementById('edit-investment-amount').value=i.amount;} openModal(editInvestmentModal);}
+        async function handleUpdateInvestment(e){ e.preventDefault(); const id=document.getElementById('edit-investment-id').value; const data={description:document.getElementById('edit-investment-description').value,amount:parseFloat(document.getElementById('edit-investment-amount').value)}; try { await updateDoc(doc(db, investmentsRef.path, id), data); closeModal(editInvestmentModal); } catch(err) { console.error("Error updating investment:",err); } }
+
+        async function handleDeleteDebt(e){ const id=e.target.dataset.debtId; try { await deleteDoc(doc(db, debtsRef.path, id)); } catch(err) { console.error("Error deleting debt:",err); } }
+        function handleEditDebt(e){ const id=e.target.dataset.debtId; const d=debts.find(item=>item.id===id); if(d){document.getElementById('edit-debt-id').value=d.id; document.getElementById('edit-debt-description').value=d.description; document.getElementById('edit-debt-amount').value=d.amount;} openModal(editDebtModal);}
+        async function handleUpdateDebt(e){ e.preventDefault(); const id=document.getElementById('edit-debt-id').value; const data={description:document.getElementById('edit-debt-description').value,amount:parseFloat(document.getElementById('edit-debt-amount').value)}; try { await updateDoc(doc(db, debtsRef.path, id), data); closeModal(editDebtModal); } catch(err) { console.error("Error updating debt:",err); } }
+
+        // --- Modals & Event Listeners ---
+        function openModal(modal) { modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'),10);}
+        function closeModal(modal) { modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'),300);}
+        function handleSort(e) { const k=e.currentTarget.dataset.sort; if(sortState.key===k)sortState.direction=sortState.direction==='asc'?'desc':'asc';else{sortState.key=k;sortState.direction='asc';} renderDashboard();}
+        
+        // --- App Initialization ---
+        async function main() {
+            appVersionEl.textContent = "v" + APP_VERSION;
+            const app = initializeApp(firebaseConfig); 
+            db = getFirestore(app); 
+            auth = getAuth(app);
+            
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent=`ID: ${userId.substring(0,12)}...`; 
+                    userIdDisplay.title=`User ID: ${userId}`;
+                    
+                    // Define collection references
+                    upcomingBillsRef = collection(db, `users/${userId}/upcoming_bills`);
+                    paidBillsHistoryRef = collection(db, `users/${userId}/paid_bills_history`);
+                    recurringTemplatesRef = collection(db, `users/${userId}/recurring_templates`);
+                    incomeRef = collection(db, `users/${userId}/income`);
+                    assetsRef = collection(db, `users/${userId}/assets`);
+                    savingsRef = collection(db, `users/${userId}/savings`);
+                    investmentsRef = collection(db, `users/${userId}/investments`);
+                    debtsRef = collection(db, `users/${userId}/debts`);
+                    
+                    // Set up snapshot listeners
+                    onSnapshot(upcomingBillsRef,s=>{upcomingBills=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='dashboard-screen')renderDashboard();if(activeScreen==='calendar-screen')renderCalendar();});
+                    onSnapshot(paidBillsHistoryRef,s=>{paidBillsHistory=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='dashboard-screen')renderDashboard();if(activeScreen==='calendar-screen')renderCalendar();if(activeScreen==='paid-bills-screen')renderFullPaidHistoryPage();});
+                    onSnapshot(recurringTemplatesRef,s=>{recurringBillTemplates=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='recurring-bills-screen')renderRecurringBillsPage();});
+                    onSnapshot(incomeRef, s => { incomeHistory = s.docs.map(d => ({ id: d.id, ...d.data() })); if(activeScreen === 'income-screen') renderIncomePage(); if(activeScreen === 'dashboard-screen') renderDashboard(); if(activeScreen==='calendar-screen')renderCalendar(); });
+                    onSnapshot(assetsRef, s => { assets = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'assets-screen') renderAssetsPage(); });
+                    onSnapshot(savingsRef, s => { savings = s.docs.map(d => ({ id: d.id, ...d.data() })); if(activeScreen==='dashboard-screen')renderDashboard(); if(activeScreen === 'savings-screen') renderSavingsPage(); });
+                    onSnapshot(investmentsRef, s => { investments = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'investments-screen') renderInvestmentsPage(); });
+                    onSnapshot(debtsRef, s => { debts = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'debts-screen') renderDebtsPage(); });
+
+                    loadingOverlay.classList.add('hidden');
+                    showScreen('dashboard-screen');
+
+                } else {
+                    signInAnonymously(auth).catch(error => {
+                        console.error("Anonymous auth failed:", error);
+                        loadingOverlay.textContent='Authentication Failed.';
+                    });
+                }
+            });
+
+            // --- SINGLE EVENT LISTENER SETUP ---
+            document.body.addEventListener('click', e => {
+                if(e.target.matches('.pay-button')) handlePayBill(e);
+                if(e.target.matches('.edit-recurring-btn')) handleEditTemplate(e);
+                if(e.target.matches('.delete-recurring-btn')) handleDeleteTemplate(e);
+                if(e.target.matches('.edit-asset-btn')) handleEditAsset(e);
+                if(e.target.matches('.delete-asset-btn')) handleDeleteAsset(e);
+                if(e.target.matches('.edit-savings-btn')) handleEditSavings(e);
+                if(e.target.matches('.delete-savings-btn')) handleDeleteSavings(e);
+                if(e.target.matches('.edit-investment-btn')) handleEditInvestment(e);
+                if(e.target.matches('.delete-investment-btn')) handleDeleteInvestment(e);
+                if(e.target.matches('.edit-debt-btn')) handleEditDebt(e);
+                if(e.target.matches('.delete-debt-btn')) handleDeleteDebt(e);
+                if(e.target.matches('.cancel-modal-btn')) closeModal(e.target.closest('.fixed'));
+            });
+
+            document.querySelectorAll('.sortable-header').forEach(h=>h.addEventListener('click',handleSort));
+            
+            // Listeners for static buttons
+            addBillBtn.addEventListener('click',()=>openModal(addBillModal));
+            addIncomeBtn.addEventListener('click', ()=>openModal(addIncomeModal));
+            addAssetBtn.addEventListener('click', () => openModal(addAssetModal));
+            addSavingsBtn.addEventListener('click', ()=>openModal(addSavingsModal));
+            addInvestmentBtn.addEventListener('click', () => openModal(addInvestmentModal));
+            addDebtBtn.addEventListener('click', () => openModal(addDebtModal));
+            helpBtn.addEventListener('click', ()=>openModal(helpModal));
+            closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
+            
+            // Listeners for modals to close when clicking outside
+            [addBillModal, editBillModal, addIncomeModal, addAssetModal, editAssetModal, addSavingsModal, editSavingsModal, addInvestmentModal, editInvestmentModal, addDebtModal, editDebtModal, helpModal].forEach(modal => modal.addEventListener('click', e => { if(e.target === modal) closeModal(modal);}));
+
+            // Form submission listeners
+            addBillForm.addEventListener('submit',handleAddBill);
+            editBillForm.addEventListener('submit',handleUpdateBill);
+            addIncomeForm.addEventListener('submit', handleAddIncome);
+            addAssetForm.addEventListener('submit', handleAddAsset);
+            editAssetForm.addEventListener('submit', handleUpdateAsset);
+            addSavingsForm.addEventListener('submit', handleAddSavings);
+            editSavingsForm.addEventListener('submit', handleUpdateSavings);
+            addInvestmentForm.addEventListener('submit', handleAddInvestment);
+            editInvestmentForm.addEventListener('submit', handleUpdateInvestment);
+            addDebtForm.addEventListener('submit', handleAddDebt);
+            editDebtForm.addEventListener('submit', handleUpdateDebt);
+
+            // Nav link listeners
+            Object.entries(navLinks).forEach(([key, link]) => {
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    showScreen(`${key}-screen`);
+                });
+            });
+            
+            // Calendar listeners
+            prevMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar();});
+            nextMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar();});
+        }
+        
+        document.addEventListener('DOMContentLoaded', main);
+    </script>
+</body>
+</html>
