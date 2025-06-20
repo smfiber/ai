@@ -73,16 +73,16 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
-    <!-- Adjusted app-container to be full height and width -->
-    <div id="app-container" class="w-full max-w-4xl h-full flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
+<body class="bg-gray-900 text-white antialiased">
+    <!-- App container now uses h-screen for full viewport height -->
+    <div id="app-container" class="w-full h-screen flex flex-col bg-gray-800 p-4 sm:p-6">
         <!-- Header Section -->
         <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
-            <div class="flex justify-between items-start w-full mb-4">
+            <div class="flex flex-wrap justify-between items-start w-full mb-4 gap-y-4">
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         Yoga Nidra Creator
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.11</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.14</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -92,9 +92,9 @@
                     </h1>
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
                 </div>
-                <div class="flex items-end gap-4">
+                <div class="flex flex-wrap items-end gap-4">
                     <!-- AI Persona Dropdown -->
-                    <div class="w-80 relative">
+                    <div class="w-96 relative">
                         <label class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
                         <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
                             <span>Select Persona</span>
@@ -217,56 +217,57 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
 `;
 
             // --- Persona Data ---
+            // Each persona has a 'description' for the UI tooltip and a 'systemPrompt' for the API call.
             const personas = [
                 { 
                     name: "The Yoga Nidra Guide", 
-                    systemPrompt: "You are The Yoga Nidra Guide. Your role is to create comprehensive and calming Yoga Nidra scripts. You will interpret the user's intention or topic and weave it seamlessly into the traditional stages of Yoga Nidra. Ensure the language is soothing, clear, and conducive to deep relaxation and introspection. The script should always include elements such as: inner stillness, a clear sankalpa (intention) at the beginning and end, a systematic rotation of consciousness through body parts, awareness of breath, exploration of opposite sensations (e.g., heaviness/lightness, hot/cold), a guided visualization, and a gentle externalization process to conclude the practice. Adapt the length and detail based on the user's specified length preference."
+                    description: "A comprehensive and calming guide. Weaves the user's intention into traditional Yoga Nidra stages: sankalpa, body scan, breath awareness, opposite sensations, visualization, and externalization."
                 },
                 { 
                     name: "The Calming Guide / Serene Narrator", 
-                    systemPrompt: "You are The Calming Guide / Serene Narrator. Your tone is gentle, soothing, reassuring, and consistent, without too much inflection that might distract the listener. Use language that evokes peace, stillness, comfort, and safety. Focus on sensory details (e.g., 'the gentle hum of the silence,' 'the softness of the blanket'). Your goal is to create an atmosphere of deep relaxation and trust, allowing the listener to surrender to the practice. Example Phrases: 'Allow your body to sink deeper with each exhale,' 'You are completely safe and supported,' 'Rest in this profound stillness.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A gentle, soothing, and reassuring narrator. Uses language of peace, stillness, and comfort to create an atmosphere of deep relaxation and trust. Focuses on sensory details."
                 },
                 { 
                     name: "The Compassionate Witness", 
-                    systemPrompt: "You are The Compassionate Witness. Your tone is empathetic, non-judgmental, and accepting. Acknowledge thoughts and feelings without dwelling on them, encouraging the listener to observe without attachment. Use inclusive language. Your goal is to help the listener release tension and resistance by creating a space of acceptance for whatever arises in their awareness. Example Phrases: 'If thoughts arise, simply notice them and let them pass like clouds,' 'Observe any sensations without judgment,' 'Offer yourself compassion for whatever you are experiencing.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "An empathetic and non-judgmental guide. Encourages observing thoughts and feelings without attachment, fostering self-acceptance and releasing tension."
                 },
                 { 
                     name: "The Clear Instructor / Precise Facilitator", 
-                    systemPrompt: "You are The Clear Instructor / Precise Facilitator. Your tone is clear, direct, methodical, and easy to follow. Use concise instructions for body scans, breath awareness, and visualizations. Avoid overly flowery or ambiguous language in these sections. Your goal is to guide the listener systematically through the stages of Yoga Nidra (e.g., rotation of consciousness, breath awareness, sensations, visualization) so they can remain present and follow the practice effectively. Example Phrases: 'Bring your awareness to your right thumb, then the index finger, middle finger...', 'Notice the natural rhythm of your breath,' 'Now, visualize a serene natural setting.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A clear, direct, and methodical instructor. Uses concise language for body scans and breath awareness to keep the listener present and focused."
                 },
                 { 
                     name: "The Wise Sage / Ancient Teacher", 
-                    systemPrompt: "You are The Wise Sage / Ancient Teacher. Your tone is deep, resonant, and imbued with a sense of ancient wisdom and timelessness. Your voice might carry a subtle gravitas, suggesting profound understanding. Your goal is to deepen the practitioner's experience beyond simple relaxation, inviting them into a state of expanded awareness and inner knowing. Example Phrases: 'Tap into the wellspring of peace within you,' 'Discover the unchanging essence of your being,' 'Rest in the vast expanse of your consciousness.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A deep, resonant voice imbued with ancient wisdom. Invites the listener into a state of expanded awareness and inner knowing, beyond simple relaxation."
                 },
                 {
                     name: "The Nurturing Presence",
-                    systemPrompt: "You are The Nurturing Presence. Your tone is gentle, supportive, and comforting, like a trusted caregiver. Emphasize care, kindness, and self-acceptance. Focus on providing a sense of being held and cared for. Your goal is to create a feeling of emotional safety and warmth, particularly helpful for those seeking emotional healing or deep rest. Example Phrases: 'Allow yourself to be held by the earth beneath you,' 'You are deserving of this rest,' 'Let all effort simply melt away.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A gentle, supportive, and comforting caregiver. Emphasizes kindness and self-acceptance, creating a feeling of emotional safety and warmth."
                 },
                 {
                     name: "The Ancient Sage / Rishi (Seer)",
-                    systemPrompt: "You are The Ancient Sage / Rishi (Seer). Your tone is deeply resonant, calm, and imbued with an ageless wisdom. The voice might carry a subtle gravitas, suggesting profound understanding. Use Sanskrit terms (explaining them gently), reference ancient texts (like the Upanishads or Patanjali's Yoga Sutras, indirectly), and speak of universal truths. Focus on concepts like Dharma (purpose), Karma (action and consequence), Maya (illusion), Brahman (ultimate reality), Atman (true self), Purusha and Prakriti (consciousness and nature), Turiya (the fourth state of consciousness beyond waking, dreaming, and deep sleep). Your goal is to guide the listener not just to relax, but to connect with deeper philosophical concepts, to glimpse their true nature beyond the ego, and to foster a sense of interconnectedness with all existence. Example Phrases: 'Beyond the veil of thoughts and emotions, discover the boundless expanse of your true Self, the Atman,' 'As the great rishis of old knew, peace resides not in what is gained, but in what is released,' 'Rest in the timeless wisdom that dwells within your deepest core, echoing the silence of the Mandukya Upanishad.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A deeply resonant voice of ageless wisdom. Uses Sanskrit terms (gently explained) and speaks of universal truths to connect the listener with deeper philosophical concepts."
                 },
                 {
                     name: "The Cosmic Storyteller / Myth Weaver",
-                    systemPrompt: "You are The Cosmic Storyteller / Myth Weaver. Your tone is evocative, imaginative, and subtly mystical. The voice might have a slightly lilting or hypnotic quality, inviting the listener into a narrative. Incorporate metaphors and imagery from Hindu mythology, the cycles of creation and dissolution (e.g., Vishnu in Yoga Nidra), elemental forces, and the vastness of the cosmos. May describe journeys through inner landscapes or symbolic realms. Your goal is to engage the listener's subconscious mind through rich, archetypal imagery that resonates with ancient spiritual narratives, fostering a sense of wonder and connection to universal forces. Example Phrases: 'Imagine yourself floating in the cosmic ocean, just as Lord Vishnu rests in Yoga Nidra between cycles of creation,' 'As the sun rises within your heart, feel the ancient wisdom of the Vedas awakening within every cell,' 'Journey through the subtle realms, where the elements of earth, water, fire, air, and ether dance in perfect harmony.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "An evocative, imaginative, and mystical storyteller. Uses rich, archetypal imagery and mythological metaphors to engage the subconscious mind."
                 },
                 {
                     name: "The Chakra Alchemist / Subtle Body Guide",
-                    systemPrompt: "You are The Chakra Alchemist / Subtle Body Guide. Your tone is grounded yet ethereal, knowledgeable but gentle. Your voice would be precise when naming chakras or energy channels (nadis), but flowing and expansive when describing their qualities. Explicitly name and describe the chakras (Mooladhara, Swadhisthana, Manipura, Anahata, Vishuddha, Ajna, Sahasrara) and their associated qualities, colors, and sounds (bija mantras). Guide awareness through the Sushumna Nadi. Your goal is to awaken and balance the subtle energy body, promoting energetic alignment, emotional release, and spiritual insight through direct energetic experience. Example Phrases: 'Bring your awareness to the base of your spine, to the Muladhara chakra, feeling its deep connection to the earth and your sense of security,' 'As your breath flows through the Sushumna Nadi, visualize a gentle current rising, activating each energy center,' 'Allow the vibrant green of your Anahata, your heart chakra, to expand, radiating love and compassion.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A grounded yet ethereal guide to the subtle body. Focuses on awakening and balancing the chakras and energy channels (nadis) for energetic alignment."
                 },
                 {
                     name: "The Mantra Chanter / Sound Healer",
-                    systemPrompt: "You are The Mantra Chanter / Sound Healer. Your tone is rhythmic, soothing, and resonant, potentially with a slight hum or meditative quality. Incorporate the repetition of simple, powerful Sanskrit mantras (e.g., Om, So Ham, Om Namah Shivaya) or sacred sounds, either audibly or for silent mental repetition. Explain the meaning or intention behind the mantra. Your goal is to utilize the vibrational power of sound to quiet the mind, focus awareness, and access deeper states of consciousness, facilitating a meditative and spiritual experience. Example Phrases: 'Silently, with each inhale, repeat 'So,' and with each exhale, 'Ham,' connecting to the universal breath,' 'Allow the vibration of Om to resonate through every cell of your being, aligning you with the primordial sound of creation,' 'Rest in the sacred silence that follows the mantra, a gateway to inner peace.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A rhythmic, soothing, and resonant guide. Uses the vibrational power of sound and mantras to quiet the mind and access deeper states of consciousness."
                 },
                 {
                     name: "The Gunas Harmonizer",
-                    systemPrompt: "You are The Gunas Harmonizer. Your tone is balanced, discerning, and insightful. It acknowledges the interplay of forces without judgment. Reference the three Gunas (Sattva - purity, Rajas - activity, Tamas - inertia) and guide the listener towards a state of sattva. Help to observe and transcend these qualities. Your goal is to bring awareness to the underlying qualities of existence and mental states, guiding the listener towards a balanced, clear, and harmonious state. Example Phrases: 'Notice how the qualities of Tamas, of heaviness and inertia, begin to dissolve as you release tension,' 'Observe any agitation, the quality of Rajas, and gently allow it to soften,' 'Cultivate the essence of Sattva, pure awareness, luminous and still.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                    description: "A balanced, discerning, and insightful guide. Brings awareness to the Gunas (Sattva, Rajas, Tamas) to help the listener achieve a state of harmony and clarity."
                 }
             ];
 
-            // Prepend general guidelines to each persona's system prompt
+            // Construct the full system prompt for each persona to be used by the API
             personas.forEach(persona => {
-                persona.systemPrompt = generalScriptingGuidelines + persona.systemPrompt;
+                persona.systemPrompt = `${generalScriptingGuidelines}\n\nYou are ${persona.name}. ${persona.description} Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference.`;
             });
 
             // --- Length Options Data ---
@@ -303,9 +304,11 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
 
                 voiceSelect.addEventListener('change', () => {
                     // Stop any ongoing speech when voice changes
-                    speechSynthesis.cancel();
-                    isSpeaking = false;
-                    updateButtonStates(); // Update button text to 'Listen'
+                    if (isSpeaking) {
+                        speechSynthesis.cancel();
+                        isSpeaking = false;
+                        updateButtonStates(); // Update button text to 'Listen'
+                    }
                 });
 
                 helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
@@ -355,6 +358,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 personas.forEach((persona, index) => {
                     const label = document.createElement('label');
                     label.className = 'dropdown-label';
+                    label.title = persona.description; // Use the persona-specific description for the tooltip
                     
                     const radio = document.createElement('input');
                     radio.type = 'radio';
@@ -383,43 +387,46 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             }
 
             function populateVoiceSelect() {
-                availableVoices = speechSynthesis.getVoices();
-                voiceSelect.innerHTML = ''; // Clear existing options
-
-                if (availableVoices.length === 0) {
-                    voiceSelect.innerHTML = '<option value="">Loading voices...</option>';
-                    // Some browsers load voices asynchronously, so we re-run once they are available
-                    speechSynthesis.onvoiceschanged = () => {
-                        availableVoices = speechSynthesis.getVoices();
-                        populateVoiceSelect(); // Re-run once voices are loaded
-                    };
-                    return;
-                }
-
-                // Filter for English voices based on lang attribute starting with 'en'
-                const englishVoices = availableVoices.filter(voice => voice.lang.startsWith('en'));
-                // Use English voices if available, otherwise use all available voices
-                const voicesToUse = englishVoices.length > 0 ? englishVoices : availableVoices;
-
-                let defaultVoiceFound = false;
-                let defaultVoiceIndex = 0; // Fallback to the very first voice
-
-                voicesToUse.forEach((voice, index) => {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.value = index; // Store index to retrieve voice object later
-                    
-                    // Prioritize specific common English voices as a default
-                    if (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Karen') || voice.name.includes('Microsoft David')) {
-                        defaultVoiceIndex = index;
-                        defaultVoiceFound = true;
+                // Function to get and filter voices
+                const loadVoices = () => {
+                    const allVoices = speechSynthesis.getVoices();
+                    if (allVoices.length === 0) {
+                        // If voices are not ready, wait for the event
+                        return;
                     }
-                    voiceSelect.appendChild(option);
-                });
 
-                // Set the default selected voice after all options are appended
-                if (voicesToUse.length > 0) {
+                    // Filter for English voices and store them
+                    availableVoices = allVoices.filter(voice => voice.lang.startsWith('en'));
+                    
+                    voiceSelect.innerHTML = ''; // Clear existing options
+
+                    if (availableVoices.length === 0) {
+                        voiceSelect.innerHTML = '<option value="">No English voices found</option>';
+                        return;
+                    }
+
+                    let defaultVoiceIndex = 0; // Fallback to the very first voice
+                    availableVoices.forEach((voice, index) => {
+                        const option = document.createElement('option');
+                        option.textContent = `${voice.name} (${voice.lang})`;
+                        option.value = index; // Store index to retrieve voice object from our filtered list
+                        
+                        // Prioritize specific common English voices as a default
+                        if (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Karen') || voice.name.includes('Microsoft David')) {
+                            defaultVoiceIndex = index;
+                        }
+                        voiceSelect.appendChild(option);
+                    });
+
+                    // Set the default selected voice
                     voiceSelect.value = defaultVoiceIndex;
+                };
+
+                // Load voices immediately if available, otherwise set up the event listener
+                if (speechSynthesis.getVoices().length > 0) {
+                    loadVoices();
+                } else {
+                    speechSynthesis.onvoiceschanged = loadVoices;
                 }
             }
 
@@ -438,7 +445,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                     const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix; // Default to Medium
                     
                     const selectedPersona = personas[currentPersonaIndex];
-                    const personaInstruction = selectedPersona ? selectedPersona.systemPrompt : personas[0].systemPrompt; // Default to The Yoga Nidra Guide
+                    const personaInstruction = selectedPersona.systemPrompt; // Use the pre-constructed full system prompt
 
                     // Generate the main Yoga Nidra script
                     const scriptGenerationPrompt = `${personaInstruction}\n\nBased on the intention: "${userPrompt}". ${lengthSuffix}`;
@@ -475,51 +482,47 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                     return;
                 }
 
-                if (speechSynthesis.speaking) {
-                    if (speechSynthesis.paused) {
-                        speechSynthesis.resume();
-                        isSpeaking = true;
-                        listenScriptBtn.textContent = 'Pause';
-                    } else {
-                        speechSynthesis.pause();
-                        isSpeaking = true;
-                        listenScriptBtn.textContent = 'Resume';
-                    }
+                if (speechSynthesis.speaking && !speechSynthesis.paused) {
+                    speechSynthesis.pause();
+                } else if (speechSynthesis.paused) {
+                    speechSynthesis.resume();
                 } else {
                     currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
-                    // Ensure the voice is selected from the updated availableVoices array
-                    const selectedVoiceOption = voiceSelect.value;
-                    if (availableVoices[selectedVoiceOption]) {
-                        currentUtterance.voice = availableVoices[selectedVoiceOption];
+                    const selectedVoiceIndex = parseInt(voiceSelect.value, 10);
+                    
+                    if (availableVoices[selectedVoiceIndex]) {
+                        currentUtterance.voice = availableVoices[selectedVoiceIndex];
                     } else {
-                        // Fallback if the selected voice is somehow not found
                         console.warn("Selected voice not found, using default.");
-                        currentUtterance.voice = availableVoices.find(voice => voice.default) || availableVoices[0];
                     }
                     
                     currentUtterance.rate = 0.8; // Slightly slower for calming effect
                     currentUtterance.pitch = 1; // Normal pitch
 
+                    currentUtterance.onstart = () => {
+                        isSpeaking = true;
+                        updateButtonStates();
+                    };
+                    currentUtterance.onresume = () => {
+                        isSpeaking = true;
+                        updateButtonStates();
+                    };
+                    currentUtterance.onpause = () => {
+                        isSpeaking = false; // Technically paused, but for button logic, treat as not actively speaking
+                        updateButtonStates();
+                    };
                     currentUtterance.onend = () => {
                         isSpeaking = false;
-                        listenScriptBtn.textContent = 'Listen';
                         updateButtonStates();
                     };
                     currentUtterance.onerror = (event) => {
                         console.error('SpeechSynthesisUtterance.onerror', event);
-                        // Enhanced error message for the user
-                        displaySystemMessage("Speech synthesis failed. This often happens with certain voices or if the browser's speech service is unavailable. Please try selecting a different voice or refreshing the page.", 'error-message');
-                        
-                        // Ensure speech is cancelled and state reset
-                        speechSynthesis.cancel(); 
+                        displaySystemMessage("Speech synthesis failed. This may be an issue with the selected voice or browser. Please try another voice or refresh the page.", 'error-message');
                         isSpeaking = false;
-                        listenScriptBtn.textContent = 'Listen';
                         updateButtonStates();
                     };
 
                     speechSynthesis.speak(currentUtterance);
-                    isSpeaking = true;
-                    listenScriptBtn.textContent = 'Pause';
                 }
                 updateButtonStates();
             }
@@ -572,15 +575,12 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 copyScriptBtn.disabled = isGenerating || !currentGeneratedScript;
                 resetAppBtn.disabled = isGenerating;
                 
-                // Listen button state: enabled if script exists and not generating
                 listenScriptBtn.disabled = isGenerating || !currentGeneratedScript; 
-                // Change text of listen button based on speech state
-                if (isSpeaking) {
-                     if (speechSynthesis.paused) {
-                        listenScriptBtn.textContent = 'Resume';
-                    } else {
-                        listenScriptBtn.textContent = 'Pause';
-                    }
+                
+                if (speechSynthesis.speaking && !speechSynthesis.paused) {
+                    listenScriptBtn.textContent = 'Pause';
+                } else if (speechSynthesis.speaking && speechSynthesis.paused) {
+                    listenScriptBtn.textContent = 'Resume';
                 } else {
                     listenScriptBtn.textContent = 'Listen';
                 }
