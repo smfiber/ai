@@ -82,7 +82,7 @@
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         Yoga Nidra Creator
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.14</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.17</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -300,14 +300,12 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             
                 resetAppBtn.addEventListener('click', resetApp);
                 copyScriptBtn.addEventListener('click', copyScriptToClipboard);
-                listenScriptBtn.addEventListener('click', handleListenScript); // New listen button listener
+                listenScriptBtn.addEventListener('click', handleListenButtonClick); 
 
                 voiceSelect.addEventListener('change', () => {
-                    // Stop any ongoing speech when voice changes
-                    if (isSpeaking) {
+                    if (currentGeneratedScript && speechSynthesis.speaking) {
                         speechSynthesis.cancel();
-                        isSpeaking = false;
-                        updateButtonStates(); // Update button text to 'Listen'
+                        setTimeout(() => startPlayback(), 100);
                     }
                 });
 
@@ -333,10 +331,10 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 scriptDisplayArea.innerHTML = '';
                 promptInput.value = '';
                 currentGeneratedScript = '';
-                scriptLengthSelect.value = "Short"; // Default to Short now
-                currentPersonaIndex = 0; // Default to The Yoga Nidra Guide
-                updatePersonaButton(currentPersonaIndex); // Update persona button on reset
-                speechSynthesis.cancel(); // Stop any ongoing speech
+                scriptLengthSelect.value = "Short"; 
+                currentPersonaIndex = 0; 
+                updatePersonaButton(currentPersonaIndex);
+                speechSynthesis.cancel();
                 isSpeaking = false;
                 updateButtonStates();
                 displaySystemMessage("Enter a topic or intention to generate your Yoga Nidra script.");
@@ -347,18 +345,18 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 scriptLengthSelect.innerHTML = '';
                 lengthOptions.forEach((option) => {
                     const opt = document.createElement('option');
-                    opt.value = option.name; // Use name as value
+                    opt.value = option.name;
                     opt.textContent = option.name;
                     scriptLengthSelect.appendChild(opt);
                 });
             }
 
             function populatePersonaSelect() {
-                personaListArea.innerHTML = ''; // Clear previous content
+                personaListArea.innerHTML = '';
                 personas.forEach((persona, index) => {
                     const label = document.createElement('label');
                     label.className = 'dropdown-label';
-                    label.title = persona.description; // Use the persona-specific description for the tooltip
+                    label.title = persona.description;
                     
                     const radio = document.createElement('input');
                     radio.type = 'radio';
@@ -387,42 +385,36 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             }
 
             function populateVoiceSelect() {
-                // Function to get and filter voices
                 const loadVoices = () => {
                     const allVoices = speechSynthesis.getVoices();
-                    if (allVoices.length === 0) {
-                        // If voices are not ready, wait for the event
-                        return;
-                    }
+                    if (allVoices.length === 0) return;
 
-                    // Filter for English voices and store them
-                    availableVoices = allVoices.filter(voice => voice.lang.startsWith('en'));
+                    // Filter specifically for Google UK English voices
+                    availableVoices = allVoices.filter(voice => voice.name.includes('Google UK English'));
                     
                     voiceSelect.innerHTML = ''; // Clear existing options
 
                     if (availableVoices.length === 0) {
-                        voiceSelect.innerHTML = '<option value="">No English voices found</option>';
+                        voiceSelect.innerHTML = '<option value="">Google UK voice not found</option>';
+                        listenScriptBtn.disabled = true; // Disable listening if the voice isn't available
                         return;
                     }
 
-                    let defaultVoiceIndex = 0; // Fallback to the very first voice
+                    let femaleVoiceIndex = -1;
                     availableVoices.forEach((voice, index) => {
                         const option = document.createElement('option');
-                        option.textContent = `${voice.name} (${voice.lang})`;
-                        option.value = index; // Store index to retrieve voice object from our filtered list
-                        
-                        // Prioritize specific common English voices as a default
-                        if (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Karen') || voice.name.includes('Microsoft David')) {
-                            defaultVoiceIndex = index;
-                        }
+                        option.textContent = voice.name;
+                        option.value = index;
                         voiceSelect.appendChild(option);
+                        if (voice.name === 'Google UK English Female') {
+                            femaleVoiceIndex = index;
+                        }
                     });
 
-                    // Set the default selected voice
-                    voiceSelect.value = defaultVoiceIndex;
+                    // Default to the female voice if found, otherwise default to the first available UK voice.
+                    voiceSelect.value = femaleVoiceIndex !== -1 ? femaleVoiceIndex : 0;
                 };
 
-                // Load voices immediately if available, otherwise set up the event listener
                 if (speechSynthesis.getVoices().length > 0) {
                     loadVoices();
                 } else {
@@ -435,102 +427,84 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 if (!userPrompt || isGenerating) return;
 
                 setLoading(true);
-                scriptDisplayArea.innerHTML = ''; // Clear previous script
-                speechSynthesis.cancel(); // Stop any ongoing speech
-                isSpeaking = false; // Reset speaking state
+                scriptDisplayArea.innerHTML = '';
+                speechSynthesis.cancel();
+                isSpeaking = false;
                 displaySystemMessage("Generating your Yoga Nidra script...", 'system-message');
 
                 try {
                     const selectedLengthOption = lengthOptions.find(opt => opt.name === scriptLengthSelect.value);
-                    const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix; // Default to Medium
+                    const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix;
                     
                     const selectedPersona = personas[currentPersonaIndex];
-                    const personaInstruction = selectedPersona.systemPrompt; // Use the pre-constructed full system prompt
+                    const personaInstruction = selectedPersona.systemPrompt;
 
-                    // Generate the main Yoga Nidra script
                     const scriptGenerationPrompt = `${personaInstruction}\n\nBased on the intention: "${userPrompt}". ${lengthSuffix}`;
                     const aiResponseText = await getAIResponse(scriptGenerationPrompt);
                     currentGeneratedScript = aiResponseText;
 
-                    // Generate a title for the script
-                    const titlePrompt = `Based on the following Yoga Nidra script and its intention, provide a short, creative title. Respond with only the title text, without any quotation marks or labels.
-                    Intention: "${userPrompt}"
-                    Script: ${aiResponseText}`;
+                    const titlePrompt = `Based on the following Yoga Nidra script and its intention, provide a short, creative title. Respond with only the title text, without any quotation marks or labels.\nIntention: "${userPrompt}"\nScript: ${aiResponseText}`;
                     const generatedTitle = await getAIResponse(titlePrompt);
 
-                    // Display the title and then the script
                     displayGeneratedScript(currentGeneratedScript, userPrompt, generatedTitle, selectedPersona.name);
-                    
-                    // After displaying the script and the system message, scroll to top
                     scriptDisplayArea.scrollTop = 0;
-
                     displaySystemMessage("Script generated successfully! You can copy it or generate a new one.");
 
                 } catch (error) {
                     console.error("Error generating script:", error);
                     displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
-                    currentGeneratedScript = ''; // Clear script on error
+                    currentGeneratedScript = '';
                 } finally {
                     setLoading(false);
                     updateButtonStates();
                 }
             }
-
-            function handleListenScript() {
+            
+            function handleListenButtonClick() {
                 if (!currentGeneratedScript) {
                     displaySystemMessage("Please generate a script first!", 'error-message');
                     return;
                 }
 
-                if (speechSynthesis.speaking && !speechSynthesis.paused) {
-                    speechSynthesis.pause();
-                } else if (speechSynthesis.paused) {
+                if (speechSynthesis.paused) {
                     speechSynthesis.resume();
+                } else if (speechSynthesis.speaking) {
+                    speechSynthesis.pause();
                 } else {
-                    currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
-                    const selectedVoiceIndex = parseInt(voiceSelect.value, 10);
-                    
-                    if (availableVoices[selectedVoiceIndex]) {
-                        currentUtterance.voice = availableVoices[selectedVoiceIndex];
-                    } else {
-                        console.warn("Selected voice not found, using default.");
-                    }
-                    
-                    currentUtterance.rate = 0.8; // Slightly slower for calming effect
-                    currentUtterance.pitch = 1; // Normal pitch
-
-                    currentUtterance.onstart = () => {
-                        isSpeaking = true;
-                        updateButtonStates();
-                    };
-                    currentUtterance.onresume = () => {
-                        isSpeaking = true;
-                        updateButtonStates();
-                    };
-                    currentUtterance.onpause = () => {
-                        isSpeaking = false; // Technically paused, but for button logic, treat as not actively speaking
-                        updateButtonStates();
-                    };
-                    currentUtterance.onend = () => {
-                        isSpeaking = false;
-                        updateButtonStates();
-                    };
-                    currentUtterance.onerror = (event) => {
-                        console.error('SpeechSynthesisUtterance.onerror', event);
-                        displaySystemMessage("Speech synthesis failed. This may be an issue with the selected voice or browser. Please try another voice or refresh the page.", 'error-message');
-                        isSpeaking = false;
-                        updateButtonStates();
-                    };
-
-                    speechSynthesis.speak(currentUtterance);
+                    startPlayback();
                 }
+            }
+            
+            function startPlayback() {
+                if (!currentGeneratedScript || availableVoices.length === 0) return;
+                
+                currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
+                const selectedVoiceIndex = parseInt(voiceSelect.value, 10);
+                
+                currentUtterance.voice = availableVoices[selectedVoiceIndex];
+                
+                currentUtterance.rate = 0.8;
+                currentUtterance.pitch = 1;
+
+                currentUtterance.onstart = () => { isSpeaking = true; updateButtonStates(); };
+                currentUtterance.onresume = () => { isSpeaking = true; updateButtonStates(); };
+                currentUtterance.onpause = () => { isSpeaking = false; updateButtonStates(); };
+                currentUtterance.onend = () => { isSpeaking = false; updateButtonStates(); };
+                currentUtterance.onerror = (event) => {
+                    console.error('SpeechSynthesisUtterance.onerror', event);
+                    let errorMsg = `Speech synthesis failed. Error: ${event.error}. Please try another voice or refresh the page.`;
+                    displaySystemMessage(errorMsg, 'error-message');
+                    isSpeaking = false;
+                    updateButtonStates();
+                };
+
+                speechSynthesis.speak(currentUtterance);
                 updateButtonStates();
             }
 
             function displayGeneratedScript(scriptText, userPrompt, aiTitle, personaName) {
-                scriptDisplayArea.innerHTML = ''; // Clear previous content
+                scriptDisplayArea.innerHTML = '';
 
-                // Create the title element
                 const titleElement = document.createElement('h2');
                 titleElement.classList.add('script-title');
                 titleElement.innerHTML = `
@@ -540,7 +514,6 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 `;
                 scriptDisplayArea.appendChild(titleElement);
 
-                // Create the script content paragraph
                 const scriptParagraph = document.createElement('p');
                 scriptParagraph.classList.add('generated-script');
                 scriptParagraph.textContent = scriptText;
@@ -548,7 +521,6 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             }
             
             function displaySystemMessage(text, type = 'system-message-paragraph') {
-                // Remove existing system/error messages to avoid clutter
                 scriptDisplayArea.querySelectorAll('.system-message-paragraph, .error-message-paragraph').forEach(el => el.remove());
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add(type);
@@ -575,11 +547,11 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 copyScriptBtn.disabled = isGenerating || !currentGeneratedScript;
                 resetAppBtn.disabled = isGenerating;
                 
-                listenScriptBtn.disabled = isGenerating || !currentGeneratedScript; 
+                listenScriptBtn.disabled = isGenerating || !currentGeneratedScript || availableVoices.length === 0; 
                 
                 if (speechSynthesis.speaking && !speechSynthesis.paused) {
                     listenScriptBtn.textContent = 'Pause';
-                } else if (speechSynthesis.speaking && speechSynthesis.paused) {
+                } else if (speechSynthesis.paused) {
                     listenScriptBtn.textContent = 'Resume';
                 } else {
                     listenScriptBtn.textContent = 'Listen';
