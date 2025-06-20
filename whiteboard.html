@@ -116,7 +116,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.39</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.40</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -201,7 +201,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.39</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.40</p>
         </div>
     </div>
 
@@ -598,8 +598,12 @@
         
         // --- UI & Event Functions ---
         async function sendChatMessage(text, type = 'text', url = null) {
+            if (!userId) {
+                console.error("Chat message not sent: User not authenticated.");
+                return;
+            }
             const content = text ? text.trim() : '';
-            if ((content || url) && userId) {
+            if (content || url) {
                 try {
                     const messageData = { author: userId, timestamp: serverTimestamp(), type: type };
                     if (content) messageData.text = content;
@@ -622,6 +626,11 @@
         
         function handleMouseDown(e) {
             if (state.isTexting) return;
+            // **FIX**: Do not start drawing if user is not authenticated.
+            if (!userId) {
+                console.warn("Cannot draw: User not authenticated.");
+                return;
+            }
             const pos = getMousePos(e);
             state.startPos = pos;
             state.action = 'none';
@@ -770,7 +779,22 @@
             redrawCanvas(); 
         }
 
-        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [start, end] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: cx, y: y1}, {x: x2, y: y2} ] }; default: return null; } }
+        function createPreviewObject(start, end) { 
+            // **FIX**: The author field relies on userId, which is checked before this function is called.
+            const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; 
+            const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; 
+            const width = Math.abs(x1 - x2); 
+            const height = Math.abs(y1 - y2); 
+            const cx = (x1+x2)/2, cy = (y1+y2)/2; 
+            switch (state.currentTool) { 
+                case 'pen': return { ...common, type: 'path', points: [start] }; 
+                case 'line': return { ...common, type: 'line', points: [start, end] }; 
+                case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; 
+                case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; 
+                case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: cx, y: y1}, {x: x2, y: y2} ] }; 
+                default: return null; 
+            } 
+        }
         
         function findClickedObject(x, y) {
             for (let i = state.sortedDrawings.length - 1; i >= 0; i--) {
@@ -840,7 +864,7 @@
         }
 
         // --- Firestore Actions ---
-        async function addObjectToFirestore(objData) { try { const docRef = await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
+        async function addObjectToFirestore(objData) { if (!userId) { console.error("Cannot add object: User not authenticated."); return null; } try { const docRef = await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
         async function updateObjectInFirestore(docId, updatedData, originalData) { if(originalData) { pushToUndoStack({ type: 'update', payload: { id: docId, before: originalData, after: {...originalData, ...updatedData} }}); } try { await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, docId), { ...updatedData, timestamp: serverTimestamp() }); } catch (error) { console.error("Error updating document: ", error); } }
         async function deleteSelectedObject() { if (!state.selectedObjectId) return; const objectToDelete = state.allDrawings.get(state.selectedObjectId); if(objectToDelete) { pushToUndoStack({ type: 'delete', payload: objectToDelete }); } try { await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, state.selectedObjectId)); state.selectedObjectId = null; redrawCanvas(); } catch (error) { console.error("Error deleting document: ", error); } }
         async function bringToFront() { if (!state.selectedObjectId) return; await updateObjectInFirestore(state.selectedObjectId, {}, state.allDrawings.get(state.selectedObjectId)); }
@@ -936,6 +960,7 @@
                     setupEventsListener(); 
                     setupChatListener(); 
                 } else { 
+                    console.log("No user signed in. Attempting anonymous sign-in.");
                     try { 
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await signInWithCustomToken(auth, __initial_auth_token);
@@ -945,6 +970,7 @@
                     } catch (error) { 
                         console.error("Sign-in error", error); 
                         document.getElementById('userId').textContent = 'Auth Error';
+                        chatInput.placeholder = 'Chat disabled due to authentication error.';
                     } 
                 } 
             });
