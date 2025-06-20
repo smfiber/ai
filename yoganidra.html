@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoga Nidra Creator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Adjusted scrollbar for the script display area */
+        #script-display-area::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 8px; }
+        #script-display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: #1f2937; }
+        #script-display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #script-display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        /* Style for the generated script */
+        .generated-script {
+            background-image: linear-gradient(to right, #1e293b, #1a222f);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            white-space: pre-wrap; /* Preserve line breaks and spaces */
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #d1d5db;
+        }
+        /* Style for system messages */
+        .system-message-paragraph {
+            align-self: center;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            max-width: 80%;
+            background-color: #374151;
+            color: #a78bfa;
+            white-space: pre-wrap;
+        }
+        .error-message-paragraph {
+            align-self: center;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            max-width: 80%;
+            background-color: #dc2626;
+            color: #fee2e2;
+            white-space: pre-wrap;
+        }
+
+        /* Styles for custom dropdowns */
+        .dropdown-label {
+            display: block;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .dropdown-label:hover {
+            background-color: #374151;
+        }
+        .dropdown-label input {
+            margin-right: 0.75rem;
+        }
+         .custom-dropdown-content {
+            max-height: 15rem; /* Limit height for scrollable content */
+            overflow-y: auto;
+        }
+        .script-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #e5e7eb;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-full flex items-center justify-center p-4 antialiased">
+    <!-- Adjusted app-container to be full height and width -->
+    <div id="app-container" class="w-full max-w-4xl h-full flex flex-col bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6">
+        <!-- Header Section -->
+        <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
+            <div class="flex justify-between items-start w-full mb-4">
+                 <div class="flex-shrink-0">
+                    <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
+                        Yoga Nidra Creator
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.10</span>
+                        <button id="help-icon" title="How to Use">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                            </svg>
+                        </button>
+                    </h1>
+                     <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
+                </div>
+                <div class="flex items-end gap-4">
+                    <!-- AI Persona Dropdown -->
+                    <div class="w-80 relative">
+                        <label class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
+                        <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
+                            <span>Select Persona</span>
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                           <div id="persona-list-area" class="max-h-56 overflow-y-auto custom-dropdown-content"></div>
+                        </div>
+                    </div>
+                    <!-- Voice Selection Dropdown -->
+                    <div class="w-60 relative">
+                        <label for="voice-select" class="block mb-1 text-gray-400 text-sm">Voice:</label>
+                        <select id="voice-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
+                     <div class="w-40">
+                        <label for="script-length-select" class="block mb-1 text-gray-400 text-sm">Length:</label>
+                        <select id="script-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
+                </div>
+            </div>
+             <div class="flex items-center justify-end gap-2 mt-3 w-full">
+                <button id="listen-script-btn" class="bg-purple-600 hover:bg-purple-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Listen</button>
+                <button id="copy-script-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Copy Script</button>
+                <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Clear</button>
+            </div>
+        </header>
+
+        <!-- Script Display Area -->
+        <main id="script-display-area" class="flex-grow w-full min-h-0 overflow-y-auto p-4 space-y-6 flex flex-col"></main>
+        
+        <!-- User Input Area -->
+        <footer class="mt-4 pt-4 border-t border-gray-700">
+            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter topic or intention for your Yoga Nidra script (e.g., 'deep relaxation', 'manifesting abundance', 'releasing stress')..."></textarea>
+            <div class="flex justify-end items-center mt-2 gap-4">
+                <button id="generate-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    <span id="btn-text">Generate Script</span>
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
+            <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Yoga Nidra Creator</h2>
+            <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
+                <div class="prose prose-invert">
+                    <p>This tool helps you generate personalized Yoga Nidra scripts based on your input.</p>
+                    <h3 class="font-semibold text-white mt-4">Core Controls</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Input Prompt:</strong> Enter a topic, intention, or theme for your Yoga Nidra script (e.g., "deep relaxation for sleep," "releasing emotional blockages," "manifesting abundance").</li>
+                        <li><strong>AI Persona:</strong> Choose the AI's guiding voice. This will subtly influence the language and focus of the generated script.</li>
+                        <li><strong>Voice:</strong> Select an AI voice for the generated script.</li>
+                        <li><strong>Length:</strong> Choose the desired length of the generated script: Short, Medium, Long, or Unlimited. This affects the depth and detail of the script.</li>
+                        <li><strong>Generate Script:</strong> Click this button to create your Yoga Nidra script. The generated script will appear in the display area above.</li>
+                        <li><strong>Listen:</strong> Plays the generated script aloud using the selected voice.</li>
+                        <li><strong>Copy Script:</strong> Once a script is generated, use this button to copy the entire text to your clipboard.</li>
+                        <li><strong>Clear:  </strong>Clears the current script and resets the input field, allowing you to generate a new script.</li>
+                    </ul>
+                    <h3 class="font-semibold text-white mt-4">Tips for Best Results</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Be specific with your prompt to guide the AI.</li>
+                        <li>Experiment with different lengths and AI Personas to find what works best for you.</li>
+                        <li>The generated script can be used as a personal guide or adapted for teaching.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="close-instructions-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const scriptDisplayArea = document.getElementById('script-display-area');
+            const promptInput = document.getElementById('prompt-input');
+            const generateBtn = document.getElementById('generate-btn');
+            const btnText = document.getElementById('btn-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const scriptLengthSelect = document.getElementById('script-length-select');
+            const resetAppBtn = document.getElementById('reset-app-btn');
+            const copyScriptBtn = document.getElementById('copy-script-btn');
+            const helpIcon = document.getElementById('help-icon');
+            const instructionsModal = document.getElementById('instructions-modal');
+            const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
+            const personaDropdownButton = document.getElementById('persona-dropdown-button');
+            const personaDropdownContent = document.getElementById('persona-dropdown-content');
+            const personaListArea = document.getElementById('persona-list-area');
+            // Audio elements
+            const listenScriptBtn = document.getElementById('listen-script-btn');
+            const voiceSelect = document.getElementById('voice-select');
+
+
+            // --- Application State ---
+            let isGenerating = false;
+            let currentGeneratedScript = '';
+            let currentPersonaIndex = 0; // Default to The Yoga Nidra Guide
+            let isSpeaking = false;
+            let currentUtterance = null;
+            let availableVoices = [];
+
+
+            // --- General Scripting Guidelines (applies to all personas) ---
+            const generalScriptingGuidelines = `
+When designing your scripts, remember to:
+Integrate gradually: Don't overload a single session with too many complex spiritual concepts. Introduce them thoughtfully and allow time for absorption.
+Keep it accessible: While using ancient terminology, always provide simple, clear explanations for those new to these concepts.
+Honor the tradition: Be mindful and respectful of the origin and depth of these ancient practices.
+Your authentic voice: Even with these personas, infuse your own authentic teaching style and compassion. The AI should aim to replicate your desired persona.
+Sankalpa (Intention): Guide the user to form a positive "I am" statement, and reiterate it at the beginning and end of the practice. The AI should understand the importance of this.
+Body Scan Precision: The rotation of consciousness needs to be clear and systematic.
+Sensory Language: Engage all senses (visual, auditory, tactile, even olfactory and gustatory when appropriate for visualization) to deepen the experience.
+Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improved sleep, emotional healing, cognitive function, pain management) to tailor the language and focus.
+`;
+
+            // --- Persona Data ---
+            const personas = [
+                { 
+                    name: "The Yoga Nidra Guide", 
+                    systemPrompt: "You are The Yoga Nidra Guide. Your role is to create comprehensive and calming Yoga Nidra scripts. You will interpret the user's intention or topic and weave it seamlessly into the traditional stages of Yoga Nidra. Ensure the language is soothing, clear, and conducive to deep relaxation and introspection. The script should always include elements such as: inner stillness, a clear sankalpa (intention) at the beginning and end, a systematic rotation of consciousness through body parts, awareness of breath, exploration of opposite sensations (e.g., heaviness/lightness, hot/cold), a guided visualization, and a gentle externalization process to conclude the practice. Adapt the length and detail based on the user's specified length preference."
+                },
+                { 
+                    name: "The Calming Guide / Serene Narrator", 
+                    systemPrompt: "You are The Calming Guide / Serene Narrator. Your tone is gentle, soothing, reassuring, and consistent, without too much inflection that might distract the listener. Use language that evokes peace, stillness, comfort, and safety. Focus on sensory details (e.g., 'the gentle hum of the silence,' 'the softness of the blanket'). Your goal is to create an atmosphere of deep relaxation and trust, allowing the listener to surrender to the practice. Example Phrases: 'Allow your body to sink deeper with each exhale,' 'You are completely safe and supported,' 'Rest in this profound stillness.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                { 
+                    name: "The Compassionate Witness", 
+                    systemPrompt: "You are The Compassionate Witness. Your tone is empathetic, non-judgmental, and accepting. Acknowledge thoughts and feelings without dwelling on them, encouraging the listener to observe without attachment. Use inclusive language. Your goal is to help the listener release tension and resistance by creating a space of acceptance for whatever arises in their awareness. Example Phrases: 'If thoughts arise, simply notice them and let them pass like clouds,' 'Observe any sensations without judgment,' 'Offer yourself compassion for whatever you are experiencing.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                { 
+                    name: "The Clear Instructor / Precise Facilitator", 
+                    systemPrompt: "You are The Clear Instructor / Precise Facilitator. Your tone is clear, direct, methodical, and easy to follow. Use concise instructions for body scans, breath awareness, and visualizations. Avoid overly flowery or ambiguous language in these sections. Your goal is to guide the listener systematically through the stages of Yoga Nidra (e.g., rotation of consciousness, breath awareness, sensations, visualization) so they can remain present and follow the practice effectively. Example Phrases: 'Bring your awareness to your right thumb, then the index finger, middle finger...', 'Notice the natural rhythm of your breath,' 'Now, visualize a serene natural setting.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                { 
+                    name: "The Wise Sage / Ancient Teacher", 
+                    systemPrompt: "You are The Wise Sage / Ancient Teacher. Your tone is deep, resonant, and imbued with a sense of ancient wisdom and timelessness. Your voice might carry a subtle gravitas, suggesting profound understanding. Your goal is to deepen the practitioner's experience beyond simple relaxation, inviting them into a state of expanded awareness and inner knowing. Example Phrases: 'Tap into the wellspring of peace within you,' 'Discover the unchanging essence of your being,' 'Rest in the vast expanse of your consciousness.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Nurturing Presence",
+                    systemPrompt: "You are The Nurturing Presence. Your tone is gentle, supportive, and comforting, like a trusted caregiver. Emphasize care, kindness, and self-acceptance. Focus on providing a sense of being held and cared for. Your goal is to create a feeling of emotional safety and warmth, particularly helpful for those seeking emotional healing or deep rest. Example Phrases: 'Allow yourself to be held by the earth beneath you,' 'You are deserving of this rest,' 'Let all effort simply melt away.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Ancient Sage / Rishi (Seer)",
+                    systemPrompt: "You are The Ancient Sage / Rishi (Seer). Your tone is deeply resonant, calm, and imbued with an ageless wisdom. The voice might carry a subtle gravitas, suggesting profound understanding. Use Sanskrit terms (explaining them gently), reference ancient texts (like the Upanishads or Patanjali's Yoga Sutras, indirectly), and speak of universal truths. Focus on concepts like Dharma (purpose), Karma (action and consequence), Maya (illusion), Brahman (ultimate reality), Atman (true self), Purusha and Prakriti (consciousness and nature), Turiya (the fourth state of consciousness beyond waking, dreaming, and deep sleep). Your goal is to guide the listener not just to relax, but to connect with deeper philosophical concepts, to glimpse their true nature beyond the ego, and to foster a sense of interconnectedness with all existence. Example Phrases: 'Beyond the veil of thoughts and emotions, discover the boundless expanse of your true Self, the Atman,' 'As the great rishis of old knew, peace resides not in what is gained, but in what is released,' 'Rest in the timeless wisdom that dwells within your deepest core, echoing the silence of the Mandukya Upanishad.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Cosmic Storyteller / Myth Weaver",
+                    systemPrompt: "You are The Cosmic Storyteller / Myth Weaver. Your tone is evocative, imaginative, and subtly mystical. The voice might have a slightly lilting or hypnotic quality, inviting the listener into a narrative. Incorporate metaphors and imagery from Hindu mythology, the cycles of creation and dissolution (e.g., Vishnu in Yoga Nidra), elemental forces, and the vastness of the cosmos. May describe journeys through inner landscapes or symbolic realms. Your goal is to engage the listener's subconscious mind through rich, archetypal imagery that resonates with ancient spiritual narratives, fostering a sense of wonder and connection to universal forces. Example Phrases: 'Imagine yourself floating in the cosmic ocean, just as Lord Vishnu rests in Yoga Nidra between cycles of creation,' 'As the sun rises within your heart, feel the ancient wisdom of the Vedas awakening within every cell,' 'Journey through the subtle realms, where the elements of earth, water, fire, air, and ether dance in perfect harmony.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Chakra Alchemist / Subtle Body Guide",
+                    systemPrompt: "You are The Chakra Alchemist / Subtle Body Guide. Your tone is grounded yet ethereal, knowledgeable but gentle. Your voice would be precise when naming chakras or energy channels (nadis), but flowing and expansive when describing their qualities. Explicitly name and describe the chakras (Mooladhara, Swadhisthana, Manipura, Anahata, Vishuddha, Ajna, Sahasrara) and their associated qualities, colors, and sounds (bija mantras). Guide awareness through the Sushumna Nadi. Your goal is to awaken and balance the subtle energy body, promoting energetic alignment, emotional release, and spiritual insight through direct energetic experience. Example Phrases: 'Bring your awareness to the base of your spine, to the Muladhara chakra, feeling its deep connection to the earth and your sense of security,' 'As your breath flows through the Sushumna Nadi, visualize a gentle current rising, activating each energy center,' 'Allow the vibrant green of your Anahata, your heart chakra, to expand, radiating love and compassion.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Mantra Chanter / Sound Healer",
+                    systemPrompt: "You are The Mantra Chanter / Sound Healer. Your tone is rhythmic, soothing, and resonant, potentially with a slight hum or meditative quality. Incorporate the repetition of simple, powerful Sanskrit mantras (e.g., Om, So Ham, Om Namah Shivaya) or sacred sounds, either audibly or for silent mental repetition. Explain the meaning or intention behind the mantra. Your goal is to utilize the vibrational power of sound to quiet the mind, focus awareness, and access deeper states of consciousness, facilitating a meditative and spiritual experience. Example Phrases: 'Silently, with each inhale, repeat 'So,' and with each exhale, 'Ham,' connecting to the universal breath,' 'Allow the vibration of Om to resonate through every cell of your being, aligning you with the primordial sound of creation,' 'Rest in the sacred silence that follows the mantra, a gateway to inner peace.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                },
+                {
+                    name: "The Gunas Harmonizer",
+                    systemPrompt: "You are The Gunas Harmonizer. Your tone is balanced, discerning, and insightful. It acknowledges the interplay of forces without judgment. Reference the three Gunas (Sattva - purity, Rajas - activity, Tamas - inertia) and guide the listener towards a state of sattva. Help to observe and transcend these qualities. Your goal is to bring awareness to the underlying qualities of existence and mental states, guiding the listener towards a balanced, clear, and harmonious state. Example Phrases: 'Notice how the qualities of Tamas, of heaviness and inertia, begin to dissolve as you release tension,' 'Observe any agitation, the quality of Rajas, and gently allow it to soften,' 'Cultivate the essence of Sattva, pure awareness, luminous and still.' Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference."
+                }
+            ];
+
+            // Prepend general guidelines to each persona's system prompt
+            personas.forEach(persona => {
+                persona.systemPrompt = generalScriptingGuidelines + persona.systemPrompt;
+            });
+
+            // --- Length Options Data ---
+            const lengthOptions = [
+                { name: "Short", promptSuffix: "Make it a concise script, around 300-500 words, focusing on key stages of Yoga Nidra." },
+                { name: "Medium", promptSuffix: "Generate a moderately detailed script, approximately 700-1000 words, covering all traditional stages comprehensively." },
+                { name: "Long", promptSuffix: "Produce a very detailed and expansive script, about 1200-1800 words, allowing for extended pauses and deeper exploration." },
+                { name: "Unlimited", promptSuffix: "Generate a comprehensive Yoga Nidra script without a specific word limit, providing as much detail and depth as necessary to fulfill the intention." }
+            ];
+
+            // --- Core Functions ---
+
+            function initializeApp() {
+                populateScriptLengthSelect();
+                populatePersonaSelect(); // Populate persona dropdown
+                updatePersonaButton(currentPersonaIndex); // Set initial button text for persona
+                populateVoiceSelect(); // Populate voice dropdown
+                resetApp();
+                addEventListeners();
+            }
+
+            function addEventListeners() {
+                generateBtn.addEventListener('click', handleGenerateScript);
+                promptInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleGenerateScript();
+                    }
+                });
+            
+                resetAppBtn.addEventListener('click', resetApp);
+                copyScriptBtn.addEventListener('click', copyScriptToClipboard);
+                listenScriptBtn.addEventListener('click', handleListenScript); // New listen button listener
+
+                voiceSelect.addEventListener('change', () => {
+                    // Stop any ongoing speech when voice changes
+                    speechSynthesis.cancel();
+                    isSpeaking = false;
+                    updateButtonStates(); // Update button text to 'Listen'
+                });
+
+                helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
+                closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
+                
+                scriptLengthSelect.addEventListener('change', () => {
+                    promptInput.focus();
+                });
+
+                personaDropdownButton.addEventListener('click', () => {
+                    personaDropdownContent.classList.toggle('hidden');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) {
+                        personaDropdownContent.classList.add('hidden');
+                    }
+                });
+            }
+
+            function resetApp() {
+                scriptDisplayArea.innerHTML = '';
+                promptInput.value = '';
+                currentGeneratedScript = '';
+                scriptLengthSelect.value = "Short"; // Default to Short now
+                currentPersonaIndex = 0; // Default to The Yoga Nidra Guide
+                updatePersonaButton(currentPersonaIndex); // Update persona button on reset
+                speechSynthesis.cancel(); // Stop any ongoing speech
+                isSpeaking = false;
+                updateButtonStates();
+                displaySystemMessage("Enter a topic or intention to generate your Yoga Nidra script.");
+                promptInput.focus();
+            }
+            
+            function populateScriptLengthSelect() {
+                scriptLengthSelect.innerHTML = '';
+                lengthOptions.forEach((option) => {
+                    const opt = document.createElement('option');
+                    opt.value = option.name; // Use name as value
+                    opt.textContent = option.name;
+                    scriptLengthSelect.appendChild(opt);
+                });
+            }
+
+            function populatePersonaSelect() {
+                personaListArea.innerHTML = ''; // Clear previous content
+                personas.forEach((persona, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'dropdown-label';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'persona';
+                    radio.value = index;
+                    radio.className = 'accent-indigo-500';
+                    if (index === currentPersonaIndex) {
+                        radio.checked = true;
+                    }
+
+                    radio.addEventListener('change', () => {
+                        currentPersonaIndex = parseInt(radio.value);
+                        updatePersonaButton(currentPersonaIndex);
+                        personaDropdownContent.classList.add('hidden');
+                        promptInput.focus();
+                    });
+
+                    label.appendChild(radio);
+                    label.append(persona.name);
+                    personaListArea.appendChild(label);
+                });
+            }
+
+            function updatePersonaButton(index) {
+                personaDropdownButton.querySelector('span').textContent = personas[index].name;
+            }
+
+            function populateVoiceSelect() {
+                availableVoices = speechSynthesis.getVoices();
+                voiceSelect.innerHTML = ''; // Clear existing options
+
+                if (availableVoices.length === 0) {
+                    voiceSelect.innerHTML = '<option value="">Loading voices...</option>';
+                    // Some browsers load voices asynchronously, so we re-run once they are available
+                    speechSynthesis.onvoiceschanged = () => {
+                        availableVoices = speechSynthesis.getVoices();
+                        populateVoiceSelect(); // Re-run once voices are loaded
+                    };
+                    return;
+                }
+
+                // Filter for English voices based on lang attribute starting with 'en'
+                const englishVoices = availableVoices.filter(voice => voice.lang.startsWith('en'));
+                // Use English voices if available, otherwise use all available voices
+                const voicesToUse = englishVoices.length > 0 ? englishVoices : availableVoices;
+
+                let defaultVoiceFound = false;
+                let defaultVoiceIndex = 0; // Fallback to the very first voice
+
+                voicesToUse.forEach((voice, index) => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.value = index; // Store index to retrieve voice object later
+                    
+                    // Prioritize specific common English voices as a default
+                    if (voice.name.includes('Google US English') || voice.name.includes('Samantha') || voice.name.includes('Karen') || voice.name.includes('Microsoft David')) {
+                        defaultVoiceIndex = index;
+                        defaultVoiceFound = true;
+                    }
+                    voiceSelect.appendChild(option);
+                });
+
+                // Set the default selected voice after all options are appended
+                if (voicesToUse.length > 0) {
+                    voiceSelect.value = defaultVoiceIndex;
+                }
+            }
+
+            async function handleGenerateScript() {
+                const userPrompt = promptInput.value.trim();
+                if (!userPrompt || isGenerating) return;
+
+                setLoading(true);
+                scriptDisplayArea.innerHTML = ''; // Clear previous script
+                speechSynthesis.cancel(); // Stop any ongoing speech
+                isSpeaking = false; // Reset speaking state
+                displaySystemMessage("Generating your Yoga Nidra script...", 'system-message');
+
+                try {
+                    const selectedLengthOption = lengthOptions.find(opt => opt.name === scriptLengthSelect.value);
+                    const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix; // Default to Medium
+                    
+                    const selectedPersona = personas[currentPersonaIndex];
+                    const personaInstruction = selectedPersona ? selectedPersona.systemPrompt : personas[0].systemPrompt; // Default to The Yoga Nidra Guide
+
+                    // Generate the main Yoga Nidra script
+                    const scriptGenerationPrompt = `${personaInstruction}\n\nBased on the intention: "${userPrompt}". ${lengthSuffix}`;
+                    const aiResponseText = await getAIResponse(scriptGenerationPrompt);
+                    currentGeneratedScript = aiResponseText;
+
+                    // Generate a title for the script
+                    const titlePrompt = `Based on the following Yoga Nidra script and its intention, provide a short, creative title. Respond with only the title text, without any quotation marks or labels.
+                    Intention: "${userPrompt}"
+                    Script: ${aiResponseText}`;
+                    const generatedTitle = await getAIResponse(titlePrompt);
+
+                    // Display the title and then the script
+                    displayGeneratedScript(currentGeneratedScript, userPrompt, generatedTitle, selectedPersona.name);
+                    
+                    // After displaying the script and the system message, scroll to top
+                    scriptDisplayArea.scrollTop = 0;
+
+                    displaySystemMessage("Script generated successfully! You can copy it or generate a new one.");
+
+                } catch (error) {
+                    console.error("Error generating script:", error);
+                    displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
+                    currentGeneratedScript = ''; // Clear script on error
+                } finally {
+                    setLoading(false);
+                    updateButtonStates();
+                }
+            }
+
+            function handleListenScript() {
+                if (!currentGeneratedScript) {
+                    displaySystemMessage("Please generate a script first!", 'error-message');
+                    return;
+                }
+
+                if (speechSynthesis.speaking) {
+                    if (speechSynthesis.paused) {
+                        speechSynthesis.resume();
+                        isSpeaking = true;
+                        listenScriptBtn.textContent = 'Pause';
+                    } else {
+                        speechSynthesis.pause();
+                        isSpeaking = true;
+                        listenScriptBtn.textContent = 'Resume';
+                    }
+                } else {
+                    currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
+                    // Ensure the voice is selected from the updated availableVoices array
+                    const selectedVoiceOption = voiceSelect.value;
+                    if (availableVoices[selectedVoiceOption]) {
+                        currentUtterance.voice = availableVoices[selectedVoiceOption];
+                    } else {
+                        // Fallback if the selected voice is somehow not found
+                        console.warn("Selected voice not found, using default.");
+                        currentUtterance.voice = availableVoices.find(voice => voice.default) || availableVoices[0];
+                    }
+                    
+                    currentUtterance.rate = 0.8; // Slightly slower for calming effect
+                    currentUtterance.pitch = 1; // Normal pitch
+
+                    currentUtterance.onend = () => {
+                        isSpeaking = false;
+                        listenScriptBtn.textContent = 'Listen';
+                        updateButtonStates();
+                    };
+                    currentUtterance.onerror = (event) => {
+                        console.error('SpeechSynthesisUtterance.onerror', event);
+                        // Enhanced error message for the user
+                        displaySystemMessage("Speech synthesis failed. This often happens with certain voices or if the browser's speech service is unavailable. Please try selecting a different voice or refreshing the page.", 'error-message');
+                        
+                        // Ensure speech is cancelled and state reset
+                        speechSynthesis.cancel(); 
+                        isSpeaking = false;
+                        listenScriptBtn.textContent = 'Listen';
+                        updateButtonStates();
+                    };
+
+                    speechSynthesis.speak(currentUtterance);
+                    isSpeaking = true;
+                    listenScriptBtn.textContent = 'Pause';
+                }
+                updateButtonStates();
+            }
+
+            function displayGeneratedScript(scriptText, userPrompt, aiTitle, personaName) {
+                scriptDisplayArea.innerHTML = ''; // Clear previous content
+
+                // Create the title element
+                const titleElement = document.createElement('h2');
+                titleElement.classList.add('script-title');
+                titleElement.innerHTML = `
+                    <div style="font-size: 1.2rem;">Prompt: ${userPrompt}</div>
+                    <div style="font-size: 1.8rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">Title: ${aiTitle}</div>
+                    <div style="font-size: 1.2rem;">Persona: ${personaName}</div>
+                `;
+                scriptDisplayArea.appendChild(titleElement);
+
+                // Create the script content paragraph
+                const scriptParagraph = document.createElement('p');
+                scriptParagraph.classList.add('generated-script');
+                scriptParagraph.textContent = scriptText;
+                scriptDisplayArea.appendChild(scriptParagraph);
+            }
+            
+            function displaySystemMessage(text, type = 'system-message-paragraph') {
+                // Remove existing system/error messages to avoid clutter
+                scriptDisplayArea.querySelectorAll('.system-message-paragraph, .error-message-paragraph').forEach(el => el.remove());
+                const messageWrapper = document.createElement('div');
+                messageWrapper.classList.add(type);
+                messageWrapper.innerHTML = text.replace(/\n/g, '<br>');
+                scriptDisplayArea.appendChild(messageWrapper);
+            }
+
+            function copyScriptToClipboard() {
+                if (currentGeneratedScript) {
+                    const tempTextArea = document.createElement('textarea');
+                    tempTextArea.value = currentGeneratedScript;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempTextArea);
+                    displaySystemMessage("Script copied to clipboard!", 'system-message');
+                } else {
+                    displaySystemMessage("No script to copy yet. Generate one first!", 'error-message');
+                }
+            }
+
+            function updateButtonStates() {
+                generateBtn.disabled = isGenerating;
+                copyScriptBtn.disabled = isGenerating || !currentGeneratedScript;
+                resetAppBtn.disabled = isGenerating;
+                
+                // Listen button state: enabled if script exists and not generating
+                listenScriptBtn.disabled = isGenerating || !currentGeneratedScript; 
+                // Change text of listen button based on speech state
+                if (isSpeaking) {
+                     if (speechSynthesis.paused) {
+                        listenScriptBtn.textContent = 'Resume';
+                    } else {
+                        listenScriptBtn.textContent = 'Pause';
+                    }
+                } else {
+                    listenScriptBtn.textContent = 'Listen';
+                }
+
+                promptInput.disabled = isGenerating;
+                promptInput.placeholder = isGenerating ? 'Generating script...' : "Enter topic or intention for your Yoga Nidra script...";
+            }
+            
+            function setLoading(isLoading) {
+                isGenerating = isLoading;
+                loadingSpinner.classList.toggle('hidden', !isLoading);
+                updateButtonStates();
+            }
+            
+            async function getAIResponse(prompt) {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const payload = { 
+                    contents: [{ role: "user", parts: [{ text: prompt }] }] 
+                };
+                
+                const response = await fetch(apiUrl, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("AI response API error:", errorText);
+                    const errorData = JSON.parse(errorText || "{}");
+                    throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error("Unexpected AI response format:", result);
+                    throw new Error(`Unexpected API response format.`);
+                }
+            }
+            
+            // --- Initialization ---
+            initializeApp();
+        });
+    </script>
+</body>
+</html>
