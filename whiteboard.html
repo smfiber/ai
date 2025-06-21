@@ -116,7 +116,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.40</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.42</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -201,7 +201,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.40</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.42</p>
         </div>
     </div>
 
@@ -244,8 +244,16 @@
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
-        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // User-provided API key
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: apiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
+        const TENOR_API_KEY = "LIVDSRZULELA"; // Public Tenor API Key
+        
+        // The app must use the configuration provided by the environment.
+        if (typeof __firebase_config === 'undefined') {
+            console.error("Firebase configuration is missing. The app cannot start.");
+            // Display an error to the user on the page itself
+            document.body.innerHTML = '<div style="color: red; text-align: center; padding: 2rem; font-size: 1.2rem;">FATAL ERROR: Firebase configuration not found. Cannot load the application.</div>';
+            throw new Error("Firebase configuration not found.");
+        }
+        const firebaseConfig = JSON.parse(__firebase_config);
         const whiteboardId = appId;
 
         // --- DOM Elements ---
@@ -314,7 +322,7 @@
         function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
 
         async function getOrGenerateAvatar(uid) {
-            if (!areGenAiFeaturesEnabled) return null; // Don't try if API is known to be blocked
+            if (!areGenAiFeaturesEnabled || !firebaseConfig.apiKey) return null; 
             if (userAvatars.has(uid) && userAvatars.get(uid).url) {
                 return userAvatars.get(uid).url;
             }
@@ -341,7 +349,7 @@
                     maxOutputTokens: 2048,
                 }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseConfig.apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -626,7 +634,7 @@
         
         function handleMouseDown(e) {
             if (state.isTexting) return;
-            // **FIX**: Do not start drawing if user is not authenticated.
+            // Do not start drawing if user is not authenticated.
             if (!userId) {
                 console.warn("Cannot draw: User not authenticated.");
                 return;
@@ -780,7 +788,6 @@
         }
 
         function createPreviewObject(start, end) { 
-            // **FIX**: The author field relies on userId, which is checked before this function is called.
             const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; 
             const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; 
             const width = Math.abs(x1 - x2); 
@@ -897,7 +904,7 @@
 
             const clientKey = "collaborative-whiteboard-app";
             const limit = 24;
-            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&client_key=${clientKey}&limit=${limit}`;
+            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&client_key=${clientKey}&limit=${limit}`;
             
             try {
                 const response = await fetch(apiUrl);
