@@ -47,12 +47,16 @@
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         AI Story Weaver
-                        <!-- NOTE TO DEVS: Remember to increment the version number for each revision. -->
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.09</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">2.10</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                 <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                            </svg>
+                        </button>
+                         <button id="api-key-settings-btn" title="API Key Settings">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key text-gray-400 hover:text-white" viewBox="0 0 16 16">
+                                <path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.646-.647.343-.343a.5.5 0 0 1 .293-.102H7.465A4 4 0 0 1 0 8zm1 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm4.5 0a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 0-1h-8a.5.5 0 0 0-.5.5z"/>
                             </svg>
                         </button>
                     </h1>
@@ -121,13 +125,28 @@
         </footer>
     </div>
     
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-white text-center">Enter Your Gemini API Key</h2>
+            <p class="text-gray-400 mb-4 text-center">To use AI Story Weaver, you need a Google AI Gemini API key. You can get one for free from <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Google AI Studio</a>.</p>
+            <input type="password" id="api-key-input" class="w-full bg-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Paste your API key here">
+            <div class="flex justify-end">
+                <button id="save-api-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
-            <!-- NOTE TO DEVS: Remember to update this modal's content with any feature changes. -->
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use AI Story Weaver</h2>
             <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
                 <div class="prose prose-invert">
+                    <h3 class="font-semibold text-white">Getting Started</h3>
+                     <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>API Key:</strong> This app requires a Google Gemini API key. Click the key icon (<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-key inline-block" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.646-.647.343-.343a.5.5 0 0 1 .293-.102H7.465A4 4 0 0 1 0 8zm1 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0zm4.5 0a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 0-1h-8a.5.5 0 0 0-.5.5z"/></svg>) in the header to enter yours. Your key is stored locally in your browser and is never shared.</li>
+                    </ul>
                     <h3 class="font-semibold text-white">Core Controls</h3>
                     <ul class="list-disc pl-5 space-y-1">
                         <li><strong>Add to Story:</strong> Submits your text as a prompt for the AI to continue the narrative. This is the main way to build your story turn-by-turn.</li>
@@ -201,8 +220,13 @@
             const confirmUpdateModal = document.getElementById('confirm-update-modal');
             const confirmUpdateBtn = document.getElementById('confirm-update-btn');
             const cancelUpdateBtn = document.getElementById('cancel-update-btn');
+            const apiKeyModal = document.getElementById('api-key-modal');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+            const apiKeySettingsBtn = document.getElementById('api-key-settings-btn');
 
             // --- Application State ---
+            let apiKey = '';
             const MAX_PROMPTS = 10;
             let isAITurn = false;
             let isEditing = false;
@@ -216,7 +240,7 @@
             let historyPointer = -1;
 
             // --- Persona, Tone, Style & Length Data (Sorted) ---
-             const personas = [
+            const personas = [
                 { name: "The Ally", systemPrompt: "You are The Ally/Companion. A loyal friend or supporter to the protagonist who offers aid, comic relief, or serves as a moral sounding board." },
                 { name: "The Archetype Bender", systemPrompt: "You are The Archetype Bender/Deconstructor. Intentionally subvert or combine traditional archetypes in novel ways for unique storytelling." },
                 { name: "The Beat Poet", systemPrompt: "You are The Beat Poet. Rebellious, improvisational, and rhythmic, exploring themes of freedom, existentialism, and counter-culture." },
@@ -369,6 +393,8 @@
             // --- Core Functions ---
 
             function initializeApp() {
+                setupApiKey();
+                
                 populatePersonaSelect();
                 populateToneSelect();
                 populateImageStyleSelect();
@@ -384,6 +410,16 @@
                 addEventListeners();
             }
 
+            function setupApiKey() {
+                const savedKey = localStorage.getItem('geminiApiKey');
+                if (savedKey) {
+                    apiKey = savedKey;
+                    apiKeyModal.classList.add('hidden');
+                } else {
+                    apiKeyModal.classList.remove('hidden');
+                }
+            }
+
             function addEventListeners() {
                 const primaryAction = () => {
                     if (isEditing) {
@@ -392,6 +428,25 @@
                         handleAddNewPart();
                     }
                 };
+                
+                // API Key Modal Listeners
+                saveApiKeyBtn.addEventListener('click', () => {
+                    const key = apiKeyInput.value.trim();
+                    if (key) {
+                        apiKey = key;
+                        localStorage.setItem('geminiApiKey', key);
+                        apiKeyModal.classList.add('hidden');
+                        displaySystemMessage("API Key saved. Provide a prompt to begin your story.", 'system-message');
+                    } else {
+                         apiKeyInput.reportValidity ? apiKeyInput.reportValidity() : alert('Please enter a valid API key.');
+                    }
+                });
+
+                apiKeySettingsBtn.addEventListener('click', () => {
+                    apiKeyInput.value = apiKey;
+                    apiKeyModal.classList.remove('hidden');
+                });
+
 
                 continueBtn.addEventListener('click', primaryAction);
                 promptInput.addEventListener('keydown', (e) => {
@@ -471,7 +526,11 @@
                 editingParagraphIndex = null;
                 
                 updateUIFromHistory();
-                displaySystemMessage("Provide a prompt to begin your story.", 'system-message');
+                if (apiKey) {
+                    displaySystemMessage("Provide a prompt to begin your story.", 'system-message');
+                } else {
+                    displaySystemMessage("Please enter your Gemini API key to begin.", 'error');
+                }
                 promptInput.focus();
             }
             
@@ -528,7 +587,6 @@
                     listArea.appendChild(label);
                 });
                 
-                // Clear and rebuild the content
                 while (personaDropdownContent.childNodes.length > 1) {
                     personaDropdownContent.removeChild(personaDropdownContent.lastChild);
                 }
@@ -575,7 +633,6 @@
                     });
 
                     label.appendChild(radio);
-                    // Clean up the name for display
                     label.append(tone.name.split('/')[0].trim());
                     toneDropdownContent.appendChild(label);
                 });
@@ -621,8 +678,12 @@
                 return combined;
             }
 
-
             async function handleAddNewPart() {
+                if (!apiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                    displaySystemMessage("Please enter your Gemini API key to continue.", 'error');
+                    return;
+                }
                 const userPrompt = promptInput.value.trim();
                 if (!userPrompt || isAITurn || (getUserPromptCount() >= MAX_PROMPTS && currentSentenceLength !== 0)) return;
 
@@ -638,12 +699,11 @@
                     pushToHistory();
                 } catch (error) {
                     console.error("Error continuing story:", error);
-                     if (error.message.includes("overloaded")) {
-                        displaySystemMessage("The AI model is currently busy. Please try again in a moment.", 'error');
-                    } else {
-                        displaySystemMessage(error.message, 'error');
-                    }
+                    displaySystemMessage(error.message, 'error');
                     storyHistory.pop();
+                    if (error.message.includes("API key")) {
+                        apiKeyModal.classList.remove('hidden');
+                    }
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
@@ -651,6 +711,11 @@
             }
 
             async function handleUpdateAndRegenerate() {
+                if (!apiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                    displaySystemMessage("Please enter your Gemini API key to continue.", 'error');
+                    return;
+                }
                 const userPrompt = promptInput.value.trim();
                 if (!userPrompt || isAITurn || editingParagraphIndex === null) return;
 
@@ -671,6 +736,9 @@
                 } catch (error) {
                    console.error("Error regenerating story:", error);
                    displaySystemMessage(error.message, 'error');
+                   if (error.message.includes("API key")) {
+                        apiKeyModal.classList.remove('hidden');
+                    }
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
@@ -769,6 +837,11 @@
             }
 
             async function handleRegenerate(index) {
+                if (!apiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                    displaySystemMessage("Please enter your Gemini API key to continue.", 'error');
+                    return;
+                }
                 if (isAITurn) return;
                 setLoading(true);
                 
@@ -782,6 +855,9 @@
                 } catch (error) {
                     console.error("Error regenerating:", error);
                     displaySystemMessage(error.message, 'error');
+                    if (error.message.includes("API key")) {
+                        apiKeyModal.classList.remove('hidden');
+                    }
                 } finally {
                     setLoading(false);
                     updateUIFromHistory();
@@ -789,6 +865,11 @@
             }
             
             async function handleIllustration(index) {
+                 if (!apiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                    displaySystemMessage("Please enter your Gemini API key to generate images.", 'error');
+                    return;
+                }
                  if (isAITurn) return;
                  setLoading(true);
                  
@@ -822,6 +903,9 @@
                  } catch(error) {
                     console.error("Error generating image:", error);
                     imageContainer.innerHTML = `<p class="text-red-400 text-center p-2">Image generation failed.</p>`;
+                    if (error.message.includes("API key")) {
+                        apiKeyModal.classList.remove('hidden');
+                    }
                  } finally {
                     setLoading(false);
                  }
@@ -915,7 +999,7 @@
                 
                 const isBusy = isAITurn;
                 
-                continueBtn.disabled = isBusy || isStoryComplete; 
+                continueBtn.disabled = isBusy || isStoryComplete || !apiKey; 
                 
                 if(isEditing) {
                     btnText.textContent = 'Update';
@@ -929,7 +1013,7 @@
                 } else {
                     const countText = currentSentenceLength === 0 ? '' : ` of ${MAX_PROMPTS}`;
                     promptInput.placeholder = isEditing ? 'Edit your prompt...' : `Add prompt ${promptCount + 1}${countText}...`;
-                    promptInput.disabled = isBusy;
+                    promptInput.disabled = isBusy || !apiKey;
                 }
 
                 undoBtn.disabled = isBusy || historyPointer <= 0;
@@ -948,7 +1032,8 @@
             }
             
             async function getAIResponse(chatHistory, systemInstruction) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; 
+                if (!apiKey) throw new Error("API key is not set. Please set it in the settings.");
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const messagesForAPI = chatHistory.map(({role, parts}) => ({role, parts}));
@@ -980,12 +1065,18 @@
                     const errorText = await response.text();
                     console.error("AI response API error:", errorText);
                     const errorData = JSON.parse(errorText || "{}");
-                    throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
+                    let errorMessage = errorData?.error?.message || `API request failed with status ${response.status}`;
+                    if(response.status === 400){
+                        errorMessage = "Invalid request. Please check your API key and try again.";
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                     return result.candidates[0].content.parts[0].text;
+                } else if (result.promptFeedback?.blockReason) {
+                    throw new Error(`Request was blocked: ${result.promptFeedback.blockReason}. Please adjust your prompt.`);
                 } else {
                     console.error("Unexpected AI response format:", result);
                     throw new Error(`Unexpected API response format.`);
@@ -993,7 +1084,8 @@
             }
             
              async function generateImage(prompt) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+                if (!apiKey) throw new Error("API key is not set. Please set it in the settings.");
+                
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                 
                 const payload = {
@@ -1010,6 +1102,9 @@
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error("Image generation API error:", errorText);
+                    if(response.status === 400){
+                         throw new Error(`Image generation failed. This may be due to an invalid API key or a safety policy violation.`);
+                    }
                     throw new Error(`Image generation failed with status: ${response.status}`);
                 }
 
@@ -1019,6 +1114,9 @@
                     return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
                 } else {
                     console.error("Unexpected image generation response:", result);
+                     if (result.predictions && result.predictions[0].error) {
+                        throw new Error(`Image generation failed: ${result.predictions[0].error.message}`);
+                    }
                     throw new Error('Could not retrieve image from API response.');
                 }
             }
