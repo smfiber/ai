@@ -76,17 +76,17 @@
             word-wrap: break-word;
         }
          /* Custom scrollbar for better aesthetics */
-        #display-area::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar {
+        #display-area::-webkit-scrollbar, textarea::-webkit-scrollbar, #instructions-modal-content::-webkit-scrollbar, #api-key-modal-content::-webkit-scrollbar {
             width: 8px;
         }
-        #display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track {
+        #display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, #instructions-modal-content::-webkit-scrollbar-track, #api-key-modal-content::-webkit-scrollbar-track {
             background: rgba(127, 29, 29, 0.2);
         }
-        #display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb {
+        #display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, #instructions-modal-content::-webkit-scrollbar-thumb, #api-key-modal-content::-webkit-scrollbar-thumb {
             background: rgba(220, 38, 38, 0.5);
             border-radius: 4px;
         }
-        #display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover {
+        #display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, #instructions-modal-content::-webkit-scrollbar-thumb:hover, #api-key-modal-content::-webkit-scrollbar-thumb:hover {
             background: rgba(239, 68, 68, 0.7);
         }
     </style>
@@ -112,8 +112,13 @@
                         <circle cx="15" cy="13" r="1.5" fill="black"/>
                     </svg>
                     Lamination Creator
-                    <!-- NOTE: Remember to increment the version number for each revision. -->
+                    <!-- NOTE TO SELF: Per user request, keep version at 7.11. -->
                     <span id="version-number" class="text-xs font-mono bg-red-900/20 px-2 py-1 rounded">7.11</span>
+                    <button id="change-api-key-btn" title="Change API Key">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key-fill text-red-300 hover:text-white" viewBox="0 0 16 16">
+                           <path d="M3.5 11.5a3.5 3.5 0 1 1 3.163-5H14L15.5 8 14 9.5l-1-1-1 1-1-1-1 1-1-1-1 1H6.663a3.5 3.5 0 0 1-3.163 2zM2.5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                        </svg>
+                    </button>
                     <button id="help-icon" title="How to Use">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-red-300 hover:text-white" viewBox="0 0 16 16">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -155,6 +160,24 @@
             </div>
         </footer>
     </div>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-red-900/30 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-white text-center">Enter Your API Key</h2>
+            <div id="api-key-modal-content" class="text-red-200 space-y-4">
+                <p>To generate images, this application requires a Google AI Gemini API key. Please enter your key below. Your key is only stored in your browser for this session and is not shared.</p>
+                <div>
+                    <label for="api-key-input" class="block text-sm font-medium text-red-300 mb-1">Gemini API Key</label>
+                    <input type="password" id="api-key-input" class="w-full bg-red-900/20 text-white rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:outline-none" placeholder="Enter your API key">
+                    <p class="text-xs text-red-400 mt-1">You can get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-white">Google AI Studio</a>.</p>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="save-api-key-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
@@ -164,6 +187,7 @@
                 <div class="prose prose-invert">
                     <h3 class="font-semibold text-white">Getting Started</h3>
                     <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Provide API Key:</strong> The first time you load the app, you'll be prompted for a Google AI Gemini API key. This is required to generate background images.</li>
                         <li><strong>Enter Text:</strong> Type the text you want to use for your lamination into the text area at the bottom. This will be the main text overlaid on your image.</li>
                         <li><strong>Create Lamination:</strong> Click the "Create Lamination" button. The app will generate a unique background image and place your text on it.</li>
                     </ul>
@@ -219,6 +243,7 @@
                 // --- STATE ---
                 state: {
                     isBusy: false,
+                    apiKey: null,
                     currentLaminationText: '',
                     laminationImageContainer: null,
                     fontsReady: false,
@@ -239,6 +264,10 @@
                     save4UpBtn: document.getElementById('save-4up-btn'),
                     saveFullPngBtn: document.getElementById('save-full-png-btn'),
                     closeSaveModalBtn: document.getElementById('close-save-modal-btn'),
+                    apiKeyModal: document.getElementById('api-key-modal'),
+                    apiKeyInput: document.getElementById('api-key-input'),
+                    saveApiKeyBtn: document.getElementById('save-api-key-btn'),
+                    changeApiKeyBtn: document.getElementById('change-api-key-btn'),
                 },
 
                 // --- INITIALIZATION ---
@@ -264,11 +293,29 @@
                         console.log("All fonts loaded and ready.");
                         this.helpers.updateButtonStates();
                     });
+                    
+                    this.helpers.requireApiKey();
                 },
                 
                 // --- HANDLERS ---
                 handlers: {
-                    // Handles the creation of a brand new lamination from the main prompt input
+                    handleSaveApiKey() {
+                        const key = this.elements.apiKeyInput.value.trim();
+                        if (key) {
+                            this.state.apiKey = key;
+                            this.elements.apiKeyModal.classList.add('hidden');
+                            this.helpers.displaySystemMessage('API Key saved for this session.', 'success');
+                            this.helpers.updateButtonStates();
+                        } else {
+                            this.helpers.displaySystemMessage('Please enter a valid API Key.', 'error');
+                        }
+                    },
+                    
+                    handleChangeApiKey() {
+                         this.elements.apiKeyModal.classList.remove('hidden');
+                         this.elements.apiKeyInput.focus();
+                    },
+
                     handleCreateNewLamination() {
                         const text = this.elements.promptInput.value.trim();
                         if (!text) {
@@ -279,7 +326,6 @@
                         this.helpers._renderLamination(); // Render with no specific theme to get a default background
                     },
 
-                    // Handles changing the background of an existing lamination
                     handleChangeBackground(themePrompt) {
                         if (!this.state.currentLaminationText) {
                             this.helpers.displaySystemMessage("Please create a lamination first before changing the background.", 'error');
@@ -291,8 +337,12 @@
 
                 // --- HELPERS ---
                 helpers: {
-                    // Core rendering function, assumes text is already in state
                     async _renderLamination(themePrompt = '') {
+                         if (!this.state.apiKey) {
+                            this.helpers.displaySystemMessage("API Key is required to generate images.", "error");
+                            this.elements.apiKeyModal.classList.remove('hidden');
+                            return;
+                        }
                         this.helpers.setLoading(true);
                         this.elements.displayArea.innerHTML = `<div id="lamination-creator" class="w-full h-full p-4 flex flex-col items-center"></div>`;
                         const laminationCreatorEl = document.getElementById('lamination-creator');
@@ -343,13 +393,22 @@
 
                         } catch (error) {
                             console.error("Error creating lamination:", error);
-                            this.state.laminationImageContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed: ${error.message}. Please try a different prompt or try again later.</p>`;
+                            this.state.laminationImageContainer.innerHTML = `<p class="text-red-400 text-center p-4">Image generation failed: ${error.message}. Please check your API key and prompt, then try again.</p>`;
                         } finally {
                             this.helpers.setLoading(false);
                         }
                     },
 
                     bindEvents() {
+                        this.elements.saveApiKeyBtn.addEventListener('click', this.handlers.handleSaveApiKey);
+                        this.elements.apiKeyInput.addEventListener('keydown', (e) => {
+                             if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 this.handlers.handleSaveApiKey();
+                             }
+                        });
+                        this.elements.changeApiKeyBtn.addEventListener('click', this.handlers.handleChangeApiKey);
+
                         this.elements.createLaminationBtn.addEventListener('click', this.handlers.handleCreateNewLamination);
                         this.elements.promptInput.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
@@ -377,6 +436,13 @@
                         });
                     },
                     
+                    requireApiKey() {
+                        if (!this.state.apiKey) {
+                            this.elements.apiKeyModal.classList.remove('hidden');
+                            this.elements.apiKeyInput.focus();
+                        }
+                    },
+                    
                     resetApp() {
                         this.elements.displayArea.innerHTML = '';
                         this.state.currentLaminationText = '';
@@ -384,7 +450,8 @@
                         this.elements.promptInput.value = '';
                         this.elements.promptInput.focus();
                         this.helpers.updateButtonStates();
-                        this.helpers.displaySystemMessage("Welcome! Enter some text below and click 'Create Lamination' to start.", "info");
+                        this.helpers.displaySystemMessage("Welcome! Enter your API Key, then some text below and click 'Create Lamination' to start.", "info");
+                        this.helpers.requireApiKey();
                     },
                     
                     renderLaminationControls(container, textElement) {
@@ -419,7 +486,10 @@
                         const fontRow = document.createElement('div');
                         fontRow.className = "w-full flex flex-wrap items-center justify-center gap-4";
                         const fontList = [ 'Inter, sans-serif', 'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif', 'Courier New, monospace', 'Lucida Console, monospace', 'Impact, sans-serif', 'Comic Sans MS, cursive', 'Trebuchet MS, sans-serif', 'Palatino Linotype, book antiqua, palatino, serif', 'Dancing Script, cursive', 'Lobster, cursive', 'Pacifico, cursive', 'Great Vibes, cursive', 'Sacramento, cursive', 'Calibri, sans-serif', 'Bahnschrift, system-ui' ].sort();
-                        const fontSelect = this.helpers.createSelect(fontList, (e) => { textElement.style.fontFamily = e.target.value; });
+                        const fontSelect = this.helpers.createSelect(fontList, (e) => {
+                            const p = textElement.querySelector('p');
+                            if (p) p.style.fontFamily = e.target.value;
+                        });
                         fontSelect.className = "p-2 bg-red-900/20 border border-red-500 rounded-lg text-white max-w-[180px]";
                         fontRow.appendChild(fontSelect);
                         const sizeSelect = this.helpers.createFontSizeSelect(textElement);
@@ -453,8 +523,12 @@
                             select.appendChild(option);
                         }
                         select.value = 24; // Default
-                        textElement.style.fontSize = '24px';
-                        select.addEventListener('change', (e) => { textElement.style.fontSize = `${e.target.value}px`; });
+                        const p = textElement.querySelector('p');
+                        if (p) p.style.fontSize = '24px';
+                        select.addEventListener('change', (e) => {
+                            const p = textElement.querySelector('p');
+                            if (p) p.style.fontSize = `${e.target.value}px`;
+                        });
                         return select;
                     },
 
@@ -463,16 +537,28 @@
                         colorInput.type = 'color';
                         colorInput.value = '#FFFFFF';
                         colorInput.className = "w-10 h-10 p-1 bg-red-900/20 rounded border-0 cursor-pointer";
-                        colorInput.addEventListener('input', (e) => { textElement.style.color = e.target.value; });
+                        colorInput.addEventListener('input', (e) => {
+                             const p = textElement.querySelector('p');
+                             if (p) p.style.color = e.target.value;
+                        });
                         return colorInput;
                     },
 
                     createStyleButtons(textElement) {
                         const wrapper = document.createElement('div');
                         wrapper.className = 'flex items-center bg-red-900/20 rounded-lg overflow-hidden';
-                        const boldButton = this.helpers.createStyleButton('B', 'font-bold', () => { textElement.style.fontWeight = textElement.style.fontWeight === 'bold' ? 'normal' : 'bold'; });
-                        const italicButton = this.helpers.createStyleButton('I', 'italic', () => { textElement.style.fontStyle = textElement.style.fontStyle === 'italic' ? 'normal' : 'italic'; });
-                        const underlineButton = this.helpers.createStyleButton('U', 'underline', () => { textElement.style.textDecoration = textElement.style.textDecoration === 'underline' ? 'none' : 'underline'; });
+                        const boldButton = this.helpers.createStyleButton('B', 'font-bold', () => {
+                            const p = textElement.querySelector('p');
+                            if(p) p.style.fontWeight = p.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                        });
+                        const italicButton = this.helpers.createStyleButton('I', 'italic', () => {
+                             const p = textElement.querySelector('p');
+                             if(p) p.style.fontStyle = p.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                        });
+                        const underlineButton = this.helpers.createStyleButton('U', 'underline', () => {
+                             const p = textElement.querySelector('p');
+                             if(p) p.style.textDecoration = p.style.textDecoration === 'underline' ? 'none' : 'underline';
+                        });
                         wrapper.appendChild(boldButton);
                         wrapper.appendChild(italicButton);
                         wrapper.appendChild(underlineButton);
@@ -578,27 +664,40 @@
                     setLoading(isLoading) {
                         this.state.isBusy = isLoading;
                         this.elements.loadingSpinner.classList.toggle('hidden', !isLoading);
-                        this.elements.createLaminationBtn.disabled = isLoading;
                         this.elements.promptInput.disabled = isLoading;
                         this.helpers.updateButtonStates();
                     },
 
                     updateButtonStates() {
                         const hasLamination = this.state.laminationImageContainer !== null && this.state.laminationImageContainer.querySelector('img') !== null;
+                        const hasApiKey = !!this.state.apiKey;
+                        
+                        this.elements.createLaminationBtn.disabled = this.state.isBusy || !hasApiKey;
                         this.elements.saveLaminationBtn.disabled = this.state.isBusy || !hasLamination || !this.state.fontsReady;
-                        if(this.elements.saveLaminationBtn.disabled && !this.state.isBusy && hasLamination) {
+                        
+                        if (this.elements.saveLaminationBtn.disabled && !this.state.isBusy && hasLamination) {
                             this.elements.saveLaminationBtn.title = "Please wait for fonts to load before saving.";
                         } else {
                             this.elements.saveLaminationBtn.title = "";
                         }
-                        this.elements.promptInput.placeholder = this.state.isBusy ? "Generating lamination..." : "Enter text for your lamination...";
+                        
+                        if (!hasApiKey) {
+                             this.elements.promptInput.placeholder = "Please enter your API key to begin.";
+                        } else if (this.state.isBusy) {
+                             this.elements.promptInput.placeholder = "Generating lamination...";
+                        } else {
+                            this.elements.promptInput.placeholder = "Enter text for your lamination...";
+                        }
                     },
                 },
 
                 // --- API ---
                 api: {
                      async generateImage(prompt) {
-                        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+                        const apiKey = this.state.apiKey;
+                        if (!apiKey) {
+                            throw new Error("API Key not provided.");
+                        }
                         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
                         const payload = { instances: [{ "prompt": prompt }], parameters: { "sampleCount": 1 } };
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
