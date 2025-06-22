@@ -86,6 +86,10 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
+    <div id="api-error-notification" class="hidden bg-yellow-500 text-yellow-900 text-center p-2 text-sm">
+        Could not generate user avatars (API permission denied). Please check the console (F12) for details. The app will use fallback avatars.
+        <button id="close-notification-btn" class="ml-4 font-bold">&times;</button>
+    </div>
     <div id="main-layout">
         <!-- Chat Column -->
         <div id="chat-container">
@@ -117,7 +121,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.44</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.45</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -202,7 +206,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.44</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.45</p>
         </div>
     </div>
 
@@ -393,9 +397,13 @@
                 }
             } catch (error) {
                 console.error(`Failed to generate avatar for ${uid}.`, error);
-                if (error.message.includes("403")) {
+                 if (error.message.includes("403")) {
                     if (areGenAiFeaturesEnabled) {
                         console.warn("Avatar generation has been disabled due to a permission error. To fix this, enable the 'Generative Language API' in your Google Cloud project.");
+                        const notification = document.getElementById('api-error-notification');
+                        if(notification) {
+                            notification.classList.remove('hidden');
+                        }
                         areGenAiFeaturesEnabled = false;
                     }
                 }
@@ -1021,6 +1029,9 @@
             });
             
             // --- Event Listeners Setup ---
+            document.getElementById('close-notification-btn')?.addEventListener('click', () => {
+                document.getElementById('api-error-notification')?.classList.add('hidden');
+            });
             const allToolButtons = document.querySelectorAll('#tool-selector .tool-btn, #tool-selector .dropdown-content .tool-btn');
             allToolButtons.forEach(button => { button.addEventListener('click', (e) => { const clickedButton = e.currentTarget; const tool = clickedButton.dataset.tool; if (!tool) return; state.currentTool = tool; eventCaptureLayer.style.cursor = tool === 'select' ? 'default' : (tool === 'text' ? 'text' : 'crosshair'); document.querySelectorAll('#tool-selector .tool-btn').forEach(b => b.classList.remove('selected')); const parentDropdownBtn = clickedButton.closest('.dropdown')?.querySelector('.tool-btn'); if (parentDropdownBtn) { parentDropdownBtn.classList.add('selected'); } else { clickedButton.classList.add('selected'); } state.selectedObjectId = null; drawOverlay(); }); });
             document.querySelectorAll('#brush-size-selector .size-btn').forEach(btn => { btn.addEventListener('click', (e) => { document.querySelectorAll('#brush-size-selector .size-btn').forEach(b => b.classList.remove('selected')); const clickedBtn = e.currentTarget; clickedBtn.classList.add('selected'); state.currentBrushSize = parseInt(clickedBtn.dataset.size, 10); }); });
