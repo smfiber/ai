@@ -208,7 +208,7 @@
                 </p>
                 <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
                 <p class="mt-4 text-xs text-slate-400">
-                    Version 2.1
+                    Version 2.2
                 </p>
             </div>
         </footer>
@@ -232,7 +232,7 @@
         // App and Firebase Configuration
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-stretch-solution';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIza...", authDomain: "...", projectId: "..."}; // Fallback config
-        const geminiApiKey = ""; // This will be handled by the environment
+        const geminiApiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // Restored API Key
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -678,9 +678,9 @@
                  muscleSelect.value = '';
                  ailmentSelect.value = '';
                  muscleSelect.disabled = true;
-                 ailmentSelect.disabled = true;
+                 searchBar.disabled = true;
                  muscleSelect.classList.add('bg-slate-100');
-                 ailmentSelect.classList.add('bg-slate-100');
+                 searchBar.classList.add('bg-slate-100');
              }
          });
          
