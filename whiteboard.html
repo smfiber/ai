@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Collaborative Whiteboard & Chat</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts & Font Awesome -->
@@ -116,7 +117,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.41</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.44</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -201,7 +202,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.41</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.44</p>
         </div>
     </div>
 
@@ -244,9 +245,16 @@
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
-        const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // User-provided API key
-        const tenorApiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // Using the same key for Tenor as per user request
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: apiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAGO0CRIL44bj9-y5k2ARi2qGqZaZ7vLPc",
+            authDomain: "whiteboard-00.firebaseapp.com",
+            projectId: "whiteboard-00",
+            storageBucket: "whiteboard-00.appspot.com",
+            messagingSenderId: "34696279859",
+            appId: "1:34696279859:web:a01addc7e57a8d06947046",
+            measurementId: "G-N2M5PRQSX1"
+        };
+        const tenorApiKey = "LIVDSRZULELA"; // Tenor API Key
         const whiteboardId = appId;
 
         // --- DOM Elements ---
@@ -349,7 +357,7 @@
                     maxOutputTokens: 2048,
                 }
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseConfig.apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -962,9 +970,9 @@
 
         // --- App Initialization ---
         window.addEventListener('load', () => {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
+            initializeApp(firebaseConfig);
+            auth = getAuth();
+            db = getFirestore();
             setLogLevel('debug');
             setDailyContent();
 
@@ -984,18 +992,31 @@
                     setupEventsListener(); 
                     setupChatListener(); 
                 } else { 
-                    console.log("No user signed in. Attempting anonymous sign-in.");
-                    try { 
+                    console.log("No user signed in. Attempting to sign in.");
+                    try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            console.log("Attempting to sign in with custom token.");
                             await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
-                            await signInAnonymously(auth); 
+                           console.log("No custom token found, signing in anonymously.");
+                           await signInAnonymously(auth);
                         }
-                    } catch (error) { 
-                        console.error("Sign-in error", error); 
-                        document.getElementById('userId').textContent = 'Auth Error';
-                        chatInput.placeholder = 'Chat disabled due to authentication error.';
-                    } 
+                    } catch (error) {
+                        console.error("Sign-in failed. Error code:", error.code);
+                        if (error.code === 'auth/custom-token-mismatch') {
+                            console.warn("Custom token mismatch. Falling back to anonymous sign-in.");
+                            try {
+                                await signInAnonymously(auth);
+                            } catch (anonError) {
+                                console.error("Anonymous sign-in also failed:", anonError);
+                                document.getElementById('userId').textContent = 'Auth Error';
+                                chatInput.placeholder = 'Chat disabled due to authentication error.';
+                            }
+                        } else {
+                             document.getElementById('userId').textContent = 'Auth Error';
+                             chatInput.placeholder = 'Chat disabled due to authentication error.';
+                        }
+                    }
                 } 
             });
             
