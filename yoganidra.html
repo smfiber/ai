@@ -82,7 +82,7 @@
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         Yoga Nidra Creator
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.17</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.18</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -171,6 +171,19 @@
             </div>
         </div>
     </div>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md flex flex-col">
+            <h2 class="text-2xl font-bold mb-4 text-white">Enter Your Gemini API Key</h2>
+            <p class="text-gray-400 mb-4">To generate scripts, a Google AI Gemini API key is required. You can get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Google AI Studio</a>.</p>
+            <input type="password" id="api-key-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter your API key here...">
+            <p id="api-key-error" class="text-red-400 text-sm mt-2 hidden">Please enter a valid API key.</p>
+            <div class="flex justify-end mt-6">
+                <button id="save-api-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
+            </div>
+        </div>
+    </div>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -192,7 +205,11 @@
             // Audio elements
             const listenScriptBtn = document.getElementById('listen-script-btn');
             const voiceSelect = document.getElementById('voice-select');
-
+            // API Key Modal elements
+            const apiKeyModal = document.getElementById('api-key-modal');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+            const apiKeyError = document.getElementById('api-key-error');
 
             // --- Application State ---
             let isGenerating = false;
@@ -201,7 +218,7 @@
             let isSpeaking = false;
             let currentUtterance = null;
             let availableVoices = [];
-
+            let geminiApiKey = ''; // Will hold the user's API key
 
             // --- General Scripting Guidelines (applies to all personas) ---
             const generalScriptingGuidelines = `
@@ -217,52 +234,18 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
 `;
 
             // --- Persona Data ---
-            // Each persona has a 'description' for the UI tooltip and a 'systemPrompt' for the API call.
             const personas = [
-                { 
-                    name: "The Yoga Nidra Guide", 
-                    description: "A comprehensive and calming guide. Weaves the user's intention into traditional Yoga Nidra stages: sankalpa, body scan, breath awareness, opposite sensations, visualization, and externalization."
-                },
-                { 
-                    name: "The Calming Guide / Serene Narrator", 
-                    description: "A gentle, soothing, and reassuring narrator. Uses language of peace, stillness, and comfort to create an atmosphere of deep relaxation and trust. Focuses on sensory details."
-                },
-                { 
-                    name: "The Compassionate Witness", 
-                    description: "An empathetic and non-judgmental guide. Encourages observing thoughts and feelings without attachment, fostering self-acceptance and releasing tension."
-                },
-                { 
-                    name: "The Clear Instructor / Precise Facilitator", 
-                    description: "A clear, direct, and methodical instructor. Uses concise language for body scans and breath awareness to keep the listener present and focused."
-                },
-                { 
-                    name: "The Wise Sage / Ancient Teacher", 
-                    description: "A deep, resonant voice imbued with ancient wisdom. Invites the listener into a state of expanded awareness and inner knowing, beyond simple relaxation."
-                },
-                {
-                    name: "The Nurturing Presence",
-                    description: "A gentle, supportive, and comforting caregiver. Emphasizes kindness and self-acceptance, creating a feeling of emotional safety and warmth."
-                },
-                {
-                    name: "The Ancient Sage / Rishi (Seer)",
-                    description: "A deeply resonant voice of ageless wisdom. Uses Sanskrit terms (gently explained) and speaks of universal truths to connect the listener with deeper philosophical concepts."
-                },
-                {
-                    name: "The Cosmic Storyteller / Myth Weaver",
-                    description: "An evocative, imaginative, and mystical storyteller. Uses rich, archetypal imagery and mythological metaphors to engage the subconscious mind."
-                },
-                {
-                    name: "The Chakra Alchemist / Subtle Body Guide",
-                    description: "A grounded yet ethereal guide to the subtle body. Focuses on awakening and balancing the chakras and energy channels (nadis) for energetic alignment."
-                },
-                {
-                    name: "The Mantra Chanter / Sound Healer",
-                    description: "A rhythmic, soothing, and resonant guide. Uses the vibrational power of sound and mantras to quiet the mind and access deeper states of consciousness."
-                },
-                {
-                    name: "The Gunas Harmonizer",
-                    description: "A balanced, discerning, and insightful guide. Brings awareness to the Gunas (Sattva, Rajas, Tamas) to help the listener achieve a state of harmony and clarity."
-                }
+                { name: "The Yoga Nidra Guide", description: "A comprehensive and calming guide. Weaves the user's intention into traditional Yoga Nidra stages: sankalpa, body scan, breath awareness, opposite sensations, visualization, and externalization." },
+                { name: "The Calming Guide / Serene Narrator", description: "A gentle, soothing, and reassuring narrator. Uses language of peace, stillness, and comfort to create an atmosphere of deep relaxation and trust. Focuses on sensory details." },
+                { name: "The Compassionate Witness", description: "An empathetic and non-judgmental guide. Encourages observing thoughts and feelings without attachment, fostering self-acceptance and releasing tension." },
+                { name: "The Clear Instructor / Precise Facilitator", description: "A clear, direct, and methodical instructor. Uses concise language for body scans and breath awareness to keep the listener present and focused." },
+                { name: "The Wise Sage / Ancient Teacher", description: "A deep, resonant voice imbued with ancient wisdom. Invites the listener into a state of expanded awareness and inner knowing, beyond simple relaxation." },
+                { name: "The Nurturing Presence", description: "A gentle, supportive, and comforting caregiver. Emphasizes kindness and self-acceptance, creating a feeling of emotional safety and warmth." },
+                { name: "The Ancient Sage / Rishi (Seer)", description: "A deeply resonant voice of ageless wisdom. Uses Sanskrit terms (gently explained) and speaks of universal truths to connect the listener with deeper philosophical concepts." },
+                { name: "The Cosmic Storyteller / Myth Weaver", description: "An evocative, imaginative, and mystical storyteller. Uses rich, archetypal imagery and mythological metaphors to engage the subconscious mind." },
+                { name: "The Chakra Alchemist / Subtle Body Guide", description: "A grounded yet ethereal guide to the subtle body. Focuses on awakening and balancing the chakras and energy channels (nadis) for energetic alignment." },
+                { name: "The Mantra Chanter / Sound Healer", description: "A rhythmic, soothing, and resonant guide. Uses the vibrational power of sound and mantras to quiet the mind and access deeper states of consciousness." },
+                { name: "The Gunas Harmonizer", description: "A balanced, discerning, and insightful guide. Brings awareness to the Gunas (Sattva, Rajas, Tamas) to help the listener achieve a state of harmony and clarity." }
             ];
 
             // Construct the full system prompt for each persona to be used by the API
@@ -282,11 +265,12 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
 
             function initializeApp() {
                 populateScriptLengthSelect();
-                populatePersonaSelect(); // Populate persona dropdown
-                updatePersonaButton(currentPersonaIndex); // Set initial button text for persona
-                populateVoiceSelect(); // Populate voice dropdown
+                populatePersonaSelect();
+                updatePersonaButton(currentPersonaIndex);
+                populateVoiceSelect();
                 resetApp();
                 addEventListeners();
+                checkApiKey();
             }
 
             function addEventListeners() {
@@ -312,19 +296,43 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
                 closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
                 
-                scriptLengthSelect.addEventListener('change', () => {
-                    promptInput.focus();
-                });
+                scriptLengthSelect.addEventListener('change', () => { promptInput.focus(); });
 
-                personaDropdownButton.addEventListener('click', () => {
-                    personaDropdownContent.classList.toggle('hidden');
-                });
-
+                personaDropdownButton.addEventListener('click', () => { personaDropdownContent.classList.toggle('hidden'); });
                 document.addEventListener('click', (event) => {
                     if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) {
                         personaDropdownContent.classList.add('hidden');
                     }
                 });
+
+                // API Key Modal Listeners
+                saveApiKeyBtn.addEventListener('click', saveApiKey);
+                apiKeyInput.addEventListener('keydown', (e) => {
+                     if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveApiKey();
+                    }
+                });
+            }
+
+            function checkApiKey() {
+                if (!geminiApiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                } else {
+                    apiKeyModal.classList.add('hidden');
+                }
+            }
+
+            function saveApiKey() {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    geminiApiKey = key;
+                    apiKeyModal.classList.add('hidden');
+                    apiKeyError.classList.add('hidden');
+                    displaySystemMessage("API Key saved. You can now generate a script.");
+                } else {
+                    apiKeyError.classList.remove('hidden');
+                }
             }
 
             function resetApp() {
@@ -363,9 +371,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                     radio.name = 'persona';
                     radio.value = index;
                     radio.className = 'accent-indigo-500';
-                    if (index === currentPersonaIndex) {
-                        radio.checked = true;
-                    }
+                    if (index === currentPersonaIndex) { radio.checked = true; }
 
                     radio.addEventListener('change', () => {
                         currentPersonaIndex = parseInt(radio.value);
@@ -389,14 +395,12 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                     const allVoices = speechSynthesis.getVoices();
                     if (allVoices.length === 0) return;
 
-                    // Filter specifically for Google UK English voices
                     availableVoices = allVoices.filter(voice => voice.name.includes('Google UK English'));
-                    
-                    voiceSelect.innerHTML = ''; // Clear existing options
+                    voiceSelect.innerHTML = ''; 
 
                     if (availableVoices.length === 0) {
                         voiceSelect.innerHTML = '<option value="">Google UK voice not found</option>';
-                        listenScriptBtn.disabled = true; // Disable listening if the voice isn't available
+                        listenScriptBtn.disabled = true;
                         return;
                     }
 
@@ -406,12 +410,9 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                         option.textContent = voice.name;
                         option.value = index;
                         voiceSelect.appendChild(option);
-                        if (voice.name === 'Google UK English Female') {
-                            femaleVoiceIndex = index;
-                        }
+                        if (voice.name === 'Google UK English Female') { femaleVoiceIndex = index; }
                     });
 
-                    // Default to the female voice if found, otherwise default to the first available UK voice.
                     voiceSelect.value = femaleVoiceIndex !== -1 ? femaleVoiceIndex : 0;
                 };
 
@@ -423,6 +424,11 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             }
 
             async function handleGenerateScript() {
+                if (!geminiApiKey) {
+                    displaySystemMessage("Please enter your Gemini API Key first by clicking the 'Set API Key' button.", 'error-message');
+                    checkApiKey();
+                    return;
+                }
                 const userPrompt = promptInput.value.trim();
                 if (!userPrompt || isGenerating) return;
 
@@ -435,10 +441,8 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 try {
                     const selectedLengthOption = lengthOptions.find(opt => opt.name === scriptLengthSelect.value);
                     const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix;
-                    
                     const selectedPersona = personas[currentPersonaIndex];
                     const personaInstruction = selectedPersona.systemPrompt;
-
                     const scriptGenerationPrompt = `${personaInstruction}\n\nBased on the intention: "${userPrompt}". ${lengthSuffix}`;
                     const aiResponseText = await getAIResponse(scriptGenerationPrompt);
                     currentGeneratedScript = aiResponseText;
@@ -452,7 +456,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
 
                 } catch (error) {
                     console.error("Error generating script:", error);
-                    displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
+                    displaySystemMessage(`Failed to generate script: ${error.message}. Please check your API key and try again.`, 'error-message');
                     currentGeneratedScript = '';
                 } finally {
                     setLoading(false);
@@ -480,9 +484,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 
                 currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
                 const selectedVoiceIndex = parseInt(voiceSelect.value, 10);
-                
                 currentUtterance.voice = availableVoices[selectedVoiceIndex];
-                
                 currentUtterance.rate = 0.8;
                 currentUtterance.pitch = 1;
 
@@ -546,7 +548,6 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 generateBtn.disabled = isGenerating;
                 copyScriptBtn.disabled = isGenerating || !currentGeneratedScript;
                 resetAppBtn.disabled = isGenerating;
-                
                 listenScriptBtn.disabled = isGenerating || !currentGeneratedScript || availableVoices.length === 0; 
                 
                 if (speechSynthesis.speaking && !speechSynthesis.paused) {
@@ -568,7 +569,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
             }
             
             async function getAIResponse(prompt) {
-                const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // Implemented the provided API key
+                const apiKey = geminiApiKey; // Use the stored API key
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const payload = { 
