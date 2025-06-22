@@ -21,7 +21,10 @@
         .sortable-header:hover { color: #ffffff; }
         .sort-icon { opacity: 0.5; margin-left: 8px; transition: opacity 0.2s; }
         .sortable-header.active .sort-icon { opacity: 1; }
-        #add-bill-modal, #edit-bill-modal, #help-modal, #add-income-modal, #edit-income-modal, #add-savings-modal, #edit-savings-modal, #add-investment-modal, #edit-investment-modal, #add-debt-modal, #edit-debt-modal, #add-asset-modal, #edit-asset-modal, #add-checking-modal, #edit-checking-modal, #import-confirm-modal { transition: opacity 0.3s ease; }
+        /* Ensure modals are on top of the loading overlay if needed */
+        #api-key-modal, #error-modal { z-index: 10001; }
+        #loading-overlay { z-index: 10000; }
+        .modal-base { transition: opacity 0.3s ease; }
         .top-nav-link { border-bottom: 2px solid transparent; }
         .top-nav-link.active { border-bottom-color: #34d399; /* emerald-400 */ color: #ffffff; font-weight: 600; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -30,7 +33,6 @@
         .calendar-grid > .calendar-day:nth-child(n+36) { border-bottom: 1px solid #374151; }
         .calendar-day.today { background-color: #1d4ed8; }
         .bill-pill { padding: 2px 8px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-        #loading-overlay { z-index: 9999; }
         .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-left-color: #34d399; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -38,7 +40,7 @@
 <body class="bg-gray-900 text-gray-300">
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex flex-col items-center justify-center">
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex-col items-center justify-center hidden">
         <div class="spinner"></div>
         <p class="text-white mt-4">Connecting to Database...</p>
     </div>
@@ -152,22 +154,22 @@
     </div>
     
     <!-- Modals -->
-    <div id="add-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add a New Bill</h2><form id="add-bill-form"><div class="space-y-4"><div><label for="bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="e.g., Internet" required></div><div><label for="bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="123.45" required></div><div><label for="bill-due-date" class="block mb-2 text-sm font-medium">Due Date (for first bill)</label><input type="date" id="bill-due-date" name="billDueDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div class="flex items-center pt-2"><input id="bill-recurring" name="billRecurring" type="checkbox" class="w-4 h-4 text-emerald-600 bg-gray-700 border-gray-600 rounded focus:ring-emerald-500"><label for="bill-recurring" class="ml-2 text-sm font-medium text-gray-300">Recurring Monthly</label></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Bill</button></div></form></div></div>
-    <div id="edit-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Recurring Bill</h2><form id="edit-bill-form"><input type="hidden" id="edit-bill-id"><div class="space-y-4"><div><label for="edit-bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="edit-bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div><label for="edit-bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-income-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Income</h2><form id="add-income-form"><div class="space-y-4"><div><label for="income-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="income-name" name="incomeName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Paycheck" required></div><div><label for="income-date" class="block mb-2 text-sm font-medium">Date Received</label><input type="date" id="income-date" name="incomeDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="income-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="income-amount" name="incomeAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="2000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Income</button></div></form></div></div>
-    <div id="edit-income-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Income</h2><form id="edit-income-form"><input type="hidden" id="edit-income-id"><div class="space-y-4"><div><label for="edit-income-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-income-name" name="incomeName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="edit-income-date" class="block mb-2 text-sm font-medium">Date Received</label><input type="date" id="edit-income-date" name="incomeDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="edit-income-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-income-amount" name="incomeAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Asset</h2><form id="add-asset-form"><div class="space-y-4"><div><label for="asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="e.g., Real Estate" required></div><div><label for="asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="150000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Asset</button></div></form></div></div>
-    <div id="edit-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Asset</h2><form id="edit-asset-form"><input type="hidden" id="edit-asset-id"><div class="space-y-4"><div><label for="edit-asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div><div><label for="edit-asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Savings Goal</h2><form id="add-savings-form"><div class="space-y-4"><div><label for="savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="e.g., Emergency Fund" required></div><div><label for="savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="1000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Savings</button></div></form></div></div>
-    <div id="edit-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Savings Goal</h2><form id="edit-savings-form"><input type="hidden" id="edit-savings-id"><div class="space-y-4"><div><label for="edit-savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div><div><label for="edit-savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Investment</h2><form id="add-investment-form"><div class="space-y-4"><div><label for="investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g., Index Fund" required></div><div><label for="investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="5000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Investment</button></div></form></div></div>
-    <div id="edit-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Investment</h2><form id="edit-investment-form"><input type="hidden" id="edit-investment-id"><div class="space-y-4"><div><label for="edit-investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div><div><label for="edit-investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Debt</h2><form id="add-debt-form"><div class="space-y-4"><div><label for="debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="e.g., Credit Card" required></div><div><label for="debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="2500.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Debt</button></div></form></div></div>
-    <div id="edit-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Debt</h2><form id="edit-debt-form"><input type="hidden" id="edit-debt-id"><div class="space-y-4"><div><label for="edit-debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div><div><label for="edit-debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
-    <div id="add-checking-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Checking Entry</h2><form id="add-checking-form"><div class="space-y-4"><div><label for="checking-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="checking-name" name="checkingName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" placeholder="e.g., Groceries" required></div><div><label for="checking-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="checking-amount" name="checkingAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" placeholder="-50.00 or 100.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Entry</button></div></form></div></div>
-    <div id="edit-checking-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Checking Entry</h2><form id="edit-checking-form"><input type="hidden" id="edit-checking-id"><div class="space-y-4"><div><label for="edit-checking-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-checking-name" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" required></div><div><label for="edit-checking-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-checking-amount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add a New Bill</h2><form id="add-bill-form"><div class="space-y-4"><div><label for="bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="e.g., Internet" required></div><div><label for="bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" placeholder="123.45" required></div><div><label for="bill-due-date" class="block mb-2 text-sm font-medium">Due Date (for first bill)</label><input type="date" id="bill-due-date" name="billDueDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div class="flex items-center pt-2"><input id="bill-recurring" name="billRecurring" type="checkbox" class="w-4 h-4 text-emerald-600 bg-gray-700 border-gray-600 rounded focus:ring-emerald-500"><label for="bill-recurring" class="ml-2 text-sm font-medium text-gray-300">Recurring Monthly</label></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Bill</button></div></form></div></div>
+    <div id="edit-bill-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Recurring Bill</h2><form id="edit-bill-form"><input type="hidden" id="edit-bill-id"><div class="space-y-4"><div><label for="edit-bill-name" class="block mb-2 text-sm font-medium">Bill Name</label><input type="text" id="edit-bill-name" name="billName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div><div><label for="edit-bill-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-bill-amount" name="billAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-income-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Income</h2><form id="add-income-form"><div class="space-y-4"><div><label for="income-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="income-name" name="incomeName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Paycheck" required></div><div><label for="income-date" class="block mb-2 text-sm font-medium">Date Received</label><input type="date" id="income-date" name="incomeDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="income-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="income-amount" name="incomeAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="2000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Income</button></div></form></div></div>
+    <div id="edit-income-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Income</h2><form id="edit-income-form"><input type="hidden" id="edit-income-id"><div class="space-y-4"><div><label for="edit-income-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-income-name" name="incomeName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="edit-income-date" class="block mb-2 text-sm font-medium">Date Received</label><input type="date" id="edit-income-date" name="incomeDate" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div><div><label for="edit-income-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-income-amount" name="incomeAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Asset</h2><form id="add-asset-form"><div class="space-y-4"><div><label for="asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="e.g., Real Estate" required></div><div><label for="asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" placeholder="150000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Asset</button></div></form></div></div>
+    <div id="edit-asset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Asset</h2><form id="edit-asset-form"><input type="hidden" id="edit-asset-id"><div class="space-y-4"><div><label for="edit-asset-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-asset-description" name="assetDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div><div><label for="edit-asset-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-asset-amount" name="assetAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Savings Goal</h2><form id="add-savings-form"><div class="space-y-4"><div><label for="savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="e.g., Emergency Fund" required></div><div><label for="savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="1000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Savings</button></div></form></div></div>
+    <div id="edit-savings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Savings Goal</h2><form id="edit-savings-form"><input type="hidden" id="edit-savings-id"><div class="space-y-4"><div><label for="edit-savings-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-savings-name" name="savingsName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div><div><label for="edit-savings-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-savings-amount" name="savingsAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Investment</h2><form id="add-investment-form"><div class="space-y-4"><div><label for="investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g., Index Fund" required></div><div><label for="investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="5000.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Investment</button></div></form></div></div>
+    <div id="edit-investment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Investment</h2><form id="edit-investment-form"><input type="hidden" id="edit-investment-id"><div class="space-y-4"><div><label for="edit-investment-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-investment-description" name="investmentDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div><div><label for="edit-investment-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-investment-amount" name="investmentAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Debt</h2><form id="add-debt-form"><div class="space-y-4"><div><label for="debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="e.g., Credit Card" required></div><div><label for="debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="2500.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Debt</button></div></form></div></div>
+    <div id="edit-debt-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Debt</h2><form id="edit-debt-form"><input type="hidden" id="edit-debt-id"><div class="space-y-4"><div><label for="edit-debt-description" class="block mb-2 text-sm font-medium">Description</label><input type="text" id="edit-debt-description" name="debtDescription" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div><div><label for="edit-debt-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-debt-amount" name="debtAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
+    <div id="add-checking-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Add Checking Entry</h2><form id="add-checking-form"><div class="space-y-4"><div><label for="checking-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="checking-name" name="checkingName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" placeholder="e.g., Groceries" required></div><div><label for="checking-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="checking-amount" name="checkingAmount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" placeholder="-50.00 or 100.00" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add Entry</button></div></form></div></div>
+    <div id="edit-checking-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Edit Checking Entry</h2><form id="edit-checking-form"><input type="hidden" id="edit-checking-id"><div class="space-y-4"><div><label for="edit-checking-name" class="block mb-2 text-sm font-medium">Name</label><input type="text" id="edit-checking-name" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" required></div><div><label for="edit-checking-amount" class="block mb-2 text-sm font-medium">Amount</label><input type="number" step="0.01" id="edit-checking-amount" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 block w-full p-2.5" required></div></div><div class="flex justify-end space-x-4 mt-8"><button type="button" class="cancel-modal-btn py-2 px-4 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Changes</button></div></form></div></div>
 
-    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Help & Instructions</h2><button id="close-help-btn" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button></div><div class="text-gray-300 space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Help & Instructions</h2><button id="close-help-btn" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button></div><div class="text-gray-300 space-y-4 max-h-[70vh] overflow-y-auto pr-4">
         <div><h4 class="font-bold text-lg text-emerald-400">Navigation</h4><p>Use the links in the top navigation bar to switch between the main Dashboard, Checking, Income History, Savings Goals, Paid Bills history, your Recurring Bill templates, and the monthly Calendar view.</p></div>
         <div><h4 class="font-bold text-lg text-emerald-400">Paying a Bill</h4><p>Click the "Pay" button on any bill in the "Upcoming Bills" table. The bill will be moved to your paid history. If it's a recurring bill, a new bill for the following month will automatically be created.</p></div>
         <div><h4 class="font-bold text-lg text-emerald-400">Data Storage & Portability</h4><p>All your financial information is saved securely in your private Firebase database, linked to your anonymous user ID shown in the footer. This ID is tied to your browser. To move your data to a new browser or computer, use the Export/Import tools below.</p></div>
@@ -185,25 +187,19 @@
         </div>
     </div></div></div>
 
-    <div id="import-confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4">Confirm Import</h2><p class="text-gray-300 mb-6">This will overwrite all currently saved data in this browser with the data from the selected file. This action cannot be undone. Are you sure you wish to proceed?</p><div class="flex justify-center space-x-4 mt-8"><button id="cancel-import-btn" class="py-2 px-6 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button id="confirm-import-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">Yes, Overwrite Data</button></div></div></div>
+    <div id="import-confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4">Confirm Import</h2><p class="text-gray-300 mb-6">This will overwrite all currently saved data in this browser with the data from the selected file. This action cannot be undone. Are you sure you wish to proceed?</p><div class="flex justify-center space-x-4 mt-8"><button id="cancel-import-btn" class="py-2 px-6 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button id="confirm-import-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">Yes, Overwrite Data</button></div></div></div>
 
+    <!-- New Modals for API Key and Errors -->
+    <div id="api-key-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Enter Firebase API Key</h2><p class="text-gray-400 mb-4">Please enter your Firebase Web API Key to connect to your database. This is stored locally and is only needed once per browser.</p><form id="api-key-form"><div class="space-y-4"><div><label for="firebase-api-key" class="block mb-2 text-sm font-medium">Firebase API Key</label><input type="password" id="firebase-api-key" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div></div><div class="flex justify-end mt-8"><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save and Connect</button></div></form></div></div>
+    <div id="error-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4 text-red-500">Connection Failed</h2><p id="error-message" class="text-gray-300 mb-6">Please check your API key and try again.</p><div class="flex justify-center mt-8"><button id="close-error-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">OK</button></div></div></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, writeBatch, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State & Constants ---
-        const APP_VERSION = "1.38";
-        const firebaseConfig = {
-          apiKey: "AIzaSyBrYRupvSHuIOWMQObQN_-UawbzCb4HfMQ",
-          authDomain: "bills-fa2ff.firebaseapp.com",
-          projectId: "bills-fa2ff",
-          storageBucket: "bills-fa2ff.appspot.com",
-          messagingSenderId: "755394451867",
-          appId: "1:755394451867:web:fd9553426e87542207a93e",
-          measurementId: "G-5RNYN6CFRJ"
-        };
+        const APP_VERSION = "1.39";
         let upcomingBills = [], paidBillsHistory = [], recurringBillTemplates = [], incomeHistory = [], savings = [], investments = [], debts = [], assets = [], checking = [];
         let sortState = { key: 'dueDate', direction: 'asc' };
         let activeScreen = 'dashboard-screen', calendarDate = new Date();
@@ -232,39 +228,23 @@
         const fullPaidHistoryTableBodyEl = document.getElementById('full-paid-history-table-body');
         const recurringBillsTableBodyEl = document.getElementById('recurring-bills-table-body');
         
-        const addBillModal = document.getElementById('add-bill-modal'), editBillModal = document.getElementById('edit-bill-modal'), helpModal = document.getElementById('help-modal'), addIncomeModal = document.getElementById('add-income-modal'), editIncomeModal = document.getElementById('edit-income-modal'), addAssetModal = document.getElementById('add-asset-modal'), editAssetModal = document.getElementById('edit-asset-modal'), addSavingsModal = document.getElementById('add-savings-modal'), editSavingsModal = document.getElementById('edit-savings-modal'), addInvestmentModal = document.getElementById('add-investment-modal'), editInvestmentModal = document.getElementById('edit-investment-modal'), addDebtModal = document.getElementById('add-debt-modal'), editDebtModal = document.getElementById('edit-debt-modal'), addCheckingModal = document.getElementById('add-checking-modal'), editCheckingModal = document.getElementById('edit-checking-modal'), importConfirmModal = document.getElementById('import-confirm-modal');
-        
+        const allModals = {};
+        document.querySelectorAll('.modal-base').forEach(modal => { allModals[modal.id] = modal });
+
         const addBillBtn = document.getElementById('add-bill-btn'), addIncomeBtn = document.getElementById('add-income-btn'), addAssetBtn = document.getElementById('add-asset-btn'), addSavingsBtn = document.getElementById('add-savings-btn'), addInvestmentBtn = document.getElementById('add-investment-btn'), addDebtBtn = document.getElementById('add-debt-btn'), addCheckingBtn = document.getElementById('add-checking-btn');
-        
         const closeHelpBtn = document.getElementById('close-help-btn'), helpBtn = document.getElementById('help-btn');
         const exportDataBtn = document.getElementById('export-data-btn'), importDataBtn = document.getElementById('import-data-btn'), importFileInput = document.getElementById('import-file-input');
         const cancelImportBtn = document.getElementById('cancel-import-btn'), confirmImportBtn = document.getElementById('confirm-import-btn');
+        const apiKeyForm = document.getElementById('api-key-form'), firebaseApiKeyInput = document.getElementById('firebase-api-key');
+        const closeErrorBtn = document.getElementById('close-error-btn');
 
         const addBillForm = document.getElementById('add-bill-form'), editBillForm = document.getElementById('edit-bill-form'), addIncomeForm = document.getElementById('add-income-form'), editIncomeForm = document.getElementById('edit-income-form'), addAssetForm = document.getElementById('add-asset-form'), editAssetForm = document.getElementById('edit-asset-form'), addSavingsForm = document.getElementById('add-savings-form'), editSavingsForm = document.getElementById('edit-savings-form'), addInvestmentForm = document.getElementById('add-investment-form'), editInvestmentForm = document.getElementById('edit-investment-form'), addDebtForm = document.getElementById('add-debt-form'), editDebtForm = document.getElementById('edit-debt-form'), addCheckingForm = document.getElementById('add-checking-form'), editCheckingForm = document.getElementById('edit-checking-form');
         
         const screens = {
-            'dashboard-screen': document.getElementById('dashboard-screen'),
-            'paid-bills-screen': document.getElementById('paid-bills-screen'),
-            'calendar-screen': document.getElementById('calendar-screen'),
-            'recurring-bills-screen': document.getElementById('recurring-bills-screen'),
-            'income-screen': document.getElementById('income-screen'),
-            'assets-screen': document.getElementById('assets-screen'),
-            'savings-screen': document.getElementById('savings-screen'),
-            'investments-screen': document.getElementById('investments-screen'),
-            'debts-screen': document.getElementById('debts-screen'),
-            'checking-screen': document.getElementById('checking-screen'),
+            'dashboard-screen': document.getElementById('dashboard-screen'), 'paid-bills-screen': document.getElementById('paid-bills-screen'), 'calendar-screen': document.getElementById('calendar-screen'), 'recurring-bills-screen': document.getElementById('recurring-bills-screen'), 'income-screen': document.getElementById('income-screen'), 'assets-screen': document.getElementById('assets-screen'), 'savings-screen': document.getElementById('savings-screen'), 'investments-screen': document.getElementById('investments-screen'), 'debts-screen': document.getElementById('debts-screen'), 'checking-screen': document.getElementById('checking-screen'),
         };
         const navLinks = {
-            'dashboard': document.getElementById('nav-dashboard'),
-            'income': document.getElementById('nav-income'),
-            'assets': document.getElementById('nav-assets'),
-            'savings': document.getElementById('nav-savings'),
-            'investments': document.getElementById('nav-investments'),
-            'debts': document.getElementById('nav-debts'),
-            'paid-bills': document.getElementById('nav-paid-bills'),
-            'recurring-bills': document.getElementById('nav-recurring-bills'),
-            'calendar': document.getElementById('nav-calendar'),
-            'checking': document.getElementById('nav-checking'),
+            'dashboard': document.getElementById('nav-dashboard'), 'income': document.getElementById('nav-income'), 'assets': document.getElementById('nav-assets'), 'savings': document.getElementById('nav-savings'), 'investments': document.getElementById('nav-investments'), 'debts': document.getElementById('nav-debts'), 'paid-bills': document.getElementById('nav-paid-bills'), 'recurring-bills': document.getElementById('nav-recurring-bills'), 'calendar': document.getElementById('nav-calendar'), 'checking': document.getElementById('nav-checking'),
         };
         const calendarGrid = document.getElementById('calendar-grid'), calendarMonthYear = document.getElementById('calendar-month-year');
         const prevMonthBtn = document.getElementById('prev-month-btn'), nextMonthBtn = document.getElementById('next-month-btn');
@@ -319,6 +299,7 @@
         function updateSortIcons() { document.querySelectorAll('.sortable-header').forEach(h=>{ const k=h.dataset.sort,i=h.querySelector('.sort-icon'); if(k===sortState.key){h.classList.add('active');i.className=`fas fa-sort-${sortState.direction==='asc'?'up':'down'} sort-icon`;}else{h.classList.remove('active');i.className='fas fa-sort sort-icon';}}); }
         
         function renderDashboard() { 
+            if (!db) return; // Don't render if firebase not ready
             sortBills(); 
             billsTableBody.innerHTML=''; 
             upcomingBills.forEach(b=>billsTableBody.appendChild(createBillRow(b))); 
@@ -417,68 +398,59 @@
             } 
             try { await batch.commit(); } catch(err) { console.error("Error paying bill:", err); }
         }
-        async function handleAddBill(e) { e.preventDefault(); const f=new FormData(addBillForm); const isRec=f.get('billRecurring')==='on'; const amount=parseFloat(f.get('billAmount')); const name=f.get('billName'); const dueDate=f.get('billDueDate'); try{if(isRec){const tData={name,amount}; const tRef=await addDoc(recurringTemplatesRef,tData); const bData={name,amount,dueDate,recurringTemplateId:tRef.id}; await addDoc(upcomingBillsRef,bData);}else{const bData={name,amount,dueDate}; await addDoc(upcomingBillsRef,bData);} addBillForm.reset();closeModal(addBillModal);}catch(err){console.error("Error adding bill:",err);}}
-        async function handleAddIncome(e) { e.preventDefault(); const f = new FormData(addIncomeForm); const iData = { name: f.get('incomeName'), date: f.get('incomeDate'), amount: parseFloat(f.get('incomeAmount'))}; try { await addDoc(incomeRef, iData); addIncomeForm.reset(); closeModal(addIncomeModal); } catch (err) { console.error("Error adding income:", err); } }
-        async function handleAddAsset(e) { e.preventDefault(); const f = new FormData(addAssetForm); const aData = { description: f.get('assetDescription'), amount: parseFloat(f.get('assetAmount'))}; try { await addDoc(assetsRef, aData); addAssetForm.reset(); closeModal(addAssetModal); } catch (err) { console.error("Error adding asset:", err); } }
-        async function handleAddSavings(e) { e.preventDefault(); const f = new FormData(addSavingsForm); const sData = { name: f.get('savingsName'), amount: parseFloat(f.get('savingsAmount'))}; try { await addDoc(savingsRef, sData); addSavingsForm.reset(); closeModal(addSavingsModal); } catch (err) { console.error("Error adding savings:", err); } }
-        async function handleAddInvestment(e) { e.preventDefault(); const f = new FormData(addInvestmentForm); const iData = { description: f.get('investmentDescription'), amount: parseFloat(f.get('investmentAmount'))}; try { await addDoc(investmentsRef, iData); addInvestmentForm.reset(); closeModal(addInvestmentModal); } catch (err) { console.error("Error adding investment:", err); } }
-        async function handleAddDebt(e) { e.preventDefault(); const f = new FormData(addDebtForm); const dData = { description: f.get('debtDescription'), amount: parseFloat(f.get('debtAmount'))}; try { await addDoc(debtsRef, dData); addDebtForm.reset(); closeModal(addDebtModal); } catch (err) { console.error("Error adding debt:", err); } }
-        async function handleAddChecking(e) { e.preventDefault(); const f = new FormData(addCheckingForm); const cData = { name: f.get('checkingName'), amount: parseFloat(f.get('checkingAmount'))}; try { await addDoc(checkingRef, cData); addCheckingForm.reset(); closeModal(addCheckingModal); } catch (err) { console.error("Error adding checking entry:", err); } }
+        async function handleAddBill(e) { e.preventDefault(); const f=new FormData(addBillForm); const isRec=f.get('billRecurring')==='on'; const amount=parseFloat(f.get('billAmount')); const name=f.get('billName'); const dueDate=f.get('billDueDate'); try{if(isRec){const tData={name,amount}; const tRef=await addDoc(recurringTemplatesRef,tData); const bData={name,amount,dueDate,recurringTemplateId:tRef.id}; await addDoc(upcomingBillsRef,bData);}else{const bData={name,amount,dueDate}; await addDoc(upcomingBillsRef,bData);} addBillForm.reset();closeModal('add-bill-modal');}catch(err){console.error("Error adding bill:",err);}}
+        async function handleAddIncome(e) { e.preventDefault(); const f = new FormData(addIncomeForm); const iData = { name: f.get('incomeName'), date: f.get('incomeDate'), amount: parseFloat(f.get('incomeAmount'))}; try { await addDoc(incomeRef, iData); addIncomeForm.reset(); closeModal('add-income-modal'); } catch (err) { console.error("Error adding income:", err); } }
+        async function handleAddAsset(e) { e.preventDefault(); const f = new FormData(addAssetForm); const aData = { description: f.get('assetDescription'), amount: parseFloat(f.get('assetAmount'))}; try { await addDoc(assetsRef, aData); addAssetForm.reset(); closeModal('add-asset-modal'); } catch (err) { console.error("Error adding asset:", err); } }
+        async function handleAddSavings(e) { e.preventDefault(); const f = new FormData(addSavingsForm); const sData = { name: f.get('savingsName'), amount: parseFloat(f.get('savingsAmount'))}; try { await addDoc(savingsRef, sData); addSavingsForm.reset(); closeModal('add-savings-modal'); } catch (err) { console.error("Error adding savings:", err); } }
+        async function handleAddInvestment(e) { e.preventDefault(); const f = new FormData(addInvestmentForm); const iData = { description: f.get('investmentDescription'), amount: parseFloat(f.get('investmentAmount'))}; try { await addDoc(investmentsRef, iData); addInvestmentForm.reset(); closeModal('add-investment-modal'); } catch (err) { console.error("Error adding investment:", err); } }
+        async function handleAddDebt(e) { e.preventDefault(); const f = new FormData(addDebtForm); const dData = { description: f.get('debtDescription'), amount: parseFloat(f.get('debtAmount'))}; try { await addDoc(debtsRef, dData); addDebtForm.reset(); closeModal('add-debt-modal'); } catch (err) { console.error("Error adding debt:", err); } }
+        async function handleAddChecking(e) { e.preventDefault(); const f = new FormData(addCheckingForm); const cData = { name: f.get('checkingName'), amount: parseFloat(f.get('checkingAmount'))}; try { await addDoc(checkingRef, cData); addCheckingForm.reset(); closeModal('add-checking-modal'); } catch (err) { console.error("Error adding checking entry:", err); } }
         
         async function handleDeleteTemplate(e){ const id=e.target.dataset.templateId; try{ await deleteDoc(doc(db, recurringTemplatesRef.path, id)); } catch(err){ console.error("Error deleting template:",err); } }
-        function handleEditTemplate(e){ const id=e.target.dataset.templateId; const t=recurringBillTemplates.find(tmp=>tmp.id===id); if(t){document.getElementById('edit-bill-id').value=t.id; document.getElementById('edit-bill-name').value=t.name; document.getElementById('edit-bill-amount').value=t.amount;} openModal(editBillModal);}
-        async function handleUpdateBill(e){ e.preventDefault(); const id=document.getElementById('edit-bill-id').value; const data={name:document.getElementById('edit-bill-name').value,amount:parseFloat(document.getElementById('edit-bill-amount').value)}; try { await updateDoc(doc(db, recurringTemplatesRef.path, id), data); closeModal(editBillModal); } catch(err){console.error("Error updating template:",err);}}
+        function handleEditTemplate(e){ const id=e.target.dataset.templateId; const t=recurringBillTemplates.find(tmp=>tmp.id===id); if(t){document.getElementById('edit-bill-id').value=t.id; document.getElementById('edit-bill-name').value=t.name; document.getElementById('edit-bill-amount').value=t.amount;} openModal('edit-bill-modal');}
+        async function handleUpdateBill(e){ e.preventDefault(); const id=document.getElementById('edit-bill-id').value; const data={name:document.getElementById('edit-bill-name').value,amount:parseFloat(document.getElementById('edit-bill-amount').value)}; try { await updateDoc(doc(db, recurringTemplatesRef.path, id), data); closeModal('edit-bill-modal'); } catch(err){console.error("Error updating template:",err);}}
         
         async function handleDeleteIncome(e){ const id = e.target.dataset.incomeId; try { await deleteDoc(doc(db, incomeRef.path, id)); } catch(err) { console.error("Error deleting income:", err); } }
-        function handleEditIncome(e){ const id = e.target.dataset.incomeId; const i = incomeHistory.find(item => item.id === id); if(i){document.getElementById('edit-income-id').value = i.id; document.getElementById('edit-income-name').value = i.name; document.getElementById('edit-income-date').value = i.date; document.getElementById('edit-income-amount').value = i.amount;} openModal(editIncomeModal); }
-        async function handleUpdateIncome(e){ e.preventDefault(); const id = document.getElementById('edit-income-id').value; const data = { name: document.getElementById('edit-income-name').value, date: document.getElementById('edit-income-date').value, amount: parseFloat(document.getElementById('edit-income-amount').value) }; try { await updateDoc(doc(db, incomeRef.path, id), data); closeModal(editIncomeModal); } catch(err) { console.error("Error updating income:", err); } }
+        function handleEditIncome(e){ const id = e.target.dataset.incomeId; const i = incomeHistory.find(item => item.id === id); if(i){document.getElementById('edit-income-id').value = i.id; document.getElementById('edit-income-name').value = i.name; document.getElementById('edit-income-date').value = i.date; document.getElementById('edit-income-amount').value = i.amount;} openModal('edit-income-modal'); }
+        async function handleUpdateIncome(e){ e.preventDefault(); const id = document.getElementById('edit-income-id').value; const data = { name: document.getElementById('edit-income-name').value, date: document.getElementById('edit-income-date').value, amount: parseFloat(document.getElementById('edit-income-amount').value) }; try { await updateDoc(doc(db, incomeRef.path, id), data); closeModal('edit-income-modal'); } catch(err) { console.error("Error updating income:", err); } }
 
-        async function handleEditAsset(e){ const id = e.target.dataset.assetId; const a = assets.find(item => item.id === id); if(a) { document.getElementById('edit-asset-id').value = a.id; document.getElementById('edit-asset-description').value = a.description; document.getElementById('edit-asset-amount').value = a.amount; } openModal(editAssetModal); }
-        async function handleUpdateAsset(e){ e.preventDefault(); const id = document.getElementById('edit-asset-id').value; const data = { description: document.getElementById('edit-asset-description').value, amount: parseFloat(document.getElementById('edit-asset-amount').value) }; try { await updateDoc(doc(db, assetsRef.path, id), data); closeModal(editAssetModal); } catch(err) { console.error("Error updating asset:", err); } }
+        async function handleEditAsset(e){ const id = e.target.dataset.assetId; const a = assets.find(item => item.id === id); if(a) { document.getElementById('edit-asset-id').value = a.id; document.getElementById('edit-asset-description').value = a.description; document.getElementById('edit-asset-amount').value = a.amount; } openModal('edit-asset-modal'); }
+        async function handleUpdateAsset(e){ e.preventDefault(); const id = document.getElementById('edit-asset-id').value; const data = { description: document.getElementById('edit-asset-description').value, amount: parseFloat(document.getElementById('edit-asset-amount').value) }; try { await updateDoc(doc(db, assetsRef.path, id), data); closeModal('edit-asset-modal'); } catch(err) { console.error("Error updating asset:", err); } }
         async function handleDeleteAsset(e){ const id = e.target.dataset.assetId; try { await deleteDoc(doc(db, assetsRef.path, id)); } catch(err) { console.error("Error deleting asset:", err); } }
 
         async function handleDeleteSavings(e){ const id=e.target.dataset.savingsId; try { await deleteDoc(doc(db, savingsRef.path, id)); } catch(err) { console.error("Error deleting savings:",err); } }
-        function handleEditSavings(e){ const id=e.target.dataset.savingsId; const s=savings.find(item=>item.id===id); if(s){document.getElementById('edit-savings-id').value=s.id; document.getElementById('edit-savings-name').value=s.name; document.getElementById('edit-savings-amount').value=s.amount;} openModal(editSavingsModal);}
-        async function handleUpdateSavings(e){ e.preventDefault(); const id=document.getElementById('edit-savings-id').value; const data={name:document.getElementById('edit-savings-name').value,amount:parseFloat(document.getElementById('edit-savings-amount').value)}; try { await updateDoc(doc(db, savingsRef.path, id), data); closeModal(editSavingsModal); } catch(err) { console.error("Error updating savings:",err); } }
+        function handleEditSavings(e){ const id=e.target.dataset.savingsId; const s=savings.find(item=>item.id===id); if(s){document.getElementById('edit-savings-id').value=s.id; document.getElementById('edit-savings-name').value=s.name; document.getElementById('edit-savings-amount').value=s.amount;} openModal('edit-savings-modal');}
+        async function handleUpdateSavings(e){ e.preventDefault(); const id=document.getElementById('edit-savings-id').value; const data={name:document.getElementById('edit-savings-name').value,amount:parseFloat(document.getElementById('edit-savings-amount').value)}; try { await updateDoc(doc(db, savingsRef.path, id), data); closeModal('edit-savings-modal'); } catch(err) { console.error("Error updating savings:",err); } }
         
         async function handleDeleteInvestment(e){ const id=e.target.dataset.investmentId; try { await deleteDoc(doc(db, investmentsRef.path, id)); } catch(err) { console.error("Error deleting investment:",err); } }
-        function handleEditInvestment(e){ const id=e.target.dataset.investmentId; const i=investments.find(item=>item.id===id); if(i){document.getElementById('edit-investment-id').value=i.id; document.getElementById('edit-investment-description').value=i.description; document.getElementById('edit-investment-amount').value=i.amount;} openModal(editInvestmentModal);}
-        async function handleUpdateInvestment(e){ e.preventDefault(); const id=document.getElementById('edit-investment-id').value; const data={description:document.getElementById('edit-investment-description').value,amount:parseFloat(document.getElementById('edit-investment-amount').value)}; try { await updateDoc(doc(db, investmentsRef.path, id), data); closeModal(editInvestmentModal); } catch(err) { console.error("Error updating investment:",err); } }
+        function handleEditInvestment(e){ const id=e.target.dataset.investmentId; const i=investments.find(item=>item.id===id); if(i){document.getElementById('edit-investment-id').value=i.id; document.getElementById('edit-investment-description').value=i.description; document.getElementById('edit-investment-amount').value=i.amount;} openModal('edit-investment-modal');}
+        async function handleUpdateInvestment(e){ e.preventDefault(); const id=document.getElementById('edit-investment-id').value; const data={description:document.getElementById('edit-investment-description').value,amount:parseFloat(document.getElementById('edit-investment-amount').value)}; try { await updateDoc(doc(db, investmentsRef.path, id), data); closeModal('edit-investment-modal'); } catch(err) { console.error("Error updating investment:",err); } }
 
         async function handleDeleteDebt(e){ const id=e.target.dataset.debtId; try { await deleteDoc(doc(db, debtsRef.path, id)); } catch(err) { console.error("Error deleting debt:",err); } }
-        function handleEditDebt(e){ const id=e.target.dataset.debtId; const d=debts.find(item=>item.id===id); if(d){document.getElementById('edit-debt-id').value=d.id; document.getElementById('edit-debt-description').value=d.description; document.getElementById('edit-debt-amount').value=d.amount;} openModal(editDebtModal);}
-        async function handleUpdateDebt(e){ e.preventDefault(); const id=document.getElementById('edit-debt-id').value; const data={description:document.getElementById('edit-debt-description').value,amount:parseFloat(document.getElementById('edit-debt-amount').value)}; try { await updateDoc(doc(db, debtsRef.path, id), data); closeModal(editDebtModal); } catch(err) { console.error("Error updating debt:",err); } }
+        function handleEditDebt(e){ const id=e.target.dataset.debtId; const d=debts.find(item=>item.id===id); if(d){document.getElementById('edit-debt-id').value=d.id; document.getElementById('edit-debt-description').value=d.description; document.getElementById('edit-debt-amount').value=d.amount;} openModal('edit-debt-modal');}
+        async function handleUpdateDebt(e){ e.preventDefault(); const id=document.getElementById('edit-debt-id').value; const data={description:document.getElementById('edit-debt-description').value,amount:parseFloat(document.getElementById('edit-debt-amount').value)}; try { await updateDoc(doc(db, debtsRef.path, id), data); closeModal('edit-debt-modal'); } catch(err) { console.error("Error updating debt:",err); } }
         
         async function handleDeleteChecking(e){ const id = e.target.dataset.checkingId; try { await deleteDoc(doc(db, checkingRef.path, id)); } catch(err) { console.error("Error deleting checking entry:", err); } }
-        function handleEditChecking(e){ const id=e.target.dataset.checkingId; const c=checking.find(item=>item.id===id); if(c){document.getElementById('edit-checking-id').value=c.id; document.getElementById('edit-checking-name').value=c.name; document.getElementById('edit-checking-amount').value=c.amount;} openModal(editCheckingModal); }
-        async function handleUpdateChecking(e){ e.preventDefault(); const id=document.getElementById('edit-checking-id').value; const data={name:document.getElementById('edit-checking-name').value,amount:parseFloat(document.getElementById('edit-checking-amount').value)}; try { await updateDoc(doc(db, checkingRef.path, id), data); closeModal(editCheckingModal); } catch(err) { console.error("Error updating checking entry:", err); } }
+        function handleEditChecking(e){ const id=e.target.dataset.checkingId; const c=checking.find(item=>item.id===id); if(c){document.getElementById('edit-checking-id').value=c.id; document.getElementById('edit-checking-name').value=c.name; document.getElementById('edit-checking-amount').value=c.amount;} openModal('edit-checking-modal'); }
+        async function handleUpdateChecking(e){ e.preventDefault(); const id=document.getElementById('edit-checking-id').value; const data={name:document.getElementById('edit-checking-name').value,amount:parseFloat(document.getElementById('edit-checking-amount').value)}; try { await updateDoc(doc(db, checkingRef.path, id), data); closeModal('edit-checking-modal'); } catch(err) { console.error("Error updating checking entry:", err); } }
 
         // --- Modals & Event Listeners ---
-        function openModal(modal) { modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'),10);}
-        function closeModal(modal) { modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'),300);}
+        function openModal(modalId) { const modal = allModals[modalId]; modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'),10);}
+        function closeModal(modalId) { const modal = allModals[modalId]; modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'),300);}
         function handleSort(e) { const k=e.currentTarget.dataset.sort; if(sortState.key===k)sortState.direction=sortState.direction==='asc'?'desc':'asc';else{sortState.key=k;sortState.direction='asc';} renderDashboard();}
         
         // --- Import / Export ---
         function handleExportData() {
+            if(!auth || !auth.currentUser) {
+                openModal('error-modal');
+                document.getElementById('error-message').textContent = 'Please connect to the database before exporting data.';
+                return;
+            }
             const dataToExport = {
-                recurringBillTemplates: recurringBillTemplates.map(t => ({...t})), // create copies
-                upcomingBills: upcomingBills.map(b => ({...b})),
-                paidBillsHistory: paidBillsHistory.map(p => ({...p})),
-                incomeHistory: incomeHistory.map(i => ({...i})),
-                assets: assets.map(a => ({...a})),
-                savings: savings.map(s => ({...s})),
-                investments: investments.map(i => ({...i})),
-                debts: debts.map(d => ({...d})),
-                checking: checking.map(c => ({...c})),
+                recurringBillTemplates: recurringBillTemplates.map(t => ({...t})),
+                upcomingBills: upcomingBills.map(b => ({...b})), paidBillsHistory: paidBillsHistory.map(p => ({...p})), incomeHistory: incomeHistory.map(i => ({...i})), assets: assets.map(a => ({...a})), savings: savings.map(s => ({...s})), investments: investments.map(i => ({...i})), debts: debts.map(d => ({...d})), checking: checking.map(c => ({...c})),
             };
-
-            // Remove firestore IDs from non-template data
-            Object.keys(dataToExport).forEach(key => {
-                if (key !== 'recurringBillTemplates') {
-                    dataToExport[key].forEach(item => delete item.id);
-                }
-            });
-
+            Object.keys(dataToExport).forEach(key => { if (key !== 'recurringBillTemplates') { dataToExport[key].forEach(item => delete item.id); } });
             const dataStr = JSON.stringify(dataToExport, null, 2);
             const dataBlob = new Blob([dataStr], {type: "application/json"});
             const url = URL.createObjectURL(dataBlob);
@@ -495,34 +467,27 @@
             const file = e.target.files[0];
             if (file && file.type === "application/json") {
                 fileToImport = file;
-                openModal(importConfirmModal);
+                openModal('import-confirm-modal');
             } else {
                 fileToImport = null;
-                alert("Please select a valid .json backup file.");
+                document.getElementById('error-message').textContent = 'Please select a valid .json backup file.';
+                openModal('error-modal');
             }
-            importFileInput.value = ''; // Reset file input
+            importFileInput.value = '';
         }
 
         async function processImport() {
             if (!fileToImport) return;
-
             const reader = new FileReader();
             reader.onload = async (e) => {
                 let data;
-                try {
-                    data = JSON.parse(e.target.result);
-                } catch(err) {
-                    document.getElementById('import-status').textContent = "Error: Invalid JSON file.";
-                    console.error("Import error:", err);
-                    return;
-                }
+                try { data = JSON.parse(e.target.result); } catch(err) { document.getElementById('import-status').textContent = "Error: Invalid JSON file."; console.error("Import error:", err); return; }
                 
-                closeModal(importConfirmModal);
+                closeModal('import-confirm-modal');
                 loadingOverlay.classList.remove('hidden');
-                document.querySelector('#loading-overlay p').textContent = "Importing data...";
+                loadingOverlay.querySelector('p').textContent = "Importing data...";
 
                 try {
-                    // 1. Delete all existing data
                     const collections = [upcomingBillsRef, paidBillsHistoryRef, recurringTemplatesRef, incomeRef, assetsRef, savingsRef, investmentsRef, debtsRef, checkingRef];
                     for (const ref of collections) {
                         const snapshot = await getDocs(ref);
@@ -531,65 +496,114 @@
                         await deleteBatch.commit();
                     }
 
-                    // 2. Import new data
                     const importBatch = writeBatch(db);
                     const templateIdMap = {};
-
-                    // Import recurring templates first to get new IDs
                     if(data.recurringBillTemplates) {
                         for (const template of data.recurringBillTemplates) {
                             const oldId = template.id;
-                            delete template.id; // remove old id
-                            const newDocRef = doc(recurringTemplatesRef); // create ref with new auto-gen id
+                            delete template.id;
+                            const newDocRef = doc(recurringTemplatesRef);
                             importBatch.set(newDocRef, template);
-                            templateIdMap[oldId] = newDocRef.id; // map old to new
+                            templateIdMap[oldId] = newDocRef.id;
                         }
                     }
-                    await importBatch.commit(); // Commit templates to get them in the DB
+                    await importBatch.commit();
 
-                    // Import remaining data, updating recurringTemplateId if necessary
                     const finalBatch = writeBatch(db);
                     const dataEntries = [
-                        {ref: upcomingBillsRef, items: data.upcomingBills},
-                        {ref: paidBillsHistoryRef, items: data.paidBillsHistory},
-                        {ref: incomeRef, items: data.incomeHistory},
-                        {ref: assetsRef, items: data.assets},
-                        {ref: savingsRef, items: data.savings},
-                        {ref: investmentsRef, items: data.investments},
-                        {ref: debtsRef, items: data.debts},
-                        {ref: checkingRef, items: data.checking}
+                        {ref: upcomingBillsRef, items: data.upcomingBills}, {ref: paidBillsHistoryRef, items: data.paidBillsHistory}, {ref: incomeRef, items: data.incomeHistory}, {ref: assetsRef, items: data.assets}, {ref: savingsRef, items: data.savings}, {ref: investmentsRef, items: data.investments}, {ref: debtsRef, items: data.debts}, {ref: checkingRef, items: data.checking}
                     ];
-
                     for (const entry of dataEntries) {
-                        if(entry.items) {
-                            entry.items.forEach(item => {
-                                if(item.recurringTemplateId && templateIdMap[item.recurringTemplateId]) {
-                                    item.recurringTemplateId = templateIdMap[item.recurringTemplateId];
-                                }
-                                finalBatch.set(doc(entry.ref), item);
-                            });
-                        }
+                        if(entry.items) { entry.items.forEach(item => { if(item.recurringTemplateId && templateIdMap[item.recurringTemplateId]) { item.recurringTemplateId = templateIdMap[item.recurringTemplateId]; } finalBatch.set(doc(entry.ref), item); }); }
                     }
-
                     await finalBatch.commit();
                     document.getElementById('import-status').textContent = "Import successful!";
-
                 } catch (err) {
                     document.getElementById('import-status').textContent = "An error occurred during import.";
                     console.error("Import process failed:", err);
                 } finally {
                      loadingOverlay.classList.add('hidden');
-                     document.querySelector('#loading-overlay p').textContent = "Connecting to Database...";
+                     loadingOverlay.querySelector('p').textContent = "Connecting to Database...";
                      fileToImport = null;
                 }
             };
             reader.readAsText(fileToImport);
         }
+        
+        function setupEventListeners() {
+             document.body.addEventListener('click', e => {
+                if(e.target.matches('.pay-button')) handlePayBill(e);
+                if(e.target.matches('.edit-recurring-btn')) handleEditTemplate(e);
+                if(e.target.matches('.delete-recurring-btn')) handleDeleteTemplate(e);
+                if(e.target.matches('.edit-income-btn')) handleEditIncome(e);
+                if(e.target.matches('.delete-income-btn')) handleDeleteIncome(e);
+                if(e.target.matches('.edit-asset-btn')) handleEditAsset(e);
+                if(e.target.matches('.delete-asset-btn')) handleDeleteAsset(e);
+                if(e.target.matches('.edit-savings-btn')) handleEditSavings(e);
+                if(e.target.matches('.delete-savings-btn')) handleDeleteSavings(e);
+                if(e.target.matches('.edit-investment-btn')) handleEditInvestment(e);
+                if(e.target.matches('.delete-investment-btn')) handleDeleteInvestment(e);
+                if(e.target.matches('.edit-debt-btn')) handleEditDebt(e);
+                if(e.target.matches('.delete-debt-btn')) handleDeleteDebt(e);
+                if(e.target.matches('.edit-checking-btn')) handleEditChecking(e);
+                if(e.target.matches('.delete-checking-btn')) handleDeleteChecking(e);
+                if(e.target.matches('.cancel-modal-btn')) closeModal(e.target.closest('.modal-base').id);
+            });
 
+            document.querySelectorAll('.sortable-header').forEach(h=>h.addEventListener('click',handleSort));
+            
+            addBillBtn.addEventListener('click',()=>openModal('add-bill-modal'));
+            addIncomeBtn.addEventListener('click', ()=>openModal('add-income-modal'));
+            addAssetBtn.addEventListener('click', () => openModal('add-asset-modal'));
+            addSavingsBtn.addEventListener('click', ()=>openModal('add-savings-modal'));
+            addInvestmentBtn.addEventListener('click', () => openModal('add-investment-modal'));
+            addDebtBtn.addEventListener('click', () => openModal('add-debt-modal'));
+            addCheckingBtn.addEventListener('click', () => openModal('add-checking-modal'));
+            helpBtn.addEventListener('click', ()=>openModal('help-modal'));
+            closeHelpBtn.addEventListener('click', () => closeModal('help-modal'));
+            closeErrorBtn.addEventListener('click', () => closeModal('error-modal'));
 
+            exportDataBtn.addEventListener('click', handleExportData);
+            importDataBtn.addEventListener('click', () => importFileInput.click());
+            importFileInput.addEventListener('change', handleSelectImportFile);
+            cancelImportBtn.addEventListener('click', () => closeModal('import-confirm-modal'));
+            confirmImportBtn.addEventListener('click', processImport);
+            
+            Object.values(allModals).forEach(modal => modal.addEventListener('click', e => { if(e.target === modal) closeModal(modal.id);}));
+
+            addBillForm.addEventListener('submit',handleAddBill);
+            editBillForm.addEventListener('submit',handleUpdateBill);
+            addIncomeForm.addEventListener('submit', handleAddIncome);
+            editIncomeForm.addEventListener('submit', handleUpdateIncome);
+            addAssetForm.addEventListener('submit', handleAddAsset);
+            editAssetForm.addEventListener('submit', handleUpdateAsset);
+            addSavingsForm.addEventListener('submit', handleAddSavings);
+            editSavingsForm.addEventListener('submit', handleUpdateSavings);
+            addInvestmentForm.addEventListener('submit', handleAddInvestment);
+            editInvestmentForm.addEventListener('submit', handleUpdateInvestment);
+            addDebtForm.addEventListener('submit', handleAddDebt);
+            editDebtForm.addEventListener('submit', handleUpdateDebt);
+            addCheckingForm.addEventListener('submit', handleAddChecking);
+            editCheckingForm.addEventListener('submit', handleUpdateChecking);
+
+            Object.entries(navLinks).forEach(([key, link]) => { link.addEventListener('click', e => { e.preventDefault(); showScreen(`${key}-screen`); }); });
+            
+            prevMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar();});
+            nextMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar();});
+        }
+        
         // --- App Initialization ---
-        async function main() {
-            appVersionEl.textContent = "v" + APP_VERSION;
+        async function initializeFirebase(apiKey) {
+            const firebaseConfig = {
+              apiKey: apiKey,
+              authDomain: "bills-fa2ff.firebaseapp.com",
+              projectId: "bills-fa2ff",
+              storageBucket: "bills-fa2ff.appspot.com",
+              messagingSenderId: "755394451867",
+              appId: "1:755394451867:web:fd9553426e87542207a93e",
+              measurementId: "G-5RNYN6CFRJ"
+            };
+            
             const app = initializeApp(firebaseConfig); 
             db = getFirestore(app); 
             auth = getAuth(app);
@@ -601,11 +615,7 @@
                     userIdDisplay.title=`User ID: ${userId}`;
                     
                     const collectionsPaths = {
-                        upcomingBillsRef: `users/${userId}/upcoming_bills`, paidBillsHistoryRef: `users/${userId}/paid_bills_history`,
-                        recurringTemplatesRef: `users/${userId}/recurring_templates`, incomeRef: `users/${userId}/income`,
-                        assetsRef: `users/${userId}/assets`, savingsRef: `users/${userId}/savings`,
-                        investmentsRef: `users/${userId}/investments`, debtsRef: `users/${userId}/debts`,
-                        checkingRef: `users/${userId}/checking`
+                        upcomingBillsRef: `users/${userId}/upcoming_bills`, paidBillsHistoryRef: `users/${userId}/paid_bills_history`, recurringTemplatesRef: `users/${userId}/recurring_templates`, incomeRef: `users/${userId}/income`, assetsRef: `users/${userId}/assets`, savingsRef: `users/${userId}/savings`, investmentsRef: `users/${userId}/investments`, debtsRef: `users/${userId}/debts`, checkingRef: `users/${userId}/checking`
                     };
 
                     upcomingBillsRef = collection(db, collectionsPaths.upcomingBillsRef);
@@ -634,77 +644,55 @@
                 } else {
                     signInAnonymously(auth).catch(error => {
                         console.error("Anonymous auth failed:", error);
-                        loadingOverlay.textContent='Authentication Failed.';
+                        loadingOverlay.classList.add('hidden');
+                        document.getElementById('error-message').textContent = 'Authentication Failed. Please check your network and API Key.';
+                        openModal('error-modal');
                     });
                 }
             });
+        }
 
-            document.body.addEventListener('click', e => {
-                if(e.target.matches('.pay-button')) handlePayBill(e);
-                if(e.target.matches('.edit-recurring-btn')) handleEditTemplate(e);
-                if(e.target.matches('.delete-recurring-btn')) handleDeleteTemplate(e);
-                if(e.target.matches('.edit-income-btn')) handleEditIncome(e);
-                if(e.target.matches('.delete-income-btn')) handleDeleteIncome(e);
-                if(e.target.matches('.edit-asset-btn')) handleEditAsset(e);
-                if(e.target.matches('.delete-asset-btn')) handleDeleteAsset(e);
-                if(e.target.matches('.edit-savings-btn')) handleEditSavings(e);
-                if(e.target.matches('.delete-savings-btn')) handleDeleteSavings(e);
-                if(e.target.matches('.edit-investment-btn')) handleEditInvestment(e);
-                if(e.target.matches('.delete-investment-btn')) handleDeleteInvestment(e);
-                if(e.target.matches('.edit-debt-btn')) handleEditDebt(e);
-                if(e.target.matches('.delete-debt-btn')) handleDeleteDebt(e);
-                if(e.target.matches('.edit-checking-btn')) handleEditChecking(e);
-                if(e.target.matches('.delete-checking-btn')) handleDeleteChecking(e);
-                if(e.target.matches('.cancel-modal-btn')) closeModal(e.target.closest('.fixed'));
-            });
+        function startApp() {
+            appVersionEl.textContent = "v" + APP_VERSION;
+            setupEventListeners();
+            const savedApiKey = localStorage.getItem('firebaseApiKey');
 
-            document.querySelectorAll('.sortable-header').forEach(h=>h.addEventListener('click',handleSort));
-            
-            addBillBtn.addEventListener('click',()=>openModal(addBillModal));
-            addIncomeBtn.addEventListener('click', ()=>openModal(addIncomeModal));
-            addAssetBtn.addEventListener('click', () => openModal(addAssetModal));
-            addSavingsBtn.addEventListener('click', ()=>openModal(addSavingsModal));
-            addInvestmentBtn.addEventListener('click', () => openModal(addInvestmentModal));
-            addDebtBtn.addEventListener('click', () => openModal(addDebtModal));
-            addCheckingBtn.addEventListener('click', () => openModal(addCheckingModal));
-            helpBtn.addEventListener('click', ()=>openModal(helpModal));
-            closeHelpBtn.addEventListener('click', () => closeModal(helpModal));
-            exportDataBtn.addEventListener('click', handleExportData);
-            importDataBtn.addEventListener('click', () => importFileInput.click());
-            importFileInput.addEventListener('change', handleSelectImportFile);
-            cancelImportBtn.addEventListener('click', () => closeModal(importConfirmModal));
-            confirmImportBtn.addEventListener('click', processImport);
-            
-            const allModals = [addBillModal, editBillModal, addIncomeModal, editIncomeModal, addAssetModal, editAssetModal, addSavingsModal, editSavingsModal, addInvestmentModal, editInvestmentModal, addDebtModal, editDebtModal, helpModal, importConfirmModal, addCheckingModal, editCheckingModal];
-            allModals.forEach(modal => modal.addEventListener('click', e => { if(e.target === modal) closeModal(modal);}));
-
-            addBillForm.addEventListener('submit',handleAddBill);
-            editBillForm.addEventListener('submit',handleUpdateBill);
-            addIncomeForm.addEventListener('submit', handleAddIncome);
-            editIncomeForm.addEventListener('submit', handleUpdateIncome);
-            addAssetForm.addEventListener('submit', handleAddAsset);
-            editAssetForm.addEventListener('submit', handleUpdateAsset);
-            addSavingsForm.addEventListener('submit', handleAddSavings);
-            editSavingsForm.addEventListener('submit', handleUpdateSavings);
-            addInvestmentForm.addEventListener('submit', handleAddInvestment);
-            editInvestmentForm.addEventListener('submit', handleUpdateInvestment);
-            addDebtForm.addEventListener('submit', handleAddDebt);
-            editDebtForm.addEventListener('submit', handleUpdateDebt);
-            addCheckingForm.addEventListener('submit', handleAddChecking);
-            editCheckingForm.addEventListener('submit', handleUpdateChecking);
-
-            Object.entries(navLinks).forEach(([key, link]) => {
-                link.addEventListener('click', e => {
-                    e.preventDefault();
-                    showScreen(`${key}-screen`);
+            if (savedApiKey) {
+                loadingOverlay.classList.remove('hidden');
+                initializeFirebase(savedApiKey).catch(err => {
+                    console.error("Firebase initialization failed with saved key:", err);
+                    localStorage.removeItem('firebaseApiKey');
+                    loadingOverlay.classList.add('hidden');
+                    document.getElementById('error-message').textContent = 'Connection failed with your saved API Key. Please enter it again.';
+                    openModal('error-modal');
+                    openModal('api-key-modal');
                 });
+            } else {
+                openModal('api-key-modal');
+            }
+
+            apiKeyForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const enteredKey = firebaseApiKeyInput.value.trim();
+                if (enteredKey) {
+                    closeModal('api-key-modal');
+                    loadingOverlay.classList.remove('hidden');
+                    initializeFirebase(enteredKey).then(() => {
+                        localStorage.setItem('firebaseApiKey', enteredKey);
+                    }).catch(err => {
+                        console.error("Firebase initialization failed with new key:", err);
+                        localStorage.removeItem('firebaseApiKey');
+                        loadingOverlay.classList.add('hidden');
+                        firebaseApiKeyInput.value = '';
+                        document.getElementById('error-message').textContent = 'Connection failed. Please double-check your API key.';
+                        openModal('error-modal');
+                        openModal('api-key-modal');
+                    });
+                }
             });
-            
-            prevMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar();});
-            nextMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar();});
         }
         
-        document.addEventListener('DOMContentLoaded', main);
+        document.addEventListener('DOMContentLoaded', startApp);
     </script>
 </body>
 </html>
