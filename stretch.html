@@ -107,14 +107,14 @@
                             <label for="muscle-select" class="block text-sm font-medium text-slate-700 mb-1">Choose a Muscle</label>
                             <select id="muscle-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Major Muscle --</option>
-                                <option>Biceps</option><option>Deltoids</option><option>Gastrocnemius</option><option>Hamstrings</option><option>Pectoralis Major</option><option>Quadriceps</option>
+                                <!-- Muscle options will be populated by script -->
                             </select>
                         </div>
                         <div>
                             <label for="ailment-select" class="block text-sm font-medium text-slate-700 mb-1">Choose an Ailment</label>
                             <select id="ailment-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Common Ailment --</option>
-                                <option>Carpal Tunnel Syndrome</option><option>Lower Back Pain</option><option>Plantar Fasciitis</option><option>Sciatica</option><option>Tennis Elbow</option>
+                                <!-- Ailment options will be populated by script -->
                             </select>
                         </div>
                         <div class="md:col-span-2 relative">
@@ -135,7 +135,7 @@
                             <div>
                                 <label for="modality-select" class="block text-sm font-medium text-slate-700 mb-1">Stretching Modality</label>
                                 <select id="modality-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>Any Modality</option><option>Static Stretching</option><option>Dynamic Stretching</option><option>Yoga Asanas</option><option>Chair Yoga</option>
+                                    <!-- Modality options will be populated by script -->
                                 </select>
                             </div>
                              <div>
@@ -203,7 +203,7 @@
                 </p>
                 <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
                 <p class="mt-4 text-xs text-slate-400">
-                    Version 1.3
+                    Version 1.8
                 </p>
             </div>
         </footer>
@@ -240,6 +240,19 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- Data ---
+        const muscleData = [
+            { name: "Masseter", location: "Side of the jaw", function: "Elevates the mandible (closes the jaw)" }, { name: "Temporalis", location: "Side of the head", function: "Elevates and retracts the mandible" }, { name: "Sternocleidomastoid", location: "Side of the neck", function: "Rotates head to opposite side, flexes neck" }, { name: "Scalenes", location: "Side of the neck", function: "Elevate ribs, flex and laterally flex neck" }, { name: "Splenius Capitis", location: "Back of the neck", function: "Extends and rotates head" }, { name: "Levator Scapulae", location: "Side of the neck to scapula", function: "Elevates the scapula" }, { name: "Trapezius", location: "Upper back and neck", function: "Elevates, depresses, and retracts scapula" }, { name: "Latissimus Dorsi", location: "Mid to lower back", function: "Extends, adducts, and medially rotates arm" }, { name: "Rhomboids", location: "Between the scapulae", function: "Retract and rotate the scapulae" }, { name: "Erector Spinae", location: "Group running along the spine", function: "Extends the vertebral column" }, { name: "Multifidus", location: "Deep spine muscles", function: "Stabilizes the vertebrae" }, { name: "Quadratus Lumborum", location: "Posterior abdominal wall", function: "Lateral flexion of vertebral column" }, { name: "Pectoralis Major", location: "Upper chest", function: "Adducts, flexes, and rotates arm" }, { name: "Pectoralis Minor", location: "Deep to pectoralis major", function: "Stabilizes and depresses scapula" }, { name: "Serratus Anterior", location: "Side of the ribs", function: "Protracts and rotates scapula" }, { name: "Rectus Abdominis", location: "Front of the abdomen", function: "Flexes vertebral column" }, { name: "External Obliques", location: "Side of the abdomen", function: "Rotates and flexes trunk" }, { name: "Internal Obliques", location: "Deep to external obliques", function: "Rotates and flexes trunk" }, { name: "Transversus Abdominis", location: "Deepest abdominal muscle", function: "Compresses abdomen, stabilizes back" }, { name: "Deltoid", location: "Shoulder cap", function: "Abducts, flexes, and extends arm" }, { name: "Rotator Cuff (Supraspinatus, Infraspinatus, Teres Minor, Subscapularis)", location: "Shoulder joint", function: "Stabilizes and rotates shoulder" }, { name: "Biceps Brachii", location: "Front of the upper arm", function: "Flexes elbow and supinates forearm" }, { name: "Brachialis", location: "Deep to the biceps", function: "Main flexor of the elbow" }, { name: "Triceps Brachii", location: "Back of the upper arm", function: "Extends the elbow" }, { name: "Brachioradialis", location: "Lateral forearm", function: "Flexes the elbow" }, { name: "Wrist Flexors", location: "Anterior forearm", function: "Flex the wrist and fingers" }, { name: "Wrist Extensors", location: "Posterior forearm", function: "Extend the wrist and fingers" }, { name: "Gluteus Maximus", location: "Buttocks", function: "Extension and lateral rotation of the hip" }, { name: "Gluteus Medius", location: "Side of the hip", function: "Abduction and medial rotation of the hip" }, { name: "Gluteus Minimus", location: "Deep to gluteus medius", function: "Abduction and medial rotation of the hip" }, { name: "Tensor Fasciae Latae (TFL)", location: "Anterolateral hip", function: "Flexes, abducts, and medially rotates hip" }, { name: "Iliopsoas", location: "Deep in the front of the hip", function: "Primary hip flexor" }, { name: "Quadriceps Femoris (Rectus Femoris, Vastus Lateralis, Medialis, Intermedius)", location: "Front of the thigh", function: "Extends the knee, flexes the hip" }, { name: "Hamstrings (Biceps Femoris, Semitendinosus, Semimembranosus)", location: "Back of the thigh", function: "Flexes the knee, extends the hip" }, { name: "Adductors (Longus, Brevis, Magnus)", location: "Inner thigh", function: "Adduct the hip" }, { name: "Sartorius", location: "Crosses the thigh", function: "Flexes and rotates the hip and knee" }, { name: "Gastrocnemius", location: "Superficial calf", function: "Plantar flexes foot, flexes knee" }, { name: "Soleus", location: "Deep to gastrocnemius", function: "Plantar flexes the foot" }, { name: "Tibialis Anterior", location: "Front of the shin", function: "Dorsiflexes and inverts the foot" }, { name: "Fibularis (Peroneus) Longus & Brevis", location: "Side of the lower leg", function: "Evert the foot" }
+        ];
+        
+        const ailmentData = [
+            { name: "Ankle Sprain", description: "Stretching or tearing of ligaments surrounding the ankle, often from a twist or roll.", role: "PT helps manage swelling, restore range of motion, improve strength, and retrain balance (proprioception) to prevent future sprains." }, { name: "Achilles Tendonitis", description: "Inflammation or degeneration of the Achilles tendon, the large tendon connecting the calf muscles to the heel bone.", role: "Therapy focuses on managing load, specific exercises (especially eccentric) to heal the tendon, and stretching the calf muscles." }, { name: "Shin Splints", description: "Pain along the shin bone (tibia), common in runners, caused by overuse and inflammation of the muscles, tendons, and bone tissue.", role: "PT addresses the underlying cause, which may include stretching tight calf muscles, strengthening weaker leg muscles, and analyzing gait." }, { name: "Bursitis (Hip, Knee, Shoulder)", description: "Inflammation of a bursa, a small fluid-filled sac that acts as a cushion between bones, tendons, and muscles.", role: "Focuses on reducing inflammation, stretching surrounding tight muscles, and strengthening to correct any biomechanical issues causing the irritation." }, { name: "Carpal Tunnel Syndrome", description: "A condition caused by pressure on the median nerve as it passes through the carpal tunnel in the wrist, leading to numbness, tingling, and weakness.", role: "PT uses nerve gliding exercises, wrist splinting, and ergonomic advice to reduce pressure on the nerve." }, { name: "De Quervain's Tenosynovitis", description: "Painful inflammation of tendons on the thumb side of the wrist.", role: "Therapy involves activity modification, splinting, and gentle stretching and strengthening to reduce strain on the affected tendons." }, { name: "Golfer's Elbow (Medial Epicondylitis)", description: "Pain and inflammation on the inner side of the elbow, affecting the wrist flexor tendons.", role: "Treatment includes stretching the wrist flexors, strengthening exercises, and technique modification for aggravating activities." }, { name: "IT Band Syndrome", description: "Pain on the outside of the knee caused by irritation of the iliotibial (IT) band, a thick band of tissue running from the hip to the knee.", role: "Focuses on releasing tension in the IT band and TFL muscle, and strengthening hip abductor muscles to improve leg mechanics." }, { name: "Piriformis Syndrome", description: "A condition where the piriformis muscle in the buttock spasms and causes pain, sometimes irritating the nearby sciatic nerve.", role: "PT involves stretching the piriformis and surrounding hip rotator muscles, and strengthening the gluteal muscles." }, { name: "Sciatica", description: "Pain that radiates along the path of the sciatic nerve, branching from the lower back through the hips and buttocks and down each leg.", role: "Therapy aims to relieve pressure on the sciatic nerve through specific exercises (like nerve glides), core strengthening, and manual therapy." }, { name: "Whiplash", description: "A neck injury due to forceful, rapid back-and-forth movement of the neck, like the cracking of a whip.", role: "Gentle range-of-motion exercises, pain management, and strengthening of the deep neck flexors and upper back muscles are key." }
+        ];
+
+        const modalityData = [
+            { name: "Static Stretching", description: "Involves holding a stretch in a challenging but comfortable position for a period of time, typically between 15 and 60 seconds.", nature: "Passive. The muscle is lengthened and held, relying on the duration of the stretch to increase flexibility. It is performed without movement." }, { name: "Dynamic Stretching", description: "Uses momentum from controlled, swinging motions to move a joint through its full range of motion. Examples include leg swings and torso twists.", nature: "Active. Involves movement and muscular effort to stretch the muscles. It is ideal for warm-ups as it mimics the movements of the upcoming activity." }, { name: "Ballistic Stretching", description: "Uses momentum from a bouncing movement to push a muscle beyond its normal range of motion. Due to a higher risk of injury, it is generally not recommended for the general public.", nature: "Active & Forceful. Involves bouncing or jerky movements. It can trigger the stretch reflex, potentially tightening the muscle instead of lengthening it." }, { name: "Proprioceptive Neuromuscular Facilitation (PNF)", description: "A more advanced form of flexibility training that involves both stretching and contracting the muscle group being targeted.", nature: "Active & Passive. Typically involves a sequence of 'contract-relax' or 'hold-relax' where the muscle is passively stretched, then isometrically contracted, then relaxed and stretched further." }, { name: "Active Isolated Stretching (AIS)", description: "A technique where you hold each stretch for only two seconds. It works by contracting the opposing muscle group to relax the target muscle.", nature: "Active. Relies on reciprocal inhibition (contracting one muscle relaxes its opposite). It involves many repetitions of short-duration stretches." }, { name: "Myofascial Release", description: "A technique that involves applying gentle, sustained pressure to the myofascial connective tissue to eliminate pain and restore motion. Often performed with tools like foam rollers or massage balls.", nature: "Passive. Focuses on releasing tension in the fascia, the connective tissue that surrounds muscles, rather than the muscle fibers themselves." }, { name: "Yoga (Asanas)", description: "A mind-body practice that combines physical postures, breathing techniques, and meditation or relaxation.", nature: "Active & Passive. Many yoga poses are forms of static or dynamic stretching, often held for several breaths. It improves flexibility, strength, and balance simultaneously." }, { name: "Chair Yoga", description: "A gentle form of yoga that is practiced sitting in a chair, or standing using a chair for support.", nature: "Active & Passive. Modifies traditional yoga poses so they can be done while seated, making stretching accessible to people with mobility or balance issues." }
+        ];
         
         // --- Global State ---
         let userId = null;
@@ -255,6 +268,50 @@
         const authContainer = document.getElementById('auth-container');
         const userIdDisplay = document.getElementById('user-id-display');
         const generateBtn = document.getElementById('generate-btn');
+        const muscleSelect = document.getElementById('muscle-select');
+        const ailmentSelect = document.getElementById('ailment-select');
+        const modalitySelect = document.getElementById('modality-select');
+
+        // --- Populate Dropdowns ---
+        function populateMuscles() {
+            muscleSelect.innerHTML = '<option value="">-- Select a Major Muscle --</option>'; // Clear before populating
+            muscleData.sort((a, b) => a.name.localeCompare(b.name));
+            muscleData.forEach(muscle => {
+                const option = document.createElement('option');
+                option.value = muscle.name;
+                option.textContent = muscle.name;
+                option.title = `Location: ${muscle.location}\nFunction: ${muscle.function}`;
+                muscleSelect.appendChild(option);
+            });
+        }
+        
+        function populateAilments() {
+            ailmentSelect.innerHTML = '<option value="">-- Select a Common Ailment --</option>'; // Clear before populating
+            ailmentData.sort((a, b) => a.name.localeCompare(b.name));
+            ailmentData.forEach(ailment => {
+                const option = document.createElement('option');
+                option.value = ailment.name;
+                option.textContent = ailment.name;
+                option.title = `Description: ${ailment.description}\n\nRole of Physical Therapy: ${ailment.role}`;
+                ailmentSelect.appendChild(option);
+            });
+        }
+
+        function populateModalities() {
+            modalitySelect.innerHTML = '<option value="Any Modality">-- Any Modality --</option>'; // Clear and add default
+            modalityData.sort((a, b) => a.name.localeCompare(b.name));
+            modalityData.forEach(modality => {
+                const option = document.createElement('option');
+                option.value = modality.name;
+                option.textContent = modality.name;
+                option.title = `Description: ${modality.description}\n\nNature of Stretch: ${modality.nature}`;
+                modalitySelect.appendChild(option);
+            });
+        }
+
+        populateMuscles();
+        populateAilments();
+        populateModalities();
 
         // --- Custom Alert Modal ---
         const modal = document.getElementById('custom-alert-modal');
@@ -323,11 +380,11 @@
             document.getElementById('routine-summary-icons').innerHTML = '';
 
 
-            const muscle = document.getElementById('muscle-select').value;
-            const ailment = document.getElementById('ailment-select').value;
+            const muscle = muscleSelect.value;
+            const ailment = ailmentSelect.value;
             const searchTerm = document.getElementById('search-bar').value;
             const routineType = document.getElementById('routine-type').value;
-            const modality = document.getElementById('modality-select').value;
+            const modality = modalitySelect.value;
             const duration = document.getElementById('duration-select').value;
             const numExercisesText = document.getElementById('exercises-select').value;
             const numExercises = parseInt(numExercisesText.split(' ')[0]);
@@ -496,6 +553,11 @@
                     currentRoutine = routine;
                     document.getElementById('routine-title').textContent = routine.title;
                     renderRoutine(routine);
+
+                    // Also update the summary icons when loading a saved routine
+                    const summaryIcons = document.getElementById('routine-summary-icons');
+                    summaryIcons.innerHTML = ''; // Clear existing icons
+                    
                     showView(resultsSection);
                     document.getElementById('loader-container').style.display = 'none';
                     document.getElementById('results-buttons').classList.remove('hidden');
@@ -507,8 +569,6 @@
 
 
         // --- Input Disabling Logic ---
-         const muscleSelect = document.getElementById('muscle-select');
-         const ailmentSelect = document.getElementById('ailment-select');
          const searchBar = document.getElementById('search-bar');
 
          function resetDisables() {
