@@ -284,6 +284,12 @@
                             this.helpers[key] = this.helpers[key].bind(this);
                         }
                     }
+                    // FIX: Bind the 'this' context for the API methods as well.
+                    for (const key in this.api) {
+                        if (typeof this.api[key] === 'function') {
+                            this.api[key] = this.api[key].bind(this);
+                        }
+                    }
 
                     this.helpers.bindEvents();
                     this.helpers.resetApp();
