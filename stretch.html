@@ -22,8 +22,51 @@
             background-size: 1em;
             padding-right: 2.5rem;
         }
-        #results-section {
+        .view { display: none; }
+        .view.active { display: block; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom modal for alerts */
+        .custom-modal {
             display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 24px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .modal-button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 16px;
         }
     </style>
 </head>
@@ -40,13 +83,12 @@
                     <h1 class="text-2xl font-bold text-slate-900">The Stretch Solution</h1>
                 </div>
                 <nav class="hidden md:flex items-center space-x-6">
-                    <a href="#" class="text-slate-600 hover:text-indigo-600 transition-colors">Home</a>
-                    <a href="#" class="text-slate-600 hover:text-indigo-600 transition-colors">About</a>
-                    <a href="#" class="text-slate-600 hover:text-indigo-600 transition-colors">My Routines</a>
+                    <a href="#" id="home-link" class="text-slate-600 hover:text-indigo-600 transition-colors">Home</a>
+                    <a href="#" id="about-link" class="text-slate-600 hover:text-indigo-600 transition-colors">About</a>
+                    <a href="#" id="my-routines-link" class="text-slate-600 hover:text-indigo-600 transition-colors">My Routines</a>
                 </nav>
-                <div class="flex items-center space-x-2">
-                    <button class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Login</button>
-                    <button class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Sign Up</button>
+                 <div id="auth-container" class="flex items-center space-x-2">
+                    <!-- This will be populated by script -->
                 </div>
             </div>
         </header>
@@ -54,7 +96,7 @@
         <!-- Main Content -->
         <main class="flex-grow py-10 px-4 md:px-8">
             <!-- Routine Creation Section -->
-            <div id="creation-section" class="max-w-4xl mx-auto text-center">
+            <div id="creation-section" class="view active max-w-4xl mx-auto text-center">
                 <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Intelligent Stretching, Personalized for You</h2>
                 <p class="mt-4 text-lg text-slate-600">Select your focus and preferences to begin your custom stretching routine.</p>
 
@@ -65,23 +107,14 @@
                             <label for="muscle-select" class="block text-sm font-medium text-slate-700 mb-1">Choose a Muscle</label>
                             <select id="muscle-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Major Muscle --</option>
-                                <option>Biceps</option>
-                                <option>Deltoids</option>
-                                <option>Gastrocnemius</option>
-                                <option>Hamstrings</option>
-                                <option>Pectoralis Major</option>
-                                <option>Quadriceps</option>
+                                <option>Biceps</option><option>Deltoids</option><option>Gastrocnemius</option><option>Hamstrings</option><option>Pectoralis Major</option><option>Quadriceps</option>
                             </select>
                         </div>
                         <div>
                             <label for="ailment-select" class="block text-sm font-medium text-slate-700 mb-1">Choose an Ailment</label>
                             <select id="ailment-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Common Ailment --</option>
-                                <option>Carpal Tunnel Syndrome</option>
-                                <option>Lower Back Pain</option>
-                                <option>Plantar Fasciitis</option>
-                                <option>Sciatica</option>
-                                <option>Tennis Elbow</option>
+                                <option>Carpal Tunnel Syndrome</option><option>Lower Back Pain</option><option>Plantar Fasciitis</option><option>Sciatica</option><option>Tennis Elbow</option>
                             </select>
                         </div>
                         <div class="md:col-span-2 relative">
@@ -92,111 +125,72 @@
                                 <svg class="w-5 h-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                             </div>
                         </div>
-
-                        <!-- Routine Customization -->
                         <div class="md:col-span-2 border-t border-slate-200 pt-6 grid grid-cols-2 md:grid-cols-4 gap-6">
                              <div>
                                 <label for="routine-type" class="block text-sm font-medium text-slate-700 mb-1">Type of Routine</label>
                                 <select id="routine-type" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>General Flexibility</option>
-                                    <option>Warm-up (Pre-Workout)</option>
-                                    <option>Cool-down (Post-Workout)</option>
-                                    <option>Morning Wake-up</option>
-                                    <option>Evening Wind-down</option>
-                                    <option>Office/Desk Relief</option>
+                                    <option>General Flexibility</option><option>Warm-up (Pre-Workout)</option><option>Cool-down (Post-Workout)</option><option>Morning Wake-up</option><option>Evening Wind-down</option><option>Office/Desk Relief</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="modality-select" class="block text-sm font-medium text-slate-700 mb-1">Stretching Modality</label>
                                 <select id="modality-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>Any Modality</option>
-                                    <option>Static Stretching</option>
-                                    <option>Dynamic Stretching</option>
-                                    <option>Yoga Asanas</option>
-                                    <option>Chair Yoga</option>
+                                    <option>Any Modality</option><option>Static Stretching</option><option>Dynamic Stretching</option><option>Yoga Asanas</option><option>Chair Yoga</option>
                                 </select>
                             </div>
                              <div>
                                 <label for="duration-select" class="block text-sm font-medium text-slate-700 mb-1">Duration</label>
                                 <select id="duration-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>5 Minutes</option>
-                                    <option selected>10 Minutes</option>
-                                    <option>15 Minutes</option>
-                                    <option>20 Minutes</option>
-                                    <option>30 Minutes</option>
+                                    <option>5 Minutes</option><option selected>10 Minutes</option><option>15 Minutes</option><option>20 Minutes</option><option>30 Minutes</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1"># of Exercises</label>
                                 <select id="exercises-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>3 Exercises</option>
-                                    <option selected>5 Exercises</option>
-                                    <option>7 Exercises</option>
-                                    <option>10 Exercises</option>
+                                    <option>3 Exercises</option><option selected>5 Exercises</option><option>7 Exercises</option><option>10 Exercises</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                      <div class="mt-8">
-                        <button id="generate-btn" class="w-full md:w-auto px-10 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all transform hover:scale-105">
+                        <button id="generate-btn" class="w-full md:w-auto px-10 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed">
                             Generate My Routine
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Results Section (Initially Hidden) -->
-            <div id="results-section" class="max-w-4xl mx-auto">
+            <!-- Results Section -->
+            <div id="results-section" class="view max-w-4xl mx-auto">
                 <div class="text-center mb-8">
-                     <h2 id="routine-title" class="text-3xl font-bold text-slate-900">Your 10-Minute Chair Yoga Routine for Lower Back Pain</h2>
-                    <div class="mt-4 flex justify-center items-center space-x-6 text-slate-600">
-                        <div class="flex items-center space-x-2">
-                             <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                            <span id="routine-duration-icon">10 Minutes</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                             <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5H9.5a2.5 2.5 0 0 0 0 5H12"/><path d="M12 14H9.5a2.5 2.5 0 0 1 0 5H12"/><path d="M15 9h-2.5a2.5 2.5 0 0 0 0 5H15"/></svg>
-                            <span id="routine-exercises-icon">5 Exercises</span>
-                        </div>
-                         <div class="flex items-center space-x-2">
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                             <span id="routine-type-icon">Office/Desk Relief</span>
-                        </div>
-                    </div>
+                     <h2 id="routine-title" class="text-3xl font-bold text-slate-900"></h2>
+                    <div id="routine-summary-icons" class="mt-4 flex justify-center items-center space-x-6 text-slate-600"></div>
                 </div>
-
-                <!-- Generated Routine List -->
-                <div id="routine-list" class="space-y-6">
-                    <!-- Sample Exercise 1 -->
-                    <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col md:flex-row gap-6">
-                        <div class="w-full md:w-1/3 h-48 bg-slate-200 rounded-lg flex items-center justify-center">
-                            <p class="text-slate-500">[AI-Generated Video]</p>
-                        </div>
-                        <div class="w-full md:w-2/3">
-                            <h3 class="text-xl font-semibold text-slate-900">Seated Cat-Cow Stretch</h3>
-                            <div class="mt-2 text-slate-600 space-y-2">
-                                <p><strong>Instructions:</strong> Sit on the edge of your chair with feet flat on the floor. Inhale as you arch your back and look up (Cow). Exhale as you round your spine, tucking your chin to your chest (Cat).</p>
-                                <p><strong>Why it's beneficial:</strong> This gentle movement warms up the spine and helps relieve tension in the upper and lower back, which is common from prolonged sitting.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Sample Exercise 2 -->
-                    <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col md:flex-row gap-6">
-                        <div class="w-full md:w-1/3 h-48 bg-slate-200 rounded-lg flex items-center justify-center">
-                            <p class="text-slate-500">[AI-Generated Video]</p>
-                        </div>
-                        <div class="w-full md:w-2/3">
-                            <h3 class="text-xl font-semibold text-slate-900">Seated Spinal Twist</h3>
-                            <div class="mt-2 text-slate-600 space-y-2">
-                                <p><strong>Instructions:</strong> Sit tall and place your right hand on the outside of your left knee. Place your left hand on the chair behind you. Gently twist your torso to the left. Hold, then repeat on the other side.</p>
-                                <p><strong>Why it's beneficial:</strong> Increases spinal mobility and can help alleviate lower back stiffness. It also provides a gentle stretch to the obliques and hips.</p>
-                            </div>
-                        </div>
-                    </div>
+                <div id="loader-container" class="flex justify-center items-center h-64">
+                    <div class="loader"></div>
                 </div>
-                 <div class="mt-8 flex flex-col md:flex-row justify-center gap-4">
-                    <button class="px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Routine</button>
+                <div id="routine-list" class="space-y-6"></div>
+                 <div id="results-buttons" class="mt-8 flex-col md:flex-row justify-center gap-4 hidden">
+                    <button id="save-routine-btn" class="px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Routine</button>
                     <button id="start-over-btn" class="px-6 py-3 text-base font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Start Over</button>
+                </div>
+            </div>
+
+            <!-- My Routines Section -->
+            <div id="my-routines-section" class="view max-w-4xl mx-auto">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">My Saved Routines</h2>
+                <div id="saved-routines-list" class="space-y-4">
+                    <p class="text-slate-500">You have no saved routines yet.</p>
+                </div>
+            </div>
+            
+             <!-- About Section -->
+            <div id="about-section" class="view max-w-4xl mx-auto">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">About The Stretch Solution</h2>
+                <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 text-slate-600">
+                    <p>The Stretch Solution is a user-friendly web application that generates customized stretching routines based on specific muscles, common physical ailments, or user search queries.</p>
+                    <p>Our goal is to provide a personalized path to flexibility and relief. The app features AI-generated exercise descriptions, allows users to select their preferred stretching modality and routine type, and tailors the duration and number of exercises to fit their needs.</p>
+                     <p>This project leverages the power of Google's Gemini API for intelligent routine generation and Firebase for secure data storage and user authentication.</p>
                 </div>
             </div>
         </main>
@@ -207,77 +201,351 @@
                 <p class="text-xs text-slate-500 max-w-2xl mx-auto">
                     <strong>Disclaimer:</strong> The Stretch Solution is for informational purposes only and is not a substitute for professional medical advice. Consult with a healthcare professional before beginning any new exercise program.
                 </p>
+                <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
                 <p class="mt-4 text-xs text-slate-400">
-                    Version 1.1
+                    Version 1.3
                 </p>
             </div>
         </footer>
+        
+        <!-- Custom Modal -->
+        <div id="custom-alert-modal" class="custom-modal">
+            <div class="modal-content">
+                <p id="modal-text"></p>
+                <button id="modal-close-btn" class="modal-button">OK</button>
+            </div>
+        </div>
 
     </div>
+    
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const generateBtn = document.getElementById('generate-btn');
-            const startOverBtn = document.getElementById('start-over-btn');
-            const creationSection = document.getElementById('creation-section');
-            const resultsSection = document.getElementById('results-section');
+        // Firebase and App Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDpi99SKXmKvhtuewNT3UxJNgpyQV37qzE",
+            authDomain: "the-stretch-solution.firebaseapp.com",
+            projectId: "the-stretch-solution",
+            storageBucket: "the-stretch-solution.firebasestorage.app",
+            messagingSenderId: "86897963844",
+            appId: "1:86897963844:web:bf9bd954c819fb099e9d11",
+            measurementId: "G-J5SWFYWRF3"
+        };
+        const geminiApiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY";
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // --- Global State ---
+        let userId = null;
+        let currentRoutine = null;
 
-            // --- Event Listeners ---
-            generateBtn.addEventListener('click', () => {
-                // In a real app, this would fetch data and generate a routine.
-                // For this prototype, we just show the sample results.
-                creationSection.style.display = 'none';
-                resultsSection.style.display = 'block';
-                window.scrollTo(0, 0); // Scroll to top to see results
+        // --- UI Elements ---
+        const creationSection = document.getElementById('creation-section');
+        const resultsSection = document.getElementById('results-section');
+        const myRoutinesSection = document.getElementById('my-routines-section');
+        const aboutSection = document.getElementById('about-section');
+        const views = [creationSection, resultsSection, myRoutinesSection, aboutSection];
+        
+        const authContainer = document.getElementById('auth-container');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const generateBtn = document.getElementById('generate-btn');
+
+        // --- Custom Alert Modal ---
+        const modal = document.getElementById('custom-alert-modal');
+        const modalText = document.getElementById('modal-text');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        function showAlert(message) {
+            modalText.textContent = message;
+            modal.style.display = 'block';
+        }
+
+        modalCloseBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+
+        // --- Authentication ---
+        onAuthStateChanged(auth, async user => {
+            if (user) {
+                userId = user.uid;
+                authContainer.innerHTML = `<p class="text-sm text-slate-600 mr-4">Welcome!</p><button id="logout-btn" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Logout</button>`;
+                userIdDisplay.textContent = `User ID: ${userId}`;
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+                loadSavedRoutines();
+            } else {
+                userId = null;
+                currentRoutine = null;
+                authContainer.innerHTML = `<button id="login-btn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Login / Sign Up</button>`;
+                userIdDisplay.textContent = '';
+                document.getElementById('login-btn').addEventListener('click', () => signInAnonymously(auth).catch(err => console.error(err)));
+                document.getElementById('saved-routines-list').innerHTML = '<p class="text-slate-500">Please log in to see your saved routines.</p>';
+            }
+        });
+
+        // --- View Navigation ---
+        function showView(viewToShow) {
+            views.forEach(view => view.classList.remove('active'));
+            viewToShow.classList.add('active');
+            window.scrollTo(0,0);
+        }
+        document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); showView(creationSection); });
+        document.getElementById('about-link').addEventListener('click', (e) => { e.preventDefault(); showView(aboutSection); });
+        document.getElementById('my-routines-link').addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            if(userId) {
+                loadSavedRoutines();
+                showView(myRoutinesSection);
+            } else {
+                showAlert('Please log in to view your routines.');
+            }
+        });
+        document.getElementById('start-over-btn').addEventListener('click', () => showView(creationSection));
+        
+        // --- Routine Generation ---
+        generateBtn.addEventListener('click', async () => {
+            showView(resultsSection);
+            document.getElementById('routine-list').innerHTML = '';
+            document.getElementById('loader-container').style.display = 'flex';
+            document.getElementById('results-buttons').classList.add('hidden');
+            document.getElementById('routine-summary-icons').innerHTML = '';
+
+
+            const muscle = document.getElementById('muscle-select').value;
+            const ailment = document.getElementById('ailment-select').value;
+            const searchTerm = document.getElementById('search-bar').value;
+            const routineType = document.getElementById('routine-type').value;
+            const modality = document.getElementById('modality-select').value;
+            const duration = document.getElementById('duration-select').value;
+            const numExercisesText = document.getElementById('exercises-select').value;
+            const numExercises = parseInt(numExercisesText.split(' ')[0]);
+
+            let focus = muscle || ailment || searchTerm;
+            if (!focus) {
+                showAlert("Please select a muscle, ailment, or enter a search term.");
+                showView(creationSection);
+                return;
+            }
+            let title = `Your ${duration} ${modality !== 'Any Modality' ? modality : ''} Routine for ${focus}`;
+            document.getElementById('routine-title').textContent = title;
+
+            // Render summary icons
+            const summaryIcons = document.getElementById('routine-summary-icons');
+            summaryIcons.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>${duration}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5H9.5a2.5 2.5 0 0 0 0 5H12"/><path d="M12 14H9.5a2.5 2.5 0 0 1 0 5H12"/><path d="M15 9h-2.5a2.5 2.5 0 0 0 0 5H15"/></svg>
+                    <span>${numExercisesText}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                   <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span>${routineType}</span>
+                </div>
+            `;
+
+            const prompt = `Generate a "${routineType}" stretching routine for "${focus}". The routine should last approximately ${duration} and consist of ${numExercises} exercises. The stretching modality should be "${modality}". For each exercise, provide a name, step-by-step instructions, and a brief explanation of why it's beneficial for the specified focus. Ensure the exercises are distinct and suitable for the context.`;
+
+            try {
+                const response = await callGeminiAPI(prompt);
+                if (!response.exercises || response.exercises.length === 0) {
+                   throw new Error("Invalid response from API");
+                }
+                currentRoutine = { title, exercises: response.exercises, createdAt: new Date().toISOString() };
+                renderRoutine(currentRoutine);
+            } catch (error) {
+                console.error("Error generating routine:", error);
+                document.getElementById('routine-list').innerHTML = `<p class="text-red-500 text-center">Sorry, we couldn't generate a routine. The AI may be experiencing high demand. Please try again later.</p>`;
+            } finally {
+                document.getElementById('loader-container').style.display = 'none';
+                document.getElementById('results-buttons').classList.remove('hidden');
+                document.getElementById('results-buttons').style.display = 'flex';
+            }
+        });
+
+        async function callGeminiAPI(prompt) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "exercises": {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        "name": { "type": "STRING", "description": "Name of the stretch" },
+                                        "instructions": { "type": "STRING", "description": "Step-by-step instructions" },
+                                        "benefit": { "type": "STRING", "description": "Why this is beneficial" }
+                                    },
+                                    required: ["name", "instructions", "benefit"]
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            startOverBtn.addEventListener('click', () => {
-                resultsSection.style.display = 'none';
-                creationSection.style.display = 'block';
-                 window.scrollTo(0, 0);
-            });
-
-            // Logic to disable one dropdown if the other is used
-            const muscleSelect = document.getElementById('muscle-select');
-            const ailmentSelect = document.getElementById('ailment-select');
-            const searchBar = document.getElementById('search-bar');
-
-            function resetDisables() {
-                muscleSelect.disabled = false;
-                ailmentSelect.disabled = false;
-                searchBar.disabled = false;
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API call failed with status: ${response.status}. Body: ${errorBody}`);
             }
 
-            muscleSelect.addEventListener('change', () => {
-                resetDisables();
-                if(muscleSelect.value) {
-                    ailmentSelect.value = '';
-                    searchBar.value = '';
-                    ailmentSelect.disabled = true;
-                    searchBar.disabled = true;
-                }
-            });
+            const result = await response.json();
+            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                throw new Error("Unexpected API response structure");
+            }
+            const text = result.candidates[0].content.parts[0].text;
+            return JSON.parse(text);
+        }
+
+        function renderRoutine(routine) {
+            const routineList = document.getElementById('routine-list');
+            routineList.innerHTML = ''; 
             
-            ailmentSelect.addEventListener('change', () => {
-                resetDisables();
-                 if(ailmentSelect.value) {
-                    muscleSelect.value = '';
-                    searchBar.value = '';
-                    muscleSelect.disabled = true;
-                    searchBar.disabled = true;
-                }
+            routine.exercises.forEach(exercise => {
+                const exerciseEl = document.createElement('div');
+                exerciseEl.className = 'bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col md:flex-row gap-6';
+                exerciseEl.innerHTML = `
+                    <div class="w-full md:w-1/3 h-48 bg-slate-200 rounded-lg flex items-center justify-center">
+                        <p class="text-slate-500">[AI-Generated Video]</p>
+                    </div>
+                    <div class="w-full md:w-2/3">
+                        <h3 class="text-xl font-semibold text-slate-900">${exercise.name}</h3>
+                        <div class="mt-2 text-slate-600 space-y-2">
+                            <p><strong>Instructions:</strong> ${exercise.instructions}</p>
+                            <p><strong>Why it's beneficial:</strong> ${exercise.benefit}</p>
+                        </div>
+                    </div>
+                `;
+                routineList.appendChild(exerciseEl);
+            });
+        }
+        
+        // --- Save & Load Routines ---
+        document.getElementById('save-routine-btn').addEventListener('click', async () => {
+            if (!userId) {
+                showAlert("Please log in to save routines.");
+                return;
+            }
+            if (!currentRoutine) {
+                 showAlert("No routine to save.");
+                 return;
+            }
+
+            try {
+                const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'the-stretch-solution';
+                const routinesCol = collection(db, `artifacts/${appIdentifier}/users/${userId}/routines`);
+                await addDoc(routinesCol, currentRoutine);
+                showAlert("Routine saved!");
+            } catch (error) {
+                console.error("Error saving routine: ", error);
+                showAlert("Could not save routine. Please try again.");
+            }
+        });
+
+        async function loadSavedRoutines() {
+            if (!userId) return;
+            const appIdentifier = typeof __app_id !== 'undefined' ? __app_id : 'the-stretch-solution';
+            const routinesCol = collection(db, `artifacts/${appIdentifier}/users/${userId}/routines`);
+            const routineSnapshot = await getDocs(routinesCol);
+            const savedList = document.getElementById('saved-routines-list');
+            savedList.innerHTML = '';
+            
+            if (routineSnapshot.empty) {
+                 savedList.innerHTML = '<p class="text-slate-500">You have no saved routines yet.</p>';
+                 return;
+            }
+            
+            const routines = [];
+            routineSnapshot.forEach(doc => {
+                routines.push({ id: doc.id, ...doc.data() });
             });
 
-            searchBar.addEventListener('input', () => {
-                resetDisables();
-                if(searchBar.value) {
-                    muscleSelect.value = '';
-                    ailmentSelect.value = '';
-                    muscleSelect.disabled = true;
-                    ailmentSelect.disabled = true;
-                }
+            // Sort routines by creation date, newest first
+            routines.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            routines.forEach(routine => {
+                const routineEl = document.createElement('div');
+                routineEl.className = 'bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:border-indigo-500';
+                routineEl.innerHTML = `<h4 class="font-semibold text-lg">${routine.title}</h4> <p class="text-xs text-slate-400">Saved on: ${new Date(routine.createdAt).toLocaleDateString()}</p>`;
+                routineEl.addEventListener('click', () => {
+                    currentRoutine = routine;
+                    document.getElementById('routine-title').textContent = routine.title;
+                    renderRoutine(routine);
+                    showView(resultsSection);
+                    document.getElementById('loader-container').style.display = 'none';
+                    document.getElementById('results-buttons').classList.remove('hidden');
+                    document.getElementById('results-buttons').style.display = 'flex';
+                });
+                savedList.appendChild(routineEl);
             });
-        });
+        }
+
+
+        // --- Input Disabling Logic ---
+         const muscleSelect = document.getElementById('muscle-select');
+         const ailmentSelect = document.getElementById('ailment-select');
+         const searchBar = document.getElementById('search-bar');
+
+         function resetDisables() {
+             muscleSelect.disabled = false;
+             ailmentSelect.disabled = false;
+             searchBar.disabled = false;
+         }
+
+         muscleSelect.addEventListener('change', () => {
+             resetDisables();
+             if(muscleSelect.value) {
+                 ailmentSelect.value = '';
+                 searchBar.value = '';
+                 ailmentSelect.disabled = true;
+                 searchBar.disabled = true;
+             }
+         });
+         
+         ailmentSelect.addEventListener('change', () => {
+             resetDisables();
+              if(ailmentSelect.value) {
+                 muscleSelect.value = '';
+                 searchBar.value = '';
+                 muscleSelect.disabled = true;
+                 searchBar.disabled = true;
+             }
+         });
+
+         searchBar.addEventListener('input', () => {
+             resetDisables();
+             if(searchBar.value) {
+                 muscleSelect.value = '';
+                 ailmentSelect.value = '';
+                 muscleSelect.disabled = true;
+                 ailmentSelect.disabled = true;
+             }
+         });
     </script>
 </body>
 </html>
