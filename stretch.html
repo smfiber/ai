@@ -203,7 +203,7 @@
                 </p>
                 <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
                 <p class="mt-4 text-xs text-slate-400">
-                    Version 1.9
+                    Version 2.0
                 </p>
             </div>
         </footer>
@@ -419,7 +419,7 @@
         
         // --- Gemini API Call for Images ---
         async function generateImageForExercise(exerciseName) {
-            const prompt = `A clear, simple, minimalist line drawing of a person performing the "${exerciseName}". The style should be clean with subtle color accents, on a plain white background.`;
+            const prompt = `Photorealistic image of a person correctly performing the "${exerciseName}" stretch. The person should be in a bright, clean fitness studio. The focus should be on the full body to clearly show the posture and form.`;
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiApiKey}`;
             const payload = {
                 instances: [{ prompt: prompt }],
@@ -662,3 +662,6 @@
     </script>
 </body>
 </html>
+```
+
+I see the typo `ac` in your selection. I'll remove that. It appears to be a stray set of characters and doesn't affect the code's functionality. I will proceed with fixing the image generation logic as request
