@@ -62,8 +62,21 @@
         
         /* Dropdown menus */
         .dropdown { position: relative; }
-        .dropdown-content { visibility: hidden; opacity: 0; transform: translateY(-10px); transition: all 0.2s ease-out; position: absolute; top: 115%; left: 50%; transform: translateX(-50%) translateY(0px); z-index: 50; }
-        .dropdown:hover .dropdown-content { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
+        .dropdown-content { 
+            visibility: hidden; 
+            opacity: 0; 
+            transition: all 0.2s ease-out; 
+            position: absolute; 
+            top: 115%; 
+            left: 50%; 
+            transform: translateX(-50%) translateY(-10px);
+            z-index: 50; 
+        }
+        .dropdown:hover .dropdown-content { 
+            visibility: visible; 
+            opacity: 1; 
+            transform: translateX(-50%) translateY(0);
+        }
         .dropdown-content .tool-btn { white-space: nowrap; }
         .dropdown-content .tool-btn:hover { background-color: #4b5563; transform: scale(1.1); }
 
@@ -121,7 +134,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.46</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.48</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -206,7 +219,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.46</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.48</p>
         </div>
     </div>
 
@@ -644,7 +657,15 @@
         }
         async function sendEffectToFirestore(effectType) { if(!userId) return; await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/events`), { type: effectType, author: userId, timestamp: new Date() }); triggerEffect(effectType); }
         function triggerEffect(type) { const container = document.getElementById('whiteboard-wrapper'); if (type === 'random-flash') { const flash = document.createElement('div'); flash.id = 'flash-overlay'; const randomColor = `rgba(${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, 0.7)`; flash.style.backgroundColor = randomColor; document.body.appendChild(flash); setTimeout(() => flash.remove(), 800); } else if (['hearts', 'rain', 'pickles'].includes(type)) { let emoji = '❤️'; if (type === 'rain') emoji = '💧'; if (type === 'pickles') emoji = '🥒'; for (let i = 0; i < 25; i++) { const particle = document.createElement('div'); particle.className = 'effect-particle'; particle.textContent = emoji; particle.style.left = `${Math.random() * 100}%`; particle.style.animationDelay = `${Math.random() * 2}s`; container.appendChild(particle); setTimeout(() => particle.remove(), 5000); } } }
-        async function clearAllDrawings() { await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, {merge: true}); }
+        async function clearAllDrawings() {
+            console.log("Attempting to clear canvas by updating epoch...");
+            try {
+                await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true });
+                console.log("Epoch updated successfully. Canvas should clear for all clients.");
+            } catch (error) {
+                console.error("Failed to clear canvas:", error);
+            }
+        }
         async function clearAllChat() { const batch = writeBatch(db); localChatHistory.forEach(msg => { const docRef = doc(db, `artifacts/${whiteboardId}/public/data/chat`, msg.id); batch.delete(docRef); }); await batch.commit(); }
         function saveChatHistory() { let chatText = `Chat History for Whiteboard: ${whiteboardTitleEl.textContent}\nSaved on: ${new Date().toLocaleString()}\n\n`; localChatHistory.forEach(msg => { const time = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : '...'; const author = getUserDisplayName(msg.author); let content = msg.text || ''; if (msg.type === 'image' || msg.type === 'gif') { content += ` [Media: ${msg.url}]`; } chatText += `[${time}] ${author}: ${content.trim()}\n`; }); const blob = new Blob([chatText], { type: 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'chat-history.txt'; link.click(); }
         function setDailyContent() { const today = new Date(); const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)); const titleIndex = dayOfYear % dailyTitles.length; const quoteIndex = dayOfYear % dailyQuotes.length; whiteboardTitleEl.textContent = dailyTitles[titleIndex]; whiteboardDescriptionEl.textContent = dailyQuotes[quoteIndex]; }
@@ -1032,12 +1053,85 @@
             document.getElementById('close-notification-btn')?.addEventListener('click', () => {
                 document.getElementById('api-error-notification')?.classList.add('hidden');
             });
+            
             const allToolButtons = document.querySelectorAll('#tool-selector .tool-btn, #tool-selector .dropdown-content .tool-btn');
             allToolButtons.forEach(button => { button.addEventListener('click', (e) => { const clickedButton = e.currentTarget; const tool = clickedButton.dataset.tool; if (!tool) return; state.currentTool = tool; eventCaptureLayer.style.cursor = tool === 'select' ? 'default' : (tool === 'text' ? 'text' : 'crosshair'); document.querySelectorAll('#tool-selector .tool-btn').forEach(b => b.classList.remove('selected')); const parentDropdownBtn = clickedButton.closest('.dropdown')?.querySelector('.tool-btn'); if (parentDropdownBtn) { parentDropdownBtn.classList.add('selected'); } else { clickedButton.classList.add('selected'); } state.selectedObjectId = null; drawOverlay(); }); });
+            
             document.querySelectorAll('#brush-size-selector .size-btn').forEach(btn => { btn.addEventListener('click', (e) => { document.querySelectorAll('#brush-size-selector .size-btn').forEach(b => b.classList.remove('selected')); const clickedBtn = e.currentTarget; clickedBtn.classList.add('selected'); state.currentBrushSize = parseInt(clickedBtn.dataset.size, 10); }); });
-            const colors = ['#FFFFFF', '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899'];
+            
+            // Color Palette Setup
             const colorPalette = document.getElementById('color-palette');
-            colors.forEach((color, index) => { const swatch = document.createElement('button'); swatch.className = 'color-swatch w-8 h-8 rounded-full border-2 border-gray-500 hover:scale-110'; swatch.style.backgroundColor = color; if(index === 0) swatch.classList.add('parent-selected'); swatch.addEventListener('click', () => { state.currentColor = color; document.querySelectorAll('#color-palette .color-swatch').forEach(s => s.classList.remove('parent-selected')); swatch.classList.add('parent-selected'); }); colorPalette.appendChild(swatch); });
+            const colors = [
+                { name: 'White', hex: '#FFFFFF' }, { name: 'Red', hex: '#EF4444' },
+                { name: 'Orange', hex: '#F97316' }, { name: 'Yellow', hex: '#EAB308' },
+                { name: 'Green', hex: '#22C55E' }, { name: 'Blue', hex: '#3B82F6' },
+                { name: 'Purple', hex: '#8B5CF6' }, { name: 'Pink', hex: '#EC4899' },
+            ];
+            const opacities = [1, 0.75, 0.5, 0.25];
+
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+            }
+
+            colors.forEach((color, index) => {
+                const dropdownContainer = document.createElement('div');
+                dropdownContainer.className = 'dropdown';
+
+                const mainSwatch = document.createElement('button');
+                mainSwatch.className = 'color-swatch w-8 h-8 rounded-full border-2 border-gray-500 hover:scale-110';
+                mainSwatch.style.backgroundColor = color.hex;
+                mainSwatch.dataset.color = color.hex;
+                 if (index === 0) {
+                    mainSwatch.classList.add('parent-selected');
+                    mainSwatch.style.setProperty('--tw-color-ring', color.hex);
+                 }
+
+                const dropdownContent = document.createElement('div');
+                dropdownContent.className = 'dropdown-content flex flex-col items-center gap-2 p-2 rounded-md bg-gray-600 shadow-lg';
+                
+                const rgb = hexToRgb(color.hex);
+                if (rgb) {
+                    opacities.forEach(opacity => {
+                        const rgbaColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        const shadeSwatch = document.createElement('button');
+                        shadeSwatch.className = 'shade-swatch w-6 h-6 rounded-full border border-white/50 hover:scale-125';
+                        shadeSwatch.style.backgroundColor = rgbaColor;
+                        shadeSwatch.dataset.color = rgbaColor;
+                         if (index === 0 && opacity === 1) {
+                             shadeSwatch.classList.add('selected');
+                         }
+
+                        shadeSwatch.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            state.currentColor = rgbaColor;
+
+                            document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('parent-selected'));
+                            document.querySelectorAll('.shade-swatch').forEach(s => s.classList.remove('selected'));
+                            
+                            shadeSwatch.classList.add('selected');
+                            mainSwatch.classList.add('parent-selected');
+                            mainSwatch.style.setProperty('--tw-color-ring', color.hex);
+                        });
+                        dropdownContent.appendChild(shadeSwatch);
+                    });
+                }
+                
+                mainSwatch.addEventListener('click', () => {
+                    state.currentColor = color.hex;
+                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('parent-selected'));
+                    document.querySelectorAll('.shade-swatch').forEach(s => s.classList.remove('selected'));
+                    mainSwatch.classList.add('parent-selected');
+                    mainSwatch.style.setProperty('--tw-color-ring', color.hex);
+                    // Also select the 100% opacity swatch in its dropdown
+                    const fullOpacitySwatch = dropdownContent.querySelector('[data-color*="rgba"]');
+                    if (fullOpacitySwatch) fullOpacitySwatch.classList.add('selected');
+                });
+
+                dropdownContainer.appendChild(mainSwatch);
+                dropdownContainer.appendChild(dropdownContent);
+                colorPalette.appendChild(dropdownContainer);
+            });
             
             chatSendBtn.addEventListener('click', () => sendChatMessage(chatInput.value));
             chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(chatInput.value); }});
@@ -1082,4 +1176,4 @@
         });
     </script>
 </body>
-</ht
+</html>
