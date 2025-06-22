@@ -36,9 +36,9 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Custom modal for alerts */
+        /* Custom modal for alerts and API key input */
         .custom-modal {
-            display: none;
+            display: none; /* Changed to none by default */
             position: fixed;
             z-index: 100;
             left: 0;
@@ -108,14 +108,12 @@
                             <label for="muscle-select" class="block text-sm font-medium text-slate-700 mb-1">Choose a Muscle</label>
                             <select id="muscle-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Major Muscle --</option>
-                                <!-- Muscle options will be populated by script -->
                             </select>
                         </div>
                         <div>
                             <label for="ailment-select" class="block text-sm font-medium text-slate-700 mb-1">Choose an Ailment</label>
                             <select id="ailment-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                                 <option value="">-- Select a Common Ailment --</option>
-                                <!-- Ailment options will be populated by script -->
                             </select>
                         </div>
                         <div class="md:col-span-2 relative">
@@ -136,7 +134,6 @@
                             <div>
                                 <label for="modality-select" class="block text-sm font-medium text-slate-700 mb-1">Stretching Modality</label>
                                 <select id="modality-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <!-- Modality options will be populated by script -->
                                 </select>
                             </div>
                              <div>
@@ -208,16 +205,26 @@
                 </p>
                 <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
                 <p class="mt-4 text-xs text-slate-400">
-                    Version 2.2
+                    Version 2.3
                 </p>
             </div>
         </footer>
         
-        <!-- Custom Modal -->
+        <!-- Custom Alert Modal -->
         <div id="custom-alert-modal" class="custom-modal">
             <div class="modal-content">
                 <p id="modal-text"></p>
                 <button id="modal-close-btn" class="modal-button">OK</button>
+            </div>
+        </div>
+
+        <!-- API Key Modal (NEW) -->
+        <div id="api-key-modal" class="custom-modal" style="display: flex;">
+            <div class="modal-content">
+                <h3 class="text-lg font-semibold mb-4">Enter Gemini API Key</h3>
+                <p class="text-sm text-slate-600 mb-4">To generate routines, please provide your Google Gemini API key. It's only stored for this session.</p>
+                <input type="password" id="api-key-input" class="w-full p-2 border border-slate-300 rounded-lg" placeholder="Enter your API key...">
+                <button id="save-api-key-btn" class="modal-button">Save & Start</button>
             </div>
         </div>
 
@@ -232,26 +239,20 @@
         // App and Firebase Configuration
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-stretch-solution';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIza...", authDomain: "...", projectId: "..."}; // Fallback config
-        const geminiApiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // Restored API Key
+        
+        // --- MODIFICATION: API key is now a 'let' and initialized to null
+        let geminiApiKey = null; 
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- Data ---
-        const muscleData = [
-            { name: "Masseter", location: "Side of the jaw", function: "Elevates the mandible (closes the jaw)" }, { name: "Temporalis", location: "Side of the head", function: "Elevates and retracts the mandible" }, { name: "Sternocleidomastoid", location: "Side of the neck", function: "Rotates head to opposite side, flexes neck" }, { name: "Scalenes", location: "Side of the neck", function: "Elevate ribs, flex and laterally flex neck" }, { name: "Splenius Capitis", location: "Back of the neck", function: "Extends and rotates head" }, { name: "Levator Scapulae", location: "Side of the neck to scapula", function: "Elevates the scapula" }, { name: "Trapezius", location: "Upper back and neck", function: "Elevates, depresses, and retracts scapula" }, { name: "Latissimus Dorsi", location: "Mid to lower back", function: "Extends, adducts, and medially rotates arm" }, { name: "Rhomboids", location: "Between the scapulae", function: "Retract and rotate the scapulae" }, { name: "Erector Spinae", location: "Group running along the spine", function: "Extends the vertebral column" }, { name: "Multifidus", location: "Deep spine muscles", function: "Stabilizes the vertebrae" }, { name: "Quadratus Lumborum", location: "Posterior abdominal wall", function: "Lateral flexion of vertebral column" }, { name: "Pectoralis Major", location: "Upper chest", function: "Adducts, flexes, and rotates arm" }, { name: "Pectoralis Minor", location: "Deep to pectoralis major", function: "Stabilizes and depresses scapula" }, { name: "Serratus Anterior", location: "Side of the ribs", function: "Protracts and rotates scapula" }, { name: "Rectus Abdominis", location: "Front of the abdomen", function: "Flexes vertebral column" }, { name: "External Obliques", location: "Side of the abdomen", function: "Rotates and flexes trunk" }, { name: "Internal Obliques", location: "Deep to external obliques", function: "Rotates and flexes trunk" }, { name: "Transversus Abdominis", location: "Deepest abdominal muscle", function: "Compresses abdomen, stabilizes back" }, { name: "Deltoid", location: "Shoulder cap", function: "Abducts, flexes, and extends arm" }, { name: "Rotator Cuff (Supraspinatus, Infraspinatus, Teres Minor, Subscapularis)", location: "Shoulder joint", function: "Stabilizes and rotates shoulder" }, { name: "Biceps Brachii", location: "Front of the upper arm", function: "Flexes elbow and supinates forearm" }, { name: "Brachialis", location: "Deep to the biceps", function: "Main flexor of the elbow" }, { name: "Triceps Brachii", location: "Back of the upper arm", function: "Extends the elbow" }, { name: "Brachioradialis", location: "Lateral forearm", function: "Flexes the elbow" }, { name: "Wrist Flexors", location: "Anterior forearm", function: "Flex the wrist and fingers" }, { name: "Wrist Extensors", location: "Posterior forearm", function: "Extend the wrist and fingers" }, { name: "Gluteus Maximus", location: "Buttocks", function: "Extension and lateral rotation of the hip" }, { name: "Gluteus Medius", location: "Side of the hip", function: "Abduction and medial rotation of the hip" }, { name: "Gluteus Minimus", location: "Deep to gluteus medius", function: "Abduction and medial rotation of the hip" }, { name: "Tensor Fasciae Latae (TFL)", location: "Anterolateral hip", function: "Flexes, abducts, and medially rotates hip" }, { name: "Iliopsoas", location: "Deep in the front of the hip", function: "Primary hip flexor" }, { name: "Quadriceps Femoris (Rectus Femoris, Vastus Lateralis, Medialis, Intermedius)", location: "Front of the thigh", function: "Extends the knee, flexes the hip" }, { name: "Hamstrings (Biceps Femoris, Semitendinosus, Semimembranosus)", location: "Back of the thigh", function: "Flexes the knee, extends the hip" }, { name: "Adductors (Longus, Brevis, Magnus)", location: "Inner thigh", function: "Adduct the hip" }, { name: "Sartorius", location: "Crosses the thigh", function: "Flexes and rotates the hip and knee" }, { name: "Gastrocnemius", location: "Superficial calf", function: "Plantar flexes foot, flexes knee" }, { name: "Soleus", location: "Deep to gastrocnemius", function: "Plantar flexes the foot" }, { name: "Tibialis Anterior", location: "Front of the shin", function: "Dorsiflexes and inverts the foot" }, { name: "Fibularis (Peroneus) Longus & Brevis", location: "Side of the lower leg", function: "Evert the foot" }
-        ];
-        
-        const ailmentData = [
-            { name: "Ankle Sprain", description: "Stretching or tearing of ligaments surrounding the ankle, often from a twist or roll.", role: "PT helps manage swelling, restore range of motion, improve strength, and retrain balance (proprioception) to prevent future sprains." }, { name: "Achilles Tendonitis", description: "Inflammation or degeneration of the Achilles tendon, the large tendon connecting the calf muscles to the heel bone.", role: "Therapy focuses on managing load, specific exercises (especially eccentric) to heal the tendon, and stretching the calf muscles." }, { name: "Shin Splints", description: "Pain along the shin bone (tibia), common in runners, caused by overuse and inflammation of the muscles, tendons, and bone tissue.", role: "PT addresses the underlying cause, which may include stretching tight calf muscles, strengthening weaker leg muscles, and analyzing gait." }, { name: "Bursitis (Hip, Knee, Shoulder)", description: "Inflammation of a bursa, a small fluid-filled sac that acts as a cushion between bones, tendons, and muscles.", role: "Focuses on reducing inflammation, stretching surrounding tight muscles, and strengthening to correct any biomechanical issues causing the irritation." }, { name: "Carpal Tunnel Syndrome", description: "A condition caused by pressure on the median nerve as it passes through the carpal tunnel in the wrist, leading to numbness, tingling, and weakness.", role: "PT uses nerve gliding exercises, wrist splinting, and ergonomic advice to reduce pressure on the nerve." }, { name: "De Quervain's Tenosynovitis", description: "Painful inflammation of tendons on the thumb side of the wrist.", role: "Therapy involves activity modification, splinting, and gentle stretching and strengthening to reduce strain on the affected tendons." }, { name: "Golfer's Elbow (Medial Epicondylitis)", description: "Pain and inflammation on the inner side of the elbow, affecting the wrist flexor tendons.", role: "Treatment includes stretching the wrist flexors, strengthening exercises, and technique modification for aggravating activities." }, { name: "IT Band Syndrome", description: "Pain on the outside of the knee caused by irritation of the iliotibial (IT) band, a thick band of tissue running from the hip to the knee.", role: "Focuses on releasing tension in the IT band and TFL muscle, and strengthening hip abductor muscles to improve leg mechanics." }, { name: "Piriformis Syndrome", description: "A condition where the piriformis muscle in the buttock spasms and causes pain, sometimes irritating the nearby sciatic nerve.", role: "PT involves stretching the piriformis and surrounding hip rotator muscles, and strengthening the gluteal muscles." }, { name: "Sciatica", description: "Pain that radiates along the path of the sciatic nerve, branching from the lower back through the hips and buttocks and down each leg.", role: "Therapy aims to relieve pressure on the sciatic nerve through specific exercises (like nerve glides), core strengthening, and manual therapy." }, { name: "Whiplash", description: "A neck injury due to forceful, rapid back-and-forth movement of the neck, like the cracking of a whip.", role: "Gentle range-of-motion exercises, pain management, and strengthening of the deep neck flexors and upper back muscles are key." }
-        ];
+        // --- Data (omitted for brevity, remains unchanged) ---
+        const muscleData = [ { name: "Masseter", location: "Side of the jaw", function: "Elevates the mandible (closes the jaw)" }, { name: "Temporalis", location: "Side of the head", function: "Elevates and retracts the mandible" }, { name: "Sternocleidomastoid", location: "Side of the neck", function: "Rotates head to opposite side, flexes neck" }, { name: "Scalenes", location: "Side of the neck", function: "Elevate ribs, flex and laterally flex neck" }, { name: "Splenius Capitis", location: "Back of the neck", function: "Extends and rotates head" }, { name: "Levator Scapulae", location: "Side of the neck to scapula", function: "Elevates the scapula" }, { name: "Trapezius", location: "Upper back and neck", function: "Elevates, depresses, and retracts scapula" }, { name: "Latissimus Dorsi", location: "Mid to lower back", function: "Extends, adducts, and medially rotates arm" }, { name: "Rhomboids", location: "Between the scapulae", function: "Retract and rotate the scapulae" }, { name: "Erector Spinae", location: "Group running along the spine", function: "Extends the vertebral column" }, { name: "Multifidus", location: "Deep spine muscles", function: "Stabilizes the vertebrae" }, { name: "Quadratus Lumborum", location: "Posterior abdominal wall", function: "Lateral flexion of vertebral column" }, { name: "Pectoralis Major", location: "Upper chest", function: "Adducts, flexes, and rotates arm" }, { name: "Pectoralis Minor", location: "Deep to pectoralis major", function: "Stabilizes and depresses scapula" }, { name: "Serratus Anterior", location: "Side of the ribs", function: "Protracts and rotates scapula" }, { name: "Rectus Abdominis", location: "Front of the abdomen", function: "Flexes vertebral column" }, { name: "External Obliques", location: "Side of the abdomen", function: "Rotates and flexes trunk" }, { name: "Internal Obliques", location: "Deep to external obliques", function: "Rotates and flexes trunk" }, { name: "Transversus Abdominis", location: "Deepest abdominal muscle", function: "Compresses abdomen, stabilizes back" }, { name: "Deltoid", location: "Shoulder cap", function: "Abducts, flexes, and extends arm" }, { name: "Rotator Cuff (Supraspinatus, Infraspinatus, Teres Minor, Subscapularis)", location: "Shoulder joint", function: "Stabilizes and rotates shoulder" }, { name: "Biceps Brachii", location: "Front of the upper arm", function: "Flexes elbow and supinates forearm" }, { name: "Brachialis", location: "Deep to the biceps", function: "Main flexor of the elbow" }, { name: "Triceps Brachii", location: "Back of the upper arm", function: "Extends the elbow" }, { name: "Brachioradialis", location: "Lateral forearm", function: "Flexes the elbow" }, { name: "Wrist Flexors", location: "Anterior forearm", function: "Flex the wrist and fingers" }, { name: "Wrist Extensors", location: "Posterior forearm", function: "Extend the wrist and fingers" }, { name: "Gluteus Maximus", location: "Buttocks", function: "Extension and lateral rotation of the hip" }, { name: "Gluteus Medius", location: "Side of the hip", function: "Abduction and medial rotation of the hip" }, { name: "Gluteus Minimus", location: "Deep to gluteus medius", function: "Abduction and medial rotation of the hip" }, { name: "Tensor Fasciae Latae (TFL)", location: "Anterolateral hip", function: "Flexes, abducts, and medially rotates hip" }, { name: "Iliopsoas", location: "Deep in the front of the hip", function: "Primary hip flexor" }, { name: "Quadriceps Femoris (Rectus Femoris, Vastus Lateralis, Medialis, Intermedius)", location: "Front of the thigh", function: "Extends the knee, flexes the hip" }, { name: "Hamstrings (Biceps Femoris, Semitendinosus, Semimembranosus)", location: "Back of the thigh", function: "Flexes the knee, extends the hip" }, { name: "Adductors (Longus, Brevis, Magnus)", location: "Inner thigh", function: "Adduct the hip" }, { name: "Sartorius", location: "Crosses the thigh", function: "Flexes and rotates the hip and knee" }, { name: "Gastrocnemius", location: "Superficial calf", function: "Plantar flexes foot, flexes knee" }, { name: "Soleus", location: "Deep to gastrocnemius", function: "Plantar flexes the foot" }, { name: "Tibialis Anterior", location: "Front of the shin", function: "Dorsiflexes and inverts the foot" }, { name: "Fibularis (Peroneus) Longus & Brevis", location: "Side of the lower leg", function: "Evert the foot" } ];
+        const ailmentData = [ { name: "Ankle Sprain", description: "Stretching or tearing of ligaments surrounding the ankle, often from a twist or roll.", role: "PT helps manage swelling, restore range of motion, improve strength, and retrain balance (proprioception) to prevent future sprains." }, { name: "Achilles Tendonitis", description: "Inflammation or degeneration of the Achilles tendon, the large tendon connecting the calf muscles to the heel bone.", role: "Therapy focuses on managing load, specific exercises (especially eccentric) to heal the tendon, and stretching the calf muscles." }, { name: "Shin Splints", description: "Pain along the shin bone (tibia), common in runners, caused by overuse and inflammation of the muscles, tendons, and bone tissue.", role: "PT addresses the underlying cause, which may include stretching tight calf muscles, strengthening weaker leg muscles, and analyzing gait." }, { name: "Bursitis (Hip, Knee, Shoulder)", description: "Inflammation of a bursa, a small fluid-filled sac that acts as a cushion between bones, tendons, and muscles.", role: "Focuses on reducing inflammation, stretching surrounding tight muscles, and strengthening to correct any biomechanical issues causing the irritation." }, { name: "Carpal Tunnel Syndrome", description: "A condition caused by pressure on the median nerve as it passes through the carpal tunnel in the wrist, leading to numbness, tingling, and weakness.", role: "PT uses nerve gliding exercises, wrist splinting, and ergonomic advice to reduce pressure on the nerve." }, { name: "De Quervain's Tenosynovitis", description: "Painful inflammation of tendons on the thumb side of the wrist.", role: "Therapy involves activity modification, splinting, and gentle stretching and strengthening to reduce strain on the affected tendons." }, { name: "Golfer's Elbow (Medial Epicondylitis)", description: "Pain and inflammation on the inner side of the elbow, affecting the wrist flexor tendons.", role: "Treatment includes stretching the wrist flexors, strengthening exercises, and technique modification for aggravating activities." }, { name: "IT Band Syndrome", description: "Pain on the outside of the knee caused by irritation of the iliotibial (IT) band, a thick band of tissue running from the hip to the knee.", role: "Focuses on releasing tension in the IT band and TFL muscle, and strengthening hip abductor muscles to improve leg mechanics." }, { name: "Piriformis Syndrome", description: "A condition where the piriformis muscle in the buttock spasms and causes pain, sometimes irritating the nearby sciatic nerve.", role: "PT involves stretching the piriformis and surrounding hip rotator muscles, and strengthening the gluteal muscles." }, { name: "Sciatica", description: "Pain that radiates along the path of the sciatic nerve, branching from the lower back through the hips and buttocks and down each leg.", role: "Therapy aims to relieve pressure on the sciatic nerve through specific exercises (like nerve glides), core strengthening, and manual therapy." }, { name: "Whiplash", description: "A neck injury due to forceful, rapid back-and-forth movement of the neck, like the cracking of a whip.", role: "Gentle range-of-motion exercises, pain management, and strengthening of the deep neck flexors and upper back muscles are key." } ];
+        const modalityData = [ { name: "Static Stretching", description: "Involves holding a stretch in a challenging but comfortable position for a period of time, typically between 15 and 60 seconds.", nature: "Passive. The muscle is lengthened and held, relying on the duration of the stretch to increase flexibility. It is performed without movement." }, { name: "Dynamic Stretching", description: "Uses momentum from controlled, swinging motions to move a joint through its full range of motion. Examples include leg swings and torso twists.", nature: "Active. Involves movement and muscular effort to stretch the muscles. It is ideal for warm-ups as it mimics the movements of the upcoming activity." }, { name: "Ballistic Stretching", description: "Uses momentum from a bouncing movement to push a muscle beyond its normal range of motion. Due to a higher risk of injury, it is generally not recommended for the general public.", nature: "Active & Forceful. Involves bouncing or jerky movements. It can trigger the stretch reflex, potentially tightening the muscle instead of lengthening it." }, { name: "Proprioceptive Neuromuscular Facilitation (PNF)", description: "A more advanced form of flexibility training that involves both stretching and contracting the muscle group being targeted.", nature: "Active & Passive. Typically involves a sequence of 'contract-relax' or 'hold-relax' where the muscle is passively stretched, then isometrically contracted, then relaxed and stretched further." }, { name: "Active Isolated Stretching (AIS)", description: "A technique where you hold each stretch for only two seconds. It works by contracting the opposing muscle group to relax the target muscle.", nature: "Active. Relies on reciprocal inhibition (contracting one muscle relaxes its opposite). It involves many repetitions of short-duration stretches." }, { name: "Myofascial Release", description: "A technique that involves applying gentle, sustained pressure to the myofascial connective tissue to eliminate pain and restore motion. Often performed with tools like foam rollers or massage balls.", nature: "Passive. Focuses on releasing tension in the fascia, the connective tissue that surrounds muscles, rather than the muscle fibers themselves." }, { name: "Yoga (Asanas)", description: "A mind-body practice that combines physical postures, breathing techniques, and meditation or relaxation.", nature: "Active & Passive. Many yoga poses are forms of static or dynamic stretching, often held for several breaths. It improves flexibility, strength, and balance simultaneously." }, { name: "Chair Yoga", description: "A gentle form of yoga that is practiced sitting in a chair, or standing using a chair for support.", nature: "Active & Passive. Modifies traditional yoga poses so they can be done while seated, making stretching accessible to people with mobility or balance issues." } ];
 
-        const modalityData = [
-            { name: "Static Stretching", description: "Involves holding a stretch in a challenging but comfortable position for a period of time, typically between 15 and 60 seconds.", nature: "Passive. The muscle is lengthened and held, relying on the duration of the stretch to increase flexibility. It is performed without movement." }, { name: "Dynamic Stretching", description: "Uses momentum from controlled, swinging motions to move a joint through its full range of motion. Examples include leg swings and torso twists.", nature: "Active. Involves movement and muscular effort to stretch the muscles. It is ideal for warm-ups as it mimics the movements of the upcoming activity." }, { name: "Ballistic Stretching", description: "Uses momentum from a bouncing movement to push a muscle beyond its normal range of motion. Due to a higher risk of injury, it is generally not recommended for the general public.", nature: "Active & Forceful. Involves bouncing or jerky movements. It can trigger the stretch reflex, potentially tightening the muscle instead of lengthening it." }, { name: "Proprioceptive Neuromuscular Facilitation (PNF)", description: "A more advanced form of flexibility training that involves both stretching and contracting the muscle group being targeted.", nature: "Active & Passive. Typically involves a sequence of 'contract-relax' or 'hold-relax' where the muscle is passively stretched, then isometrically contracted, then relaxed and stretched further." }, { name: "Active Isolated Stretching (AIS)", description: "A technique where you hold each stretch for only two seconds. It works by contracting the opposing muscle group to relax the target muscle.", nature: "Active. Relies on reciprocal inhibition (contracting one muscle relaxes its opposite). It involves many repetitions of short-duration stretches." }, { name: "Myofascial Release", description: "A technique that involves applying gentle, sustained pressure to the myofascial connective tissue to eliminate pain and restore motion. Often performed with tools like foam rollers or massage balls.", nature: "Passive. Focuses on releasing tension in the fascia, the connective tissue that surrounds muscles, rather than the muscle fibers themselves." }, { name: "Yoga (Asanas)", description: "A mind-body practice that combines physical postures, breathing techniques, and meditation or relaxation.", nature: "Active & Passive. Many yoga poses are forms of static or dynamic stretching, often held for several breaths. It improves flexibility, strength, and balance simultaneously." }, { name: "Chair Yoga", description: "A gentle form of yoga that is practiced sitting in a chair, or standing using a chair for support.", nature: "Active & Passive. Modifies traditional yoga poses so they can be done while seated, making stretching accessible to people with mobility or balance issues." }
-        ];
-        
         // --- Global State ---
         let userId = null;
         let currentRoutine = null;
@@ -320,7 +321,24 @@
         modalCloseBtn.onclick = function() {
             modal.style.display = 'none';
         }
+        
+        // --- MODIFICATION: New API Key Modal Logic ---
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+        const apiKeyInput = document.getElementById('api-key-input');
 
+        saveApiKeyBtn.addEventListener('click', () => {
+            const inputKey = apiKeyInput.value.trim();
+            if (inputKey) {
+                geminiApiKey = inputKey;
+                apiKeyModal.style.display = 'none';
+                init(); // Initialize the app now that we have the key
+            } else {
+                alert("Please enter a valid API key to continue."); // Using native alert here is fine for this simple check
+            }
+        });
+
+        // Close alert modal if clicking outside of it
         window.onclick = function(event) {
             if (event.target == modal) {
                 modal.style.display = "none";
@@ -356,7 +374,6 @@
             }
         });
 
-
         // --- View Navigation ---
         function showView(viewToShow) {
             views.forEach(view => view.classList.remove('active'));
@@ -378,6 +395,11 @@
         
         // --- Gemini API Call for Text ---
         async function callGeminiTextAPI(prompt) {
+            // MODIFICATION: Check if API key exists
+            if (!geminiApiKey) {
+                showAlert("API Key is not set. Please refresh and enter your API key.");
+                throw new Error("API Key is missing.");
+            }
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -425,6 +447,11 @@
         
         // --- Gemini API Call for Images ---
         async function generateImageForExercise(exerciseName) {
+             // MODIFICATION: Check if API key exists
+            if (!geminiApiKey) {
+                console.error("Cannot generate image without an API key.");
+                return `https://placehold.co/400x400/e2e8f0/64748b?text=API+Key+Missing`;
+            }
             const prompt = `Minimalist line art illustration of a person correctly performing the "${exerciseName}" stretch. Use clean, bold lines and a simple, limited color palette on a solid light gray background (#f0f0f0). The full body should be visible to clearly show the posture, form, and muscles being stretched, with an emphasis on anatomical accuracy and clarity.`;
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiApiKey}`;
             const payload = {
@@ -552,7 +579,6 @@
                 routineList.appendChild(exerciseEl);
 
                 if (generateImages) {
-                     // Asynchronously generate and update the image
                     generateImageForExercise(exercise.name).then(imageUrl => {
                         const imageContainer = document.getElementById(imageContainerId);
                         if (imageContainer) {
@@ -560,7 +586,6 @@
                         }
                     });
                 } else {
-                    // If not generating images (e.g., loading from saved), show a placeholder.
                     const imageContainer = document.getElementById(imageContainerId);
                     if(imageContainer) {
                          imageContainer.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-500">
@@ -611,7 +636,6 @@
                 routines.push({ id: doc.id, ...doc.data() });
             });
 
-            // Sort routines by creation date, newest first
             routines.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             routines.forEach(routine => {
@@ -621,8 +645,7 @@
                 routineEl.addEventListener('click', () => {
                     currentRoutine = routine;
                     document.getElementById('routine-title').textContent = routine.title;
-                    renderRoutine(routine, false); // Do not regenerate images for saved routines
-
+                    renderRoutine(routine, false); 
                     const summaryIcons = document.getElementById('routine-summary-icons');
                     summaryIcons.innerHTML = ''; 
                     
@@ -635,70 +658,52 @@
             });
         }
 
-
         // --- Input Disabling Logic ---
          const searchBar = document.getElementById('search-bar');
-
          function updateInputStates() {
             const muscleValue = muscleSelect.value;
             const ailmentValue = ailmentSelect.value;
             const searchValue = searchBar.value;
-
-            // Determine which input is active
             const searchIsActive = searchValue !== '';
             const muscleIsActive = muscleValue !== '';
             const ailmentIsActive = ailmentValue !== '';
-            
-            // Disable/enable muscle select
             muscleSelect.disabled = searchIsActive || ailmentIsActive;
             if (muscleSelect.disabled) muscleSelect.classList.add('bg-slate-100');
             else muscleSelect.classList.remove('bg-slate-100');
-
-            // Disable/enable ailment select
             ailmentSelect.disabled = searchIsActive || muscleIsActive;
             if (ailmentSelect.disabled) ailmentSelect.classList.add('bg-slate-100');
             else ailmentSelect.classList.remove('bg-slate-100');
-
-            // Disable/enable search bar
             searchBar.disabled = muscleIsActive || ailmentIsActive;
             if (searchBar.disabled) searchBar.classList.add('bg-slate-100');
             else searchBar.classList.remove('bg-slate-100');
          }
-
          muscleSelect.addEventListener('change', () => {
-             if (muscleSelect.value) {
-                 ailmentSelect.value = '';
-                 searchBar.value = '';
-             }
+             if (muscleSelect.value) { ailmentSelect.value = ''; searchBar.value = ''; }
              updateInputStates();
          });
-         
          ailmentSelect.addEventListener('change', () => {
-            if (ailmentSelect.value) {
-                 muscleSelect.value = '';
-                 searchBar.value = '';
-             }
+            if (ailmentSelect.value) { muscleSelect.value = ''; searchBar.value = ''; }
              updateInputStates();
          });
-
          searchBar.addEventListener('input', () => {
-            if (searchBar.value) {
-                 muscleSelect.value = '';
-                 ailmentSelect.value = '';
-             }
+            if (searchBar.value) { muscleSelect.value = ''; ailmentSelect.value = ''; }
              updateInputStates();
          });
          
-        // --- Initial Load ---
+        // --- MODIFICATION: App initialization is now a function called after API key is entered
         function init() {
             populateMuscles();
             populateAilments();
             populateModalities();
             showView(creationSection);
-            updateInputStates(); // Set initial state
+            updateInputStates();
         }
 
-        init();
+        // --- Initial Load ---
+        // The script now waits for the user to provide an API key. 
+        // The API Key modal is shown by default via inline style.
+        // The init() function is called via the 'save-api-key-btn' event listener.
+
     </script>
 </body>
 </html>
