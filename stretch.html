@@ -639,49 +639,54 @@
         // --- Input Disabling Logic ---
          const searchBar = document.getElementById('search-bar');
 
-         function resetDisables() {
-             muscleSelect.disabled = false;
-             ailmentSelect.disabled = false;
-             searchBar.disabled = false;
-             muscleSelect.classList.remove('bg-slate-100');
-             ailmentSelect.classList.remove('bg-slate-100');
-             searchBar.classList.remove('bg-slate-100');
+         function updateInputStates() {
+            const muscleValue = muscleSelect.value;
+            const ailmentValue = ailmentSelect.value;
+            const searchValue = searchBar.value;
+
+            // Determine which input is active
+            const searchIsActive = searchValue !== '';
+            const muscleIsActive = muscleValue !== '';
+            const ailmentIsActive = ailmentValue !== '';
+            
+            // Disable/enable muscle select
+            muscleSelect.disabled = searchIsActive || ailmentIsActive;
+            if (muscleSelect.disabled) muscleSelect.classList.add('bg-slate-100');
+            else muscleSelect.classList.remove('bg-slate-100');
+
+            // Disable/enable ailment select
+            ailmentSelect.disabled = searchIsActive || muscleIsActive;
+            if (ailmentSelect.disabled) ailmentSelect.classList.add('bg-slate-100');
+            else ailmentSelect.classList.remove('bg-slate-100');
+
+            // Disable/enable search bar
+            searchBar.disabled = muscleIsActive || ailmentIsActive;
+            if (searchBar.disabled) searchBar.classList.add('bg-slate-100');
+            else searchBar.classList.remove('bg-slate-100');
          }
 
          muscleSelect.addEventListener('change', () => {
-             resetDisables();
-             if(muscleSelect.value) {
+             if (muscleSelect.value) {
                  ailmentSelect.value = '';
                  searchBar.value = '';
-                 ailmentSelect.disabled = true;
-                 searchBar.disabled = true;
-                 ailmentSelect.classList.add('bg-slate-100');
-                 searchBar.classList.add('bg-slate-100');
              }
+             updateInputStates();
          });
          
          ailmentSelect.addEventListener('change', () => {
-             resetDisables();
-              if(ailmentSelect.value) {
+            if (ailmentSelect.value) {
                  muscleSelect.value = '';
                  searchBar.value = '';
-                 muscleSelect.disabled = true;
-                 searchBar.disabled = true;
-                 muscleSelect.classList.add('bg-slate-100');
-                 searchBar.classList.add('bg-slate-100');
              }
+             updateInputStates();
          });
 
          searchBar.addEventListener('input', () => {
-             resetDisables();
-             if(searchBar.value) {
+            if (searchBar.value) {
                  muscleSelect.value = '';
                  ailmentSelect.value = '';
-                 muscleSelect.disabled = true;
-                 searchBar.disabled = true;
-                 muscleSelect.classList.add('bg-slate-100');
-                 searchBar.classList.add('bg-slate-100');
              }
+             updateInputStates();
          });
          
         // --- Initial Load ---
@@ -690,6 +695,7 @@
             populateAilments();
             populateModalities();
             showView(creationSection);
+            updateInputStates(); // Set initial state
         }
 
         init();
