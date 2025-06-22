@@ -8,73 +8,63 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Adjusted scrollbar for the script display area */
-        #script-display-area::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 8px; }
-        #script-display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: #1f2937; }
-        #script-display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        #script-display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        /* Style for the generated script */
+        /* Adjusted scrollbar styles */
+        #script-display-area::-webkit-scrollbar, textarea::-webkit-scrollbar, .custom-dropdown-content::-webkit-scrollbar { width: 8px; }
+        #script-display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, .custom-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
+        #script-display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, .custom-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #script-display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
         .generated-script {
             background-image: linear-gradient(to right, #1e293b, #1a222f);
             padding: 1.5rem;
             border-radius: 0.75rem;
-            white-space: pre-wrap; /* Preserve line breaks and spaces */
+            white-space: pre-wrap;
             font-size: 1.1rem;
             line-height: 1.8;
             color: #d1d5db;
         }
-        /* Style for system messages */
-        .system-message-paragraph {
+        
+        .system-message-paragraph, .error-message-paragraph {
             align-self: center;
             text-align: center;
             padding: 1rem;
             border-radius: 0.5rem;
             font-weight: bold;
             max-width: 80%;
-            background-color: #374151;
-            color: #a78bfa;
             white-space: pre-wrap;
         }
-        .error-message-paragraph {
-            align-self: center;
-            text-align: center;
-            padding: 1rem;
-            border-radius: 0.5rem;
+        .system-message-paragraph { background-color: #374151; color: #a78bfa; }
+        .error-message-paragraph { background-color: #dc2626; color: #fee2e2; }
+
+        .dropdown-label { display: block; padding: 0.5rem 1rem; cursor: pointer; transition: background-color 0.2s; position: relative; }
+        .dropdown-label:hover { background-color: #374151; }
+        .dropdown-label input { margin-right: 0.75rem; }
+        .custom-dropdown-content { max-height: 15rem; overflow-y: auto; }
+        
+        .script-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; color: #e5e7eb; text-align: center; }
+
+        .info-btn {
+            background: none;
+            border: none;
+            padding: 0.25rem;
+            cursor: pointer;
+            border-radius: 9999px;
+            line-height: 1;
+        }
+        .info-btn:hover {
+            background-color: #4b5563;
+        }
+        .modal-content-title {
             font-weight: bold;
-            max-width: 80%;
-            background-color: #dc2626;
-            color: #fee2e2;
-            white-space: pre-wrap;
+            color: #a78bfa;
+            margin-top: 0.75rem;
+            margin-bottom: 0.25rem;
         }
 
-        /* Styles for custom dropdowns */
-        .dropdown-label {
-            display: block;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .dropdown-label:hover {
-            background-color: #374151;
-        }
-        .dropdown-label input {
-            margin-right: 0.75rem;
-        }
-         .custom-dropdown-content {
-            max-height: 15rem; /* Limit height for scrollable content */
-            overflow-y: auto;
-        }
-        .script-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            color: #e5e7eb;
-            text-align: center;
-        }
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
-    <!-- App container now uses h-screen for full viewport height -->
+    <!-- App container -->
     <div id="app-container" class="w-full h-screen flex flex-col bg-gray-800 p-4 sm:p-6">
         <!-- Header Section -->
         <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
@@ -82,32 +72,31 @@
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         Yoga Nidra Creator
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.18</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.27</span>
                         <button id="help-icon" title="How to Use">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
+                        </button>
+                         <button id="api-key-btn" title="Set API Key">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.707 0L6 9.207l-.646.647a.5.5 0 0 1-.708 0L4 9.207l-.646.647a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.647-.646a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0L7.465 6H8a4 4 0 1 1 0 4zM3.5 11.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
                         </button>
                     </h1>
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
                 </div>
                 <div class="flex flex-wrap items-end gap-4">
-                    <!-- AI Persona Dropdown -->
+                    <!-- Controls -->
                     <div class="w-96 relative">
-                        <label class="block mb-1 text-gray-400 text-sm">AI Persona:</label>
+                        <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Script Type (Optional):</label>
+                        <select id="script-type-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    </div>
+                    <div class="w-96 relative">
+                        <label class="block mb-1 text-gray-400 text-sm">AI Persona (Optional):</label>
                         <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
                             <span>Select Persona</span>
-                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
                            <div id="persona-list-area" class="max-h-56 overflow-y-auto custom-dropdown-content"></div>
                         </div>
-                    </div>
-                    <!-- Voice Selection Dropdown -->
-                    <div class="w-60 relative">
-                        <label for="voice-select" class="block mb-1 text-gray-400 text-sm">Voice:</label>
-                        <select id="voice-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                      <div class="w-40">
                         <label for="script-length-select" class="block mb-1 text-gray-400 text-sm">Length:</label>
@@ -116,7 +105,6 @@
                 </div>
             </div>
              <div class="flex items-center justify-end gap-2 mt-3 w-full">
-                <button id="listen-script-btn" class="bg-purple-600 hover:bg-purple-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Listen</button>
                 <button id="copy-script-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Copy Script</button>
                 <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Clear</button>
             </div>
@@ -127,42 +115,40 @@
         
         <!-- User Input Area -->
         <footer class="mt-4 pt-4 border-t border-gray-700">
-            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter topic or intention for your Yoga Nidra script (e.g., 'deep relaxation', 'manifesting abundance', 'releasing stress')..."></textarea>
+            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
             <div class="flex justify-end items-center mt-2 gap-4">
                 <button id="generate-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
                     <span id="btn-text">Generate Script</span>
-                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 </button>
             </div>
         </footer>
     </div>
     
-    <!-- Instructions Modal -->
+    <!-- Modals -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl h-[80vh] flex flex-col">
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Yoga Nidra Creator</h2>
-            <div id="instructions-modal-content" class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
+            <div class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
                 <div class="prose prose-invert">
-                    <p>This tool helps you generate personalized Yoga Nidra scripts based on your input.</p>
-                    <h3 class="font-semibold text-white mt-4">Core Controls</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Input Prompt:</strong> Enter a topic, intention, or theme for your Yoga Nidra script (e.g., "deep relaxation for sleep," "releasing emotional blockages," "manifesting abundance").</li>
-                        <li><strong>AI Persona:</strong> Choose the AI's guiding voice. This will subtly influence the language and focus of the generated script.</li>
-                        <li><strong>Voice:</strong> Select an AI voice for the generated script.</li>
-                        <li><strong>Length:</strong> Choose the desired length of the generated script: Short, Medium, Long, or Unlimited. This affects the depth and detail of the script.</li>
-                        <li><strong>Generate Script:</strong> Click this button to create your Yoga Nidra script. The generated script will appear in the display area above.</li>
-                        <li><strong>Listen:</strong> Plays the generated script aloud using the selected voice.</li>
-                        <li><strong>Copy Script:</strong> Once a script is generated, use this button to copy the entire text to your clipboard.</li>
-                        <li><strong>Clear:  </strong>Clears the current script and resets the input field, allowing you to generate a new script.</li>
-                    </ul>
-                    <h3 class="font-semibold text-white mt-4">Tips for Best Results</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li>Be specific with your prompt to guide the AI.</li>
-                        <li>Experiment with different lengths and AI Personas to find what works best for you.</li>
-                        <li>The generated script can be used as a personal guide or adapted for teaching.</li>
+                    <p>Welcome! Generate personalized Yoga Nidra scripts with a layered approach for precise results.</p>
+                    <h3 class="font-semibold text-white mt-4">Getting Started: API Key</h3>
+                     <ul class="list-disc pl-5 space-y-1">
+                        <li>This tool requires a Google AI API key to function.</li>
+                        <li>On first use, you will be prompted to enter your key. You can also click the <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-key inline-block" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.707 0L6 9.207l-.646.647a.5.5 0 0 1-.708 0L4 9.207l-.646.647a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.647-.646a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0L7.465 6H8a4 4 0 1 1 0 4zM3.5 11.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg> icon to open the API key dialog at any time.</li>
+                        <li>Your key is stored only in your browser for this session.</li>
+                     </ul>
+                    <h3 class="font-semibold text-white mt-4">Generation Workflow</h3>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li><strong>Enter Your Intention:</strong> Type the main goal or theme for your script in the text box. This is the only required step.</li>
+                        <li><strong>Select a Script Type (Optional):</strong> Choose a pre-defined theme from this dropdown to give the AI a strong starting point. Hover over an option to see its description.</li>
+                        <li><strong>Select an AI Persona (Optional):</strong> Choose a guiding voice. Click the 'i' icon next to a persona to see its detailed description in a popup. If none is chosen, a neutral guide is used.</li>
+                         <li><strong>Choose Length:</strong> Select the desired script length.</li>
+                        <li><strong>Generate Script:</strong> Click to create your unique Yoga Nidra script based on all your selections.</li>
+                    </ol>
+                    <h3 class="font-semibold text-white mt-4">Other Controls</h3>
+                     <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Copy Script & Clear:</strong> Use these buttons to copy the generated script to your clipboard or clear the display.</li>
                     </ul>
                 </div>
             </div>
@@ -171,184 +157,495 @@
             </div>
         </div>
     </div>
-
-    <!-- API Key Modal -->
-    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md flex flex-col">
-            <h2 class="text-2xl font-bold mb-4 text-white">Enter Your Gemini API Key</h2>
-            <p class="text-gray-400 mb-4">To generate scripts, a Google AI Gemini API key is required. You can get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Google AI Studio</a>.</p>
-            <input type="password" id="api-key-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter your API key here...">
-            <p id="api-key-error" class="text-red-400 text-sm mt-2 hidden">Please enter a valid API key.</p>
-            <div class="flex justify-end mt-6">
+            <h2 class="text-2xl font-bold mb-4 text-white">Enter Your API Key</h2>
+            <p class="text-gray-400 mb-4 text-sm">A Google AI API key is required to generate scripts. You can get a free key from Google AI Studio. This key is stored only in your browser for this session.</p>
+            <input type="password" id="api-key-input" class="w-full bg-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Paste your API key here">
+            <div class="flex justify-end gap-4">
+                 <button id="close-api-key-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>
                 <button id="save-api-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
             </div>
         </div>
     </div>
-    
+
+    <div id="persona-detail-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col">
+            <h2 id="persona-modal-title" class="text-2xl font-bold mb-2 text-white"></h2>
+            <div id="persona-modal-content" class="text-gray-300 space-y-2 text-sm"></div>
+            <div class="flex justify-end mt-6">
+                <button id="close-persona-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Element References ---
             const scriptDisplayArea = document.getElementById('script-display-area');
             const promptInput = document.getElementById('prompt-input');
             const generateBtn = document.getElementById('generate-btn');
-            const btnText = document.getElementById('btn-text');
             const loadingSpinner = document.getElementById('loading-spinner');
             const scriptLengthSelect = document.getElementById('script-length-select');
+            const scriptTypeSelect = document.getElementById('script-type-select');
             const resetAppBtn = document.getElementById('reset-app-btn');
             const copyScriptBtn = document.getElementById('copy-script-btn');
-            const helpIcon = document.getElementById('help-icon');
-            const instructionsModal = document.getElementById('instructions-modal');
-            const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
             const personaDropdownButton = document.getElementById('persona-dropdown-button');
             const personaDropdownContent = document.getElementById('persona-dropdown-content');
             const personaListArea = document.getElementById('persona-list-area');
-            // Audio elements
-            const listenScriptBtn = document.getElementById('listen-script-btn');
-            const voiceSelect = document.getElementById('voice-select');
-            // API Key Modal elements
+            
+            const helpIcon = document.getElementById('help-icon');
+            const instructionsModal = document.getElementById('instructions-modal');
+            const closeInstructionsModalBtn = document.getElementById('close-instructions-modal-btn');
+            const apiKeyBtn = document.getElementById('api-key-btn');
             const apiKeyModal = document.getElementById('api-key-modal');
             const apiKeyInput = document.getElementById('api-key-input');
             const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-            const apiKeyError = document.getElementById('api-key-error');
+            const closeApiKeyModalBtn = document.getElementById('close-api-key-modal-btn');
+            const personaDetailModal = document.getElementById('persona-detail-modal');
+            const personaModalTitle = document.getElementById('persona-modal-title');
+            const personaModalContent = document.getElementById('persona-modal-content');
+            const closePersonaModalBtn = document.getElementById('close-persona-modal-btn');
+
 
             // --- Application State ---
+            let apiKey = '';
             let isGenerating = false;
             let currentGeneratedScript = '';
-            let currentPersonaIndex = 0; // Default to The Yoga Nidra Guide
-            let isSpeaking = false;
-            let currentUtterance = null;
-            let availableVoices = [];
-            let geminiApiKey = ''; // Will hold the user's API key
+            let selectedPersonaIndex = null; // Use null for no selection
+            let scriptTypesData = [];
+            let personas = [];
+            
+            // --- Data Definitions ---
 
-            // --- General Scripting Guidelines (applies to all personas) ---
-            const generalScriptingGuidelines = `
-When designing your scripts, remember to:
-Integrate gradually: Don't overload a single session with too many complex spiritual concepts. Introduce them thoughtfully and allow time for absorption.
-Keep it accessible: While using ancient terminology, always provide simple, clear explanations for those new to these concepts.
-Honor the tradition: Be mindful and respectful of the origin and depth of these ancient practices.
-Your authentic voice: Even with these personas, infuse your own authentic teaching style and compassion. The AI should aim to replicate your desired persona.
-Sankalpa (Intention): Guide the user to form a positive "I am" statement, and reiterate it at the beginning and end of the practice. The AI should understand the importance of this.
-Body Scan Precision: The rotation of consciousness needs to be clear and systematic.
-Sensory Language: Engage all senses (visual, auditory, tactile, even olfactory and gustatory when appropriate for visualization) to deepen the experience.
-Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improved sleep, emotional healing, cognitive function, pain management) to tailor the language and focus.
-`;
-
-            // --- Persona Data ---
-            const personas = [
-                { name: "The Yoga Nidra Guide", description: "A comprehensive and calming guide. Weaves the user's intention into traditional Yoga Nidra stages: sankalpa, body scan, breath awareness, opposite sensations, visualization, and externalization." },
-                { name: "The Calming Guide / Serene Narrator", description: "A gentle, soothing, and reassuring narrator. Uses language of peace, stillness, and comfort to create an atmosphere of deep relaxation and trust. Focuses on sensory details." },
-                { name: "The Compassionate Witness", description: "An empathetic and non-judgmental guide. Encourages observing thoughts and feelings without attachment, fostering self-acceptance and releasing tension." },
-                { name: "The Clear Instructor / Precise Facilitator", description: "A clear, direct, and methodical instructor. Uses concise language for body scans and breath awareness to keep the listener present and focused." },
-                { name: "The Wise Sage / Ancient Teacher", description: "A deep, resonant voice imbued with ancient wisdom. Invites the listener into a state of expanded awareness and inner knowing, beyond simple relaxation." },
-                { name: "The Nurturing Presence", description: "A gentle, supportive, and comforting caregiver. Emphasizes kindness and self-acceptance, creating a feeling of emotional safety and warmth." },
-                { name: "The Ancient Sage / Rishi (Seer)", description: "A deeply resonant voice of ageless wisdom. Uses Sanskrit terms (gently explained) and speaks of universal truths to connect the listener with deeper philosophical concepts." },
-                { name: "The Cosmic Storyteller / Myth Weaver", description: "An evocative, imaginative, and mystical storyteller. Uses rich, archetypal imagery and mythological metaphors to engage the subconscious mind." },
-                { name: "The Chakra Alchemist / Subtle Body Guide", description: "A grounded yet ethereal guide to the subtle body. Focuses on awakening and balancing the chakras and energy channels (nadis) for energetic alignment." },
-                { name: "The Mantra Chanter / Sound Healer", description: "A rhythmic, soothing, and resonant guide. Uses the vibrational power of sound and mantras to quiet the mind and access deeper states of consciousness." },
-                { name: "The Gunas Harmonizer", description: "A balanced, discerning, and insightful guide. Brings awareness to the Gunas (Sattva, Rajas, Tamas) to help the listener achieve a state of harmony and clarity." }
-            ];
-
-            // Construct the full system prompt for each persona to be used by the API
-            personas.forEach(persona => {
-                persona.systemPrompt = `${generalScriptingGuidelines}\n\nYou are ${persona.name}. ${persona.description} Ensure the script includes traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization). Adapt length based on user's preference.`;
-            });
-
-            // --- Length Options Data ---
             const lengthOptions = [
-                { name: "Short", promptSuffix: "Make it a concise script, around 300-500 words, focusing on key stages of Yoga Nidra." },
-                { name: "Medium", promptSuffix: "Generate a moderately detailed script, approximately 700-1000 words, covering all traditional stages comprehensively." },
-                { name: "Long", promptSuffix: "Produce a very detailed and expansive script, about 1200-1800 words, allowing for extended pauses and deeper exploration." },
-                { name: "Unlimited", promptSuffix: "Generate a comprehensive Yoga Nidra script without a specific word limit, providing as much detail and depth as necessary to fulfill the intention." }
+                { name: "Short", promptSuffix: "Make it a concise script, around 300-500 words." },
+                { name: "Medium", promptSuffix: "Generate a moderately detailed script, approximately 700-1000 words." },
+                { name: "Long", promptSuffix: "Produce a very detailed and expansive script, about 1200-1800 words." },
+                { name: "Unlimited", promptSuffix: "Generate a comprehensive script without a specific word limit." }
             ];
 
-            // --- Core Functions ---
+            // --- Data Parsing and Loading ---
+
+            function parsePersonaData() {
+                const rawPersonaText = `
+The Traditional & Serene
+1. The Sage (Traditional Guru)
+Description: Generate a Yoga Nidra script with the persona of a wise, ancient sage. The tone should be calm, profound, and deeply reassuring. Use traditional Sanskrit terms (like Sankalpa, Savasana) with brief, clear explanations. The pacing is slow and deliberate, with ample space for silence.
+Vocal Quality: A deep, resonant male or female voice with a gentle, slow cadence.
+Imagery: Focus on timeless, universal symbols: a silent mountain, a still lake at dawn, the vast expanse of the cosmos.
+Theme: Stillness, timelessness, and connection to the universal consciousness.
+2. The Nurturing Mother (The Caregiver)
+Description: Create a script from the perspective of a loving, maternal figure. The language should be gentle, comforting, and filled with affirmations of safety and unconditional acceptance. The focus is on deep physical and emotional rest.
+Vocal Quality: A soft, warm, and soothing female voice.
+Imagery: Evoke feelings of being held, swaddled, and protected. Use images of a cozy hearth, a gentle embrace, or a peaceful, sunlit garden.
+Theme: Deep rest, emotional healing, and self-compassion.
+3. The Yogi (The Balanced Practitioner)
+Description: The persona is a seasoned yoga practitioner leading a fellow yogi through practice. The script should be clear, and precise, and follow a classical structure. It can include subtle references to chakras or energy channels (nadis) without being overly esoteric.
+Vocal Quality: A clear, calm, and centered voice, either male or female.
+Imagery: Focus on the internal landscape of the body: the flow of breath, the release of tension in the muscles, and a sense of inner alignment.
+Theme: Balance, integration, and mindful awareness of the body.
+The Natural & Elemental
+4. The Gardener (The Creator)
+Description: Generate a script with the theme of planting, nurturing, and harvesting. The persona is a patient gardener guiding the listener to cultivate their inner landscape. The Sankalpa is framed as planting a seed of intention.
+Vocal Quality: A gentle, earthy, and patient voice.
+Imagery: A lush garden, a seed sprouting, roots growing deep into the earth, flowers blossoming.
+Theme: Growth, manifestation, and patience.
+5. The Oceanographer (The Explorer)
+Description: Create a script that takes the listener on a journey into the depths of the ocean. The persona is a calm and knowledgeable oceanographer. The body scan becomes a descent into deeper, quieter levels of consciousness.
+Vocal Quality: A calm, steady voice that conveys a sense of wonder.
+Imagery: The sunlit surface of the water, coral reefs, bioluminescent creatures in the deep, and the profound silence of the ocean floor.
+Theme: Exploring the subconscious, deep relaxation, and surrender.
+6. The Stargazer (The Visionary)
+Description: The persona is an astronomer or stargazer, guiding the listener on a cosmic journey. The script should evoke a sense of awe, expansion, and connection to the vastness of space.
+Vocal Quality: A clear, wondrous, and expansive voice.
+Imagery: Constellations, shooting stars, nebulae, the Milky Way, and the feeling of floating in space.
+Theme: Expanded consciousness, letting go of small worries, and connecting to a larger perspective.
+7. The Forest Spirit (The Wild One)
+Description: Create a script from the perspective of an ancient forest spirit. The language is earthy and sensory, focusing on the sights, sounds, and smells of a deep, old-growth forest.
+Vocal Quality: A textured, grounding voice, with a hint of wildness.
+Imagery: Sunlight filtering through a dense canopy, the feeling of moss underfoot, the scent of pine and damp earth, the sounds of unseen creatures.
+Theme: Grounding, connection to nature's cycles, and wild, untamed peace.
+The Modern & Innovative
+8. The Neuroscientist (The Scientist)
+Description: Generate a script with a modern, scientific approach. The persona is a calm and reassuring neuroscientist explaining the physiological benefits of each stage of Yoga Nidra (e.g., "As we scan the body, we are calming the nervous system...").
+Vocal Quality: A clear, articulate, and trustworthy voice.
+Imagery: The gentle firing of neurons, the release of calming brainwaves (alpha and theta), and the harmonious functioning of the body's systems.
+Theme: Brain optimization, stress reduction, and the science of relaxation.
+9. The AI Companion (The Guide)
+Description: The persona is a benevolent and highly intelligent AI designed for optimal human wellness. The language is precise, soothing, and subtly futuristic. The script could incorporate soft, ambient electronic soundscapes.
+Vocal Quality: A smooth, perfectly modulated, and calming synthesized voice.
+Imagery: Geometric patterns of light, data streams flowing harmoniously, and the visualization of the body's energy field as a coherent light grid.
+Theme: Digital detox, mental clarity, and harmonizing with technology.
+10. The Minimalist (The Purist)
+Description: Create a script that is sparse, direct, and free of excessive imagery or flowery language. The focus is on pure awareness of the body, breath, and sensations. The persona is a minimalist who values clarity and simplicity.
+Vocal Quality: A clean, clear, and direct voice.
+Imagery: Simple geometric shapes, the color white, and the concept of empty space.
+Theme: Decluttering the mind, simplicity, and pure awareness.
+11. The Bio-Hacker (The Optimizer)
+Description: The persona is a friendly and enthusiastic bio-hacker, focused on upgrading the human experience. The script is framed as a "system reset" or "neural upgrade." The tone is positive and empowering.
+Vocal Quality: An upbeat, confident, and encouraging voice.
+Imagery: Visualizing cellular regeneration, optimizing energy flow, and clearing mental "cache."
+Theme: Self-improvement, enhanced performance, and mindful optimization.
+The Mystical & Magical
+12. The Alchemist (The Magician)
+Description: Create a script with the theme of inner alchemy – transforming a base state (stress, fatigue) into a golden state (peace, vitality). The persona is a wise and mysterious alchemist.
+Vocal Quality: A measured, slightly theatrical, and wise voice.
+Imagery: A bubbling cauldron, lead turning to gold, the distillation of pure energy, and symbols of transformation like the phoenix.
+Theme: Transformation, purification, and the creation of inner gold.
+13. The Dream Weaver (The Artist)
+Description: The persona is a weaver of dreams, guiding the listener into the liminal space between waking and sleeping. The language is poetic, lyrical, and surreal.
+Vocal Quality: A soft, ethereal, and mesmerizing voice.
+Imagery: Shifting landscapes, colors that can be heard, sounds that can be seen, and other dream-like synesthetic experiences.
+Theme: Creativity, accessing the subconscious, and lucid dreaming.
+14. The Storyteller (The Bard)
+Description: Generate a script that subtly weaves a gentle, archetypal story into the Yoga Nidra framework. The body scan might follow the path of a character on a peaceful journey. The persona is a captivating storyteller.
+Vocal Quality: A warm, engaging, and melodic voice.
+Imagery: The imagery will be dictated by the gentle narrative – a walk through an enchanted forest, a sail across a calm sea, a climb to a peaceful mountain hermitage.
+Theme: The power of narrative, life as a journey, and finding peace in the story.
+15. The Mystic (The Oracle)
+Description: The persona is a mystic who speaks in profound, yet simple, truths. The script is less about detailed guidance and more about creating a space for personal insight and revelation.
+Vocal Quality: A calm, knowing, and slightly detached voice.
+Imagery: Focus on abstract concepts like light, shadow, silence, and emptiness. The visualization might involve looking into a still pool of water to see one's own inner wisdom.
+Theme: Inner wisdom, intuition, and direct experience of the self.
+The Whimsical & Playful
+16. The Inner Child (The Innocent)
+Description: Create a script that invites a sense of childlike wonder and simplicity. The persona is the listener's own inner child, speaking with gentleness and purity.
+Vocal Quality: A soft, gentle, and innocent voice.
+Imagery: Floating on a soft cloud, being rocked in a gentle swing, the feeling of warm sunshine on the face.
+Theme: Reclaiming innocence, joy, and simple being.
+17. The Jester (The Playful Spirit)
+Description: A more unconventional persona, the Jester guides a Yoga Nidra with a lighthearted and playful touch. The script uses gentle humor and unexpected, delightful imagery to release tension. The aim is to smile into relaxation.
+Vocal Quality: A warm, chuckling, and friendly voice.
+Imagery: The feeling of fizzing bubbles of joy, a gentle breeze tickling the skin, the image of worries as small, silly cartoons that float away.
+Theme: Joyful release, not taking things too seriously, and the healing power of laughter.
+The Healing & Therapeutic
+18. The Healer (The Empath)
+Description: The persona is a compassionate healer, guiding the listener to activate their own inner healing resources. The language is gentle, permissive, and deeply validating of the listener's experience.
+Vocal Quality: A very soft, gentle, and empathetic voice.
+Imagery: A soft, healing light (in a color of the listener's choosing) that flows through the body, mending and soothing. The visualization could be a peaceful healing sanctuary.
+Theme: Self-healing, restoration, and deep, compassionate rest.
+19. The Peace Ambassador (The Diplomat)
+Description: Create a script with the theme of inner peace and reconciliation. The persona is a calm and centered peace ambassador, guiding the listener to negotiate a truce between different parts of the self (e.g., a an anxious mind and a tired body).
+Vocal Quality: A calm, balanced, and diplomatic voice.
+Imagery: A round table where all parts of the self are welcome, a treaty of peace being signed, a gentle rain washing away conflict.
+Theme: Inner harmony, conflict resolution, and equanimity.
+20. The Ancestor (The Guardian)
+Description: The persona is a wise and loving ancestor, speaking from a place of deep time and collective wisdom. The script evokes a sense of belonging and connection to one's lineage.
+Vocal Quality: A deep, resonant voice that carries the weight of time and wisdom.
+Imagery: The roots of a great tree, a long line of ancestors standing in support, the stars as the eyes of those who came before.
+Theme: Ancestral healing, deep roots, and a sense of belonging.
+The Abstract & Expansive
+21. The Geometrician (The Architect)
+Description: The persona is a being of pure consciousness that perceives the world in terms of sacred geometry. The script guides the listener to experience their body and consciousness as patterns of light and form.
+Vocal Quality: A precise, melodic, and almost mathematical voice.
+Imagery: The Flower of Life, Platonic solids, mandalas, and the body as a temple of living geometry.
+Theme: Order from chaos, universal patterns, and the architecture of being.
+22. The Musician (The Harmonizer)
+Description: The persona is a musician or composer who guides the listener to experience their body as an instrument and their breath as the music. The script uses musical metaphors.
+Vocal Quality: A melodic, rhythmic, and soothing voice.
+Imagery: The body as a string instrument being gently tuned, the breath as a melody, and sensations as harmonies. The visualization could be a symphony of light and sound.
+Theme: Inner harmony, resonance, and the vibration of life.
+23. The Poet (The Romantic)
+Description: Create a script that is rich in poetic language and beautiful metaphors. The persona is a poet who sees the beauty in every sensation and breath.
+Vocal Quality: A soft, expressive, and heartfelt voice.
+Imagery: Evocative and sensory metaphors: breath like the tide, thoughts like clouds drifting across the sky, peace like a soft blanket of snow.
+Theme: Beauty, grace, and a poetic appreciation for the present moment.
+24. The Librarian of the Akashic Records (The Chronicler)
+Description: The persona is the keeper of the Akashic Records, a vast library of all knowledge and experience. The script guides the listener to a state of deep stillness where they can access their own inner book of wisdom.
+Vocal Quality: A hushed, reverent, and knowledgeable voice.
+Imagery: A vast, silent library, ancient scrolls and books, a single, glowing page that holds a personal message of insight.
+Theme: Accessing inner wisdom, understanding one's life path, and deep, quiet knowing.
+25. The Silent Witness (The Observer)
+Description: This persona is the epitome of pure, non-judgmental awareness. The script uses minimal language, with long pauses to allow the listener to simply be with their own experience. The guidance is very simple and direct, pointing awareness to different aspects of being.
+Vocal Quality: A calm, neutral, and unobtrusive voice.
+Imagery: The primary "image" is that of a vast, open, and aware space in which all sensations, thoughts, and feelings can arise and pass away without disturbance.
+Theme: Pure awareness, detachment, and the nature of consciousness itself.
+`;
+                const lines = rawPersonaText.trim().split('\n');
+                let currentCategory = 'Uncategorized';
+                let currentPersona = null;
+
+                personas = [];
+
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+
+                    const isCategoryHeader = line.toUpperCase() === line && !line.includes(':') && !/^\d+\./.test(line);
+
+                    if (isCategoryHeader) {
+                        if (currentPersona) personas.push(currentPersona);
+                        currentCategory = line;
+                        currentPersona = null;
+                    } else if (/^\d+\./.test(line)) {
+                        if (currentPersona) personas.push(currentPersona);
+                        currentPersona = {
+                            category: currentCategory,
+                            name: line.replace(/^\d+\.\s*/, ''),
+                            description: '',
+                            vocal_quality: '',
+                            imagery: '',
+                            theme: ''
+                        };
+                    } else if (currentPersona) {
+                        if (line.startsWith('Description:')) {
+                            currentPersona.description = line.substring('Description:'.length).trim();
+                        } else if (line.startsWith('Vocal Quality:')) {
+                            currentPersona.vocal_quality = line.substring('Vocal Quality:'.length).trim();
+                        } else if (line.startsWith('Imagery:')) {
+                            currentPersona.imagery = line.substring('Imagery:'.length).trim();
+                        } else if (line.startsWith('Theme:')) {
+                            currentPersona.theme = line.substring('Theme:'.length).trim();
+                        }
+                    }
+                });
+                if (currentPersona) personas.push(currentPersona);
+                
+                personas.unshift({
+                    name: 'Default Yoga Nidra Guide',
+                    description: 'A neutral, clear, and calming guide for a general Yoga Nidra practice.',
+                    vocal_quality: 'A clear and calm voice.',
+                    imagery: 'Simple and accessible, focusing on breath and body sensations.',
+                    theme: 'General relaxation and stillness.',
+                    systemPrompt: `You are a neutral, clear, and calming AI assistant creating a general Yoga Nidra script. Your script must include traditional Yoga Nidra stages.`
+                });
+
+                personas.forEach(p => {
+                    if (!p.systemPrompt) {
+                        p.systemPrompt = `You are an AI assistant creating a Yoga Nidra script. Adopt the persona of **${p.name}**.
+                        **Detailed Persona Profile:**
+                        - **Description:** ${p.description}
+                        - **Vocal Quality:** ${p.vocal_quality}
+                        - **Imagery Style:** ${p.imagery}
+                        - **Core Theme:** ${p.theme}
+                        
+                        Your script must include traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization).
+                        Adapt the length based on user's preference.`;
+                    }
+                });
+            }
+
+            function parseAndLoadScriptTypes() {
+                 const rawScriptTypesText = `
+Foundational & Restorative Scripts
+Classic Body Scan for Deep Relaxation: This foundational script meticulously guides awareness to each part of the body, from the toes to the head. Its primary goal is to release physical tension and cultivate a profound sense of physical relaxation.
+Breath and Energy Awareness: Focusing on the natural rhythm of the breath and the flow of prana (life force energy), this script helps to calm the nervous system and deepen the connection between mind and body.
+Yoga Nidra for Restful Sleep: Specifically designed to be practiced before bed, this script often incorporates visualizations of serene landscapes and gentle suggestions for letting go of the day's thoughts to encourage a smooth transition into deep and restful sleep.
+Stress and Anxiety Relief: This script utilizes calming imagery, affirmations, and the exploration of opposite sensations (e.g., tension and release) to soothe an anxious mind and release accumulated stress from the body.
+Healing and Recovery: With a focus on directing healing energy to areas of the body that are injured, ill, or in pain, this script supports the body's natural healing processes and promotes a sense of wholeness.
+Thematic & Intentional Scripts
+Sankalpa (Intention) Focused: This script places a strong emphasis on the formulation and repetition of a sankalpa, a heartfelt resolve or intention. The deep state of relaxation is used to plant this intention into the subconscious mind for manifestation.
+Journey Through the Koshas: Based on yogic philosophy, this script guides the practitioner through the five layers of being (the koshas): the physical, energetic, mental/emotional, wisdom, and bliss bodies, fostering a holistic sense of integration.
+Chakra Balancing and Awakening: This script focuses on the seven main energy centers (chakras) in the body. Through visualization and focused awareness, it aims to cleanse, balance, and awaken these vital energy points.
+Exploring the Five Elements (Pancha Maha Bhutas): Practitioners are guided to connect with the qualities of Earth, Water, Fire, Air, and Ether within their own bodies and consciousness, fostering a sense of connection to the natural world.
+Working with Opposites (Dvandvas): This script intentionally brings up pairs of opposite sensations or emotions (e.g., hot/cold, heavy/light, joy/sorrow) to cultivate equanimity and the understanding that all experiences are transient.
+Creative & Visualization-Based Scripts
+Enchanted Forest Journey: A highly imaginative script that leads the practitioner on a walk through a magical forest, encountering calming natural elements and symbolic imagery to foster a sense of peace and wonder.
+Cosmic Journey and Stargazing: This script invites the practitioner to visualize floating in space, observing the stars and galaxies. It's designed to expand consciousness and create a feeling of connection to the vastness of the universe.
+Oceanic Relaxation: Using the imagery and sounds of the ocean—waves, tides, and the deep blue—this script cultivates a sense of cleansing, release, and profound calm.
+Inner Sanctuary or Safe Space: This script guides the practitioner in creating a detailed mental sanctuary, a place of perfect safety and peace that they can return to anytime they need solace.
+Meeting a Wise Guide: A creative visualization that facilitates a meeting with an inner wise guide or mentor to receive guidance, insight, and reassurance.
+Scripts for Personal Growth & Transformation
+Cultivating Gratitude: This script focuses on bringing to mind and feeling gratitude for various aspects of one's life, fostering a positive mindset and emotional upliftment.
+Forgiveness and Letting Go: A gentle yet powerful script that guides the practitioner through the process of forgiving themselves and others, releasing emotional burdens and creating space for healing.
+Unlocking Creativity: By tapping into the subconscious mind, this script aims to dissolve creative blocks and awaken inspiration through symbolic imagery and open-ended suggestions.
+Building Self-Compassion and Love: This script uses affirmations and heart-centered visualizations to nurture a sense of self-love, acceptance, and kindness.
+Yoga Nidra for a New Beginning: Often used at the start of a new year, season, or life phase, this script helps to release the old and set clear, positive intentions for the future, instilling a sense of renewal and purpose.
+`;
+                const lines = rawScriptTypesText.trim().split('\n');
+                let currentCategory = 'Uncategorized';
+                scriptTypesData = [];
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+                    const hasColon = line.includes(':');
+                    const isHeader = !hasColon && line.endsWith('Scripts');
+                    if (isHeader) {
+                        currentCategory = line;
+                    } else if (hasColon) {
+                        const parts = line.split(/:(.*)/s);
+                        const name = parts[0].trim();
+                        const description = parts[1] ? parts[1].trim() : '';
+                        if (name && description) {
+                            scriptTypesData.push({ category: currentCategory, name, description });
+                        }
+                    }
+                });
+            }
 
             function initializeApp() {
+                parseAndLoadScriptTypes();
+                parsePersonaData();
+                populateScriptTypeSelect();
                 populateScriptLengthSelect();
                 populatePersonaSelect();
-                updatePersonaButton(currentPersonaIndex);
-                populateVoiceSelect();
-                resetApp();
                 addEventListeners();
-                checkApiKey();
+                resetApp();
+                checkAndPromptForKey();
             }
+            
+            // --- UI Population Functions ---
+
+            function populatePersonaSelect() {
+                personaListArea.innerHTML = '';
+                const noneLabel = document.createElement('label');
+                noneLabel.className = 'dropdown-label flex justify-between items-center';
+                noneLabel.innerHTML = `
+                    <div>
+                        <input type="radio" name="persona" value="none" class="accent-indigo-500">
+                        <span>None (Default Guide)</span>
+                    </div>
+                `;
+                if (selectedPersonaIndex === null) {
+                    noneLabel.querySelector('input').checked = true;
+                }
+                noneLabel.querySelector('input').addEventListener('change', () => {
+                    selectedPersonaIndex = null;
+                    updatePersonaButton(null);
+                    personaDropdownContent.classList.add('hidden');
+                });
+                personaListArea.appendChild(noneLabel);
+
+
+                const categories = [...new Set(personas.filter(p => p.name !== 'Default Yoga Nidra Guide').map(p => p.category))];
+
+                categories.forEach(category => {
+                    const optgroupHeader = document.createElement('div');
+                    optgroupHeader.className = 'px-4 py-2 text-xs font-bold text-gray-400 uppercase';
+                    optgroupHeader.textContent = category;
+                    personaListArea.appendChild(optgroupHeader);
+
+                    const personasInCategory = personas.filter(p => p.category === category);
+                    personasInCategory.forEach(persona => {
+                        const personaIndex = personas.indexOf(persona);
+                        const label = document.createElement('label');
+                        label.className = 'dropdown-label flex justify-between items-center';
+                        
+                        const contentDiv = document.createElement('div');
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'persona';
+                        radio.value = personaIndex;
+                        radio.className = 'accent-indigo-500';
+                         if (personaIndex === selectedPersonaIndex) {
+                            radio.checked = true;
+                        }
+
+                        radio.addEventListener('change', () => {
+                            selectedPersonaIndex = parseInt(radio.value);
+                            updatePersonaButton(selectedPersonaIndex);
+                            personaDropdownContent.classList.add('hidden');
+                        });
+                        
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = persona.name;
+                        
+                        contentDiv.appendChild(radio);
+                        contentDiv.appendChild(nameSpan);
+
+                        const infoButton = document.createElement('button');
+                        infoButton.className = 'info-btn';
+                        infoButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle text-gray-400" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.25.25 0 0 1-.288-.469l.738-3.468a.25.25 0 0 1 .469-.288zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+                        infoButton.dataset.index = personaIndex;
+
+                        label.appendChild(contentDiv);
+                        label.appendChild(infoButton);
+                        personaListArea.appendChild(label);
+                    });
+                });
+            }
+
+            function showPersonaDetailModal(persona) {
+                personaModalTitle.textContent = persona.name;
+                personaModalContent.innerHTML = `
+                    <div class="modal-content-title">Description:</div><p>${persona.description}</p>
+                    <div class="modal-content-title">Vocal Quality:</div><p>${persona.vocal_quality}</p>
+                    <div class="modal-content-title">Imagery:</div><p>${persona.imagery}</p>
+                    <div class="modal-content-title">Theme:</div><p>${persona.theme}</p>
+                `;
+                personaDetailModal.classList.remove('hidden');
+            }
+
 
             function addEventListeners() {
                 generateBtn.addEventListener('click', handleGenerateScript);
-                promptInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleGenerateScript();
-                    }
-                });
-            
+                promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerateScript(); } });
                 resetAppBtn.addEventListener('click', resetApp);
                 copyScriptBtn.addEventListener('click', copyScriptToClipboard);
-                listenScriptBtn.addEventListener('click', handleListenButtonClick); 
-
-                voiceSelect.addEventListener('change', () => {
-                    if (currentGeneratedScript && speechSynthesis.speaking) {
-                        speechSynthesis.cancel();
-                        setTimeout(() => startPlayback(), 100);
-                    }
-                });
-
-                helpIcon.addEventListener('click', () => { instructionsModal.classList.remove('hidden'); });
-                closeInstructionsModalBtn.addEventListener('click', () => { instructionsModal.classList.add('hidden'); });
-                
-                scriptLengthSelect.addEventListener('change', () => { promptInput.focus(); });
-
-                personaDropdownButton.addEventListener('click', () => { personaDropdownContent.classList.toggle('hidden'); });
-                document.addEventListener('click', (event) => {
-                    if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) {
-                        personaDropdownContent.classList.add('hidden');
-                    }
-                });
-
-                // API Key Modal Listeners
+                helpIcon.addEventListener('click', () => instructionsModal.classList.remove('hidden'));
+                closeInstructionsModalBtn.addEventListener('click', () => instructionsModal.classList.add('hidden'));
+                apiKeyBtn.addEventListener('click', () => apiKeyModal.classList.remove('hidden'));
+                closeApiKeyModalBtn.addEventListener('click', () => apiKeyModal.classList.add('hidden'));
                 saveApiKeyBtn.addEventListener('click', saveApiKey);
-                apiKeyInput.addEventListener('keydown', (e) => {
-                     if (e.key === 'Enter') {
-                        e.preventDefault();
-                        saveApiKey();
+                closePersonaModalBtn.addEventListener('click', () => personaDetailModal.classList.add('hidden'));
+                scriptTypeSelect.addEventListener('change', () => promptInput.focus());
+                personaDropdownButton.addEventListener('click', () => personaDropdownContent.classList.toggle('hidden'));
+                document.addEventListener('click', (event) => { if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) { personaDropdownContent.classList.add('hidden'); } });
+                
+                // Event delegation for persona info buttons
+                personaListArea.addEventListener('click', (event) => {
+                    const infoButton = event.target.closest('.info-btn');
+                    if (infoButton) {
+                        event.stopPropagation(); // prevent the dropdown from closing
+                        const personaIndex = parseInt(infoButton.dataset.index);
+                        if (!isNaN(personaIndex) && personas[personaIndex]) {
+                            showPersonaDetailModal(personas[personaIndex]);
+                        }
                     }
                 });
-            }
-
-            function checkApiKey() {
-                if (!geminiApiKey) {
-                    apiKeyModal.classList.remove('hidden');
-                } else {
-                    apiKeyModal.classList.add('hidden');
-                }
-            }
-
-            function saveApiKey() {
-                const key = apiKeyInput.value.trim();
-                if (key) {
-                    geminiApiKey = key;
-                    apiKeyModal.classList.add('hidden');
-                    apiKeyError.classList.add('hidden');
-                    displaySystemMessage("API Key saved. You can now generate a script.");
-                } else {
-                    apiKeyError.classList.remove('hidden');
-                }
             }
 
             function resetApp() {
                 scriptDisplayArea.innerHTML = '';
                 promptInput.value = '';
                 currentGeneratedScript = '';
-                scriptLengthSelect.value = "Short"; 
-                currentPersonaIndex = 0; 
-                updatePersonaButton(currentPersonaIndex);
-                speechSynthesis.cancel();
-                isSpeaking = false;
+                scriptLengthSelect.value = "Short";
+                scriptTypeSelect.value = "";
+                selectedPersonaIndex = null;
+                updatePersonaButton(null);
+                populatePersonaSelect();
                 updateButtonStates();
-                displaySystemMessage("Enter a topic or intention to generate your Yoga Nidra script.");
-                promptInput.focus();
+                displaySystemMessage("Enter an intention, or select a script type to begin.");
+            }
+
+            function checkAndPromptForKey() {
+                if (!apiKey) {
+                    apiKeyModal.classList.remove('hidden');
+                }
+            }
+
+            function saveApiKey() {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    apiKey = key;
+                    apiKeyInput.value = '';
+                    apiKeyModal.classList.add('hidden');
+                    displaySystemMessage("API Key saved. You can now generate a script.");
+                } else {
+                    alert("Please enter a valid API key.");
+                }
             }
             
+            function populateScriptTypeSelect() {
+                scriptTypeSelect.innerHTML = '<option value="">Select a Script Type (Optional)</option>';
+                const categories = [...new Set(scriptTypesData.map(item => item.category))];
+                categories.forEach(category => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = category;
+                    const typesInCategory = scriptTypesData.filter(item => item.category === category);
+                    typesInCategory.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.name;
+                        option.textContent = type.name;
+                        option.title = type.description;
+                        optgroup.appendChild(option);
+                    });
+                    scriptTypeSelect.appendChild(optgroup);
+                });
+            }
+
             function populateScriptLengthSelect() {
                 scriptLengthSelect.innerHTML = '';
                 lengthOptions.forEach((option) => {
@@ -359,173 +656,98 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 });
             }
 
-            function populatePersonaSelect() {
-                personaListArea.innerHTML = '';
-                personas.forEach((persona, index) => {
-                    const label = document.createElement('label');
-                    label.className = 'dropdown-label';
-                    label.title = persona.description;
-                    
-                    const radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'persona';
-                    radio.value = index;
-                    radio.className = 'accent-indigo-500';
-                    if (index === currentPersonaIndex) { radio.checked = true; }
-
-                    radio.addEventListener('change', () => {
-                        currentPersonaIndex = parseInt(radio.value);
-                        updatePersonaButton(currentPersonaIndex);
-                        personaDropdownContent.classList.add('hidden');
-                        promptInput.focus();
-                    });
-
-                    label.appendChild(radio);
-                    label.append(persona.name);
-                    personaListArea.appendChild(label);
-                });
-            }
-
             function updatePersonaButton(index) {
-                personaDropdownButton.querySelector('span').textContent = personas[index].name;
-            }
-
-            function populateVoiceSelect() {
-                const loadVoices = () => {
-                    const allVoices = speechSynthesis.getVoices();
-                    if (allVoices.length === 0) return;
-
-                    availableVoices = allVoices.filter(voice => voice.name.includes('Google UK English'));
-                    voiceSelect.innerHTML = ''; 
-
-                    if (availableVoices.length === 0) {
-                        voiceSelect.innerHTML = '<option value="">Google UK voice not found</option>';
-                        listenScriptBtn.disabled = true;
-                        return;
-                    }
-
-                    let femaleVoiceIndex = -1;
-                    availableVoices.forEach((voice, index) => {
-                        const option = document.createElement('option');
-                        option.textContent = voice.name;
-                        option.value = index;
-                        voiceSelect.appendChild(option);
-                        if (voice.name === 'Google UK English Female') { femaleVoiceIndex = index; }
-                    });
-
-                    voiceSelect.value = femaleVoiceIndex !== -1 ? femaleVoiceIndex : 0;
-                };
-
-                if (speechSynthesis.getVoices().length > 0) {
-                    loadVoices();
+                if (index !== null && personas[index]) {
+                   personaDropdownButton.querySelector('span').textContent = personas[index].name;
                 } else {
-                    speechSynthesis.onvoiceschanged = loadVoices;
+                   personaDropdownButton.querySelector('span').textContent = 'Select Persona (Optional)';
                 }
             }
-
+            
             async function handleGenerateScript() {
-                if (!geminiApiKey) {
-                    displaySystemMessage("Please enter your Gemini API Key first by clicking the 'Set API Key' button.", 'error-message');
-                    checkApiKey();
+                if (!apiKey) {
+                    displaySystemMessage("Please set your API key first by clicking the key icon.", 'error-message');
+                    checkAndPromptForKey();
                     return;
                 }
-                const userPrompt = promptInput.value.trim();
-                if (!userPrompt || isGenerating) return;
+                const customIntention = promptInput.value.trim();
+                const selectedTypeName = scriptTypeSelect.value;
+                if (!selectedTypeName && !customIntention) {
+                    displaySystemMessage("Please enter an intention, or select a script type.", 'error-message');
+                    return;
+                }
+                if (isGenerating) return;
 
                 setLoading(true);
                 scriptDisplayArea.innerHTML = '';
-                speechSynthesis.cancel();
-                isSpeaking = false;
-                displaySystemMessage("Generating your Yoga Nidra script...", 'system-message');
+                displaySystemMessage("Generating your Yoga Nidra script...", 'system-message-paragraph');
 
                 try {
-                    const selectedLengthOption = lengthOptions.find(opt => opt.name === scriptLengthSelect.value);
-                    const lengthSuffix = selectedLengthOption ? selectedLengthOption.promptSuffix : lengthOptions[1].promptSuffix;
-                    const selectedPersona = personas[currentPersonaIndex];
-                    const personaInstruction = selectedPersona.systemPrompt;
-                    const scriptGenerationPrompt = `${personaInstruction}\n\nBased on the intention: "${userPrompt}". ${lengthSuffix}`;
+                    const lengthInstruction = lengthOptions.find(opt => opt.name === scriptLengthSelect.value).promptSuffix;
+                    const finalPersonaIndex = selectedPersonaIndex === null ? 0 : selectedPersonaIndex;
+                    const personaInstruction = personas[finalPersonaIndex].systemPrompt;
+
+                    let themeInstruction = '';
+                    const selectedType = scriptTypesData.find(type => type.name === selectedTypeName);
+                    if (selectedType) {
+                        themeInstruction = `The core theme is **${selectedType.name}**. Description: *${selectedType.description}*`;
+                    }
+
+                    let intentionInstruction = '';
+                    if (customIntention) {
+                        intentionInstruction = `Please weave in this specific user intention: **"${customIntention}"**.`;
+                    }
+
+                    if (!selectedType && customIntention) {
+                        themeInstruction = `The core theme is the user's intention: **"${customIntention}"**.`;
+                        intentionInstruction = '';
+                    }
+
+                    const scriptGenerationPrompt = `${personaInstruction}\n\n--- SCRIPT REQUIREMENTS ---\n${themeInstruction}\n${intentionInstruction}\n${lengthInstruction}`;
                     const aiResponseText = await getAIResponse(scriptGenerationPrompt);
                     currentGeneratedScript = aiResponseText;
 
-                    const titlePrompt = `Based on the following Yoga Nidra script and its intention, provide a short, creative title. Respond with only the title text, without any quotation marks or labels.\nIntention: "${userPrompt}"\nScript: ${aiResponseText}`;
+                    const titlePrompt = `Based on the following Yoga Nidra script, provide a short, creative title. Respond with only the title text, no quotes.\nScript: ${aiResponseText}`;
                     const generatedTitle = await getAIResponse(titlePrompt);
 
-                    displayGeneratedScript(currentGeneratedScript, userPrompt, generatedTitle, selectedPersona.name);
-                    scriptDisplayArea.scrollTop = 0;
-                    displaySystemMessage("Script generated successfully! You can copy it or generate a new one.");
-
+                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedTypeName);
                 } catch (error) {
                     console.error("Error generating script:", error);
-                    displaySystemMessage(`Failed to generate script: ${error.message}. Please check your API key and try again.`, 'error-message');
+                    displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
                     currentGeneratedScript = '';
                 } finally {
                     setLoading(false);
-                    updateButtonStates();
                 }
             }
             
-            function handleListenButtonClick() {
-                if (!currentGeneratedScript) {
-                    displaySystemMessage("Please generate a script first!", 'error-message');
-                    return;
-                }
-
-                if (speechSynthesis.paused) {
-                    speechSynthesis.resume();
-                } else if (speechSynthesis.speaking) {
-                    speechSynthesis.pause();
-                } else {
-                    startPlayback();
-                }
-            }
-            
-            function startPlayback() {
-                if (!currentGeneratedScript || availableVoices.length === 0) return;
-                
-                currentUtterance = new SpeechSynthesisUtterance(currentGeneratedScript);
-                const selectedVoiceIndex = parseInt(voiceSelect.value, 10);
-                currentUtterance.voice = availableVoices[selectedVoiceIndex];
-                currentUtterance.rate = 0.8;
-                currentUtterance.pitch = 1;
-
-                currentUtterance.onstart = () => { isSpeaking = true; updateButtonStates(); };
-                currentUtterance.onresume = () => { isSpeaking = true; updateButtonStates(); };
-                currentUtterance.onpause = () => { isSpeaking = false; updateButtonStates(); };
-                currentUtterance.onend = () => { isSpeaking = false; updateButtonStates(); };
-                currentUtterance.onerror = (event) => {
-                    console.error('SpeechSynthesisUtterance.onerror', event);
-                    let errorMsg = `Speech synthesis failed. Error: ${event.error}. Please try another voice or refresh the page.`;
-                    displaySystemMessage(errorMsg, 'error-message');
-                    isSpeaking = false;
-                    updateButtonStates();
-                };
-
-                speechSynthesis.speak(currentUtterance);
-                updateButtonStates();
-            }
-
-            function displayGeneratedScript(scriptText, userPrompt, aiTitle, personaName) {
+            function displayGeneratedScript(scriptText, customIntention, aiTitle, personaName, scriptType) {
                 scriptDisplayArea.innerHTML = '';
-
                 const titleElement = document.createElement('h2');
                 titleElement.classList.add('script-title');
+                let promptHTML = '';
+                if (scriptType) {
+                    promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Theme: <span class="text-white">${scriptType}</span></div>`;
+                }
+                if (customIntention) {
+                    promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Custom Intention: <span class="text-white">${customIntention}</span></div>`;
+                }
                 titleElement.innerHTML = `
-                    <div style="font-size: 1.2rem;">Prompt: ${userPrompt}</div>
-                    <div style="font-size: 1.8rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">Title: ${aiTitle}</div>
-                    <div style="font-size: 1.2rem;">Persona: ${personaName}</div>
+                    ${promptHTML || `<div style="font-size: 1.2rem; color: #9ca3af;">Intention: General Relaxation</div>`}
+                    <div style="font-size: 1.8rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">${aiTitle}</div>
+                    <div style="font-size: 1.2rem; color: #9ca3af;">Persona: <span class="text-white">${personaName}</span></div>
                 `;
                 scriptDisplayArea.appendChild(titleElement);
-
                 const scriptParagraph = document.createElement('p');
                 scriptParagraph.classList.add('generated-script');
                 scriptParagraph.textContent = scriptText;
                 scriptDisplayArea.appendChild(scriptParagraph);
+                scriptDisplayArea.scrollTop = 0;
             }
-            
+
             function displaySystemMessage(text, type = 'system-message-paragraph') {
                 scriptDisplayArea.querySelectorAll('.system-message-paragraph, .error-message-paragraph').forEach(el => el.remove());
                 const messageWrapper = document.createElement('div');
-                messageWrapper.classList.add(type);
+                messageWrapper.className = type;
                 messageWrapper.innerHTML = text.replace(/\n/g, '<br>');
                 scriptDisplayArea.appendChild(messageWrapper);
             }
@@ -538,9 +760,7 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                     tempTextArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(tempTextArea);
-                    displaySystemMessage("Script copied to clipboard!", 'system-message');
-                } else {
-                    displaySystemMessage("No script to copy yet. Generate one first!", 'error-message');
+                    displaySystemMessage("Script copied to clipboard!", 'system-message-paragraph');
                 }
             }
 
@@ -548,52 +768,33 @@ Benefits of Yoga Nidra: Keep the core benefits in mind (stress reduction, improv
                 generateBtn.disabled = isGenerating;
                 copyScriptBtn.disabled = isGenerating || !currentGeneratedScript;
                 resetAppBtn.disabled = isGenerating;
-                listenScriptBtn.disabled = isGenerating || !currentGeneratedScript || availableVoices.length === 0; 
-                
-                if (speechSynthesis.speaking && !speechSynthesis.paused) {
-                    listenScriptBtn.textContent = 'Pause';
-                } else if (speechSynthesis.paused) {
-                    listenScriptBtn.textContent = 'Resume';
-                } else {
-                    listenScriptBtn.textContent = 'Listen';
-                }
-
                 promptInput.disabled = isGenerating;
-                promptInput.placeholder = isGenerating ? 'Generating script...' : "Enter topic or intention for your Yoga Nidra script...";
+                promptInput.placeholder = isGenerating ? 'Generating...' : "Enter your script intention here...";
             }
-            
+
             function setLoading(isLoading) {
                 isGenerating = isLoading;
                 loadingSpinner.classList.toggle('hidden', !isLoading);
                 updateButtonStates();
             }
-            
+
             async function getAIResponse(prompt) {
-                const apiKey = geminiApiKey; // Use the stored API key
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                
-                const payload = { 
-                    contents: [{ role: "user", parts: [{ text: prompt }] }] 
-                };
-                
-                const response = await fetch(apiUrl, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-                
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error("AI response API error:", errorText);
                     const errorData = JSON.parse(errorText || "{}");
                     throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
                 }
-
                 const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                     return result.candidates[0].content.parts[0].text;
                 } else {
-                    console.error("Unexpected AI response format:", result);
                     throw new Error(`Unexpected API response format.`);
                 }
             }
