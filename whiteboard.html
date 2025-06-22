@@ -134,7 +134,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.48</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.49</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -219,7 +219,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.48</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.49</p>
         </div>
     </div>
 
@@ -658,10 +658,31 @@
         async function sendEffectToFirestore(effectType) { if(!userId) return; await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/events`), { type: effectType, author: userId, timestamp: new Date() }); triggerEffect(effectType); }
         function triggerEffect(type) { const container = document.getElementById('whiteboard-wrapper'); if (type === 'random-flash') { const flash = document.createElement('div'); flash.id = 'flash-overlay'; const randomColor = `rgba(${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, ${Math.floor(Math.random() * 156) + 100}, 0.7)`; flash.style.backgroundColor = randomColor; document.body.appendChild(flash); setTimeout(() => flash.remove(), 800); } else if (['hearts', 'rain', 'pickles'].includes(type)) { let emoji = '❤️'; if (type === 'rain') emoji = '💧'; if (type === 'pickles') emoji = '🥒'; for (let i = 0; i < 25; i++) { const particle = document.createElement('div'); particle.className = 'effect-particle'; particle.textContent = emoji; particle.style.left = `${Math.random() * 100}%`; particle.style.animationDelay = `${Math.random() * 2}s`; container.appendChild(particle); setTimeout(() => particle.remove(), 5000); } } }
         async function clearAllDrawings() {
-            console.log("Attempting to clear canvas by updating epoch...");
+            console.log("Attempting to clear all drawings from Firestore.");
             try {
+                const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`;
+                // No need to query by epoch, just delete everything for this whiteboardId
+                const q = query(collection(db, drawingsCollectionPath));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    console.log("No drawings to clear.");
+                } else {
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+
+                    console.log(`Deleting ${querySnapshot.size} drawings.`);
+                    await batch.commit();
+                }
+                
+                // After deleting, update the epoch to ensure all clients are reset.
+                console.log("Updating epoch to finalize canvas clear.");
                 await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true });
-                console.log("Epoch updated successfully. Canvas should clear for all clients.");
+                
+                console.log("Canvas cleared successfully.");
+
             } catch (error) {
                 console.error("Failed to clear canvas:", error);
             }
@@ -1049,6 +1070,22 @@
                 } 
             });
             
+            function updateSelectedObjectColor(newColor) {
+                if (!state.selectedObjectId) return;
+                
+                const objectToUpdate = state.allDrawings.get(state.selectedObjectId);
+                if (!objectToUpdate) return;
+                
+                const originalObjectState = JSON.parse(JSON.stringify(objectToUpdate));
+
+                objectToUpdate.color = newColor;
+                
+                drawOverlay();
+                
+                const { id, ...data } = objectToUpdate;
+                updateObjectInFirestore(id, data, originalObjectState);
+            }
+
             // --- Event Listeners Setup ---
             document.getElementById('close-notification-btn')?.addEventListener('click', () => {
                 document.getElementById('api-error-notification')?.classList.add('hidden');
@@ -1104,7 +1141,10 @@
 
                         shadeSwatch.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            state.currentColor = rgbaColor;
+                            const newColor = shadeSwatch.dataset.color;
+                            state.currentColor = newColor;
+                            updateSelectedObjectColor(newColor);
+
 
                             document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('parent-selected'));
                             document.querySelectorAll('.shade-swatch').forEach(s => s.classList.remove('selected'));
@@ -1118,7 +1158,10 @@
                 }
                 
                 mainSwatch.addEventListener('click', () => {
-                    state.currentColor = color.hex;
+                    const newColor = color.hex;
+                    state.currentColor = newColor;
+                    updateSelectedObjectColor(newColor);
+                    
                     document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('parent-selected'));
                     document.querySelectorAll('.shade-swatch').forEach(s => s.classList.remove('selected'));
                     mainSwatch.classList.add('parent-selected');
