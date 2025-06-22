@@ -116,7 +116,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.40</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">1.41</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -201,7 +201,7 @@
                 <li><b>Fun Effects:</b> Add some visual flair with screen effects like "random flash", "abundance of hearts", "wet for you", and "big pickles".</li>
                 <li><b>Daily Inspiration:</b> The board's title and description change daily to spark creativity.</li>
             </ul>
-            <p class="mt-4 text-xs text-gray-400">Version: 1.40</p>
+            <p class="mt-4 text-xs text-gray-400">Version: 1.41</p>
         </div>
     </div>
 
@@ -240,11 +240,12 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
         const apiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // User-provided API key
+        const tenorApiKey = "AIzaSyA29N25PG96j0NURl1m-Hn8ydX9P_X97kY"; // Using the same key for Tenor as per user request
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: apiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046" };
         const whiteboardId = appId;
 
@@ -298,6 +299,7 @@
             tempDrawing: null, transformHandle: null, isTexting: false, isShiftDown: false,
             undoStack: [], redoStack: [],
             isGridVisible: true, isSnapEnabled: true, gridSize: 20,
+            originalObjectState: null,
         };
         
         const dailyTitles = ["Flow", "Clarity", "Presence", "Intention", "Balance", "Growth", "Stillness", "Awareness", "Release", "Connect"];
@@ -314,20 +316,26 @@
         function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
 
         async function getOrGenerateAvatar(uid) {
-            if (!areGenAiFeaturesEnabled) return null; // Don't try if API is known to be blocked
+            if (!areGenAiFeaturesEnabled) return null;
             if (userAvatars.has(uid) && userAvatars.get(uid).url) {
                 return userAvatars.get(uid).url;
             }
 
             const avatarDocRef = doc(db, `artifacts/${whiteboardId}/public/data/avatars`, uid);
-            const avatarDoc = await getDoc(avatarDocRef);
-            const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+            try {
+                const avatarDoc = await getDoc(avatarDocRef);
+                const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
-            if (avatarDoc.exists() && avatarDoc.data().generatedAt?.toMillis() > oneDayAgo) {
-                const url = avatarDoc.data().imageUrl;
-                userAvatars.set(uid, { url });
-                return url;
+                if (avatarDoc.exists() && avatarDoc.data().generatedAt?.toMillis() > oneDayAgo) {
+                    const url = avatarDoc.data().imageUrl;
+                    userAvatars.set(uid, { url });
+                    return url;
+                }
+            } catch (error) {
+                console.error("Error fetching avatar from Firestore:", error);
+                // Continue to generation
             }
+
 
             const nickname = getUserDisplayName(uid);
             const prompt = `Create a unique, simple, modern, abstract, and colorful SVG avatar for a user named '${nickname}'. The SVG must be exactly 100x100 pixels. Use clean geometric shapes and interesting color palettes. Do not include any text, raster images, or font dependencies. The background should be a solid color. Return ONLY the raw SVG code, starting with "<svg" and ending with "</svg>".`;
@@ -358,8 +366,13 @@
                 const result = await response.json();
                 
                 const candidate = result.candidates && result.candidates[0];
-                if (!candidate) throw new Error("No candidates in API response.");
-                if (candidate.finishReason && candidate.finishReason !== "STOP") throw new Error(`Avatar generation failed: ${candidate.finishReason}`);
+                if (!candidate) {
+                    throw new Error("No candidates in API response.");
+                }
+
+                if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                    throw new Error(`Avatar generation failed: ${candidate.finishReason}`);
+                }
                 
                 if (candidate.content?.parts?.[0]?.text) {
                     let svgText = candidate.content.parts[0].text.replace(/```svg/g, '').replace(/```/g, '').trim();
@@ -446,7 +459,7 @@
         
         // --- Drawing & Core Logic ---
         function drawGrid() { if (!state.isGridVisible) return; ctx.save(); ctx.strokeStyle = '#374151'; /* gray-700 */ ctx.lineWidth = 0.5; for (let x = 0; x < canvas.width; x += state.gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } for (let y = 0; y < canvas.height; y += state.gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } ctx.restore(); }
-        function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = document.getElementById('main-content').getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { if (c.width !== rect.width * dpr || c.height !== rect.height * dpr) { c.width = rect.width * dpr; c.height = rect.height * dpr; if (c.style) { c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; } c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
+        function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = document.getElementById('main-content').getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { const targetWidth = rect.width * dpr; const targetHeight = rect.height * dpr; if (c.width !== targetWidth || c.height !== targetHeight) { c.width = targetWidth; c.height = targetHeight; if (c.style) { c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; } c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
         function drawOverlay() { overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); if (state.tempDrawing) { drawObject(overlayCtx, state.tempDrawing); } const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { drawSelectionBox(selectedObject); deleteBtn.disabled = false; frontBtn.disabled = false; duplicateBtn.disabled = false; } else { deleteBtn.disabled = true; frontBtn.disabled = true; duplicateBtn.disabled = true; } }
         
         function drawObject(context, data) {
@@ -626,7 +639,6 @@
         
         function handleMouseDown(e) {
             if (state.isTexting) return;
-            // **FIX**: Do not start drawing if user is not authenticated.
             if (!userId) {
                 console.warn("Cannot draw: User not authenticated.");
                 return;
@@ -641,7 +653,7 @@
                     const handles = getTransformHandles(selectedObject);
                     for (const key in handles) {
                         const handle = handles[key];
-                        if (Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { 
+                        if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { 
                             state.action = handle.type; 
                             state.transformHandle = key;
                             state.originalObjectState = JSON.parse(JSON.stringify(selectedObject));
@@ -658,6 +670,8 @@
                     const obj = state.allDrawings.get(clickedObjectId);
                     const center = getObjectCenter(obj);
                     state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y };
+                    state.originalObjectState = JSON.parse(JSON.stringify(obj));
+
                 } else {
                     state.selectedObjectId = null;
                 }
@@ -680,8 +694,8 @@
                 const selObj = state.allDrawings.get(state.selectedObjectId);
                 if (selObj) {
                    const handles = getTransformHandles(selObj);
-                   if (state.action === 'rotating') cursor = handles.rot.cursor;
-                   if (state.action === 'resizing') cursor = handles[state.transformHandle].cursor;
+                   if (handles[state.transformHandle] && state.action === 'rotating') cursor = handles.rot.cursor;
+                   if (handles[state.transformHandle] && state.action === 'resizing') cursor = handles[state.transformHandle].cursor;
                 }
             } else if (state.currentTool === 'select') {
                  const selectedObject = state.allDrawings.get(state.selectedObjectId);
@@ -690,7 +704,7 @@
                      let onHandle = false;
                      for (const key in handles) {
                         const handle = handles[key];
-                        if (Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
+                        if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
                             cursor = handle.cursor;
                             onHandle = true;
                             break;
@@ -723,8 +737,9 @@
             } else if (state.action === 'rotating' && state.selectedObjectId) {
                 const selectedObject = state.allDrawings.get(state.selectedObjectId);
                 const center = state.originalObjectState.center;
-                const angle = Math.atan2(pos.y - center.y, pos.x - center.x) + Math.PI / 2;
-                selectedObject.rotation = angle;
+                const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x);
+                const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x);
+                selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle);
                 drawOverlay();
             } else if (state.action === 'resizing' && state.selectedObjectId) {
                 const selectedObject = state.allDrawings.get(state.selectedObjectId);
@@ -732,7 +747,6 @@
                 
                 const angle = -state.originalObjectState.rotation || 0;
                 const localPos = rotatePoint(pos, center, angle);
-                const localStartPos = rotatePoint(state.startPos, center, angle);
 
                 const origBounds = getObjectBounds(state.originalObjectState);
                 let newWidth = Math.abs(localPos.x - center.x) * 2;
@@ -746,10 +760,11 @@
                 } else if (selectedObject.type === 'circle') {
                     selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y);
                 } else if (selectedObject.type === 'text') {
+                    const localStartPos = rotatePoint(state.startPos, center, angle);
                     const origFontSize = state.originalObjectState.fontSize;
                     const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y);
                     const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y);
-                    if(origDist > 0) {
+                    if(origDist > 0.1) {
                        const scale = newDist / origDist;
                        selectedObject.fontSize = Math.max(5, origFontSize * scale);
                     }
@@ -780,7 +795,6 @@
         }
 
         function createPreviewObject(start, end) { 
-            // **FIX**: The author field relies on userId, which is checked before this function is called.
             const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; 
             const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; 
             const width = Math.abs(x1 - x2); 
@@ -800,14 +814,17 @@
             for (let i = state.sortedDrawings.length - 1; i >= 0; i--) {
                 const obj = state.sortedDrawings[i];
                 const center = getObjectCenter(obj);
-                const angle = obj.rotation || 0;
+                const angle = -(obj.rotation || 0);
                 
-                const localClick = rotatePoint({x,y}, center, -angle);
+                const localClick = rotatePoint({x,y}, center, angle);
                 
                 const bounds = getObjectBounds(obj);
-                const fuzz = (obj.lineWidth || 0) + 5;
+                if (!bounds) continue;
+
+                const fuzz = (obj.lineWidth || 2) / 2 + 5; // Use half line width + buffer
                 if (localClick.x >= bounds.x - fuzz && localClick.x <= bounds.x + bounds.width + fuzz &&
                     localClick.y >= bounds.y - fuzz && localClick.y <= bounds.y + bounds.height + fuzz) {
+                    // More precise check for non-rectangular objects can be added here if needed
                     return obj.id;
                 }
             }
@@ -816,6 +833,7 @@
 
         function moveObjectTo(obj, newCenterX, newCenterY) {
             const bounds = getObjectBounds(obj);
+            if (!bounds) return;
             const oldCenterX = bounds.x + bounds.width / 2;
             const oldCenterY = bounds.y + bounds.height / 2;
             const dx = newCenterX - oldCenterX;
@@ -892,12 +910,17 @@
             const query = gifSearchInput.value.trim();
             if (!query) return;
 
+            if(!tenorApiKey) {
+                 gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Tenor API key is not configured.</p>`;
+                 return;
+            }
+
             gifSearchExecuteBtn.disabled = true;
             gifSearchResults.innerHTML = `<div class="col-span-full flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Searching...</span></div>`;
 
             const clientKey = "collaborative-whiteboard-app";
             const limit = 24;
-            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&client_key=${clientKey}&limit=${limit}`;
+            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${tenorApiKey}&client_key=${clientKey}&limit=${limit}`;
             
             try {
                 const response = await fetch(apiUrl);
@@ -942,6 +965,7 @@
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
+            setLogLevel('debug');
             setDailyContent();
 
             onAuthStateChanged(auth, async (user) => { 
@@ -1018,7 +1042,9 @@
             toggleSnapBtn.addEventListener('click', () => { state.isSnapEnabled = !state.isSnapEnabled; toggleSnapBtn.classList.toggle('selected', state.isSnapEnabled); });
             document.querySelectorAll('#effects-dropdown .tool-btn').forEach(btn => { btn.addEventListener('click', (e) => { sendEffectToFirestore(e.currentTarget.dataset.effect); }); });
             document.getElementById('save-btn').addEventListener('click', () => { const link = document.createElement('a'); link.download = `${whiteboardTitleEl.textContent.trim()}-whiteboard.png`; link.href = canvas.toDataURL("image/png"); link.click(); });
-            eventCaptureLayer.addEventListener('mousedown', handleMouseDown); eventCaptureLayer.addEventListener('mousemove', handleMouseMove); eventCaptureLayer.addEventListener('mouseup', handleMouseUp); eventCaptureLayer.addEventListener('mouseleave', handleMouseUp);
+            eventCaptureLayer.addEventListener('mousedown', handleMouseDown); 
+            window.addEventListener('mousemove', handleMouseMove); 
+            window.addEventListener('mouseup', handleMouseUp); 
             window.addEventListener('resize', redrawCanvas, { passive: true }); window.addEventListener('keydown', (e) => { if(e.key === 'Shift') state.isShiftDown = true; }); window.addEventListener('keyup', (e) => { if(e.key === 'Shift') state.isShiftDown = false; });
             redrawCanvas();
         });
