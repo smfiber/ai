@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v5.9</title>
+    <title>AI Yoga Class & Theme Generator v6.1</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -47,6 +47,8 @@
              font-size: inherit;
              line-height: inherit;
         }
+        .prose p { margin-bottom: 1em; }
+        .prose ul { margin-left: 1.5em; list-style-type: disc; }
         .card {
             background-color: var(--color-card-bg);
             backdrop-filter: blur(5px);
@@ -60,7 +62,6 @@
         }
         .card:hover {
             transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 20px 25px -5px rgba(147, 51, 234, 0.1), 0 10px 10px -5px rgba(147, 51, 234, 0.08);
         }
         .card-content {
             flex-grow: 1;
@@ -120,7 +121,6 @@
         }
         .floating-action-button:hover {
             transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 15px 25px rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.15);
         }
         #ai-help-button { bottom: 2rem; right: 2rem; }
         #settings-button { bottom: 6.5rem; right: 2rem; }
@@ -208,7 +208,7 @@
 <body class="p-4 md:p-8">
 
     <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Enter Your API Key</h2>
             <p class="mb-6 text-gray-600">To use the AI generators, please provide your API key. This key is used for both Gemini (text) and Imagen (image) generation and is only stored for your current session.</p>
@@ -245,7 +245,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.9</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.1</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -344,7 +344,7 @@
         <div class="space-y-4">
             <div>
                 <label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label>
-                <select id="font-family-select" class="theme-select w-full p-2 themed-input border rounded-lg">
+                <select id="font-family-select" class="w-full p-2 themed-input border rounded-lg">
                     <option value="'Inter', sans-serif">Inter</option>
                     <option value="'Lato', sans-serif">Lato</option>
                     <option value="'Roboto Slab', serif">Roboto Slab</option>
@@ -352,7 +352,7 @@
             </div>
             <div>
                 <label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size</label>
-                <select id="font-size-select" class="theme-select w-full p-2 themed-input border rounded-lg">
+                <select id="font-size-select" class="w-full p-2 themed-input border rounded-lg">
                     <option value="0.9rem">Small</option>
                     <option value="1rem" selected>Medium</option>
                     <option value="1.1rem">Large</option>
@@ -360,7 +360,7 @@
             </div>
             <div>
                 <label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label>
-                <select id="line-height-select" class="theme-select w-full p-2 themed-input border rounded-lg">
+                <select id="line-height-select" class="w-full p-2 themed-input border rounded-lg">
                     <option value="1.5">Tight</option>
                     <option value="1.6" selected>Normal</option>
                     <option value="1.8">Relaxed</option>
@@ -394,7 +394,6 @@
             document.getElementById('apiKeyModal').classList.remove('hidden');
             populateAllDropdowns();
             setupEventListeners();
-            loadDynamicPlaceholders();
         });
 
         // --- Event Listeners Setup ---
@@ -402,14 +401,18 @@
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleVisualThemeGeneration);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
-            document.querySelectorAll('select.theme-select').forEach(select => {
+            
+            // Target only the theme dropdowns in the main content area
+            document.querySelectorAll('#main-content select.theme-select').forEach(select => {
                 select.addEventListener('change', handleDropdownSelect);
             });
+
             // Typography settings listeners
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
+            // Global click listener for modals, buttons, etc.
             document.addEventListener('click', (e) => {
                 const inDepthModal = document.getElementById('inDepthModal');
                 if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) {
@@ -437,9 +440,10 @@
                     handleAIHelpRequest();
                 }
                 const settingsPanel = document.getElementById('settings-panel');
+                const settingsButton = document.getElementById('settings-button');
                 if (e.target.closest('#settings-button')) {
                     settingsPanel.classList.toggle('hidden');
-                } else if (!settingsPanel.contains(e.target)) {
+                } else if (!settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
                     settingsPanel.classList.add('hidden');
                 }
             });
@@ -453,7 +457,7 @@
             if (input.value.trim()) {
                 apiKey = input.value.trim();
                 document.getElementById('apiKeyModal').classList.add('hidden');
-                loadDynamicPlaceholders();
+                loadDynamicPlaceholders(); // Load placeholders after getting key
             }
         }
         
@@ -467,12 +471,29 @@
             showThemeLoading(true);
             const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`;
             const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`;
-            const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]);
-            if (colorResult.status === 'fulfilled') applyTheme(colorResult.value);
-            else showThemeError(generateErrorMessage(colorResult.reason, 'color'));
-            if (imageResult.status === 'fulfilled') applyHeaderImage(imageResult.value);
-            else showThemeError(generateErrorMessage(imageResult.reason, 'image'));
-            showThemeLoading(false);
+            
+            try {
+                const [colorResult, imageResult] = await Promise.allSettled([
+                    callColorGenAPI(colorPrompt), 
+                    callImageGenAPI(imagePrompt)
+                ]);
+
+                if (colorResult.status === 'fulfilled') {
+                    applyTheme(colorResult.value);
+                } else {
+                    showThemeError(generateErrorMessage(colorResult.reason, 'color'));
+                }
+
+                if (imageResult.status === 'fulfilled') {
+                    applyHeaderImage(imageResult.value);
+                } else {
+                    showThemeError(generateErrorMessage(imageResult.reason, 'image'));
+                }
+            } catch (error) {
+                 showThemeError(generateErrorMessage(error, 'visual theme'));
+            } finally {
+                showThemeLoading(false);
+            }
         }
 
         async function handleDropdownSelect(e) {
@@ -573,16 +594,17 @@
         }
 
         async function handleRefineRequest(container) {
-            const parentContainer = container.closest('.details-container, #gemini-result-container, #inDepthModalContent');
-            if(!parentContainer) return;
+            const parentContainer = container.parentElement;
+            const contentContainer = parentContainer.id === 'inDepthModalFooter' ? document.getElementById('inDepthModalContent') : parentContainer;
+            if(!contentContainer) return;
 
             const refinementInstruction = container.querySelector('.refinement-input').value.trim();
             if(!refinementInstruction) { alert("Please enter a refinement instruction."); return; }
 
-            const originalText = originalGeneratedText.get(parentContainer);
+            const originalText = originalGeneratedText.get(contentContainer);
             if(!originalText) { alert("Original text not found. Please generate content first."); return; }
             
-            const contentArea = parentContainer.querySelector('.prose-content');
+            const contentArea = contentContainer.querySelector('.prose-content');
             contentArea.innerHTML = getLoaderHTML('Refining your content...');
 
             const prompt = `You are a yoga content editor. A user has provided an existing yoga plan and an instruction to refine it. Please generate the new, refined plan.
@@ -597,7 +619,7 @@
 
             try {
                 const newText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(parentContainer, newText); // Update the stored text to the new version
+                originalGeneratedText.set(contentContainer, newText); // Update the stored text to the new version
                 const isAccordion = newText.includes('###');
                 contentArea.innerHTML = isAccordion ? convertMarkdownToAccordion(newText) : robustMarkdownToHtml(newText);
                 container.remove(); // Remove the refine UI
@@ -621,17 +643,18 @@
         }
 
         // --- API Call Functions ---
-        async function callGeminiAPI(prompt) { const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; const payload = { contents: [{ parts: [{ text: prompt }] }] }; const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API request failed with status ${response.status}`); const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]?.text) { return result.candidates[0].content.parts[0].text; } else if (result.candidates?.[0]?.finishReason === 'SAFETY') { throw new Error("API request failed due to safety settings."); } throw new Error("Invalid response structure from Gemini API."); }
-        async function callColorGenAPI(prompt) { const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }; const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API request failed with status ${response.status}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (jsonText) return JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); throw new Error("Could not parse a valid color theme from the AI's response."); }
-        async function callImageGenAPI(prompt) { const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`; const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } }; const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API request failed with status ${response.status}`); const result = await response.json(); const base64 = result.predictions?.[0]?.bytesBase64Encoded; if (base64) return `data:image/png;base64,${base64}`; throw new Error("Could not get a valid image from the AI's response."); }
+        async function callApi(apiUrl, payload) { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorBody = await response.text(); console.error("API Error Response:", errorBody); throw new Error(`API request failed with status ${response.status}`); } return await response.json(); }
+        async function callGeminiAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }] }); if (result.candidates?.[0]?.content?.parts?.[0]?.text) { return result.candidates[0].content.parts[0].text; } else if (result.candidates?.[0]?.finishReason === 'SAFETY') { throw new Error("Request blocked for safety reasons."); } throw new Error("Invalid response structure from Gemini API."); }
+        async function callColorGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (jsonText) return JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); throw new Error("Could not parse a valid color theme from the AI's response."); }
+        async function callImageGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } }); const base64 = result.predictions?.[0]?.bytesBase64Encoded; if (base64) return `data:image/png;base64,${base64}`; throw new Error("Could not get a valid image from the AI's response."); }
 
         // --- UI Utility Functions ---
-        function checkApiKey(container) { if (!apiKey) { if(container) { container.innerHTML = `<p class="text-amber-600 p-2">Please enter your API key first.</p>`; } else { document.getElementById('apiKeyModal').classList.remove('hidden'); } return false; } return true; }
+        function checkApiKey(container) { if (!apiKey) { document.getElementById('apiKeyModal').classList.remove('hidden'); if(container) { container.innerHTML = `<p class="text-amber-600 p-2">Please enter your API key to continue.</p>`; } return false; } return true; }
         function applyTheme(colors) { Object.keys(colors).forEach(key => { const cssVarName = '--color-' + key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`); root.style.setProperty(cssVarName, colors[key]); }); }
         function applyHeaderImage(imageUrl) { document.getElementById('header-bg-image').style.backgroundImage = `url('${imageUrl}')`; }
         function showThemeLoading(isLoading) { document.getElementById('theme-loader-container').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('flex', isLoading); document.getElementById('generate-theme-btn').disabled = isLoading; document.getElementById('generate-theme-btn').classList.toggle('opacity-50', isLoading); }
         function showThemeError(message) { const el = document.getElementById('theme-error-container'); el.textContent = message; el.classList.remove('hidden'); }
-        function getLoaderHTML(message) { return `<div class="loader themed-loader mx-auto my-4"></div><p class="text-center themed-text-muted">${message}</p>`; }
+        function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
 
         function createButton(text, className, type = 'button') {
             const button = document.createElement('button');
@@ -714,7 +737,43 @@
                     option.title = `${theme.founder ? `Founder: ${theme.founder}\n` : ''}${theme.description || theme.explanation || ''}`;
                 }
                 selectElement.appendChild(option);
+            }); // <-- BUG FIX: Added closing ); here
+        }
+        
+        function robustMarkdownToHtml(text) {
+            if (!text) return '';
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic
+
+            const paragraphs = html.split('\n').filter(p => p.trim() !== '');
+            html = '';
+            let inList = false;
+
+            paragraphs.forEach(p => {
+                const trimmed = p.trim();
+                if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                    if (!inList) {
+                        html += '<ul>';
+                        inList = true;
+                    }
+                    html += `<li>${trimmed.substring(2)}</li>`;
+                } else {
+                    if (inList) {
+                        html += '</ul>';
+                        inList = false;
+                    }
+                    html += `<p>${p}</p>`;
+                }
             });
+
+            if(inList) {
+                html += '</ul>';
+            }
+            return html;
         }
 
         function convertMarkdownToAccordion(text, openFirst = true) {
@@ -728,53 +787,21 @@
                 return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`;
             }).join('') + '</div>';
         }
-        
-        function robustMarkdownToHtml(text) {
-            if (!text) return '';
-            const lines = text.trim().split('\n');
-            let html = '';
-            let inList = false;
-
-            lines.forEach(line => {
-                const trimmedLine = line.trim();
-                // Check for list items
-                if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
-                    if (!inList) {
-                        html += '<ul>';
-                        inList = true;
-                    }
-                    html += `<li>${trimmedLine.substring(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
-                } else {
-                    // If we were in a list and this line is not a list item, close the list
-                    if (inList) {
-                        html += '</ul>';
-                        inList = false;
-                    }
-                    // Process non-list lines (paragraphs)
-                    if (trimmedLine) {
-                        html += `<p>${trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`;
-                    }
-                }
-            });
-
-            // Close any list that is still open at the end
-            if (inList) {
-                html += '</ul>';
-            }
-            return html;
-        }
 
         function generateErrorMessage(error, type = 'general') {
-            let message = `An unknown ${type} error occurred.`;
+            console.error(`Error during ${type} generation:`, error);
+            let message = `An unknown ${type} error occurred. Check the console for details.`;
             const errorMessage = error.message.toLowerCase();
-            if (errorMessage.includes('safety')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`;
+            if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`;
+            else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`;
+            else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`;
             else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`;
             else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`;
             else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.';
             return `Sorry, something went wrong. ${message}`;
         }
         
-        // --- Seed Data Functions ---
+        // --- Seed Data Functions (Hardcoded data for dropdowns) ---
         function getModalitiesSeedData() { const csvData = `Modality,Founder/Key Figure,Description\nBhakti Yoga,,"The path of devotion and love."\nJnana Yoga,,"The path of knowledge and wisdom."\nKarma Yoga,,"The path of selfless action."\nRaja Yoga,,"The ""royal path"" of meditation and self-control."\nHatha Yoga,,"A general term for a slower-paced, foundational yoga class."\nTantra Yoga,,"Weaving together the physical and spiritual realms."\nYoga Nidra,,"Yogic sleep for deep relaxation."\nAshtanga Vinyasa Yoga,Sri K. Pattabhi Jois,"A rigorous and physically demanding style."\nIyengar Yoga,B.K.S. Iyengar,"Emphasis on precise anatomical alignment and props."\nViniyoga,T.K.V. Desikachar,"A therapeutic and highly individualized approach."\nSivananda Yoga,Swami Sivananda,"A holistic system based on five principles."\nKripalu Yoga,Swami Kripalu,"A gentle and introspective practice."\nVinyasa Yoga,,"A dynamic and flowing style where movement is synchronized with the breath."\nPower Yoga,,"An athletic and vigorous style of Vinyasa yoga."\nBikram Yoga,,"A specific sequence of 26 postures in a heated room."\nHot Yoga,,"Any style of yoga practiced in a heated environment."\nYin Yoga,,"A slow-paced, passive style where poses are held for longer periods."\nRestorative Yoga,,"A gentle and therapeutic practice that uses props extensively."\nJivamukti Yoga,David Life & Sharon Gannon,"A physically vigorous and intellectually stimulating style."\nAnusara Yoga,John Friend,"Emphasizes ""Universal Principles of Alignment"" and a heart-oriented philosophy."\nKundalini Yoga,Yogi Bhajan,"A dynamic practice to awaken energy at the base of the spine."\nAcroYoga,,"A partner-based practice blending yoga and acrobatics."\nAerial Yoga,,"Uses a silk hammock to support the body in various postures."\nChair Yoga,,"A modified form of yoga practiced while sitting in a chair."\nPrenatal Yoga,,"A gentle style designed specifically for pregnant women."\nForrest Yoga,Ana T. Forrest,"An intensely physical and internally focused style."`; const lines = csvData.trim().split('\n').slice(1); return lines.map(line => { const [title, founder, description] = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(field => field.trim().replace(/^"|"$/g, '')); return { id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: title, founder: founder, description: description }; }); }
         function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root)", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability." }, { id: "svadhisthana", title: "Svadhisthana (Sacral)", explanation: "Unleash your creative potential and embrace the flow of life." }, { id: "manipura", title: "Manipura (Solar Plexus)", explanation: "This empowering class is dedicated to activating the center of our personal power and self-esteem." }, { id: "anahata", title: "Anahata (Heart)", explanation: "Cultivate love, compassion, and connection in this heart-opening class." }, { id: "vishuddha", title: "Vishuddha (Throat)", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra." }, { id: "ajna", title: "Ajna (Third Eye)", explanation: "This introspective class is designed to awaken the center of intuition and inner wisdom." }, { id: "sahasrara", title: "Sahasrara (Crown)", explanation: "Experience a sense of unity and connection to something greater than yourself." } ]; }
         function getMeridiansSeedData() { return [ { id: "lung-large-intestine", title: "Lung & Large Intestine", explanation: "This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release." }, { id: "stomach-spleen", title: "Stomach & Spleen", explanation: "This grounding class uses poses that stretch the front of the body and stabilize the core to aid digestion and nourishment." }, { id: "heart-small-intestine", title: "Heart & Small Intestine", explanation: "This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders to cultivate joy." }, { id: "kidney-bladder", title: "Kidney & Bladder", explanation: "This deep, restorative class uses forward folds and gentle backbends to tap into our life force." }, { id: "pericardium-triple-burner", title: "Pericardium & Triple Burner", explanation: "This class focuses on creating healthy boundaries and balancing the body's systems." }, { id: "liver-gallbladder", title: "Liver & Gallbladder", explanation: "This dynamic class uses twists and side-body stretches to help with planning and decisiveness." } ]; }
