@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v4.7.0 (AI-Powered)</title>
+    <title>Yoga Class Themer v4.8.0 (AI-Powered)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -165,7 +165,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Yoga Class Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">AI-powered inspiration for your next yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.8.0</div>
         </header>
 
         <main id="main-content" class="bg-white/50 backdrop-blur-md rounded-2xl p-6 md:p-10 shadow-xl border border-purple-100">
@@ -326,9 +326,9 @@
     </div>
 
     <script type="module">
-        // App Version: 4.7.0
+        // App Version: 4.8.0
         // Changelog:
-        // v4.7.0: Added date generation for holidays, seasons, and moon phases.
+        // v4.8.0: Fixed accordion bug in Custom Theme generator by consolidating event listeners.
         
         // --- Global Variables ---
         let geminiApiKey = "";
@@ -352,37 +352,23 @@
 
         // --- Event Listeners Setup ---
         function setupEventListeners() {
-            // API Key Modal
-            document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
-            
-            // In-Depth Modal
-            const inDepthModal = document.getElementById('inDepthModal');
-            inDepthModal.addEventListener('click', (e) => {
+            // Consolidated click listener for the entire document
+            document.addEventListener('click', (e) => {
+                // Modal closing logic
+                const inDepthModal = document.getElementById('inDepthModal');
                 if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) {
-                    inDepthModal.classList.add('hidden');
+                    if (inDepthModal) inDepthModal.classList.add('hidden');
                 }
-            });
 
-            // Main Content Area Event Delegation
-            document.getElementById('main-content').addEventListener('click', (e) => {
+                // Explore button logic
                 const exploreBtn = e.target.closest('.explore-button');
                 if (exploreBtn) {
                     const themeId = exploreBtn.dataset.themeId;
                     const themeType = exploreBtn.dataset.themeType;
                     handleExploreInDepth(themeId, themeType);
                 }
-            });
-
-            // Custom theme form
-            document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
-            
-            // Delegated listener for dropdown changes
-             document.querySelectorAll('.theme-select').forEach(select => {
-                select.addEventListener('change', handleDropdownSelect);
-            });
-
-            // Accordion listener for in-depth modal
-             document.getElementById('inDepthModalContent').addEventListener('click', (e) => {
+                
+                // Accordion logic (for both main content and modal)
                 const header = e.target.closest('.accordion-header');
                 if (header) {
                     const content = header.nextElementSibling;
@@ -391,6 +377,18 @@
                     const icon = header.querySelector('.icon');
                     if (icon) icon.classList.toggle('rotate-180');
                 }
+            });
+
+            // Form Submissions
+            const apiKeyForm = document.getElementById('apiKeyForm');
+            if (apiKeyForm) apiKeyForm.addEventListener('submit', handleApiKeySubmit);
+            
+            const geminiForm = document.getElementById('gemini-form');
+            if(geminiForm) geminiForm.addEventListener('submit', handleGeminiSubmit);
+            
+            // Dropdown changes
+            document.querySelectorAll('.theme-select').forEach(select => {
+                select.addEventListener('change', handleDropdownSelect);
             });
         }
 
@@ -781,4 +779,4 @@ Forrest Yoga,Ana T. Forrest,"An intensely physical and internally focused style.
         }
     </script>
 </body>
-</html>
+</ht
