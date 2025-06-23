@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v9.6 (Copy-Paste Fix)</title>
+    <title>AI Yoga Class & Theme Generator v9.7</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -257,7 +257,6 @@
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
-            /* REMOVED max-height and overflow-y */
             padding: 0.5rem;
             border-radius: 8px;
             background: rgba(0,0,0,0.02);
@@ -314,7 +313,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.6</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.7</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -349,12 +348,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Align your practice with the body's seven primary energy centers. Select a chakra to focus on, and let the AI generate a corresponding theme and short description to guide your session.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2><p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p><div id="seasons-selector-visual" class="visual-selector-container mt-auto"></div><div id="seasons-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2><p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p><div id="moon-phases-selector-visual" class="visual-selector-container mt-auto"></div><div id="moon-phases-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2><p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p><div id="styles-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="styles-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Twelve Meridians</h2><p class="mb-6 themed-text-muted">Explore the major meridians of Traditional Chinese Medicine.</p><div id="meridian-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="meridian-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p><div id="holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="holidays-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Hindu Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Hindu traditions.</p><div id="hindu-holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="hindu-holidays-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Buddhist Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Buddhist traditions.</p><div id="buddhist-holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="buddhist-holidays-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2><p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p><div id="styles-selector-visual" class="visual-selector-container mt-auto"></div><div id="styles-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Twelve Meridians</h2><p class="mb-6 themed-text-muted">Explore the major meridians of Traditional Chinese Medicine.</p><div id="meridian-selector-visual" class="visual-selector-container mt-auto"></div><div id="meridian-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p><div id="holidays-selector-visual" class="visual-selector-container mt-auto"></div><div id="holidays-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Hindu Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Hindu traditions.</p><div id="hindu-holidays-selector-visual" class="visual-selector-container mt-auto"></div><div id="hindu-holidays-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Buddhist Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Buddhist traditions.</p><div id="buddhist-holidays-selector-visual" class="visual-selector-container mt-auto"></div><div id="buddhist-holidays-details" class="details-container prose max-w-none"></div></div></div>
+                 <div class="card md:col-span-2"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2><p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p><div id="moon-phases-selector-visual" class="visual-selector-container mt-auto"></div><div id="moon-phases-details" class="details-container prose max-w-none"></div></div></div>
             </div>
         </main>
     </div>
