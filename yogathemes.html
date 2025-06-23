@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v4.0.0 (AI-Powered)</title>
+    <title>Yoga Class Themer v4.6.0 (AI-Powered)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -66,9 +66,26 @@
             background-position: center;
         }
         /* Styles for generated prose content */
-        .prose h1, .prose h2, .prose h3, .prose h4 {
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
             color: #581c87; /* Purple 900 */
         }
+         .prose p {
+            margin-bottom: 0.5rem;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .prose li {
+            margin-bottom: 0.25rem;
+        }
+
         /* Accordion Styles */
         .accordion-item {
             border-bottom: 1px solid #e5e7eb; /* Gray 200 */
@@ -148,7 +165,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Yoga Class Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">AI-powered inspiration for your next yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.0</div>
         </header>
 
         <main id="main-content" class="bg-white/50 backdrop-blur-md rounded-2xl p-6 md:p-10 shadow-xl border border-purple-100">
@@ -168,64 +185,139 @@
 
                 <!-- Grid for Theme Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Themed cards will be dynamically handled by JavaScript -->
-                    <div class="card theme-generator-card" data-theme-type="chakras">
+                     <!-- Chakras Card -->
+                    <div class="card">
                         <div class="p-8 card-content">
                             <h2 class="text-2xl font-bold mb-2 text-purple-600">The Seven Chakras</h2>
-                            <p class="mb-6 text-gray-600">Generate themes to balance the seven primary energy centers in the body.</p>
-                            <button class="btn-primary w-full mt-auto generate-options-button">Generate Chakra Ideas</button>
-                            <div class="mt-6 w-full hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select a Theme:</label>
-                                <select class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg">
-                                    <option value="">-- Generate ideas first --</option>
+                            <p class="mb-6 text-gray-600">Balance and activate the seven primary energy centers in the body.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="chakras-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Chakra Theme:</label>
+                                <select id="chakras-select" data-theme-type="chakras" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a chakra --</option>
                                 </select>
                             </div>
-                            <div class="details-container prose max-w-none text-gray-700 mt-4"></div>
+
+                            <div id="chakras-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
 
-                    <div class="card theme-generator-card" data-theme-type="meridians">
-                         <div class="p-8 card-content">
+                    <!-- Meridians Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
                             <h2 class="text-2xl font-bold mb-2 text-purple-600">The Twelve Meridians</h2>
-                            <p class="mb-6 text-gray-600">Generate themes based on the major meridians of Traditional Chinese Medicine.</p>
-                            <button class="btn-primary w-full mt-auto generate-options-button">Generate Meridian Ideas</button>
-                             <div class="mt-6 w-full hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select a Theme:</label>
-                                <select class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg">
-                                     <option value="">-- Generate ideas first --</option>
+                            <p class="mb-6 text-gray-600">Explore the major meridians of Traditional Chinese Medicine.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="meridian-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Meridian Theme:</label>
+                                <select id="meridian-select" data-theme-type="meridians" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a flow --</option>
                                 </select>
                             </div>
-                            <div class="details-container prose max-w-none text-gray-700 mt-4"></div>
+
+                            <div id="meridian-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
 
-                    <div class="card theme-generator-card" data-theme-type="seasons">
-                         <div class="p-8 card-content">
+                    <!-- Seasons Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
                             <h2 class="text-2xl font-bold mb-2 text-purple-600">The Four Seasons</h2>
-                            <p class="mb-6 text-gray-600">Generate themes to align your practice with the natural cycles of the earth.</p>
-                            <button class="btn-primary w-full mt-auto generate-options-button">Generate Seasonal Ideas</button>
-                             <div class="mt-6 w-full hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select a Theme:</label>
-                                <select class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg">
-                                     <option value="">-- Generate ideas first --</option>
+                            <p class="mb-6 text-gray-600">Align your practice with the natural cycles of the earth.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="seasons-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Season Theme:</label>
+                                <select id="seasons-select" data-theme-type="seasons" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a season --</option>
                                 </select>
                             </div>
-                            <div class="details-container prose max-w-none text-gray-700 mt-4"></div>
+
+                            <div id="seasons-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
-                    
-                    <div class="card theme-generator-card" data-theme-type="styles">
-                         <div class="p-8 card-content">
-                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Yoga Styles</h2>
-                            <p class="mb-6 text-gray-600">Generate themes based on the principles of a specific yoga style.</p>
-                            <button class="btn-primary w-full mt-auto generate-options-button">Generate Style Ideas</button>
-                             <div class="mt-6 w-full hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select a Theme:</label>
-                                <select class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg">
-                                     <option value="">-- Generate ideas first --</option>
+
+                    <!-- US Holidays Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">US Holidays</h2>
+                            <p class="mb-6 text-gray-600">Find themed yoga practices inspired by US holidays.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="holidays-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Holiday Theme:</label>
+                                <select id="holidays-select" data-theme-type="holidays" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a holiday --</option>
                                 </select>
                             </div>
-                            <div class="details-container prose max-w-none text-gray-700 mt-4"></div>
+
+                            <div id="holidays-details" class="details-container prose max-w-none text-gray-700"></div>
+                        </div>
+                    </div>
+
+                    <!-- Hindu Holidays Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Hindu Holidays</h2>
+                            <p class="mb-6 text-gray-600">Find themed yoga practices inspired by Hindu traditions.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="hindu-holidays-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Holiday Theme:</label>
+                                <select id="hindu-holidays-select" data-theme-type="hinduHolidays" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a holiday --</option>
+                                </select>
+                            </div>
+
+                            <div id="hindu-holidays-details" class="details-container prose max-w-none text-gray-700"></div>
+                        </div>
+                    </div>
+
+                    <!-- Buddhist Holidays Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Buddhist Holidays</h2>
+                            <p class="mb-6 text-gray-600">Find themed yoga practices inspired by Buddhist traditions.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="buddhist-holidays-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Holiday Theme:</label>
+                                <select id="buddhist-holidays-select" data-theme-type="buddhistHolidays" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a holiday --</option>
+                                </select>
+                            </div>
+
+                            <div id="buddhist-holidays-details" class="details-container prose max-w-none text-gray-700"></div>
+                        </div>
+                    </div>
+
+                    <!-- Moon Phases Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Moon Phases</h2>
+                            <p class="mb-6 text-gray-600">Align your practice with the energy of the lunar cycle.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="moon-phases-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Moon Phase:</label>
+                                <select id="moon-phases-select" data-theme-type="moonPhases" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a phase --</option>
+                                </select>
+                            </div>
+
+                            <div id="moon-phases-details" class="details-container prose max-w-none text-gray-700"></div>
+                        </div>
+                    </div>
+
+                    <!-- Yoga Styles Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Yoga Styles</h2>
+                            <p class="mb-6 text-gray-600">Base your class around the principles of a specific yoga style.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="styles-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Yoga Style:</label>
+                                <select id="styles-select" data-theme-type="styles" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a style --</option>
+                                </select>
+                            </div>
+
+                            <div id="styles-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
                 </div>
@@ -234,22 +326,27 @@
     </div>
 
     <script type="module">
-        // App Version: 4.0.0
+        // App Version: 4.6.0
         // Changelog:
-        // v4.0.0: Overhauled to be fully AI-driven. All theme ideas, card content, and in-depth explorations
-        //         are now generated by the Gemini API on-demand. Removed all static seed data.
+        // v4.6.0: Added new cards for Hindu Holidays, Buddhist Holidays, and Moon Phases.
         
         // --- Global Variables ---
         let geminiApiKey = "";
-        const generatedThemes = {
-            chakras: [],
-            meridians: [],
-            seasons: [],
-            styles: []
+        const allThemeData = {
+            chakras: getChakrasSeedData(),
+            meridians: getMeridiansSeedData(),
+            seasons: getSeasonsSeedData(),
+            styles: getModalitiesSeedData(),
+            holidays: getHolidaysSeedData(),
+            hinduHolidays: getHinduHolidaysSeedData(),
+            buddhistHolidays: getBuddhistHolidaysSeedData(),
+            moonPhases: getMoonPhasesSeedData()
         };
+
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
+            populateAllDropdowns();
             setupEventListeners();
         });
 
@@ -268,19 +365,11 @@
 
             // Main Content Area Event Delegation
             document.getElementById('main-content').addEventListener('click', (e) => {
-                const generateBtn = e.target.closest('.generate-options-button');
                 const exploreBtn = e.target.closest('.explore-button');
-
-                if (generateBtn) {
-                    const card = generateBtn.closest('.theme-generator-card');
-                    const themeType = card.dataset.themeType;
-                    handleGenerateOptions(themeType, card);
-                }
-                
                 if (exploreBtn) {
-                    const themeTitle = exploreBtn.dataset.themeTitle;
+                    const themeId = exploreBtn.dataset.themeId;
                     const themeType = exploreBtn.dataset.themeType;
-                    handleExploreInDepth(themeTitle, themeType);
+                    handleExploreInDepth(themeId, themeType);
                 }
             });
 
@@ -288,13 +377,8 @@
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             
             // Delegated listener for dropdown changes
-            document.getElementById('main-content').addEventListener('change', (e) => {
-                 if(e.target.classList.contains('theme-select')) {
-                    const card = e.target.closest('.theme-generator-card');
-                    const themeType = card.dataset.themeType;
-                    const selectedTitle = e.target.value;
-                    handleDropdownSelect(selectedTitle, themeType, card);
-                 }
+             document.querySelectorAll('.theme-select').forEach(select => {
+                select.addEventListener('change', handleDropdownSelect);
             });
 
             // Accordion listener for in-depth modal
@@ -321,118 +405,84 @@
             }
         }
 
-        async function handleGenerateOptions(themeType, card) {
-            if (!checkApiKey()) return;
+        async function handleDropdownSelect(e) {
+            const themeId = e.target.value;
+            const themeType = e.target.dataset.themeType;
+            const container = e.target.closest('.card').querySelector('.details-container');
             
-            const generateBtn = card.querySelector('.generate-options-button');
-            const detailsContainer = card.querySelector('.details-container');
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = 'Generating...';
-            detailsContainer.innerHTML = '<div class="loader"></div>';
-
-            const prompts = {
-                chakras: "Generate a list of 7 creative yoga class themes based on the seven chakras. Return a JSON array of objects, where each object has a 'title' key with a unique, evocative theme name (e.g., 'Grounding Root Energy').",
-                meridians: "Generate a list of 8 creative yoga class themes based on Traditional Chinese Medicine meridians. Return a JSON array of objects, where each object has a 'title' key with a unique, evocative theme name (e.g., 'Flowing with the Liver Meridian').",
-                seasons: "Generate a list of 5 creative yoga class themes based on the seasons or solstices/equinoxes. Return a JSON array of objects, where each object has a 'title' key with a unique, evocative theme name (e.g., 'Embracing Winter's Stillness').",
-                styles: "Generate a list of 10 creative yoga class themes based on popular yoga styles (like Vinyasa, Hatha, Yin, etc.). Return a JSON array of objects, where each object has a 'title' key with a unique, evocative theme name (e.g., 'Dynamic Power Vinyasa Flow')."
-            };
-
-            try {
-                const text = await callGeminiAPI(prompts[themeType]);
-                // The API might return markdown with ```json ... ```, so we need to clean it.
-                const jsonString = text.replace(/```json\n?|```/g, '').trim();
-                const themes = JSON.parse(jsonString);
-
-                generatedThemes[themeType] = themes;
-                populateDropdown(card, themes);
-                
-                const selectWrapper = card.querySelector('.mt-6');
-                selectWrapper.classList.remove('hidden');
-                generateBtn.classList.add('hidden');
-                detailsContainer.innerHTML = '<p class="text-center text-gray-500">Select a theme above to see details.</p>';
-
-            } catch (error) {
-                console.error(`Error generating options for ${themeType}:`, error);
-                detailsContainer.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = `Try Again`;
+            if (!themeId) {
+                container.innerHTML = '';
+                return;
             }
-        }
-        
-        async function handleDropdownSelect(selectedTitle, themeType, card) {
-            if (!selectedTitle) return;
-            if (!checkApiKey()) return;
+            if (!checkApiKey()) {
+                e.target.value = ""; // Reset dropdown if no key
+                return;
+            }
 
-            const detailsContainer = card.querySelector('.details-container');
-            detailsContainer.innerHTML = '<div class="loader"></div><p class="text-center">Generating theme details...</p>';
+            const theme = allThemeData[themeType].find(t => t.id === themeId);
 
+            container.innerHTML = '<div class="loader"></div><p class="text-center">Generating theme details...</p>';
+            
+            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
+            const description = theme.description || theme.explanation;
+            
             const prompt = `
-                For a yoga class with the theme "${selectedTitle}", generate the following content. Use markdown with ### headings.
-                
-                ### Explanation
-                Provide a rich, inviting one-paragraph explanation of what a class with this theme would feel like and its primary benefits for a student.
-
-                ### Themed Ideas
-                - **Focus:** A one-sentence summary of the class's main intention.
-                - **Poses:** List 5-7 key poses characteristic of this theme.
-                - **Mantra:** Create a short, fitting mantra for the practice.
+                For a yoga class with the theme "${theme.title}" (described as: "${description}" ${founderInfo}), generate a short, engaging preview for a student.
+                Start with a rich, inviting one-paragraph explanation of what the class will feel like.
+                Then, add a few bullet points highlighting key elements, like:
+                - **Focus:** (A one-sentence intention)
+                - **Sample Poses:** (List 2-3 characteristic poses)
+                - **Vibe:** (e.g., "Grounding and introspective")
+                Use markdown for formatting (e.g., **bold** and * for lists).
             `;
 
             try {
                 const markdownText = await callGeminiAPI(prompt);
                 const htmlContent = robustMarkdownToHtml(markdownText);
-                detailsContainer.innerHTML = `
+                container.innerHTML = `
                     <div class="prose max-w-none">${htmlContent}</div>
-                    <button class="btn-primary w-full mt-6 explore-button" data-theme-title="${selectedTitle}" data-theme-type="${themeType}">Explore in Depth with AI</button>
+                    <button class="btn-primary w-full mt-6 explore-button" data-theme-id="${theme.id}" data-theme-type="${themeType}">Explore in Depth with AI</button>
                 `;
             } catch (error) {
-                console.error(`Error generating details for ${selectedTitle}:`, error);
-                detailsContainer.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
+                console.error(`Error generating details for ${theme.title}:`, error);
+                container.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
             }
         }
 
-        async function handleExploreInDepth(themeTitle, themeType) {
+        async function handleExploreInDepth(themeId, themeType) {
             if (!checkApiKey()) return;
             
             const modal = document.getElementById('inDepthModal');
             const modalTitle = document.getElementById('inDepthModalTitle');
             const modalContent = document.getElementById('inDepthModalContent');
+            
+            const theme = allThemeData[themeType].find(t => t.id === themeId);
 
-            modalTitle.textContent = `Exploring: ${themeTitle}`;
+            modalTitle.textContent = `Exploring: ${theme.title}`;
             modalContent.innerHTML = '<div class="loader"></div><p class="text-center">Generating your detailed guide... this may take a moment. ✨</p>';
             modal.classList.remove('hidden');
+            
+            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
+            const description = theme.description || theme.explanation;
 
             const prompt = `
-                You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${themeTitle}".
-                The theme category is "${themeType}".
-                
-                Your guide should be extremely thorough, providing a wealth of ideas for a yoga teacher.
-                Generate content for ALL of the following sections, using Markdown with ### headings.
-                
-                ### Core Philosophy & Thematic Connection
-                Delve into the core concept of "${themeTitle}". What is the main message or feeling? How does it connect to deeper yogic principles?
-                
-                ### Energetic & Emotional Landscape
-                Describe the energetic qualities (e.g., grounding, uplifting) and the emotional states this theme aims to cultivate.
+                You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}
 
-                ### Creative Inspiration
-                - **Affirmations:** Provide 5 powerful affirmations related to the theme.
-                - **Quotations:** Provide 3 insightful quotes that resonate with the theme.
+                Your guide should be extremely thorough, providing a wealth of ideas for a yoga teacher.
                 
-                ### Class Elements
-                - **Key Asanas:** Suggest 8-10 key poses (a mix of yin and yang where appropriate). For each, briefly explain *why* it fits the theme.
-                - **Signature Sequence Idea:** Describe a creative 3-5 pose mini-flow that embodies the theme.
-                - **Pranayama (Breathwork):** Suggest 1-2 specific pranayama techniques and explain their relevance.
-                - **Meditation Focus:** Describe a specific meditation or visualization to use.
-                - **Essential Oils:** Suggest 3 essential oils and their thematic benefits.
-                - **Music Vibe:** Describe the genre or feeling of music that would fit (e.g., 'ambient soundscapes', 'upbeat folk', 'devotional chants'). Suggest 3 specific song examples (Title and Artist).
+                Organize the entire guide into several logical sections yourself. Use '###' before each section title to create the structure. For example:
+                '### The Heart of the Practice'
+                '### Key Postures and Their Purpose'
+                '### Crafting the Atmosphere: Music and Scent'
+
+                Please generate at least 4-5 distinct sections covering different aspects like philosophy, key poses, sequencing ideas, breathwork, meditation, and class atmosphere. Ensure the content within each section is detailed and practical for a teacher.
             `;
 
             try {
                 const text = await callGeminiAPI(prompt);
                 modalContent.innerHTML = convertMarkdownToAccordion(text);
             } catch (error) {
-                console.error(`Error in handleExploreInDepth for "${themeTitle}":`, error);
+                console.error(`Error in handleExploreInDepth for "${theme.title}":`, error);
                 modalContent.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
             }
         }
@@ -451,30 +501,15 @@
             }
             resultContainer.innerHTML = '<div class="loader"></div><p class="text-center">Crafting your custom class plan... ✨</p>';
             
-            // Re-using the comprehensive 'Explore in Depth' prompt for the custom generator
             const fullPrompt = `
                 You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${userPrompt}".
-                
-                Your guide should be extremely thorough, providing a wealth of ideas for a yoga teacher.
-                Generate content for ALL of the following sections, using Markdown with ### headings.
-                
-                ### Core Philosophy & Thematic Connection
-                Delve into the core concept of "${userPrompt}". What is the main message or feeling? How does it connect to deeper yogic principles?
-                
-                ### Energetic & Emotional Landscape
-                Describe the energetic qualities (e.g., grounding, uplifting) and the emotional states this theme aims to cultivate.
-
-                ### Creative Inspiration
-                - **Affirmations:** Provide 5 powerful affirmations related to the theme.
-                - **Quotations:** Provide 3 insightful quotes that resonate with the theme.
-                
-                ### Class Elements
-                - **Key Asanas:** Suggest 8-10 key poses (a mix of yin and yang where appropriate). For each, briefly explain *why* it fits the theme.
-                - **Signature Sequence Idea:** Describe a creative 3-5 pose mini-flow that embodies the theme.
-                - **Pranayama (Breathwork):** Suggest 1-2 specific pranayama techniques and explain their relevance.
-                - **Meditation Focus:** Describe a specific meditation or visualization to use.
-                - **Essential Oils:** Suggest 3 essential oils and their thematic benefits.
-                - **Music Vibe:** Describe the genre or feeling of music that would fit. Suggest 3 specific song examples (Title and Artist).
+                Your guide should be extremely thorough. 
+                Organize the entire guide into several logical sections yourself. Use '###' before each section title to create the structure. For example:
+                '### Core Philosophy & Thematic Connection'
+                '### Energetic & Emotional Landscape'
+                '### Creative Inspiration'
+                '### Class Elements'
+                Please generate at least 4-5 distinct sections.
             `;
             
             try {
@@ -487,7 +522,7 @@
         }
 
         async function callGeminiAPI(prompt) {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             
             const response = await fetch(apiUrl, {
@@ -505,7 +540,10 @@
             const result = await response.json();
             if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                 return result.candidates[0].content.parts[0].text;
-            } else {
+            } else if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                throw new Error("API request failed due to safety settings. Try a different prompt.");
+            }
+            else {
                console.error("Invalid API Response Structure:", result);
                throw new Error("Invalid response structure from API.");
             }
@@ -520,17 +558,34 @@
             }
             return true;
         }
+        
+        function populateAllDropdowns() {
+            populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra');
+            populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow');
+            populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season');
+            populateDropdown('styles-select', allThemeData.styles, 'Choose a style', true);
+            populateDropdown('holidays-select', allThemeData.holidays, 'Choose a holiday');
+            populateDropdown('hindu-holidays-select', allThemeData.hinduHolidays, 'Choose a holiday');
+            populateDropdown('buddhist-holidays-select', allThemeData.buddhistHolidays, 'Choose a holiday');
+            populateDropdown('moon-phases-select', allThemeData.moonPhases, 'Choose a phase');
+        }
 
-        function populateDropdown(card, themes) {
-            const selectElement = card.querySelector('.theme-select');
-            selectElement.innerHTML = `<option value="">-- Choose a theme --</option>`;
-            themes.forEach(theme => {
+        function populateDropdown(selectId, data, placeholder, addTooltip = false) {
+            const selectElement = document.getElementById(selectId);
+            selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+            data.sort((a, b) => a.title.localeCompare(b.title));
+            data.forEach(theme => {
                 const option = document.createElement('option');
-                option.value = theme.title;
+                option.value = theme.id;
                 option.textContent = theme.title;
+                if (addTooltip) {
+                    const founderText = theme.founder ? `Founder: ${theme.founder}\n` : '';
+                    option.title = `${founderText}${theme.description || theme.explanation || ''}`;
+                }
                 selectElement.appendChild(option);
             });
         }
+
 
         function convertMarkdownToAccordion(text, openFirst = true) {
             const sections = text.split(/^(?:###) /m).slice(1);
@@ -557,28 +612,50 @@
         
         function robustMarkdownToHtml(text) {
             if (!text) return '';
-            let html = text.trim();
-            // General bolding
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            // List items with potential bolding
-            html = html.replace(/^\s*-\s+\*\*(.*?)\*\*(.*)/gm, '<li><strong>$1</strong>$2</li>');
-            html = html.replace(/^\s*-\s+(.*)/gm, '<li>$1</li>');
-            html = html.replace(/(\<li\>.*\<\/li\>)+/g, '<ul>$&</ul>');
-            // Replace newlines with <br> for non-list/heading content
-            html = html.split('\n').map(line => {
-                if (line.startsWith('<ul>') || line.startsWith('<li>') || line.trim() === '') return line;
-                return `<p>${line}</p>`;
-            }).join('');
-             // Clean up empty paragraphs and paragraphs around lists
-            html = html.replace(/<p>\s*<ul>/g, '<ul>').replace(/<\/ul>\s*<\/p>/g, '</ul>');
-            html = html.replace(/<p>\s*<\/p>/g, '');
+            
+            const lines = text.trim().split('\n');
+            let html = '';
+            let inList = false;
+
+            for (const line of lines) {
+                let trimmedLine = line.trim();
+
+                // Close list if the current line is not a list item
+                if (!trimmedLine.startsWith('* ') && !trimmedLine.startsWith('- ') && inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+
+                if (trimmedLine.startsWith('### ')) {
+                    html += `<h3>${trimmedLine.substring(4)}</h3>`;
+                } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
+                    if (!inList) {
+                        html += '<ul>';
+                        inList = true;
+                    }
+                    // Process bolding within the list item
+                    let listItem = trimmedLine.substring(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    html += `<li>${listItem}</li>`;
+                } else if (trimmedLine) {
+                    // Process bolding within the paragraph
+                    let paragraph = trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    html += `<p>${paragraph}</p>`;
+                }
+            }
+
+            // Close any open list at the end
+            if (inList) {
+                html += '</ul>';
+            }
+
             return html;
         }
 
+
         function generateErrorMessage(error) {
             let message = 'An unknown error occurred. Please check the console.';
-            if (error.message.includes('400')) {
-                message = 'API Error: Bad Request. The request was malformed. This might be due to a safety policy violation. Try a different prompt.';
+            if (error.message.includes('400') || error.message.includes('safety settings')) {
+                message = 'API Error: The request was blocked. This might be due to a safety policy violation. Please try a different prompt.';
             } else if (error.message.includes('401') || error.message.includes('403')) {
                 message = 'API Error: Authentication failed. Please verify your API key is correct and has the Gemini API enabled.';
             } else if (error.message.includes('429')) {
@@ -592,7 +669,104 @@
             }
             return `Sorry, something went wrong. ${message}`;
         }
+        
+        // --- Seed Data Functions ---
+        function getModalitiesSeedData() {
+            const csvData = `Modality,Founder/Key Figure,Description
+Bhakti Yoga,,"The path of devotion and love."
+Jnana Yoga,,"The path of knowledge and wisdom."
+Karma Yoga,,"The path of selfless action."
+Raja Yoga,,"The ""royal path"" of meditation and self-control."
+Hatha Yoga,,"A general term for a slower-paced, foundational yoga class."
+Tantra Yoga,,"Weaving together the physical and spiritual realms."
+Yoga Nidra,,"Yogic sleep for deep relaxation."
+Ashtanga Vinyasa Yoga,Sri K. Pattabhi Jois,"A rigorous and physically demanding style."
+Iyengar Yoga,B.K.S. Iyengar,"Emphasis on precise anatomical alignment and props."
+Viniyoga,T.K.V. Desikachar,"A therapeutic and highly individualized approach."
+Sivananda Yoga,Swami Sivananda,"A holistic system based on five principles."
+Kripalu Yoga,Swami Kripalu,"A gentle and introspective practice."
+Vinyasa Yoga,,"A dynamic and flowing style where movement is synchronized with the breath."
+Power Yoga,,"An athletic and vigorous style of Vinyasa yoga."
+Bikram Yoga,,"A specific sequence of 26 postures in a heated room."
+Hot Yoga,,"Any style of yoga practiced in a heated environment."
+Yin Yoga,,"A slow-paced, passive style where poses are held for longer periods."
+Restorative Yoga,,"A gentle and therapeutic practice that uses props extensively."
+Jivamukti Yoga,David Life & Sharon Gannon,"A physically vigorous and intellectually stimulating style."
+Anusara Yoga,John Friend,"Emphasizes ""Universal Principles of Alignment"" and a heart-oriented philosophy."
+Kundalini Yoga,Yogi Bhajan,"A dynamic practice to awaken energy at the base of the spine."
+AcroYoga,,"A partner-based practice blending yoga and acrobatics."
+Aerial Yoga,,"Uses a silk hammock to support the body in various postures."
+Chair Yoga,,"A modified form of yoga practiced while sitting in a chair."
+Prenatal Yoga,,"A gentle style designed specifically for pregnant women."
+Forrest Yoga,Ana T. Forrest,"An intensely physical and internally focused style."`;
 
+            const lines = csvData.trim().split('\n').slice(1);
+            return lines.map(line => {
+                const [title, founder, description] = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(field => field.trim().replace(/^"|"$/g, ''));
+                return {
+                    id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                    title: title,
+                    founder: founder,
+                    description: description
+                };
+            });
+        }
+        
+        function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root)", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability." }, { id: "svadhisthana", title: "Svadhisthana (Sacral)", explanation: "Unleash your creative potential and embrace the flow of life." }, { id: "manipura", title: "Manipura (Solar Plexus)", explanation: "This empowering class is dedicated to activating the center of our personal power and self-esteem." }, { id: "anahata", title: "Anahata (Heart)", explanation: "Cultivate love, compassion, and connection in this heart-opening class." }, { id: "vishuddha", title: "Vishuddha (Throat)", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra." }, { id: "ajna", title: "Ajna (Third Eye)", explanation: "This introspective class is designed to awaken the center of intuition and inner wisdom." }, { id: "sahasrara", title: "Sahasrara (Crown)", explanation: "Experience a sense of unity and connection to something greater than yourself." } ]; }
+        function getMeridiansSeedData() { return [ { id: "lung-large-intestine", title: "Lung & Large Intestine", explanation: "This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release." }, { id: "stomach-spleen", title: "Stomach & Spleen", explanation: "This grounding class uses poses that stretch the front of the body and stabilize the core to aid digestion and nourishment." }, { id: "heart-small-intestine", title: "Heart & Small Intestine", explanation: "This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders to cultivate joy." }, { id: "kidney-bladder", title: "Kidney & Bladder", explanation: "This deep, restorative class uses forward folds and gentle backbends to tap into our life force." }, { id: "pericardium-triple-burner", title: "Pericardium & Triple Burner", explanation: "This class focuses on creating healthy boundaries and balancing the body's systems." }, { id: "liver-gallbladder", title: "Liver & Gallbladder", explanation: "This dynamic class uses twists and side-body stretches to help with planning and decisiveness." } ]; }
+        function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox", explanation: "This class focuses on renewal, growth, and setting new intentions for the season of awakening." }, { id: "summer-solstice", title: "Summer Solstice", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class." }, { id: "autumn-equinox", title: "Autumn Equinox", explanation: "This class encourages introspection, balance, and the art of letting go of what no longer serves us." }, { id: "winter-solstice", title: "Winter Solstice", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class." } ]; }
+        function getHolidaysSeedData() {
+            return [
+                { id: "new-years-day", title: "New Year's Day", explanation: "A practice to set intentions, release the old, and welcome new beginnings." },
+                { id: "martin-luther-king-jr-day", title: "Martin Luther King, Jr. Day", explanation: "A practice focused on equality, justice, and compassionate action." },
+                { id: "valentines-day", title: "Valentine's Day", explanation: "A heart-opening practice to cultivate self-love and connection with others." },
+                { id: "presidents-day", title: "Presidents' Day", explanation: "A practice to cultivate leadership qualities like integrity and clarity." },
+                { id: "st-patricks-day", title: "St. Patrick's Day", explanation: "A playful practice focused on luck, abundance, and finding the pot of gold within." },
+                { id: "easter", title: "Easter", explanation: "A practice themed around renewal, rebirth, and new possibilities." },
+                { id: "mothers-day", title: "Mother's Day", explanation: "A nurturing practice to honor the divine feminine and motherly energy." },
+                { id: "memorial-day", title: "Memorial Day", explanation: "A practice of remembrance, gratitude, and honoring sacrifice." },
+                { id: "fathers-day", title: "Father's Day", explanation: "A practice to cultivate strength, stability, and supportive energy." },
+                { id: "juneteenth", title: "Juneteenth", explanation: "A practice centered on freedom, liberation, and celebrating progress." },
+                { id: "independence-day", title: "Independence Day (4th of July)", explanation: "A practice celebrating freedom, inner fire, and joyful expression." },
+                { id: "labor-day", title: "Labor Day", explanation: "A practice to honor our work, find balance, and enjoy the fruits of our labor." },
+                { id: "halloween", title: "Halloween", explanation: "A practice to play with shadows, embrace transformation, and reveal our true selves." },
+                { id: "veterans-day", title: "Veterans Day", explanation: "A practice of gratitude and respect for those who have served." },
+                { id: "thanksgiving", title: "Thanksgiving", explanation: "A practice overflowing with gratitude, abundance, and mindful consumption." },
+                { id: "christmas", title: "Christmas", explanation: "A practice of peace, joy, and connecting to the light within." }
+            ];
+        }
+        function getHinduHolidaysSeedData() {
+            return [
+                { id: "diwali", title: "Diwali", explanation: "The festival of lights, celebrating the victory of light over darkness and good over evil." },
+                { id: "holi", title: "Holi", explanation: "The festival of colors, celebrating spring, love, and new life." },
+                { id: "navaratri", title: "Navaratri", explanation: "A nine-night festival dedicated to the worship of the goddess Durga." },
+                { id: "raksha-bandhan", title: "Raksha Bandhan", explanation: "Celebrating the bond between brothers and sisters." },
+                { id: "ganesh-chaturthi", title: "Ganesh Chaturthi", explanation: "Celebrating the birth of Lord Ganesha, the remover of obstacles." },
+                { id: "janmashtami", title: "Janmashtami", explanation: "Celebrating the birth of Lord Krishna." },
+                { id: "maha-shivaratri", title: "Maha Shivaratri", explanation: "The great night of Shiva, a day of introspection and meditation." }
+            ];
+        }
+        function getBuddhistHolidaysSeedData() {
+            return [
+                { id: "vesak", title: "Vesak (Buddha Day)", explanation: "Commemorating the birth, enlightenment, and death of Gautama Buddha." },
+                { id: "dharma-day", title: "Dharma Day (Asalha Puja)", explanation: "Commemorates the Buddha's first sermon." },
+                { id: "sangha-day", title: "Sangha Day (Magha Puja)", explanation: "Commemorates the first gathering of the Buddha's enlightened disciples." },
+                { id: "parinirvana-day", title: "Parinirvana Day", explanation: "Observes the death of the Buddha and his attainment of final nirvana." },
+                { id: "bodhi-day", title: "Bodhi Day", explanation: "Commemorating the day that the historical Buddha experienced enlightenment." }
+            ];
+        }
+        function getMoonPhasesSeedData() {
+            return [
+                { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." },
+                { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." },
+                { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." },
+                { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." },
+                { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." },
+                { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." },
+                { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." },
+                { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." }
+            ];
+        }
     </script>
 </body>
 </html>
