@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v5.7</title>
+    <title>AI Yoga Class & Theme Generator v5.8</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -91,6 +91,29 @@
             background-color: #e5e7eb; /* gray-200 */
             color: var(--color-accent);
         }
+        
+        .ai-help-fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 40;
+        }
+        .ai-help-fab:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.15);
+        }
+
 
         /* Themed UI Elements */
         .themed-text-primary { color: var(--color-primary); }
@@ -195,7 +218,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.7</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.8</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -297,6 +320,12 @@
         </main>
     </div>
 
+    <!-- AI Help Button -->
+    <button id="ai-help-button" class="ai-help-fab" title="AI Help & Feedback">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-3-3 3-3"/><path d="M15 6l3 3-3 3"/><path d="M12 19.52A10 10 0 1 0 12 4.48"/><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
+    </button>
+
+
     <script type="module">
         // --- Global Variables ---
         let apiKey = "";
@@ -329,16 +358,19 @@
                 select.addEventListener('change', handleDropdownSelect);
             });
             document.addEventListener('click', (e) => {
+                // Modal closing
                 const inDepthModal = document.getElementById('inDepthModal');
                 if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) {
                     if (inDepthModal) inDepthModal.classList.add('hidden');
                 }
+                // Explore button
                 const exploreBtn = e.target.closest('.explore-button');
                 if (exploreBtn) {
                     const themeId = exploreBtn.dataset.themeId;
                     const themeType = exploreBtn.dataset.themeType;
                     handleExploreInDepth(themeId, themeType);
                 }
+                // Accordion
                 const header = e.target.closest('.accordion-header');
                 if (header) {
                     const content = header.nextElementSibling;
@@ -346,6 +378,10 @@
                     content.classList.toggle('open');
                     const icon = header.querySelector('.icon');
                     if (icon) icon.classList.toggle('rotate-180');
+                }
+                // AI Help Button
+                if (e.target.closest('#ai-help-button')) {
+                    handleAIHelpRequest();
                 }
             });
         }
@@ -488,9 +524,42 @@
             }
         }
 
+        async function handleAIHelpRequest() {
+            if (!checkApiKey()) return;
+            const modal = document.getElementById('inDepthModal');
+            const modalTitle = document.getElementById('inDepthModalTitle');
+            const modalContent = document.getElementById('inDepthModalContent');
+            const modalFooter = document.getElementById('inDepthModalFooter');
+            
+            modalTitle.textContent = "AI Help & Feedback";
+            modalContent.innerHTML = '<div class="loader themed-loader mx-auto my-8"></div><p class="text-center themed-text-muted">Generating help and suggestions...</p>';
+            modalFooter.innerHTML = '';
+            modal.classList.remove('hidden');
+
+            const pageStructure = document.getElementById('main-content').innerText;
+            const prompt = `You are a helpful UI/UX assistant. Based on the text content and structure of the application provided below, please do two things: 
+1.  **Explain How It Works:** Briefly describe the main features of this "AI Yoga Class & Theme Generator" application.
+2.  **Suggest Improvements:** Offer a few specific, actionable suggestions to improve the user interface (UI) and overall user experience (UX).
+
+Structure your response with two main sections using '###' markdown headings: '### How This App Works' and '### UI/UX Improvement Suggestions'.
+
+Here is the text content of the app:
+${pageStructure}`;
+
+            try {
+                const text = await callGeminiAPI(prompt);
+                modalContent.innerHTML = convertMarkdownToAccordion(text);
+                 const exportButton = createExportButton();
+                exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget));
+                modalFooter.appendChild(exportButton);
+            } catch (error) {
+                console.error("Error generating AI help:", error);
+                modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
+            }
+        }
+
         // --- New Feature: Dynamic Placeholders ---
         async function loadDynamicPlaceholders() {
-            // Check for key silently, don't show modal if not present
             if (!apiKey) {
                 console.log("API key not present, skipping dynamic placeholders.");
                 return;
@@ -508,7 +577,6 @@
 
             } catch (error) {
                 console.error("Could not load dynamic placeholders:", error);
-                // Fallback to default placeholders on error
                 document.getElementById('theme-prompt').placeholder = "e.g., 'A quiet, misty forest at dawn'";
                 document.getElementById('gemini-prompt').placeholder = "e.g., 'Courage & Heart Opening'";
             }
@@ -706,10 +774,15 @@
         function robustMarkdownToHtml(text) {
             if (!text) return '';
             let html = text.trim();
+            // Process bolding **text**
             html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Process lists starting with * or -
             html = html.replace(/^(?:-|\*)\s+(.*$)/gm, '<li>$1</li>');
+             // Wrap consecutive list items in <ul>
             html = html.replace(/((<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
+            // Convert remaining newlines to <br>, but not if they are next to block elements
             html = html.replace(/\n(?!<[u\/l])/g, '<br>');
+            // Clean up extra breaks
             html = html.replace(/<br>\s*<ul>/g, '<ul>');
             html = html.replace(/<\/ul>\s*<br>/g, '</ul>');
             return html;
