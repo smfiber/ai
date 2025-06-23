@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v1.1</title>
+    <title>Yoga Class Themer v1.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -14,18 +14,17 @@
         /* Custom styles */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #fff1f2; /* Rose 50 */
-            /* Subtle lotus background pattern */
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80"><path fill="%23fecdd3" fill-opacity="0.4" d="M40 29.17c0-3.8-3.14-6.86-7-6.86-3.87 0-7 3.06-7 6.86 0 3.8 3.13 6.86 7 6.86 3.86 0 7-3.06 7-6.86zm14 0c0-3.8-3.14-6.86-7-6.86-3.87 0-7 3.06-7 6.86 0 3.8 3.13 6.86 7 6.86 3.86 0 7-3.06 7-6.86zM40 40c-6.9 0-12.5 5.6-12.5 12.5S33.1 65 40 65s12.5-5.6 12.5-12.5S46.9 40 40 40z"></path></svg>');
         }
         .card {
-            background-color: white;
+            background-color: rgba(255, 255, 255, 0.9); /* Slightly more opaque for readability inside the new canvas */
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
             border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             display: flex;
             flex-direction: column;
-            border: 1px solid #fce7f3; /* Rose 100 */
+            border: 1px solid #e9d5ff; /* Purple 200 */
         }
         .card:hover {
             transform: translateY(-5px);
@@ -37,7 +36,7 @@
             flex-direction: column;
         }
         .btn-primary {
-            background-color: #e11d48; /* Rose 600 */
+            background-color: #9333ea; /* Purple 600 */
             color: white;
             font-weight: 600;
             padding: 10px 20px;
@@ -45,29 +44,33 @@
             transition: background-color 0.2s;
         }
         .btn-primary:hover {
-            background-color: #be123c; /* Rose 700 */
+            background-color: #7e22ce; /* Purple 700 */
         }
-        /* Style for the select dropdown */
         .theme-select {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%23fda4af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); /* Rose 300 */
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%23c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); /* Purple 400 */
             background-repeat: no-repeat;
             background-position: right 0.75rem center;
             background-size: 1.5em 1.5em;
         }
+        .header-bg-image {
+            background-image: url('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png');
+            background-size: cover;
+            background-position: center;
+        }
     </style>
 </head>
-<body class="bg-rose-50 text-gray-800">
+<body class="bg-purple-50 text-gray-800">
 
     <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Enter Your API Key</h2>
             <p class="mb-6 text-gray-600">To use the AI theme generator, please provide your Gemini API key. This key is only stored for your current session.</p>
             <form id="apiKeyForm">
-                <input type="password" id="apiKeyInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Your Gemini API Key" required>
+                <input type="password" id="apiKeyInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="Your Gemini API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
             </form>
         </div>
@@ -75,105 +78,111 @@
 
     <!-- Main Content -->
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-red-700 flex items-center justify-center gap-4">
-                <svg class="w-10 h-10 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
-                </svg>
-                Yoga Class Theme Generator
-            </h1>
-            <p class="text-lg text-rose-600 mt-2">Find inspiration for your next 1-hour yoga class.</p>
+        
+        <!-- Header with Background Image -->
+        <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
+            <div class="absolute inset-0 header-bg-image"></div>
+            <div class="absolute inset-0 bg-purple-900 opacity-50"></div>
+            <div class="relative z-10 p-12 text-white">
+                 <h1 class="text-4xl md:text-5xl font-bold flex items-center justify-center gap-4" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                    <svg class="w-10 h-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                    </svg>
+                    Yoga Class Theme Generator
+                </h1>
+                <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Find inspiration for your next 1-hour yoga class.</p>
+            </div>
         </header>
 
-        <div class="space-y-8">
-            <!-- Gemini AI Card (Full Width) -->
-            <div class="card">
-                <div class="p-8 card-content">
-                    <h2 class="text-2xl font-bold mb-2 text-red-600">AI-Powered Theme Generator</h2>
-                    <p class="mb-6 text-gray-600">Feeling creative? Enter a keyword or concept, and let Gemini craft a unique 1-hour class plan for you.</p>
-                    
-                    <form id="gemini-form">
-                        <div class="mb-4">
-                            <label for="gemini-prompt" class="block text-sm font-medium text-gray-700 mb-1">Enter a theme idea (e.g., "Finding Balance", "Morning Energy"):</label>
-                            <input type="text" id="gemini-prompt" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="e.g., 'Courage & Heart Opening'">
-                        </div>
-                        <button type="submit" class="btn-primary w-full">Generate AI Theme</button>
-                    </form>
-                    
-                    <div id="gemini-result" class="mt-6 prose max-w-none text-gray-700">
-                        <!-- AI-generated theme will appear here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Grid for Theme Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                 <!-- Chakras Card -->
+        <!-- Rounded Canvas for Cards -->
+        <main class="bg-white/50 backdrop-blur-md rounded-2xl p-6 md:p-10 shadow-xl border border-purple-100">
+            <div class="space-y-8">
+                <!-- Gemini AI Card (Full Width) -->
                 <div class="card">
                     <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 text-red-600">The Foundation: The Seven Chakras</h2>
-                        <p class="mb-6 text-gray-600">Balance and activate the seven primary energy centers in the body, from the grounding root to the transcendent crown.</p>
+                        <h2 class="text-2xl font-bold mb-2 text-purple-600">AI-Powered Theme Generator</h2>
+                        <p class="mb-6 text-gray-600">Feeling creative? Enter a keyword or concept, and let Gemini craft a unique 1-hour class plan for you.</p>
                         
-                        <div class="mb-6 mt-auto">
-                            <label for="chakras-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Chakra Theme:</label>
-                            <select id="chakras-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
-                                <option value="">-- Choose a chakra --</option>
-                            </select>
-                        </div>
-
-                        <div id="chakras-details" class="details-container prose max-w-none text-gray-700">
-                            <!-- Chakra details will be dynamically injected here -->
+                        <form id="gemini-form">
+                            <div class="mb-4">
+                                <label for="gemini-prompt" class="block text-sm font-medium text-gray-700 mb-1">Enter a theme idea:</label>
+                                <input type="text" id="gemini-prompt" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="e.g., 'Courage & Heart Opening'">
+                            </div>
+                            <button type="submit" class="btn-primary w-full">Generate AI Theme</button>
+                        </form>
+                        
+                        <div id="gemini-result" class="mt-6 prose max-w-none text-gray-700">
+                            <!-- AI-generated theme will appear here -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Meridians Card -->
-                <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 text-red-600">The Energetic Body: The Twelve Meridians</h2>
-                        <p class="mb-6 text-gray-600">Explore the twelve major meridians of Traditional Chinese Medicine to foster physical and emotional health.</p>
-                        
-                        <div class="mb-6 mt-auto">
-                            <label for="meridian-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Meridian Theme:</label>
-                            <select id="meridian-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
-                                <option value="">-- Choose a flow --</option>
-                            </select>
-                        </div>
+                <!-- Grid for Theme Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                     <!-- Chakras Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">The Seven Chakras</h2>
+                            <p class="mb-6 text-gray-600">Balance and activate the seven primary energy centers in the body.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="chakras-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Chakra Theme:</label>
+                                <select id="chakras-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a chakra --</option>
+                                </select>
+                            </div>
 
-                        <div id="meridian-details" class="details-container prose max-w-none text-gray-700">
-                            <!-- Meridian details will be dynamically injected here -->
+                            <div id="chakras-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Seasons Card -->
-                <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 text-red-600">The Rhythm of Nature: The Four Seasons</h2>
-                        <p class="mb-6 text-gray-600">Align your practice with the natural cycles of the earth, from the rebirth of spring to the stillness of winter.</p>
-                        
-                        <div class="mb-6 mt-auto">
-                            <label for="seasons-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Season Theme:</label>
-                            <select id="seasons-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
-                                <option value="">-- Choose a season --</option>
-                            </select>
+                    <!-- Meridians Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">The Twelve Meridians</h2>
+                            <p class="mb-6 text-gray-600">Explore the major meridians of Traditional Chinese Medicine.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="meridian-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Meridian Theme:</label>
+                                <select id="meridian-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a flow --</option>
+                                </select>
+                            </div>
+
+                            <div id="meridian-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
+                    </div>
 
-                        <div id="seasons-details" class="details-container prose max-w-none text-gray-700">
-                            <!-- Season details will be dynamically injected here -->
+                    <!-- Seasons Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">The Four Seasons</h2>
+                            <p class="mb-6 text-gray-600">Align your practice with the natural cycles of the earth.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="seasons-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Season Theme:</label>
+                                <select id="seasons-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a season --</option>
+                                </select>
+                            </div>
+
+                            <div id="seasons-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 1.1 ---
+        // --- App Version: 1.4 ---
         // Changelog:
+        // v1.4: Moved background image to header and placed cards in a rounded canvas.
+        // v1.3: Changed background image and updated color palette to purple tones.
+        // v1.2: Replaced background pattern with a full-page image.
         // v1.1: Themed with red/rose colors and added background pattern/icon.
-        // v1.0: Added Chakras card, versioning system, and reorganized layout.
+        // v1.0: Initial release.
     
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -223,7 +232,7 @@
                 });
             } catch (e) {
                 console.error("Firebase initialization failed:", e);
-                alert("Could not connect to the database. Check the console for details.");
+                console.error("Could not connect to the database. Check the console for details.");
             }
         }
         
@@ -312,14 +321,14 @@
             e.preventDefault();
             if (!geminiApiKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
-                alert("Please enter your Gemini API key first.");
+                console.warn("Please enter your Gemini API key first.");
                 return;
             }
             const promptInput = document.getElementById('gemini-prompt');
             const resultContainer = document.getElementById('gemini-result');
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) {
-                alert("Please enter a theme idea.");
+                 resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`;
                 return;
             }
             resultContainer.innerHTML = '<p class="text-center">Generating your class plan... ✨</p>';
@@ -342,7 +351,7 @@
                 }
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
-                resultContainer.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Check the console. Ensure your API key is correct and has the Gemini API enabled.</p>`;
+                resultContainer.innerHTML = `<p class="text-purple-500">Sorry, something went wrong. Check the console. Ensure your API key is correct and has the Gemini API enabled.</p>`;
             }
         }
 
@@ -373,7 +382,7 @@
             }
             ideasHtml += '</ul>';
             container.innerHTML = `
-                <h3 class="text-xl font-bold mt-4 mb-2 text-red-500">${theme.title}</h3>
+                <h3 class="text-xl font-bold mt-4 mb-2 text-purple-500">${theme.title}</h3>
                 <p class="mb-4">${theme.explanation}</p>
                 <p class="mb-4"><strong>Suggested Oils:</strong> ${theme.oils}</p>
                 <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
