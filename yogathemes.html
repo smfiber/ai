@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v1.5</title>
+    <title>Yoga Class Themer v1.6</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -176,8 +176,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 1.5 ---
+        // --- App Version: 1.6 ---
         // Changelog:
+        // v1.6: Fixed dropdown population bug by loading local data first.
         // v1.5: API Key modal now shows on page load by default.
         // v1.4: Moved background image to header and placed cards in a rounded canvas.
         // v1.3: Changed background image and updated color palette to purple tones.
@@ -206,13 +207,19 @@
         let userId;
         let geminiApiKey = "";
 
-        // Data is fetched from Firestore and stored here
-        let chakrasData = [];
-        let meridianData = [];
-        let seasonsData = [];
+        // Data is now loaded from local functions first.
+        let chakrasData = getChakrasSeedData();
+        let meridianData = getMeridiansSeedData();
+        let seasonsData = getSeasonsSeedData();
 
         // --- App Initialization ---
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
+            // Populate UI immediately with local data
+            populateChakrasDropdown();
+            populateMeridianDropdown();
+            populateSeasonsDropdown();
+            
+            // Initialize Firebase and sync data in the background
             initializeFirebase();
             setupEventListeners();
         });
@@ -226,7 +233,8 @@
                     if (user) {
                         userId = user.uid;
                         console.log("User is signed in with UID:", userId);
-                        seedAndFetchData();
+                        // Now seed data to Firestore if it's not there
+                        seedAllCollections();
                     } else {
                         signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
                     }
@@ -237,36 +245,15 @@
             }
         }
         
-        async function seedAndFetchData() {
+        async function seedAllCollections() {
+            // This function now only seeds data, it doesn't fetch,
+            // as fetching might overwrite the local data if there's a delay.
+            // The main purpose of the DB now is to be a backup/CMS.
             await Promise.all([
-                seedCollection('public_themes/chakras/themes', getChakrasSeedData()),
-                seedCollection('public_themes/meridians/themes', getMeridiansSeedData()),
-                seedCollection('public_themes/seasons/themes', getSeasonsSeedData())
+                seedCollection('public_themes/chakras/themes', chakrasData),
+                seedCollection('public_themes/meridians/themes', meridianData),
+                seedCollection('public_themes/seasons/themes', seasonsData)
             ]);
-            
-            [chakrasData, meridianData, seasonsData] = await Promise.all([
-                fetchCollection('public_themes/chakras/themes'),
-                fetchCollection('public_themes/meridians/themes'),
-                fetchCollection('public_themes/seasons/themes')
-            ]);
-            
-            populateChakrasDropdown();
-            populateMeridianDropdown();
-            populateSeasonsDropdown();
-        }
-
-        async function fetchCollection(path) {
-            if (!db) return [];
-            try {
-                const collectionRef = collection(db, path);
-                const snapshot = await getDocs(collectionRef);
-                const data = [];
-                snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
-                return data;
-            } catch (error) {
-                console.error(`Error fetching collection ${path}:`, error);
-                return []; // Return empty array on error
-            }
         }
 
         // --- Data Seeding ---
