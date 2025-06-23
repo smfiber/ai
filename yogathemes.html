@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v9.3</title>
+    <title>AI Yoga Class & Theme Generator v9.4 (Fading Header)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -176,7 +176,8 @@
             background-image: url('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png'); 
             background-size: cover; 
             background-position: center;
-            transition: background-image 1s ease-in-out;
+            opacity: 1;
+            transition: opacity 1.5s ease-in-out; /* Slower fade for header */
         }
         .header-loader-spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; }
 
@@ -314,7 +315,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.3</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.4</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -550,29 +551,38 @@
                 addPostGenerationButtons(resultContainer, userPrompt, 'custom');
                 
                 if (selectedOptions.length > 0) {
-                    const proseContent = resultContainer.querySelector('.prose-content .accordion');
+                    const accordionContainer = resultContainer.querySelector('.prose-content .accordion');
                     
-                    for (const option of selectedOptions) {
-                        const loaderId = `loader-${option.replace(/\s+/g, '-')}`;
-                        const componentLoader = document.createElement('div');
-                        componentLoader.id = loaderId;
-                        componentLoader.innerHTML = getLoaderHTML(`Generating section for ${option}...`);
-                        proseContent.appendChild(componentLoader);
+                    if (accordionContainer) { // Check if the accordion container exists
+                        for (const option of selectedOptions) {
+                            const loaderId = `loader-${option.replace(/\s+/g, '-')}`;
+                            const componentLoader = document.createElement('div');
+                            componentLoader.id = loaderId;
+                            componentLoader.innerHTML = getLoaderHTML(`Generating section for ${option}...`);
+                            accordionContainer.appendChild(componentLoader);
 
-                        try {
-                            const componentPrompt = `You are a yoga expert. Provide a detailed explanation and a practical guide for incorporating "${option}" into a yoga class. Structure the response with a '###' for the main heading (e.g., '### Incorporating ${option}'). Be creative and thorough.`;
-                            const componentText = await callGeminiAPI(componentPrompt);
-                            
-                            const accordionHtml = convertMarkdownToAccordion(componentText, false);
-                            document.getElementById(loaderId).innerHTML = accordionHtml;
+                            try {
+                                const componentPrompt = `You are a yoga expert. Provide a detailed explanation and a practical guide for incorporating "${option}" into a yoga class. Structure the response with a '###' for the main heading (e.g., '### Incorporating ${option}'). Be creative and thorough.`;
+                                const componentText = await callGeminiAPI(componentPrompt);
+                                
+                                const accordionHtml = convertMarkdownToAccordion(componentText, false);
+                                const loaderElement = document.getElementById(loaderId);
+                                if (loaderElement) {
+                                    loaderElement.outerHTML = accordionHtml; // Replace loader with content
+                                }
 
-                            let currentText = originalGeneratedText.get(resultContainer) || "";
-                            currentText += `\n\n${componentText}`;
-                            originalGeneratedText.set(resultContainer, currentText);
 
-                        } catch (componentError) {
-                            document.getElementById(loaderId).innerHTML = `<div class="p-4 text-red-500">Failed to generate section for <strong>${option}</strong>.</div>`;
-                            console.error(`Error generating component for ${option}:`, componentError);
+                                let currentText = originalGeneratedText.get(resultContainer) || "";
+                                currentText += `\n\n${componentText}`;
+                                originalGeneratedText.set(resultContainer, currentText);
+
+                            } catch (componentError) {
+                                const loaderElement = document.getElementById(loaderId);
+                                if(loaderElement) {
+                                   loaderElement.innerHTML = `<div class="p-4 text-red-500">Failed to generate section for <strong>${option}</strong>.</div>`;
+                                }
+                                console.error(`Error generating component for ${option}:`, componentError);
+                            }
                         }
                     }
                 }
@@ -615,7 +625,7 @@
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
         function createButton(text, className, type = 'button') { const button = document.createElement('button'); button.className = className; button.type = type; button.innerHTML = text; return button; }
         function robustMarkdownToHtml(text) { if (!text) return ''; let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); const paragraphs = html.split('\n').filter(p => p.trim() !== ''); html = ''; let inList = false; paragraphs.forEach(p => { const trimmed = p.trim(); if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${trimmed.substring(2)}</li>`; } else { if (inList) { html += '</ul>'; inList = false; } html += `<p>${p}</p>`; } }); if(inList) { html += '</ul>'; } return html; }
-        function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return robustMarkdownToHtml(text); return sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join(''); }
+        function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return `<div class="accordion">${robustMarkdownToHtml(text)}</div>`; const accordionItems = sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join(''); return `<div class="accordion">${accordionItems}</div>`;}
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown ${type} error occurred. Check the console for details.`; const errorMessage = error.message.toLowerCase(); if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`; else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`; else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`; else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`; else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`; else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.'; return `Sorry, something went wrong. ${message}`; }
         async function handleVisualThemeGeneration() { if (!checkApiKey()) return; const prompt = document.getElementById('theme-prompt').value.trim(); if (!prompt) { showThemeError("Please enter a description for your visual theme."); return; } showThemeLoading(true); const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`; const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`; try { const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]); if (colorResult.status === 'fulfilled') { applyTheme(colorResult.value); } else { showThemeError(generateErrorMessage(colorResult.reason, 'color')); } if (imageResult.status === 'fulfilled') { applyHeaderImage(imageResult.value); } else { showThemeError(generateErrorMessage(imageResult.reason, 'image')); } } catch (error) { showThemeError(generateErrorMessage(error, 'visual theme')); } finally { showThemeLoading(false); } }
         async function handleExploreInDepth(themeId, themeType) { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); modalTitle.textContent = `Exploring: ${theme.title}`; modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(modalFooter, themeId, themeType); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
@@ -623,7 +633,21 @@
         function addPostGenerationButtons(container, themeId, themeType) { const buttonContainer = document.createElement('div'); buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6'; const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button'); const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto'); copyButton.addEventListener('click', (e) => copyElementTextToClipboard(container.querySelector('.prose-content'), e.currentTarget)); if(container.id !== 'inDepthModalFooter') { const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); exploreButton.dataset.themeId = themeId; exploreButton.dataset.themeType = themeType; buttonContainer.appendChild(exploreButton); } buttonContainer.appendChild(refineButton); buttonContainer.appendChild(copyButton); container.appendChild(buttonContainer); }
         async function loadDynamicPlaceholders() { if (!apiKey) { return; } try { const prompt = `Generate two short, creative, and distinct yoga class theme ideas to be used as placeholder text in an input field. Return the result as a JSON object with two keys, "theme1" and "theme2". Example: {"theme1": "Embracing the winds of change", "theme2": "Finding stillness in the storm"}`; const jsonText = await callGeminiAPI(prompt); const themes = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); if (themes.theme1) document.getElementById('theme-prompt').placeholder = `e.g., '${themes.theme1}'`; if (themes.theme2) document.getElementById('gemini-prompt').placeholder = `e.g., '${themes.theme2}'`; } catch (error) { console.error("Could not load dynamic placeholders:", error); } }
         function applyTheme(colors) { Object.keys(colors).forEach(key => { const cssVarName = '--color-' + key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`); root.style.setProperty(cssVarName, colors[key]); }); }
-        function applyHeaderImage(imageUrl) { document.getElementById('header-bg-image').style.backgroundImage = `url('${imageUrl}')`; }
+        
+        function applyHeaderImage(imageUrl) {
+            const headerBg = document.getElementById('header-bg-image');
+            headerBg.style.opacity = 0; // Fade out
+            
+            // Preload the image
+            const img = new Image();
+            img.onload = () => {
+                // When loaded, set as background and fade in
+                headerBg.style.backgroundImage = `url('${imageUrl}')`;
+                headerBg.style.opacity = 1; // Fade in
+            };
+            img.src = imageUrl;
+        }
+
         function showThemeLoading(isLoading) { document.getElementById('theme-loader-container').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('flex', isLoading); document.getElementById('generate-theme-btn').disabled = isLoading; document.getElementById('generate-theme-btn').classList.toggle('opacity-50', isLoading); }
         function showThemeError(message) { const el = document.getElementById('theme-error-container'); el.textContent = message; el.classList.remove('hidden'); }
         function getIconForTheme(themeType, themeId) { /* A simple SVG icon system */ const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
@@ -641,7 +665,7 @@
         function getMoonPhasesSeedData() { return [ { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." }, { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." }, { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." }, { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." }, { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." }, { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." }, { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." }, { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." } ]; }
     </script>
 </body>
-</ht" code between  and  in the most up-to-date Canvas "AI Yoga Class & Theme Generator v9.2 (Bug Fix)" document above and am asking a query about/based on this code below.
+</ht" code between  and  in the most up-to-date Canvas "AI Yoga Class & Theme Generator v9.3 (Component Accordions)" document above and am asking a query about/based on this code below.
 Instructions to follow:
   * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
   * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
