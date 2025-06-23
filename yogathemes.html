@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v2.4.1</title>
+    <title>Yoga Class Themer v3.0.0</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -128,6 +128,19 @@
         .accordion-header.active .icon {
             transform: rotate(180deg);
         }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #9333ea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-purple-50 text-gray-800">
@@ -176,7 +189,7 @@
                 </h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Find inspiration for your next 1-hour yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.4.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v3.0.0</div>
         </header>
 
         <!-- Rounded Canvas for Cards -->
@@ -279,15 +292,14 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 2.4.1 ---
+        // --- App Version: 3.0.0 ---
         // Changelog:
-        // v2.4.1: Improved error handling for Gemini API calls to provide better user feedback on network or service issues.
-        // v2.4: Added "Yoga Styles" theme card with seed data and UI functionality. Replaced the "Breathwork Library" card.
-        // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number. Enhanced in-depth modal with accordion layout and fixed rendering.
-        // v2.2: Adjusted AI prompt and rendering function for better readability.
-        // v2.1: Added Affirmations, Poem, and Quotations to the main AI theme generator.
-        // v2.0: Added "Explore in Depth" feature with a dedicated modal for detailed AI generation.
-    
+        // v3.0.0: Replaced static Yoga Styles data with dynamic data from user-provided 'Modality.xlsx'.
+        //         Added tooltips to dropdown options showing Founder and Description.
+        //         Implemented AI generation for both the initial card content and the "Explore in Depth" content for Yoga Styles.
+        // v2.4.1: Improved error handling for Gemini API calls.
+        // v2.4: Added "Yoga Styles" theme card with seed data.
+        
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -313,16 +325,12 @@
             chakras: getChakrasSeedData(),
             meridians: getMeridiansSeedData(),
             seasons: getSeasonsSeedData(),
-            styles: getYogaStylesSeedData()
+            styles: getModalitiesSeedData()
         };
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            populateChakrasDropdown();
-            populateMeridianDropdown();
-            populateSeasonsDropdown();
-            populateStylesDropdown();
-            
+            populateAllDropdowns();
             initializeFirebase();
             setupEventListeners();
         });
@@ -335,7 +343,7 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        seedAllCollections();
+                        seedStaticCollections();
                     } else {
                         signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
                     }
@@ -345,12 +353,12 @@
             }
         }
         
-        async function seedAllCollections() {
+        async function seedStaticCollections() {
+            // No longer seeding styles as it's now dynamically handled
             await Promise.all([
                 seedCollection('public_themes/chakras/themes', allThemeData.chakras),
                 seedCollection('public_themes/meridians/themes', allThemeData.meridians),
                 seedCollection('public_themes/seasons/themes', allThemeData.seasons),
-                seedCollection('public_themes/styles/themes', allThemeData.styles)
             ]);
         }
 
@@ -371,19 +379,16 @@
         // --- Event Listeners Setup ---
         function setupEventListeners() {
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
-            document.getElementById('chakras-select').addEventListener('change', handleDropdownSelect);
-            document.getElementById('meridian-select').addEventListener('change', handleDropdownSelect);
-            document.getElementById('seasons-select').addEventListener('change', handleDropdownSelect);
-            document.getElementById('styles-select').addEventListener('change', handleDropdownSelect);
+            document.querySelectorAll('.theme-select').forEach(select => {
+                select.addEventListener('change', handleDropdownSelect);
+            });
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             
             const modal = document.getElementById('inDepthModal');
             modal.addEventListener('click', (e) => {
-                // Close modal button
                 if (e.target.closest('#closeInDepthModal')) {
                     modal.classList.add('hidden');
                 }
-                // Accordion header toggle
                 const header = e.target.closest('.accordion-header');
                 if (header) {
                     const content = header.nextElementSibling;
@@ -393,20 +398,19 @@
             });
 
             document.getElementById('main-content').addEventListener('click', (e) => {
-                if (e.target.classList.contains('explore-button')) {
-                    const themeId = e.target.dataset.themeId;
-                    const themeType = e.target.dataset.themeType;
+                const exploreButton = e.target.closest('.explore-button');
+                if (exploreButton) {
+                    const themeId = exploreButton.dataset.themeId;
+                    const themeType = exploreButton.dataset.themeType;
                     handleExploreInDepth(themeId, themeType);
                 }
             });
 
-            // Event delegation for dynamically created tabs
             document.getElementById('gemini-result-container').addEventListener('click', (e) => {
                 if (e.target.matches('.tab-button')) {
                     const tabContainer = e.target.closest('.ai-tabs');
                     tabContainer.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
                     e.target.classList.add('active');
-
                     tabContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                     const targetContentId = e.target.dataset.target;
                     document.getElementById(targetContentId).classList.add('active');
@@ -424,12 +428,17 @@
             }
         }
         
-        function handleDropdownSelect(e) {
+        async function handleDropdownSelect(e) {
             const themeId = e.target.value;
             const themeType = e.target.dataset.themeType;
             const theme = allThemeData[themeType].find(t => t.id === themeId);
             const container = e.target.parentElement.nextElementSibling;
-            displayThemeDetails(theme, container, themeType);
+
+            if (themeType === 'styles') {
+                await displayAIStyleDetails(theme, container, themeType);
+            } else {
+                displayThemeDetails(theme, container, themeType);
+            }
         }
 
         async function handleGeminiSubmit(e) {
@@ -445,7 +454,7 @@
                  resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`;
                 return;
             }
-            resultContainer.innerHTML = '<p class="text-center">Generating your class plan... ✨</p>';
+            resultContainer.innerHTML = '<div class="loader"></div><p class="text-center">Generating your class plan... ✨</p>';
             
             const fullPrompt = `
 Generate a comprehensive yoga class theme based on the idea: "${userPrompt}".
@@ -480,15 +489,7 @@ Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. U
                 renderAIGeneratedTabs(text, resultContainer);
             } catch (error) {
                 console.error("Error calling Gemini API for main theme:", error);
-                let errorMessage = 'Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.';
-                if (error.message.includes('503') || error.message.includes('500')) {
-                    errorMessage = 'The AI service is temporarily unavailable. Please try again later.';
-                } else if (error.message.includes('400')) {
-                     errorMessage = 'There was a problem with the request (Bad Request). Please check your input and try again.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'A network error occurred. Please check your connection and try again.';
-                }
-                resultContainer.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
+                resultContainer.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
             }
         }
         
@@ -510,46 +511,60 @@ Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. U
 
             modalTitle.textContent = `Exploring: ${theme.title}`;
             
-            let ideasHtml = '<ul class="list-disc list-inside space-y-1">';
-            for (const [key, value] of Object.entries(theme.ideas)) {
-                ideasHtml += `<li><strong>${key}:</strong> ${value}</li>`;
-            }
-            ideasHtml += '</ul>';
+            // For styles, the initial info comes from the CSV. For others, it comes from seed data.
+            const summaryHtml = themeType === 'styles' 
+                ? `
+                    <p class="mb-3">${theme.description}</p>
+                    ${theme.founder ? `<p class="mb-3"><strong>Founder/Key Figure:</strong> ${theme.founder}</p>` : ''}
+                  `
+                : `
+                    <p class="mb-3">${theme.explanation}</p>
+                    <p class="mb-3"><strong>Suggested Oils:</strong> ${theme.oils}</p>
+                    <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
+                    ${renderIdeas(theme.ideas)}
+                  `;
 
             const initialContentHtml = `
                 <div class="p-4 mb-4 bg-purple-50 rounded-lg border border-purple-200">
                     <h3 class="text-xl font-bold mb-2 text-purple-600">Theme Summary</h3>
-                    <p class="mb-3">${theme.explanation}</p>
-                    <p class="mb-3"><strong>Suggested Oils:</strong> ${theme.oils}</p>
-                    <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
-                    ${ideasHtml}
+                    ${summaryHtml}
                 </div>
                 <div id="ai-generated-content">
+                    <div class="loader"></div>
                     <p class="text-center">Generating your detailed guide... ✨</p>
                 </div>
             `;
             modalContent.innerHTML = initialContentHtml;
             modal.classList.remove('hidden');
 
+            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
             const prompt = `
-You are a knowledgeable yoga instructor. Provide a detailed exploration of the yoga theme: "${theme.title}".
-Your explanation should be comprehensive and suitable for a yoga teacher.
-Please cover the following aspects in detail, using Markdown with ### headings for each section:
+You are a master yoga instructor. Provide a thorough and comprehensive exploration of the yoga style: "${theme.title}".
+This style is described as: "${theme.description}". ${founderInfo}
 
-### Core Concepts
-Explain its historical, philosophical, or energetic background.
+Your explanation should be as thorough as possible, suitable for training a new yoga teacher.
+Please cover the following aspects in exhaustive detail, using Markdown with ### headings for each section:
+
+### Core Philosophy & History
+Delve into its origins, key figures, and the fundamental principles or philosophy that underpin this style. What makes it unique?
 
 ### Thematic Connection to Yoga
-Discuss the mind-body-spirit connection it emphasizes.
+Discuss the specific mind-body-spirit connection it emphasizes. How does it approach the integration of physical practice with deeper yogic goals?
 
 ### Energetic & Emotional Landscape
-What are the energetic qualities and emotional states associated with this theme?
+Describe the energetic qualities (e.g., grounding, uplifting, fiery, cooling) and the emotional states it aims to cultivate in practitioners.
 
-### Asana (Pose) Application
-Suggest 5 key poses. For each, explain in detail *why* it's a good fit.
+### Key Asana (Pose) Application
+Suggest 8-10 key poses that are characteristic of this style. For each pose, provide its name and a detailed explanation of *why* it is a good fit for this style and what specific alignment cues or focus points are important within this tradition.
+
+### Signature Sequences or Techniques
+Describe any signature sequences (like the Ashtanga series) or unique techniques that are central to this style of practice.
 
 ### Pranayama & Meditation
-Suggest a specific pranayama technique and a meditation focus that would deepen the experience.
+Suggest a specific pranayama technique and a meditation focus that are commonly paired with this style to deepen the experience. Explain the connection.
+
+### Who is this style for?
+Describe the ideal student for this style. Who would benefit most from it, and are there any contraindications?
 `;
 
             try {
@@ -557,15 +572,7 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 document.getElementById('ai-generated-content').innerHTML = convertMarkdownToAccordion(text);
             } catch (error) {
                 console.error(`Error calling Gemini API for in-depth theme "${theme.title}":`, error);
-                let errorMessage = 'Sorry, something went wrong generating the detailed guide. Please ensure your API key is correct and try again.';
-                if (error.message.includes('503') || error.message.includes('500')) {
-                    errorMessage = 'The AI service is temporarily unavailable. Please try again later.';
-                } else if (error.message.includes('400')) {
-                     errorMessage = 'There was a problem with the request. Please check the theme and try again.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'A network error occurred. Please check your connection and try again.';
-                }
-                document.getElementById('ai-generated-content').innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
+                document.getElementById('ai-generated-content').innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
             }
         }
 
@@ -578,7 +585,7 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                const errorBody = await response.text(); // Use .text() in case response is not valid JSON
+                const errorBody = await response.text(); 
                 console.error("API Error Response:", errorBody);
                 throw new Error(`API request failed with status ${response.status}`);
             }
@@ -592,7 +599,14 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
         }
 
         // --- UI Population Functions ---
-        function populateDropdown(selectId, data, placeholder) {
+        function populateAllDropdowns() {
+            populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra');
+            populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow');
+            populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season');
+            populateStylesDropdown();
+        }
+
+        function populateDropdown(selectId, data, placeholder, addTooltip = false) {
             const selectElement = document.getElementById(selectId);
             selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
             data.sort((a, b) => a.title.localeCompare(b.title));
@@ -600,32 +614,77 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 const option = document.createElement('option');
                 option.value = theme.id;
                 option.textContent = theme.title;
+                if (addTooltip) {
+                    const founderText = theme.founder ? `Founder: ${theme.founder}\n` : '';
+                    option.title = `${founderText}${theme.description}`;
+                }
                 selectElement.appendChild(option);
             });
         }
-        function populateChakrasDropdown() { populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra'); }
-        function populateMeridianDropdown() { populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow'); }
-        function populateSeasonsDropdown() { populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season'); }
-        function populateStylesDropdown() { populateDropdown('styles-select', allThemeData.styles, 'Choose a style'); }
+
+        function populateStylesDropdown() {
+            populateDropdown('styles-select', allThemeData.styles, 'Choose a style', true);
+        }
 
         function displayThemeDetails(theme, container, themeType) {
             if (!theme) {
                 container.innerHTML = '';
                 return;
             }
-            let ideasHtml = '<ul class="space-y-2">';
-            for (const [key, value] of Object.entries(theme.ideas)) {
-                ideasHtml += `<li><strong class="text-gray-800">${key}:</strong> ${value}</li>`;
-            }
-            ideasHtml += '</ul>';
             container.innerHTML = `
                 <h3 class="text-xl font-bold mt-4 mb-2 text-purple-500">${theme.title}</h3>
                 <p class="mb-4">${theme.explanation}</p>
                 <p class="mb-4"><strong>Suggested Oils:</strong> ${theme.oils}</p>
                 <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
-                ${ideasHtml}
+                ${renderIdeas(theme.ideas)}
                 <button class="btn-primary w-full mt-4 explore-button" data-theme-id="${theme.id}" data-theme-type="${themeType}">Explore in Depth with AI</button>
             `;
+        }
+
+        async function displayAIStyleDetails(theme, container, themeType) {
+            if (!theme) {
+                container.innerHTML = '';
+                return;
+            }
+            if (!geminiApiKey) {
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                container.innerHTML = '<p class="text-amber-600">Please enter your API key to generate content.</p>';
+                document.getElementById('styles-select').value = ''; // Reset dropdown
+                return;
+            }
+            
+            container.innerHTML = '<div class="loader"></div><p class="text-center">Generating theme...</p>';
+
+            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
+            const prompt = `
+Based on the yoga style "${theme.title}", which is described as "${theme.description}". ${founderInfo}
+Please generate the following content for a yoga class theme card. Use markdown with ### headings for each section.
+
+### Explanation
+Provide a rich, inviting explanation of what a class in this style would feel like and its primary benefits for a student. Expand on the initial description.
+
+### Suggested Oils
+Suggest 3-4 essential oils that would complement this style of practice and briefly explain why.
+
+### Themed Ideas
+Provide themed ideas for a class, including:
+- **Focus:** A one-sentence summary of the class's main intention.
+- **Poses:** List 5-7 key poses characteristic of this style.
+- **Breathwork:** Suggest a specific pranayama technique suitable for the style.
+- **Mantra:** Create a short, fitting mantra for the practice.
+`;
+
+            try {
+                const markdownText = await callGeminiAPI(prompt);
+                const htmlContent = robustMarkdownToHtml(markdownText);
+                container.innerHTML = `
+                    ${htmlContent}
+                    <button class="btn-primary w-full mt-4 explore-button" data-theme-id="${theme.id}" data-theme-type="${themeType}">Explore in Depth with AI</button>
+                `;
+            } catch (error) {
+                console.error(`Error generating AI content for ${theme.title}:`, error);
+                container.innerHTML = `<p class="text-red-500">${generateErrorMessage(error)}</p>`;
+            }
         }
         
         function renderAIGeneratedTabs(markdownText, container) {
@@ -673,6 +732,15 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
         }
 
         // --- Utility Functions ---
+        function renderIdeas(ideas) {
+            let ideasHtml = '<ul class="space-y-2">';
+            for (const [key, value] of Object.entries(ideas)) {
+                ideasHtml += `<li><strong class="text-gray-800">${key}:</strong> ${value}</li>`;
+            }
+            ideasHtml += '</ul>';
+            return ideasHtml;
+        }
+
         function convertMarkdownToAccordion(text, openFirst = true) {
             const sections = text.split(/^(?:##|###) /m).slice(1);
             if (sections.length === 0) return robustMarkdownToHtml(text);
@@ -690,11 +758,23 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div class="accordion-content ${isOpen ? 'open' : ''}">
-                        ${robustMarkdownToHtml(content)}
+                        <div class="prose max-w-none">${robustMarkdownToHtml(content)}</div>
                     </div>
                 </div>
                 `;
             }).join('');
+        }
+        
+        function generateErrorMessage(error) {
+            let errorMessage = 'Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.';
+            if (error.message.includes('503') || error.message.includes('500')) {
+                errorMessage = 'The AI service is temporarily unavailable. Please try again later.';
+            } else if (error.message.includes('400')) {
+                 errorMessage = 'There was a problem with the request (Bad Request). Please check your input and try again.';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'A network error occurred. Please check your connection and try again.';
+            }
+            return errorMessage;
         }
 
         function robustMarkdownToHtml(text) {
@@ -712,30 +792,80 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
             // Lists - Process entire list blocks at once
             html = html.replace(/(\n?^\s*\*.*)+/g, (match) => {
                 const listItems = match.trim().split('\n').map(item => {
-                    return `<li>${item.replace(/^\s*\*\s*/, '')}</li>`;
+                    const processedItem = item.replace(/^\s*\*\s*/, '');
+                    return `<li>${processedItem.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
                 }).join('');
                 return `<ul class="list-disc list-inside space-y-1 my-4">${listItems}</ul>`;
             });
             
             // Replace remaining newlines with paragraphs, avoiding those inside HTML tags
-            html = html.split('\n').map(line => {
+            const lines = html.split('\n');
+            let inList = false;
+            html = lines.map(line => {
                 const trimmed = line.trim();
                 if (!trimmed) return '';
-                if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<li')) {
-                    return line; // Don't wrap already-tagged lines
+                if (trimmed.startsWith('<h') || trimmed.startsWith('</ul')) {
+                    inList = false;
+                    return line; 
                 }
-                return `<p>${line}</p>`; // Wrap other lines in <p>
+                if (trimmed.startsWith('<ul')) {
+                    inList = true;
+                    return line;
+                }
+                 if (inList || trimmed.startsWith('<li')) {
+                    return line;
+                }
+                return `<p>${line}</p>`; 
             }).join('');
 
             return html;
         }
 
-
         // --- Seed Data Functions ---
+        function getModalitiesSeedData() {
+            const csvData = `Modality,Founder/Key Figure,Description
+Bhakti Yoga,,"The path of devotion and love. Bhakti yogis practice devotion to a divine entity or to all of creation through prayer, chanting (kirtan), and selfless acts of love and compassion. The focus is on channeling emotions towards a higher purpose."
+Jnana Yoga,,"The path of knowledge and wisdom. This is a deeply philosophical and introspective path that involves study of sacred texts, self-inquiry, and meditation to discern the nature of reality and the self. The goal is to achieve liberation through understanding."
+Karma Yoga,,"The path of selfless action. Karma yogis dedicate their actions to the service of others without attachment to the results. The aim is to purify the heart and mind by acting out of a sense of duty and compassion, rather than for personal gain."
+Raja Yoga,,"The ""royal path"" of meditation and self-control. This path is systematically outlined in Patanjali's Yoga Sutras and encompasses the eight limbs of yoga: ethical principles (Yamas and Niyamas), physical postures (Asana), breath control (Pranayama), sense withdrawal (Pratyahara), concentration (Dharana), meditation (Dhyana), and enlightenment (Samadhi)."
+Hatha Yoga,,"Originally, Hatha Yoga referred to the physical practices of yoga (asanas, pranayama, mudras, and shatkarma) as a preparation for Raja Yoga. In modern usage, ""Hatha"" is often a general term for a slower-paced, foundational yoga class that focuses on holding poses and gentle movements."
+Tantra Yoga,,"An ancient tradition that uses a variety of techniques, including asana, mantra, mudra, and visualization, to expand consciousness and awaken dormant spiritual energy (Kundalini). Tantra views the body as a sacred vessel and seeks to weave together the physical and spiritual realms."
+Yoga Nidra,,"Often referred to as ""yogic sleep,"" this is a guided meditation practice that induces a state of deep relaxation and conscious awareness between waking and sleeping. It is a powerful technique for physical and mental rejuvenation."
+Ashtanga Vinyasa Yoga,Sri K. Pattabhi Jois,"A rigorous and physically demanding style that involves a set sequence of postures linked by the breath (vinyasa). Students progress through a series of six sequences at their own pace."
+Iyengar Yoga,B.K.S. Iyengar,"Characterized by a strong emphasis on precise anatomical alignment and the use of props (belts, blocks, blankets) to help students achieve the correct posture. Poses are typically held for longer durations."
+Viniyoga,T.K.V. Desikachar (son of Krishnamacharya),"A therapeutic and highly individualized approach to yoga that adapts the practice to the specific needs, abilities, and goals of the practitioner. Breath is a central component, and sequences are often designed to address particular physical or energetic imbalances."
+Sivananda Yoga,Swami Sivananda & Swami Vishnu-devananda,"A holistic system based on five principles: proper exercise (Asana), proper breathing (Pranayama), proper relaxation (Savasana), proper diet (vegetarian), and positive thinking/meditation (Vedanta and Dhyana). Classes follow a set sequence of 12 basic postures."
+Kripalu Yoga,Swami Kripalu,"A gentle and introspective practice that encourages self-compassion and ""witness consciousness."" Kripalu yoga emphasizes following the body's wisdom and allows for spontaneous movement and holding postures to explore inner sensations."
+Vinyasa Yoga,,"A dynamic and flowing style where movement is synchronized with the breath. Unlike Ashtanga, Vinyasa classes do not have a set sequence, and the order of poses is often at the discretion of the teacher. It is one of the most popular forms of yoga today."
+Power Yoga,,"An athletic and vigorous style of Vinyasa yoga that emphasizes building strength and flexibility. Power Yoga often appeals to those seeking a challenging workout."
+Bikram Yoga,,"A specific sequence of 26 postures and two breathing exercises performed in a room heated to 105°F (40.6°C) with 40% humidity. The sequence is the same in every class."
+Hot Yoga,,"Similar to Bikram in that it is practiced in a heated room, but the term ""Hot Yoga"" can refer to any style of yoga practiced in a heated environment, and the sequences can vary."
+Yin Yoga,,"A slow-paced, passive style of yoga where poses are held for longer periods (typically 3-5 minutes or more). Yin Yoga targets the deep connective tissues, such as ligaments and fascia, to improve flexibility and energetic flow."
+Restorative Yoga,,"A gentle and therapeutic practice that uses props extensively to support the body in comfortable and relaxing poses. The goal is to promote deep relaxation, reduce stress, and facilitate healing."
+Jivamukti Yoga,David Life & Sharon Gannon,"A physically vigorous and intellectually stimulating style that integrates a five-part method: scripture (shastra), devotion (bhakti), non-harming (ahimsa), music (nada), and meditation (dhyana)."
+Anusara Yoga,John Friend,"A modern school of Hatha Yoga that emphasizes ""Universal Principles of Alignment"" and a heart-oriented Tantric philosophy. Anusara seeks to align the body and mind with the ""flow of Grace."""
+Kundalini Yoga,Yogi Bhajan,"A dynamic practice that combines specific postures (kriyas), breathing techniques, chanting, and meditation to awaken the Kundalini energy believed to reside at the base of the spine."
+AcroYoga,,"A partner-based practice that blends the wisdom of yoga, the dynamic power of acrobatics, and the loving kindness of Thai massage. It involves a ""base,"" a ""flyer,"" and a ""spotter."""
+Aerial Yoga,,"A style that uses a silk hammock or swing suspended from the ceiling to support the body in various yoga postures. It allows for deeper stretches, spinal decompression, and a playful approach to inversions."
+Chair Yoga,,"A modified form of yoga that is practiced while sitting in a chair or using a chair for support. It is accessible to individuals with limited mobility, seniors, and those working in an office environment."
+Prenatal Yoga,,"A gentle and supportive style of yoga designed specifically for pregnant women. It focuses on poses that are safe and beneficial during pregnancy, as well as breathing and relaxation techniques for labor and delivery."
+Forrest Yoga,Ana T. Forrest,"A modern style developed by Ana T. Forrest that is intensely physical and internally focused. It emphasizes holding poses for extended periods, deep breathing, and addressing physical and emotional trauma."`;
+
+            const lines = csvData.trim().split('\n').slice(1);
+            return lines.map(line => {
+                const [title, founder, description] = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(field => field.trim().replace(/^"|"$/g, ''));
+                return {
+                    id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                    title: title,
+                    founder: founder,
+                    description: description
+                };
+            });
+        }
+
         function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root): Grounding and Stability", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability. We will focus on poses that strengthen the legs and connect the feet to the ground, cultivating a feeling of being rooted and supported. The gratitude theme centers on appreciating the foundational aspects of life: our bodies, our homes, and the earth that sustains us.", oils: "Cedarwood, Vetiver, Patchouli", ideas: { "Poses": "Mountain Pose, Warrior I & II, Tree Pose, Standing Forward Bend.", "Breathwork": "Deep, slow belly breathing.", "Meditation": "A guided meditation focused on visualizing roots growing from the feet into the earth.", "Mantra": "I am grounded, I am safe, I am grateful." } }, { id: "svadhisthana", title: "Svadhisthana (Sacral): Flowing with Creativity", explanation: "Unleash your creative potential and embrace the flow of life with this class centered on the sacral chakra. Through fluid movements and hip-opening postures, we will tap into our emotional intelligence and cultivate a sense of joy and abundance. The gratitude theme is for the gifts of creativity, pleasure, and emotional expression.", oils: "Orange, Ylang Ylang, Clary Sage", ideas: { "Poses": "Cat-Cow, Goddess Pose, Pigeon Pose, Bound Angle Pose.", "Breathwork": "Circular breathing to mimic the flow of water.", "Meditation": "A visualization of a flowing river, washing away creative blocks.", "Mantra": "I flow with creativity and grace. I am grateful for the sweetness of life." } }, { id: "manipura", title: "Manipura (Solar Plexus): Igniting Personal Power", explanation: "This empowering class is dedicated to activating the solar plexus chakra, the center of our personal power, self-esteem, and determination. Through core-strengthening poses and dynamic sequences, we will build inner fire and confidence. The gratitude theme focuses on acknowledging our inner strength, courage, and ability to manifest our intentions.", oils: "Lemon, Ginger, Peppermint", ideas: { "Poses": "Boat Pose, Plank Pose, Warrior III, Sun Salutations.", "Breathwork": "Breath of Fire (Kapalabhati).", "Meditation": "A meditation on the inner sun, radiating warmth and confidence.", "Mantra": "I am powerful, I am confident, I am grateful for my inner fire." } }, { id: "anahata", title: "Anahata (Heart): Opening to Love and Compassion", explanation: "Cultivate love, compassion, and connection in this heart-opening class focused on the Anahata chakra. Through chest-opening postures and practices of loving-kindness, we will dissolve emotional barriers and foster a sense of unity with all beings. The gratitude theme is for the love we give and receive, and the boundless compassion within us.", oils: "Rose, Geranium, Bergamot", ideas: { "Poses": "Camel Pose, Cobra Pose, Upward-Facing Dog, Bridge Pose.", "Breathwork": "Breathing into the heart space.", "Meditation": "A loving-kindness (Metta) meditation.", "Mantra": "My heart is open. I am grateful for the power of love." } }, { id: "vishuddha", title: "Vishuddha (Throat): Expressing Authentic Truth", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra. We will work with poses that open the neck and shoulders, encouraging clear communication and authentic self-expression. The gratitude theme is for the ability to communicate honestly, listen with compassion, and express our unique creativity.", oils: "Lavender, Eucalyptus, Roman Chamomile", ideas: { "Poses": "Fish Pose, Shoulder Stand, Plow Pose, Cat-Cow with neck movements.", "Breathwork": "Ujjayi breath (victorious breath).", "Meditation": "A meditation on finding and speaking one's truth.", "Mantra": "I speak my truth with clarity and grace. I am grateful for my authentic voice." } }, { id: "ajna", title: "Ajna (Third Eye): Cultivating Intuition", explanation: "This introspective class is designed to awaken the third eye chakra, the center of intuition, insight, and inner wisdom. Through focused gaze (drishti), meditation, and poses that stimulate the pineal gland, we will learn to trust our inner guidance. The gratitude theme is for the gift of intuition and the clarity it brings to our lives.", oils: "Frankincense, Sandalwood, Rosemary", ideas: { "Poses": "Child's Pose with forehead on the mat, Downward-Facing Dog, Seated Meditation.", "Breathwork": "Alternate Nostril Breathing (Nadi Shodhana).", "Meditation": "A third-eye meditation, focusing on the space between the eyebrows.", "Mantra": "I trust my intuition. I am grateful for my inner wisdom." } }, { id: "sahasrara", title: "Sahasrara (Crown): Connecting to Consciousness", explanation: "Experience a sense of unity and connection to something greater than yourself in this class focused on the crown chakra. Through meditation, inversions, and practices that quiet the ego, we will tap into a state of pure awareness and spiritual connection. The gratitude theme is for our connection to the divine and the infinite wisdom of the universe.", oils: "Frankincense, Myrrh, Neroli", ideas: { "Poses": "Headstand (or variations), Lotus Pose (or other meditative seats), Savasana.", "Breathwork": "Silent, mindful breathing.", "Meditation": "A meditation on universal consciousness and oneness.", "Mantra": "I am connected to all that is. I am grateful for this divine connection." } } ]; }
         function getMeridiansSeedData() { return [ { id: "lung-large-intestine", title: "Lung & Large Intestine: Embracing Grief & Letting Go", explanation: "In TCM, the Lung meridian (Yin) governs the intake of pure Qi and is associated with inspiration and the emotion of grief. Its partner, the Large Intestine meridian (Yang), is responsible for releasing waste. This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release.", oils: "Eucalyptus, Cypress, Frankincense", ideas: { "Poses": "Cow Face Pose (arms), Humble Warrior, Fish Pose, Reclined Spinal Twist.", "Breathwork": "Deep diaphragmatic breathing with a focus on long, complete exhales.", "Gratitude Focus": "Gratitude for the breath and the freedom of releasing burdens." }}, { id: "stomach-spleen", title: "Stomach & Spleen: Nourishing Ourselves", explanation: "This pair is central to digestion and nourishment. The Stomach meridian (Yang) processes food and information, while the Spleen meridian (Yin) transforms it into usable energy (Qi). Imbalance can lead to worry. This grounding class uses poses that stretch the front of the body and stabilize the core.", oils: "Ginger, Fennel, Rosemary", ideas: { "Poses": "Hero's Pose, Saddle Pose (Yin), Low Lunge, and gentle core work like Cat-Cow.", "Breathwork": "Deep belly breathing to gently massage the digestive organs.", "Gratitude Focus": "Gratitude for the earth's bounty and our ability to digest life's experiences." }}, { id: "heart-small-intestine", title: "Heart & Small Intestine: Cultivating Joy & Clarity", explanation: "The Heart meridian (Yin) houses the 'Shen' or Spirit and is associated with joy and love. Its partner, the Small Intestine meridian (Yang), provides clarity by separating the pure from the impure. This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders.", oils: "Rose, Bergamot, Neroli", ideas: { "Poses": "Wild Thing, Dancer's Pose, Camel Pose, Eagle Pose arms.", "Breathwork": "Breathing into the heart space; practicing loving-kindness (Metta) breath.", "Gratitude Focus": "Gratitude for connections that bring joy and inner wisdom." }}, { id: "kidney-bladder", title: "Kidney & Bladder: Accessing Willpower & Wisdom", explanation: "This pair relates to our fundamental life force. The Kidney meridian (Yin) stores our 'Jing' or life essence and governs willpower. The Bladder meridian (Yang) is the longest meridian, helping us manifest our potential. This deep, restorative class uses forward folds and gentle backbends.", oils: "Myrrh, Cedarwood, Juniper Berry", ideas: { "Poses": "Caterpillar (Yin), Seated Forward Bend, Sphinx and Seal Pose, Butterfly.", "Breathwork": "Slow, deep breathing into the low back (the area of the 'Ming Men').", "Gratitude Focus": "Gratitude for our endurance, inner strength, and the power of rest." }}, { id: "pericardium-triple-burner", title: "Pericardium & Triple Burner: Protecting the Heart", explanation: "The Pericardium (Yin) is the heart's protector, governing our intimate relationships. The Triple Burner (Yang) regulates temperature and the flow of Qi and fluids. This class focuses on creating healthy boundaries and balancing the body's systems.", oils: "Geranium, Spikenard, Vetiver", ideas: { "Poses": "Prayer Pose behind the back, Thread the Needle, and full-body flows like Sun Salutations.", "Breathwork": "Sama Vritti (Equal Ratio Breathing) to promote balance.", "Gratitude Focus": "Gratitude for healthy boundaries and our body's innate ability to maintain equilibrium." }}, { id: "liver-gallbladder", title: "Liver & Gallbladder: Finding Vision & Action", explanation: "This pair is the master planner and decision-maker. The Liver meridian (Yin) ensures the smooth flow of Qi and governs our ability to plan. The Gallbladder meridian (Yang) governs decisiveness and courage. This dynamic class uses twists and side-body stretches.", oils: "Lemon, Rosemary, Peppermint", ideas: { "Poses": "Gate Pose, Revolved Triangle, Side Angle Pose, Pigeon Pose, Lizard Lunge.", "Breathwork": "A cleansing breath like Breath of Fire (Kapalabhati), followed by smooth Ujjayi.", "Gratitude Focus": "Gratitude for our dreams and the personal power to move forward." }} ]; }
         function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox: Renewal and Rebirth", explanation: "As nature awakens from its winter slumber, this class focuses on renewal, growth, and setting new intentions. We will incorporate detoxifying twists, energizing flows, and heart-opening poses to welcome the fresh energy of spring.", oils: "Lemon (cleansing), Grapefruit (uplifting), Peppermint (energizing)", ideas: { "Poses": "Sun Salutations with twists, Revolved Chair Pose, Sprouting Seed (a creative flow from child's pose to upward salute).", "Breathwork": "Kapalabhati (Skull Shining Breath) for cleansing.", "Meditation": "A guided meditation on planting seeds of intention for the coming season.", "Gratitude Focus": "Gratitude for the return of light and the opportunity for a fresh start." }}, { id: "summer-solstice", title: "Summer Solstice: Radiance and Vitality", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class. We will embrace the fire element with dynamic sequences, heart-opening backbends, and playful balancing poses.", oils: "Bergamot (joyful), Ylang Ylang (euphoric), Jasmine (uplifting)", ideas: { "Poses": "Wild Thing, Dancer's Pose, Wheel Pose, Handstand variations.", "Breathwork": "Ujjayi breath to build internal heat.", "Meditation": "A meditation on the inner sun, radiating light and vitality.", "Gratitude Focus": "Gratitude for peak experiences, abundance, and the life-giving energy of the sun." }}, { id: "autumn-equinox", title: "Autumn Equinox: Balance and Letting Go", explanation: "As the days grow shorter, this class encourages introspection, balance, and the art of letting go. We will focus on grounding poses, mindful transitions, and forward folds to release what no longer serves us.", oils: "Cedarwood (grounding), Frankincense (introspective), Cypress (transitional)", ideas: { "Poses": "Standing Forward Bend, Seated Forward Bend, Eagle Pose, a 'Falling Leaves' flow with gentle, flowing movements.", "Breathwork": "Alternate Nostril Breathing (Nadi Shodhana) for balance.", "Meditation": "A guided meditation on releasing old patterns and embracing change.", "Gratitude Focus": "Gratitude for the abundance in our lives and the wisdom that comes from letting go." }}, { id: "winter-solstice", title: "Winter Solstice: Rest and Restoration", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class. We will embrace the stillness of winter with long-held yin poses, gentle stretches, and guided relaxation to replenish our energy reserves.", oils: "Lavender (calming), Sandalwood (meditative), Myrrh (restorative)", ideas: { "Poses": "Yin poses such as Sleeping Swan (Pigeon), Caterpillar (Seated Forward Bend), and Reclining Twist.", "Breathwork": "Deep, diaphragmatic breathing to calm the nervous system.", "Meditation": "Yoga Nidra (yogic sleep) for deep relaxation.", "Gratitude Focus": "Gratitude for the gift of rest, the opportunity for introspection, and the promise of returning light." }} ]; }
-        function getYogaStylesSeedData() { return [ { id: "vinyasa", title: "Vinyasa: Breath-Synchronized Flow", explanation: "A dynamic and fluid style of yoga, where poses are linked together with the breath. Vinyasa classes are known for their variety and creativity, building heat, strength, and flexibility.", oils: "Peppermint, Orange, Eucalyptus", ideas: { "Focus": "Continuous movement and smooth transitions.", "Poses": "Sun Salutation A & B, Warrior series, Chaturanga Dandasana, Crow Pose.", "Breathwork": "Ujjayi (Victorious) Breath throughout the practice.", "Mantra": "I flow with the rhythm of my breath and life." } }, { id: "hatha", title: "Hatha: Foundational Poses & Alignment", explanation: "Hatha is a general term for any type of physical yoga. In modern practice, it often refers to a slower-paced class focused on holding foundational poses to learn proper alignment and breathing.", oils: "Sandalwood, Lavender, Cedarwood", ideas: { "Focus": "Mindful alignment and holding postures.", "Poses": "Mountain Pose, Warrior II, Triangle Pose, Bridge Pose, Seated Forward Bend.", "Breathwork": "Natural, deep diaphragmatic breathing in each pose.", "Mantra": "I am steady, comfortable, and balanced." } }, { id: "yin", title: "Yin: Deep Connective Tissue Release", explanation: "A slow, meditative style of yoga where passive poses are held for several minutes. Yin yoga targets the deep connective tissues, like ligaments and fascia, to increase flexibility and encourage a state of release.", oils: "Frankincense, Myrrh, Patchouli", ideas: { "Focus": "Long holds, stillness, and mindful sensation.", "Poses": "Caterpillar Pose, Butterfly Pose, Dragon Pose, Sphinx Pose.", "Breathwork": "Slow, soft, and receptive breathing.", "Mantra": "I soften, I release, I let go." } }, { id: "restorative", title: "Restorative: Conscious Relaxation", explanation: "A practice of deep rest that uses props like bolsters, blankets, and blocks to support the body completely. Restorative yoga is designed to calm the nervous system and promote healing.", oils: "Chamomile, Lavender, Bergamot", ideas: { "Focus": "Total relaxation and support.", "Poses": "Supported Child's Pose, Supported Bridge Pose, Legs-Up-The-Wall, Reclining Bound Angle.", "Breathwork": "Natural, effortless breathing.", "Mantra": "I allow myself to rest and be restored." } }, { id: "ashtanga", title: "Ashtanga: Disciplined & Structured Series", explanation: "A physically demanding style of yoga that follows a specific, set sequence of postures. Ashtanga builds internal heat, purifies the body, and develops a strong, disciplined practice.", oils: "Tea Tree, Eucalyptus, Lemongrass", ideas: { "Focus": "Adherence to a set sequence, bandhas, and drishti.", "Poses": "Primary Series postures (e.g., Marichyasana A-D, Navasana).", "Breathwork": "Ujjayi breath with a specific count for each movement.", "Mantra": "I am disciplined, strong, and focused." } } ]; }
     </script>
 </body>
 </html>
