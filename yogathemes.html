@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v5.5 (Creative AI)</title>
+    <title>AI Yoga Class & Theme Generator v5.6 (Current Dates)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -169,7 +169,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.5</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.6</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -413,7 +413,8 @@
             let datePromptSection = '';
             const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
             if (dateableThemes.includes(themeType)) {
-                datePromptSection = `First, state the next upcoming date for this event in the New York (EST) timezone as a bolded line of text.\n\n`;
+                const currentYear = new Date().getFullYear();
+                datePromptSection = `The current year is ${currentYear}. First, state the next upcoming date for this event in the New York (EST) timezone for the current year, as a bolded line of text.\n\n`;
             }
             
             const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Feel free to structure it in any way you see fit using markdown (like paragraphs, lists, or bold text) to make it appealing.`;
@@ -475,7 +476,8 @@
             let datePromptSection = '';
             const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
             if (dateableThemes.includes(themeType)) {
-                datePromptSection = `First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone.\n\n`;
+                const currentYear = new Date().getFullYear();
+                datePromptSection = `The current year is ${currentYear}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`;
             }
 
             const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
