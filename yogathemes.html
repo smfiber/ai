@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v6.1</title>
+    <title>AI Yoga Class & Theme Generator v8.0 (AI-Powered Tailoring)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -104,6 +104,19 @@
             color: var(--color-accent);
         }
         
+        .btn-toggle {
+            background-color: var(--color-input-bg);
+            color: var(--color-text-muted);
+            border: 1px solid var(--color-input-border);
+            transition: all 0.2s ease;
+        }
+        .btn-toggle.active {
+            background-color: var(--color-accent);
+            color: var(--color-button-text);
+            border-color: var(--color-primary-dark);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .floating-action-button {
             position: fixed;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
@@ -245,7 +258,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v8.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -268,6 +281,14 @@
                     <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
                     <form id="gemini-form">
                         <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
+                        
+                        <div class="my-4">
+                            <label class="block text-sm font-medium themed-text-muted mb-2">Tailor Your Plan with AI-Powered Options:</label>
+                            <div id="tailoring-buttons-container" class="flex flex-wrap gap-2">
+                                <!-- AI-generated buttons will be dynamically inserted here -->
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn-primary w-full mt-4">Generate AI Yoga Plan</button>
                     </form>
                     <div id="gemini-result-container" class="mt-6 text-gray-700"></div>
@@ -394,7 +415,44 @@
             document.getElementById('apiKeyModal').classList.remove('hidden');
             populateAllDropdowns();
             setupEventListeners();
+            // We call the AI to get tailoring options after the API key is submitted.
         });
+        
+        // --- NEW: Function to load tailoring options from AI ---
+        async function loadAITailoringOptions() {
+            const container = document.getElementById('tailoring-buttons-container');
+            if (!container || !checkApiKey(container)) return;
+
+            container.innerHTML = getLoaderHTML('AI is generating tailoring options...');
+            const fallbackOptions = ["Breathwork", "Essential Oils", "Chanting", "Poetry", "Props", "Meditation", "Mantra & Affirmations", "Partner Poses"];
+
+            try {
+                const prompt = `You are an expert yoga instructor. Generate a list of 20 unique and creative optional elements or themes that can be added to a yoga class to tailor it. Return the list as a single JSON array of strings. For example: ["Mantra & Affirmations", "Partner Poses", "Journaling"]. Return only the JSON array.`;
+                const jsonText = await callGeminiAPI(prompt);
+                const tailoringOptions = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim());
+                populateTailoringButtons(tailoringOptions);
+            } catch (error) {
+                console.error("Failed to load AI tailoring options, using fallback.", error);
+                container.innerHTML = `<p class="text-amber-600 text-sm">Could not load AI options. Using defaults.</p>`;
+                populateTailoringButtons(fallbackOptions);
+            }
+        }
+        
+        // --- UPDATED: Function to populate tailoring buttons ---
+        function populateTailoringButtons(options) {
+            const container = document.getElementById('tailoring-buttons-container');
+            if (!container) return;
+            container.innerHTML = ''; // Clear loader or previous buttons
+            options.forEach(option => {
+                const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm');
+                button.dataset.option = option;
+                button.addEventListener('click', (e) => {
+                    e.preventDefault(); // Prevent form submission
+                    button.classList.toggle('active');
+                });
+                container.appendChild(button);
+            });
+        }
 
         // --- Event Listeners Setup ---
         function setupEventListeners() {
@@ -402,17 +460,14 @@
             document.getElementById('generate-theme-btn').addEventListener('click', handleVisualThemeGeneration);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             
-            // Target only the theme dropdowns in the main content area
             document.querySelectorAll('#main-content select.theme-select').forEach(select => {
                 select.addEventListener('change', handleDropdownSelect);
             });
 
-            // Typography settings listeners
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // Global click listener for modals, buttons, etc.
             document.addEventListener('click', (e) => {
                 const inDepthModal = document.getElementById('inDepthModal');
                 if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) {
@@ -457,7 +512,8 @@
             if (input.value.trim()) {
                 apiKey = input.value.trim();
                 document.getElementById('apiKeyModal').classList.add('hidden');
-                loadDynamicPlaceholders(); // Load placeholders after getting key
+                loadDynamicPlaceholders();
+                loadAITailoringOptions(); // UPDATED: Load AI options after getting key
             }
         }
         
@@ -528,8 +584,18 @@
             if (!checkApiKey(resultContainer)) return;
             const userPrompt = document.getElementById('gemini-prompt').value.trim();
             if (!userPrompt) { resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`; return; }
+            
+            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
+                                         .map(btn => btn.dataset.option);
+            
+            let tailoringInstruction = '';
+            if (selectedOptions.length > 0) {
+                tailoringInstruction = `Please make sure to specifically include sections or suggestions for the following elements: ${selectedOptions.join(', ')}.`;
+            }
+
             resultContainer.innerHTML = getLoaderHTML('Crafting your custom class plan...');
-            const fullPrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
+            const fullPrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme. ${tailoringInstruction}`;
+            
             try {
                 const text = await callGeminiAPI(fullPrompt);
                 originalGeneratedText.set(resultContainer, text);
@@ -588,7 +654,8 @@
                 const exportButton = createButton('Copy Text', 'btn-secondary');
                 exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget));
                 modalFooter.appendChild(exportButton);
-            } catch (error) {
+            } catch (error)
+ {
                 modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
             }
         }
@@ -619,12 +686,12 @@
 
             try {
                 const newText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(contentContainer, newText); // Update the stored text to the new version
+                originalGeneratedText.set(contentContainer, newText);
                 const isAccordion = newText.includes('###');
                 contentArea.innerHTML = isAccordion ? convertMarkdownToAccordion(newText) : robustMarkdownToHtml(newText);
-                container.remove(); // Remove the refine UI
+                container.remove(); 
             } catch (error) {
-                contentArea.innerHTML = robustMarkdownToHtml(originalText); // Restore original content on error
+                contentArea.innerHTML = robustMarkdownToHtml(originalText); 
                 alert(`Failed to refine content. ${generateErrorMessage(error, 'text')}`);
             }
         }
@@ -737,7 +804,7 @@
                     option.title = `${theme.founder ? `Founder: ${theme.founder}\n` : ''}${theme.description || theme.explanation || ''}`;
                 }
                 selectElement.appendChild(option);
-            }); // <-- BUG FIX: Added closing ); here
+            });
         }
         
         function robustMarkdownToHtml(text) {
@@ -746,8 +813,8 @@
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-                .replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>'); 
 
             const paragraphs = html.split('\n').filter(p => p.trim() !== '');
             html = '';
