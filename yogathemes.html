@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v5.3</title>
+    <title>AI Yoga Class & Theme Generator v5.5 (Creative AI)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -169,7 +169,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.4</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.5</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -388,7 +388,11 @@
         // == Custom Yoga Plan & Pre-made Theme Logic (from v4.8) ==
         async function handleDropdownSelect(e) {
             const themeId = e.target.value;
-            if (!themeId) return; // Ignore if it's the placeholder being selected
+            if (!themeId) {
+                const container = e.target.closest('.card').querySelector('.details-container');
+                container.innerHTML = '';
+                return;
+            }
 
             const themeType = e.target.dataset.themeType;
             const container = e.target.closest('.card').querySelector('.details-container');
@@ -409,10 +413,10 @@
             let datePromptSection = '';
             const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
             if (dateableThemes.includes(themeType)) {
-                datePromptSection = `First, state the next upcoming date for this event in the New York (EST) timezone. Format it as: "**Next Occasion:** [Date]".\n\n`;
+                datePromptSection = `First, state the next upcoming date for this event in the New York (EST) timezone as a bolded line of text.\n\n`;
             }
             
-            const prompt = `${datePromptSection}For a yoga class with the theme "${theme.title}" (described as: "${description}" ${founderInfo}), generate a short, engaging preview for a student. Start with a rich, inviting one-paragraph explanation of what the class will feel like. Then, add a few bullet points highlighting key elements, like: - **Focus:** (A one-sentence intention) - **Sample Poses:** (List 2-3 characteristic poses) - **Vibe:** (e.g., "Grounding and introspective"). Use markdown for formatting.`;
+            const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Feel free to structure it in any way you see fit using markdown (like paragraphs, lists, or bold text) to make it appealing.`;
 
             try {
                 const markdownText = await callGeminiAPI(prompt);
@@ -441,7 +445,7 @@
             }
             resultContainer.innerHTML = '<div class="loader themed-loader mx-auto my-4"></div><p class="text-center themed-text-muted">Crafting your custom class plan... ✨</p>';
             
-            const fullPrompt = `You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${userPrompt}". Your guide should be extremely thorough. Organize the entire guide into several logical sections yourself. Use '###' before each section title to create the structure. For example: '### Core Philosophy & Thematic Connection', '### Energetic & Emotional Landscape', '### Creative Inspiration', '### Class Elements'. Please generate at least 4-5 distinct sections.`;
+            const fullPrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
             
             try {
                 const text = await callGeminiAPI(fullPrompt);
@@ -471,10 +475,10 @@
             let datePromptSection = '';
             const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
             if (dateableThemes.includes(themeType)) {
-                datePromptSection = `First, as a standalone line, state the next upcoming date for this event in the New York (EST) timezone. Format it clearly, for example: "Next Occasion: [Date]".\n\n`;
+                datePromptSection = `First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone.\n\n`;
             }
 
-            const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Your guide should be extremely thorough, providing a wealth of ideas for a yoga teacher. Organize the entire guide into several logical sections yourself. Use '###' before each section title to create the structure. For example: '### The Heart of the Practice', '### Key Postures and Their Purpose', '### Crafting the Atmosphere: Music and Scent'. Please generate at least 4-5 distinct sections covering different aspects like philosophy, key poses, sequencing ideas, breathwork, meditation, and class atmosphere. Ensure the content within each section is detailed and practical for a teacher.`;
+            const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
 
             try {
                 const text = await callGeminiAPI(prompt);
@@ -622,12 +626,17 @@
         function robustMarkdownToHtml(text) {
             if (!text) return '';
             let html = text.trim();
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
-            html = html.replace(/^(?:-|\*) (.*$)/gm, '<li>$1</li>'); // List items
-            html = html.replace(/(\<li\>.*?\<\/li\>)/gs, '<ul>$1</ul>'); // Wrap list items in <ul>
-            html = html.replace(/\n/g, '<br>'); // Newlines to <br>
-            html = html.replace(/<br><ul>/g, '<ul>'); // Cleanup extra breaks before lists
-            html = html.replace(/<\/ul><br>/g, '</ul>'); // Cleanup extra breaks after lists
+            // Process bolding **text**
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Process lists starting with * or -
+            html = html.replace(/^(?:-|\*)\s+(.*$)/gm, '<li>$1</li>');
+             // Wrap consecutive list items in <ul>
+            html = html.replace(/((<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
+            // Convert remaining newlines to <br>, but not if they are next to block elements
+            html = html.replace(/\n(?!<[u\/l])/g, '<br>');
+            // Clean up extra breaks
+            html = html.replace(/<br>\s*<ul>/g, '<ul>');
+            html = html.replace(/<\/ul>\s*<br>/g, '</ul>');
             return html;
         }
 
