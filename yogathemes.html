@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v4.6.0 (AI-Powered)</title>
+    <title>Yoga Class Themer v4.7.0 (AI-Powered)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -165,7 +165,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Yoga Class Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">AI-powered inspiration for your next yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7.0</div>
         </header>
 
         <main id="main-content" class="bg-white/50 backdrop-blur-md rounded-2xl p-6 md:p-10 shadow-xl border border-purple-100">
@@ -326,9 +326,9 @@
     </div>
 
     <script type="module">
-        // App Version: 4.6.0
+        // App Version: 4.7.0
         // Changelog:
-        // v4.6.0: Added new cards for Hindu Holidays, Buddhist Holidays, and Moon Phases.
+        // v4.7.0: Added date generation for holidays, seasons, and moon phases.
         
         // --- Global Variables ---
         let geminiApiKey = "";
@@ -425,9 +425,15 @@
             
             const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
             const description = theme.description || theme.explanation;
+
+            let datePromptSection = '';
+            const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
+            if (dateableThemes.includes(themeType)) {
+                datePromptSection = `First, state the next upcoming date for this event in the New York (EST) timezone. Format it as: "**Next Occasion:** [Date]".\n\n`;
+            }
             
             const prompt = `
-                For a yoga class with the theme "${theme.title}" (described as: "${description}" ${founderInfo}), generate a short, engaging preview for a student.
+                ${datePromptSection}For a yoga class with the theme "${theme.title}" (described as: "${description}" ${founderInfo}), generate a short, engaging preview for a student.
                 Start with a rich, inviting one-paragraph explanation of what the class will feel like.
                 Then, add a few bullet points highlighting key elements, like:
                 - **Focus:** (A one-sentence intention)
@@ -465,8 +471,14 @@
             const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
             const description = theme.description || theme.explanation;
 
+            let datePromptSection = '';
+            const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
+            if (dateableThemes.includes(themeType)) {
+                datePromptSection = `First, as a standalone line, state the next upcoming date for this event in the New York (EST) timezone. Format it clearly, for example: "Next Occasion: [Date]".\n\n`;
+            }
+
             const prompt = `
-                You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}
+                ${datePromptSection}You are a master yoga instructor creating a comprehensive guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}
 
                 Your guide should be extremely thorough, providing a wealth of ideas for a yoga teacher.
                 
