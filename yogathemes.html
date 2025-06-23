@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v9.4 (Fading Header)</title>
+    <title>AI Yoga Class & Theme Generator v9.6 (Copy-Paste Fix)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -257,8 +257,7 @@
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
-            max-height: 300px;
-            overflow-y: auto;
+            /* REMOVED max-height and overflow-y */
             padding: 0.5rem;
             border-radius: 8px;
             background: rgba(0,0,0,0.02);
@@ -315,7 +314,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.4</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.6</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -348,7 +347,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Balance and activate the seven primary energy centers in the body.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Align your practice with the body's seven primary energy centers. Select a chakra to focus on, and let the AI generate a corresponding theme and short description to guide your session.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2><p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p><div id="seasons-selector-visual" class="visual-selector-container mt-auto"></div><div id="seasons-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2><p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p><div id="moon-phases-selector-visual" class="visual-selector-container mt-auto"></div><div id="moon-phases-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2><p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p><div id="styles-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="styles-details" class="details-container prose max-w-none"></div></div></div>
@@ -630,7 +629,65 @@
         async function handleVisualThemeGeneration() { if (!checkApiKey()) return; const prompt = document.getElementById('theme-prompt').value.trim(); if (!prompt) { showThemeError("Please enter a description for your visual theme."); return; } showThemeLoading(true); const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`; const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`; try { const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]); if (colorResult.status === 'fulfilled') { applyTheme(colorResult.value); } else { showThemeError(generateErrorMessage(colorResult.reason, 'color')); } if (imageResult.status === 'fulfilled') { applyHeaderImage(imageResult.value); } else { showThemeError(generateErrorMessage(imageResult.reason, 'image')); } } catch (error) { showThemeError(generateErrorMessage(error, 'visual theme')); } finally { showThemeLoading(false); } }
         async function handleExploreInDepth(themeId, themeType) { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); modalTitle.textContent = `Exploring: ${theme.title}`; modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(modalFooter, themeId, themeType); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
         async function handleAIHelpRequest() { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); modalTitle.textContent = "AI Help & Feedback"; modalContent.innerHTML = getLoaderHTML('Generating help and suggestions...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const pageStructure = document.getElementById('main-content').innerText; const prompt = `You are a helpful UI/UX assistant. Based on the text content and structure of the application provided below, please do two things: 1. **Explain How It Works:** Briefly describe the main features of this "AI Yoga Class & Theme Generator" application. 2. **Suggest Improvements:** Offer a few specific, actionable suggestions to improve the user interface (UI) and overall user experience (UX). Structure your response with two main sections using '###' markdown headings: '### How This App Works' and '### UI/UX Improvement Suggestions'. Here is the text content of the app:\n${pageStructure}`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; const exportButton = createButton('Copy Text', 'btn-secondary'); exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget)); modalFooter.appendChild(exportButton); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
-        function addPostGenerationButtons(container, themeId, themeType) { const buttonContainer = document.createElement('div'); buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6'; const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button'); const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto'); copyButton.addEventListener('click', (e) => copyElementTextToClipboard(container.querySelector('.prose-content'), e.currentTarget)); if(container.id !== 'inDepthModalFooter') { const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); exploreButton.dataset.themeId = themeId; exploreButton.dataset.themeType = themeType; buttonContainer.appendChild(exploreButton); } buttonContainer.appendChild(refineButton); buttonContainer.appendChild(copyButton); container.appendChild(buttonContainer); }
+        
+        function copyElementTextToClipboard(element, button) {
+            if (!element) return;
+            const textToCopy = element.innerText;
+            
+            // Create a temporary textarea element
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+
+            // Make it invisible
+            textArea.style.position = "fixed";
+            textArea.style.top = 0;
+            textArea.style.left = 0;
+            textArea.style.width = "2em";
+            textArea.style.height = "2em";
+            textArea.style.padding = 0;
+            textArea.style.border = "none";
+            textArea.style.outline = "none";
+            textArea.style.boxShadow = "none";
+            textArea.style.background = "transparent";
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful && button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<span>Copied!</span>';
+                    button.disabled = true;
+                    setTimeout(() => { button.innerHTML = originalText; button.disabled = false; }, 2000);
+                } else if (!successful) {
+                    console.error('Copy command was unsuccessful');
+                }
+            } catch (err) {
+                console.error('Oops, unable to copy', err);
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        function addPostGenerationButtons(container, themeId, themeType) { 
+            const buttonContainer = document.createElement('div'); 
+            buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6'; 
+            const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button'); 
+            const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto'); 
+            copyButton.addEventListener('click', (e) => copyElementTextToClipboard(container.querySelector('.prose-content'), e.currentTarget)); 
+            if(container.id !== 'inDepthModalFooter') { 
+                const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); 
+                exploreButton.dataset.themeId = themeId; 
+                exploreButton.dataset.themeType = themeType; 
+                buttonContainer.appendChild(exploreButton); 
+            } 
+            buttonContainer.appendChild(refineButton); 
+            buttonContainer.appendChild(copyButton); 
+            container.appendChild(buttonContainer); 
+        }
+
         async function loadDynamicPlaceholders() { if (!apiKey) { return; } try { const prompt = `Generate two short, creative, and distinct yoga class theme ideas to be used as placeholder text in an input field. Return the result as a JSON object with two keys, "theme1" and "theme2". Example: {"theme1": "Embracing the winds of change", "theme2": "Finding stillness in the storm"}`; const jsonText = await callGeminiAPI(prompt); const themes = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); if (themes.theme1) document.getElementById('theme-prompt').placeholder = `e.g., '${themes.theme1}'`; if (themes.theme2) document.getElementById('gemini-prompt').placeholder = `e.g., '${themes.theme2}'`; } catch (error) { console.error("Could not load dynamic placeholders:", error); } }
         function applyTheme(colors) { Object.keys(colors).forEach(key => { const cssVarName = '--color-' + key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`); root.style.setProperty(cssVarName, colors[key]); }); }
         
@@ -665,15 +722,4 @@
         function getMoonPhasesSeedData() { return [ { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." }, { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." }, { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." }, { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." }, { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." }, { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." }, { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." }, { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." } ]; }
     </script>
 </body>
-</ht" code between  and  in the most up-to-date Canvas "AI Yoga Class & Theme Generator v9.3 (Component Accordions)" document above and am asking a query about/based on this code below.
-Instructions to follow:
-  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
-  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
-    * Don't output the same document/empty document and say that you have edited it.
-    * Don't change unrelated code in the document.
-  * Don't output  and  in your final response.
-  * Any references like "this" or "selected code" refers to the code between  and  tags.
-  * Just acknowledge my request in the introduction.
-  * Make sure to refer to the document as "Canvas" in your response.
-
-Please change the title to 'v9.3' and have it so that the AI generated visual theme header will fade in slowly once it's been creat
+</html>
