@@ -88,6 +88,46 @@
         .ai-tabs .tab-content.active {
             display: block;
         }
+        /* Accordion Styles */
+        .accordion-item {
+            border-bottom: 1px solid #e5e7eb; /* Gray 200 */
+        }
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+        .accordion-header {
+            width: 100%;
+            text-align: left;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #374151; /* Gray 700 */
+            background-color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .accordion-header:hover {
+            background-color: #f9fafb; /* Gray 50 */
+        }
+        .accordion-content {
+            padding: 0 1rem 1rem 1rem;
+            display: none; /* Hidden by default */
+            background-color: white;
+        }
+        .accordion-content.open {
+            display: block;
+        }
+        .accordion-header .icon {
+            transition: transform 0.3s ease;
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        .accordion-header.active .icon {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="bg-purple-50 text-gray-800">
@@ -172,7 +212,7 @@
                             
                             <div class="mb-6 mt-auto">
                                 <label for="chakras-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Chakra Theme:</label>
-                                <select id="chakras-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <select id="chakras-select" data-theme-type="chakras" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                     <option value="">-- Choose a chakra --</option>
                                 </select>
                             </div>
@@ -189,7 +229,7 @@
                             
                             <div class="mb-6 mt-auto">
                                 <label for="meridian-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Meridian Theme:</label>
-                                <select id="meridian-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <select id="meridian-select" data-theme-type="meridians" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                     <option value="">-- Choose a flow --</option>
                                 </select>
                             </div>
@@ -206,7 +246,7 @@
                             
                             <div class="mb-6 mt-auto">
                                 <label for="seasons-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Season Theme:</label>
-                                <select id="seasons-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <select id="seasons-select" data-theme-type="seasons" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                     <option value="">-- Choose a season --</option>
                                 </select>
                             </div>
@@ -233,7 +273,7 @@
     <script type="module">
         // --- App Version: 2.3 ---
         // Changelog:
-        // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number.
+        // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number. Enhanced in-depth modal with accordion layout and fixed rendering.
         // v2.2: Adjusted AI prompt and rendering function for better readability.
         // v2.1: Added Affirmations, Poem, and Quotations to the main AI theme generator.
         // v2.0: Added "Explore in Depth" feature with a dedicated modal for detailed AI generation.
@@ -259,9 +299,11 @@
         let userId;
         let geminiApiKey = "";
 
-        let chakrasData = getChakrasSeedData();
-        let meridianData = getMeridiansSeedData();
-        let seasonsData = getSeasonsSeedData();
+        const allThemeData = {
+            chakras: getChakrasSeedData(),
+            meridians: getMeridiansSeedData(),
+            seasons: getSeasonsSeedData()
+        };
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -293,9 +335,9 @@
         
         async function seedAllCollections() {
             await Promise.all([
-                seedCollection('public_themes/chakras/themes', chakrasData),
-                seedCollection('public_themes/meridians/themes', meridianData),
-                seedCollection('public_themes/seasons/themes', seasonsData)
+                seedCollection('public_themes/chakras/themes', allThemeData.chakras),
+                seedCollection('public_themes/meridians/themes', allThemeData.meridians),
+                seedCollection('public_themes/seasons/themes', allThemeData.seasons)
             ]);
         }
 
@@ -316,20 +358,32 @@
         // --- Event Listeners Setup ---
         function setupEventListeners() {
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
-            document.getElementById('chakras-select').addEventListener('change', handleChakraSelect);
-            document.getElementById('meridian-select').addEventListener('change', handleMeridianSelect);
-            document.getElementById('seasons-select').addEventListener('change', handleSeasonSelect);
+            document.getElementById('chakras-select').addEventListener('change', handleDropdownSelect);
+            document.getElementById('meridian-select').addEventListener('change', handleDropdownSelect);
+            document.getElementById('seasons-select').addEventListener('change', handleDropdownSelect);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-breathwork-btn').addEventListener('click', handleBreathworkGenerate);
             
-            document.getElementById('closeInDepthModal').addEventListener('click', () => {
-                document.getElementById('inDepthModal').classList.add('hidden');
+            const modal = document.getElementById('inDepthModal');
+            modal.addEventListener('click', (e) => {
+                // Close modal button
+                if (e.target.closest('#closeInDepthModal')) {
+                    modal.classList.add('hidden');
+                }
+                // Accordion header toggle
+                const header = e.target.closest('.accordion-header');
+                if (header) {
+                    const content = header.nextElementSibling;
+                    header.classList.toggle('active');
+                    content.classList.toggle('open');
+                }
             });
 
             document.getElementById('main-content').addEventListener('click', (e) => {
                 if (e.target.classList.contains('explore-button')) {
-                    const themeTitle = e.target.dataset.themeTitle;
-                    handleExploreInDepth(themeTitle);
+                    const themeId = e.target.dataset.themeId;
+                    const themeType = e.target.dataset.themeType;
+                    handleExploreInDepth(themeId, themeType);
                 }
             });
 
@@ -356,18 +410,13 @@
                 document.getElementById('apiKeyModal').classList.add('hidden');
             }
         }
-
-        function handleChakraSelect(e) {
-            const theme = chakrasData.find(c => c.id === e.target.value);
-            displayThemeDetails(theme, document.getElementById('chakras-details'));
-        }
-        function handleMeridianSelect(e) {
-            const theme = meridianData.find(m => m.id === e.target.value);
-            displayThemeDetails(theme, document.getElementById('meridian-details'));
-        }
-        function handleSeasonSelect(e) {
-            const theme = seasonsData.find(s => s.id === e.target.value);
-            displayThemeDetails(theme, document.getElementById('seasons-details'));
+        
+        function handleDropdownSelect(e) {
+            const themeId = e.target.value;
+            const themeType = e.target.dataset.themeType;
+            const theme = allThemeData[themeType].find(t => t.id === themeId);
+            const container = e.target.parentElement.nextElementSibling;
+            displayThemeDetails(theme, container, themeType);
         }
 
         async function handleGeminiSubmit(e) {
@@ -385,8 +434,6 @@
             }
             resultContainer.innerHTML = '<p class="text-center">Generating your class plan... ✨</p>';
             
-            const coreMessageInstructions = `Behind every memorable themed event, party, or even yoga class lies a quiet and deeply personal journey of introspection. It's a process of turning inward to unearth the core message, the desired feeling, and the authentic story that will resonate with both the creator and the attendees. This internal exploration is the alchemy that transforms a simple gathering into a meaningful and cohesive experience. The process often begins not with a frantic search for ideas, but with a period of quiet contemplation, asking a series of probing personal questions. This introspective dialogue allows the theme to emerge organically, imbued with a sense of purpose and personal significance.`;
-
             const fullPrompt = `
 Generate a comprehensive yoga class theme based on the idea: "${userPrompt}".
 Please provide the following, formatted using Markdown, with clear headings for each section.
@@ -413,45 +460,6 @@ Suggest 5 essential oils. For each oil, provide its name in bold followed by its
 
 ### Music
 Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. Use a bulleted list.
-
-## Introspective Journey: Finding the "Why"
-Answer the following questions based on the theme "${userPrompt}", providing thoughtful and creative responses to guide the user's introspection.
-
-### 1. What is currently inspiring me?
-(e.g., A book you've just read, a piece of art that moved you, a historical period that fascinates you, or a social cause you feel passionate about.)
-
-### 2. What are the values I want to champion?
-(e.g., For a yoga class, this might be compassion, balance, or resilience. For a celebratory event, it could be community, gratitude, or joy.)
-
-### 3. What is a story I feel compelled to tell?
-(e.g., Themes with a narrative arc, even a subtle one, are often the most engaging. This could be a personal story of triumph, a collective story of heritage, or a fictional story that encapsulates a particular feeling.)
-
-### 4. What is an emotion I want to evoke?
-(e.g., Before considering colors, decorations, or activities, the most crucial element is the desired emotional landscape. Do you want guests to feel energized, reflective, whimsical, or a sense of awe?)
-
-### 5. Why this theme for this specific occasion?
-(e.g., How does the theme genuinely connect with the purpose? The answer should go beyond aesthetics.)
-
-### 6. What is the underlying message I want to convey?
-(e.g., A "vintage travel" theme for a farewell party isn't just about old suitcases; it's about celebrating a journey and embracing new adventures.)
-
-### 7. How does this theme support the physical and spiritual practice?
-(e.g., A theme of "grounding" would inform the choice of poses (asanas), breathing exercises (pranayama), and meditative focus, creating a holistic and integrated experience.)
-
-## The Emergence of a Vision: From Abstract to Tangible
-Answer the following questions about translating the theme into a tangible experience.
-
-### 1. How can I translate this feeling into sensory experiences?
-(e.g., If the desired emotion is "tranquility," what colors, scents, sounds, and textures evoke that feeling?)
-
-### 2. What symbols and metaphors align with my core message?
-(e.g., For a theme of "renewal," imagery of spring, blossoming flowers, or the rising sun can be powerful and consistent visual cues.)
-
-### 3. How can the activities and interactions reinforce the theme's purpose?
-(e.g., For a party with a "community" theme, collaborative games or a shared storytelling session would be more meaningful than purely individualistic entertainment.)
-
-## Core Message
-Based on the principles in the following text, create a 3-sentence core message for the theme "${userPrompt}": "${coreMessageInstructions}"
 `;
             
             try {
@@ -486,57 +494,79 @@ Format the entire response in Markdown, with a clear heading for each of the 5 t
 `;
             try {
                 const text = await callGeminiAPI(prompt);
-                modalContent.innerHTML = convertMarkdownToHtml(text);
+                modalContent.innerHTML = convertMarkdownToAccordion(text, false);
             } catch (error) {
                 console.error(`Error calling Gemini API for breathwork:`, error);
                 modalContent.innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the techniques. Please check the console for more information.</p>`;
             }
         }
         
-        async function handleExploreInDepth(themeTitle) {
+        async function handleExploreInDepth(themeId, themeType) {
             if (!geminiApiKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
                 return;
             }
             
+            const theme = allThemeData[themeType]?.find(t => t.id === themeId);
+            if (!theme) {
+                console.error("Theme not found for exploration:", themeId, themeType);
+                return;
+            }
+
             const modal = document.getElementById('inDepthModal');
             const modalTitle = document.getElementById('inDepthModalTitle');
             const modalContent = document.getElementById('inDepthModalContent');
 
-            modalTitle.textContent = `Exploring: ${themeTitle}`;
-            modalContent.innerHTML = '<p class="text-center">Generating your detailed guide... ✨</p>';
+            modalTitle.textContent = `Exploring: ${theme.title}`;
+            
+            let ideasHtml = '<ul class="list-disc list-inside space-y-1">';
+            for (const [key, value] of Object.entries(theme.ideas)) {
+                ideasHtml += `<li><strong>${key}:</strong> ${value}</li>`;
+            }
+            ideasHtml += '</ul>';
+
+            const initialContentHtml = `
+                <div class="p-4 mb-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h3 class="text-xl font-bold mb-2 text-purple-600">Theme Summary</h3>
+                    <p class="mb-3">${theme.explanation}</p>
+                    <p class="mb-3"><strong>Suggested Oils:</strong> ${theme.oils}</p>
+                    <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
+                    ${ideasHtml}
+                </div>
+                <div id="ai-generated-content">
+                    <p class="text-center">Generating your detailed guide... ✨</p>
+                </div>
+            `;
+            modalContent.innerHTML = initialContentHtml;
             modal.classList.remove('hidden');
 
             const prompt = `
-You are a knowledgeable yoga instructor and philosopher. Provide a detailed, in-depth exploration of the yoga theme: "${themeTitle}".
-Your explanation should be comprehensive and suitable for a yoga teacher looking for deep inspiration.
-Please cover the following aspects in detail, using Markdown for formatting:
+You are a knowledgeable yoga instructor. Provide a detailed exploration of the yoga theme: "${theme.title}".
+Your explanation should be comprehensive and suitable for a yoga teacher.
+Please cover the following aspects in detail, using Markdown with ### headings for each section:
 
-### 1. Introduction & Core Concepts
-What are the fundamental principles of this theme? Explain its historical, philosophical, or energetic background (e.g., for a chakra, its meaning, element, and purpose; for a meridian, its role in TCM; for a season, its archetypal energy).
+### Core Concepts
+Explain its historical, philosophical, or energetic background.
 
-### 2. Thematic Connection to Yoga
-How does this theme translate into a holistic yoga practice? Discuss the mind-body-spirit connection it emphasizes.
+### Thematic Connection to Yoga
+Discuss the mind-body-spirit connection it emphasizes.
 
-### 3. Energetic & Emotional Landscape
-What are the energetic qualities (e.g., grounding, uplifting, calming) and emotional states (e.g., courage, release, joy) associated with this theme? How might imbalances manifest?
+### Energetic & Emotional Landscape
+What are the energetic qualities and emotional states associated with this theme?
 
-### 4. Anatomy & Physiology
-Is there relevant physical anatomy to consider? (e.g., for the Heart Chakra, the thoracic spine and lungs; for the Liver meridian, the inner legs and ribcage).
+### Asana (Pose) Application
+Suggest 5 key poses. For each, explain in detail *why* it's a good fit.
 
-### 5. Asana (Pose) Application
-Suggest at least 5 key poses (a mix of yin and yang) that embody this theme. For each pose, explain in detail *why* it's a good fit, detailing the physical and energetic benefits in relation to the theme.
-
-### 6. Pranayama (Breathwork) & Meditation
-Suggest a specific pranayama technique and a meditation focus that would deepen the practitioner's experience of this theme. Explain the connection clearly.
+### Pranayama & Meditation
+Suggest a specific pranayama technique and a meditation focus that would deepen the experience.
 `;
 
             try {
                 const text = await callGeminiAPI(prompt);
-                modalContent.innerHTML = convertMarkdownToHtml(text);
+                document.getElementById('ai-generated-content').innerHTML = convertMarkdownToAccordion(text);
             } catch (error) {
-                console.error(`Error calling Gemini API for in-depth theme "${themeTitle}":`, error);
-                modalContent.innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the detailed guide. Please check the console for more information.</p>`;
+                console.error(`Error calling Gemini API for in-depth theme "${theme.title}":`, error);
+                document.getElementById('ai-generated-content').innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the detailed guide. Please check the console.</p>`;
             }
         }
 
@@ -574,11 +604,11 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 selectElement.appendChild(option);
             });
         }
-        function populateChakrasDropdown() { populateDropdown('chakras-select', chakrasData, 'Choose a chakra'); }
-        function populateMeridianDropdown() { populateDropdown('meridian-select', meridianData, 'Choose a flow'); }
-        function populateSeasonsDropdown() { populateDropdown('seasons-select', seasonsData, 'Choose a season'); }
+        function populateChakrasDropdown() { populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra'); }
+        function populateMeridianDropdown() { populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow'); }
+        function populateSeasonsDropdown() { populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season'); }
 
-        function displayThemeDetails(theme, container) {
+        function displayThemeDetails(theme, container, themeType) {
             if (!theme) {
                 container.innerHTML = '';
                 return;
@@ -594,57 +624,40 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 <p class="mb-4"><strong>Suggested Oils:</strong> ${theme.oils}</p>
                 <h4 class="text-lg font-semibold mb-2 text-gray-800">Themed Ideas:</h4>
                 ${ideasHtml}
-                <button class="btn-primary w-full mt-4 explore-button" data-theme-title="${theme.title}">Explore in Depth with AI</button>
+                <button class="btn-primary w-full mt-4 explore-button" data-theme-id="${theme.id}" data-theme-type="${themeType}">Explore in Depth with AI</button>
             `;
         }
         
         function renderAIGeneratedTabs(markdownText, container) {
-            const sections = {
-                "Inspiration": { title: "Creative Inspiration", content: "" },
-                "Class": { title: "Class Elements", content: "" },
-                "Introspection": { title: "Introspective Journey", content: "" },
-                "Vision": { title: "The Emergence of a Vision", content: ""},
-                "Other": { title: "Other Ideas to Search for", content: ""},
-                "Core": { title: "Core Message", content: ""}
-            };
-
+            const sections = {};
             const chunks = markdownText.split(/^## /m);
-            chunks.forEach(chunk => {
-                if (!chunk.trim()) return;
-                
-                if (chunk.startsWith("Creative Inspiration")) sections.Inspiration.content += chunk;
-                else if (chunk.startsWith("Class Elements")) sections.Class.content += chunk;
-                else if (chunk.startsWith("Introspective Journey")) sections.Introspection.content += chunk;
-                else if (chunk.startsWith("The Emergence of a Vision")) sections.Vision.content += chunk;
-                else if (chunk.startsWith("Other Ideas")) sections.Other.content += chunk;
-                else if (chunk.startsWith("Core Message")) sections.Core.content += chunk;
+            chunks.slice(1).forEach(chunk => {
+                const parts = chunk.split(/\n/);
+                const title = parts[0].trim();
+                const content = parts.slice(1).join('\n');
+                sections[title] = content;
             });
             
             const tabButtonsHtml = `
                 <button class="tab-button active" data-target="tab-content-inspiration">Inspiration</button>
                 <button class="tab-button" data-target="tab-content-class">Class Plan</button>
-                <button class="tab-button" data-target="tab-content-introspection">Introspection</button>
             `;
 
             const inspirationContent = `
-                ${sections.Inspiration.content}
-                ${sections.Other.content}
+                ## Creative Inspiration
+                ${sections['Creative Inspiration'] || ''}
+                ## Other Ideas to Search for
+                ${sections['Other Ideas to Search for'] || ''}
             `;
 
             const classContent = `
-                ${sections.Class.content}
-                ${sections.Core.content}
+                ## Class Elements
+                ${sections['Class Elements'] || ''}
             `;
             
-            const introspectionContent = `
-                ${sections.Introspection.content}
-                ${sections.Vision.content}
-            `;
-
             const tabContentsHtml = `
-                <div id="tab-content-inspiration" class="tab-content active p-4 border-t prose max-w-none">${convertMarkdownToHtml(inspirationContent)}</div>
-                <div id="tab-content-class" class="tab-content p-4 border-t prose max-w-none">${convertMarkdownToHtml(classContent)}</div>
-                <div id="tab-content-introspection" class="tab-content p-4 border-t prose max-w-none">${convertMarkdownToHtml(introspectionContent)}</div>
+                <div id="tab-content-inspiration" class="tab-content active p-4 border-t prose max-w-none">${robustMarkdownToHtml(inspirationContent)}</div>
+                <div id="tab-content-class" class="tab-content p-4 border-t prose max-w-none">${robustMarkdownToHtml(classContent)}</div>
             `;
             
             container.innerHTML = `
@@ -660,23 +673,61 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
         }
 
         // --- Utility Functions ---
-        function convertMarkdownToHtml(text) {
-            // Add a little more vertical space for lists
-            text = text.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-6 mb-2">$1</h3>');
-            text = text.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-8 mb-3">$1</h2>');
-            text = text.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-10 mb-4">$1</h1>');
-            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            text = text.replace(/^\* (.*$)/gim, '<ul class="space-y-2"><li class="ml-4 list-disc">$1</li></ul>');
-            text = text.replace(/<\/ul>\n?<ul>/g, '');
-             // Convert newlines to <br> tags, but protect them within list items
-            text = text.replace(/\n/g, '<br>');
-            text = text.replace(/<br>\s*<li/g, '<li');
-            text = text.replace(/<\/li><br>/g, '</li>');
-            // Cleanup extra breaks
-            text = text.replace(/(<\/h[1-4]>)<br\s*\/?>/g, '$1');
-            text = text.replace(/<br\s*\/?>\s*<ul/g, '<ul>');
-            return text;
+        function convertMarkdownToAccordion(text, openFirst = true) {
+            const sections = text.split(/^(?:##|###) /m).slice(1);
+            if (sections.length === 0) return robustMarkdownToHtml(text);
+
+            return sections.map((section, index) => {
+                const parts = section.split('\n');
+                const title = parts[0].trim();
+                const content = parts.slice(1).join('\n');
+                const isOpen = openFirst && index === 0;
+
+                return `
+                <div class="accordion-item">
+                    <button class="accordion-header ${isOpen ? 'active' : ''}">
+                        <span>${title}</span>
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="accordion-content ${isOpen ? 'open' : ''}">
+                        ${robustMarkdownToHtml(content)}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function robustMarkdownToHtml(text) {
+            if (!text) return '';
+            let html = text.trim();
+
+            // Headings
+            html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>');
+
+            // Bold and Italic
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Lists - Process entire list blocks at once
+            html = html.replace(/(\n?^\s*\*.*)+/g, (match) => {
+                const listItems = match.trim().split('\n').map(item => {
+                    return `<li>${item.replace(/^\s*\*\s*/, '')}</li>`;
+                }).join('');
+                return `<ul class="list-disc list-inside space-y-1 my-4">${listItems}</ul>`;
+            });
+            
+            // Replace remaining newlines with paragraphs, avoiding those inside HTML tags
+            html = html.split('\n').map(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return '';
+                if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<li')) {
+                    return line; // Don't wrap already-tagged lines
+                }
+                return `<p>${line}</p>`; // Wrap other lines in <p>
+            }).join('');
+
+            return html;
         }
 
 
