@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v8.0 (AI-Powered Tailoring)</title>
+    <title>AI Yoga Class & Theme Generator v9.2</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab -->
@@ -153,8 +153,6 @@
             transform-origin: bottom right;
         }
 
-
-        /* Themed UI Elements */
         .themed-text-primary { color: var(--color-primary); }
         .themed-text-accent { color: var(--color-accent); }
         .themed-text-muted { color: var(--color-text-muted); }
@@ -164,22 +162,8 @@
             color: var(--color-text);
             transition: background-color 0.5s ease, border-color 0.5s ease;
         }
-        .themed-input::placeholder {
-            color: var(--color-text-muted);
-            opacity: 0.7;
-        }
+        .themed-input::placeholder { color: var(--color-text-muted); opacity: 0.7; }
         .themed-input:focus { --tw-ring-color: var(--color-primary); }
-        .theme-select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%239333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1.5em 1.5em;
-        }
-        .prose h3 { color: var(--color-accent); }
-        .prose p, .prose li { color: var(--color-text); }
 
         .loader { border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         .themed-loader {
@@ -210,18 +194,93 @@
         .accordion-header .icon { transition: transform 0.3s ease; }
         .accordion-header.active .icon { transform: rotate(180deg); }
 
-        /* Refine Input Area */
         .refine-container {
             margin-top: 1rem;
             padding-top: 1rem;
             border-top: 1px solid var(--color-card-border);
         }
+        
+        /* --- Visual Selector Styles --- */
+        .visual-selector-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        /* Chakra Styles */
+        .chakra-selector {
+            width: 3rem; height: 3rem; border-radius: 50%; cursor: pointer;
+            transition: all 0.3s ease; border: 3px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .chakra-selector:hover { transform: scale(1.1); }
+        .chakra-selector.active {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .chakra-tooltip {
+            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+            background-color: var(--color-accent); color: white; padding: 0.25rem 0.5rem;
+            border-radius: 4px; font-size: 0.75rem; white-space: nowrap;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none;
+        }
+        .chakra-selector:hover .chakra-tooltip { opacity: 1; }
+        
+        /* Seasons Styles */
+        .season-selector {
+            cursor: pointer; transition: all 0.3s ease; padding: 0.5rem;
+            border-radius: 50%; border: 3px solid transparent;
+        }
+        .season-selector:hover { transform: scale(1.1) rotate(5deg); }
+        .season-selector.active {
+            border-color: var(--color-primary);
+            background-color: rgba(147, 51, 234, 0.1);
+        }
+        .season-selector svg { width: 4rem; height: 4rem; }
+        
+        /* Moon Phases Styles */
+        .moon-phase-selector {
+            cursor: pointer; transition: all 0.3s ease;
+            padding: 0.5rem; border-radius: 8px; border: 2px solid transparent;
+        }
+        .moon-phase-selector:hover { background-color: rgba(0,0,0,0.05); }
+        .moon-phase-selector.active { border-color: var(--color-accent); }
+        .moon-phase-selector svg { width: 3rem; height: 3rem; }
+        
+        /* Card Grid Styles (Holidays, Styles, Meridians) */
+        .card-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.02);
+        }
+        .grid-card-selector {
+            background-color: white; border: 1px solid var(--color-card-border);
+            border-radius: 8px; padding: 1rem; text-align: center;
+            cursor: pointer; transition: all 0.2s ease;
+            font-size: 0.875rem; font-weight: 500;
+        }
+        .grid-card-selector:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .grid-card-selector.active {
+            background-color: var(--color-accent); color: white;
+            border-color: var(--color-primary-dark);
+        }
+        .grid-card-selector .icon { margin-bottom: 0.5rem; }
+        .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+    <!-- API Key Modal & In-Depth Modal (unchanged) -->
+     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Enter Your API Key</h2>
             <p class="mb-6 text-gray-600">To use the AI generators, please provide your API key. This key is used for both Gemini (text) and Imagen (image) generation and is only stored for your current session.</p>
@@ -231,8 +290,6 @@
             </form>
         </div>
     </div>
-    
-    <!-- In-Depth / Help Modal -->
     <div id="inDepthModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -246,7 +303,6 @@
 
     <!-- Main Content -->
     <div class="container mx-auto">
-        
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
                 <div class="loader header-loader-spinner"></div>
@@ -258,11 +314,10 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v8.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v9.2</div>
         </header>
 
         <main id="main-content" class="space-y-8">
-            
             <div class="card p-8">
                 <h2 class="text-2xl font-bold mb-2 themed-text-primary">AI Visual Theme Generator</h2>
                 <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
@@ -281,14 +336,10 @@
                     <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
                     <form id="gemini-form">
                         <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
-                        
                         <div class="my-4">
                             <label class="block text-sm font-medium themed-text-muted mb-2">Tailor Your Plan with AI-Powered Options:</label>
-                            <div id="tailoring-buttons-container" class="flex flex-wrap gap-2">
-                                <!-- AI-generated buttons will be dynamically inserted here -->
-                            </div>
+                            <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
                         </div>
-
                         <button type="submit" class="btn-primary w-full mt-4">Generate AI Yoga Plan</button>
                     </form>
                     <div id="gemini-result-container" class="mt-6 text-gray-700"></div>
@@ -296,140 +347,202 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2>
-                        <p class="mb-6 themed-text-muted">Balance and activate the seven primary energy centers in the body.</p>
-                        <div class="mb-6 mt-auto">
-                            <label for="chakras-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Chakra Theme:</label>
-                            <select id="chakras-select" data-theme-type="chakras" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2">
-                                <option value="">-- Choose a chakra --</option>
-                            </select>
-                        </div>
-                        <div id="chakras-details" class="details-container prose max-w-none"></div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 themed-text-primary">The Twelve Meridians</h2>
-                        <p class="mb-6 themed-text-muted">Explore the major meridians of Traditional Chinese Medicine.</p>
-                        <div class="mb-6 mt-auto">
-                            <label for="meridian-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Meridian Theme:</label>
-                            <select id="meridian-select" data-theme-type="meridians" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2">
-                                <option value="">-- Choose a flow --</option>
-                            </select>
-                        </div>
-                        <div id="meridian-details" class="details-container prose max-w-none"></div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2>
-                        <p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p>
-                        <div class="mb-6 mt-auto">
-                            <label for="seasons-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Season Theme:</label>
-                            <select id="seasons-select" data-theme-type="seasons" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2">
-                                <option value="">-- Choose a season --</option>
-                            </select>
-                        </div>
-                        <div id="seasons-details" class="details-container prose max-w-none"></div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="p-8 card-content">
-                        <h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2>
-                        <p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p>
-                        <div class="mb-6 mt-auto">
-                            <label for="holidays-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Holiday Theme:</label>
-                            <select id="holidays-select" data-theme-type="holidays" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2">
-                                <option value="">-- Choose a holiday --</option>
-                            </select>
-                        </div>
-                        <div id="holidays-details" class="details-container prose max-w-none"></div>
-                    </div>
-                </div>
-                <div class="card"> <div class="p-8 card-content"> <h2 class="text-2xl font-bold mb-2 themed-text-primary">Hindu Holidays</h2> <p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Hindu traditions.</p> <div class="mb-6 mt-auto"> <label for="hindu-holidays-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Holiday Theme:</label> <select id="hindu-holidays-select" data-theme-type="hinduHolidays" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2"> <option value="">-- Choose a holiday --</option> </select> </div> <div id="hindu-holidays-details" class="details-container prose max-w-none"></div> </div> </div>
-                <div class="card"> <div class="p-8 card-content"> <h2 class="text-2xl font-bold mb-2 themed-text-primary">Buddhist Holidays</h2> <p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Buddhist traditions.</p> <div class="mb-6 mt-auto"> <label for="buddhist-holidays-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Holiday Theme:</label> <select id="buddhist-holidays-select" data-theme-type="buddhistHolidays" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2"> <option value="">-- Choose a holiday --</option> </select> </div> <div id="buddhist-holidays-details" class="details-container prose max-w-none"></div> </div> </div>
-                <div class="card"> <div class="p-8 card-content"> <h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2> <p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p> <div class="mb-6 mt-auto"> <label for="moon-phases-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Moon Phase:</label> <select id="moon-phases-select" data-theme-type="moonPhases" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2"> <option value="">-- Choose a phase --</option> </select> </div> <div id="moon-phases-details" class="details-container prose max-w-none"></div> </div> </div>
-                <div class="card"> <div class="p-8 card-content"> <h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2> <p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p> <div class="mb-6 mt-auto"> <label for="styles-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Yoga Style:</label> <select id="styles-select" data-theme-type="styles" class="theme-select w-full p-3 themed-input border rounded-lg focus:ring-2"> <option value="">-- Choose a style --</option> </select> </div> <div id="styles-details" class="details-container prose max-w-none"></div> </div> </div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Balance and activate the seven primary energy centers in the body.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2><p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p><div id="seasons-selector-visual" class="visual-selector-container mt-auto"></div><div id="seasons-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2><p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p><div id="moon-phases-selector-visual" class="visual-selector-container mt-auto"></div><div id="moon-phases-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2><p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p><div id="styles-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="styles-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Twelve Meridians</h2><p class="mb-6 themed-text-muted">Explore the major meridians of Traditional Chinese Medicine.</p><div id="meridian-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="meridian-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p><div id="holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="holidays-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Hindu Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Hindu traditions.</p><div id="hindu-holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="hindu-holidays-details" class="details-container prose max-w-none"></div></div></div>
+                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Buddhist Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by Buddhist traditions.</p><div id="buddhist-holidays-selector-visual" class="visual-selector-container mt-auto flex-col"></div><div id="buddhist-holidays-details" class="details-container prose max-w-none"></div></div></div>
             </div>
         </main>
     </div>
 
-    <!-- Floating Action Buttons -->
-    <button id="settings-button" class="floating-action-button" title="Typography Settings">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-    </button>
-    <div id="settings-panel" class="hidden">
-        <h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3>
-        <div class="space-y-4">
-            <div>
-                <label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label>
-                <select id="font-family-select" class="w-full p-2 themed-input border rounded-lg">
-                    <option value="'Inter', sans-serif">Inter</option>
-                    <option value="'Lato', sans-serif">Lato</option>
-                    <option value="'Roboto Slab', serif">Roboto Slab</option>
-                </select>
-            </div>
-            <div>
-                <label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size</label>
-                <select id="font-size-select" class="w-full p-2 themed-input border rounded-lg">
-                    <option value="0.9rem">Small</option>
-                    <option value="1rem" selected>Medium</option>
-                    <option value="1.1rem">Large</option>
-                </select>
-            </div>
-            <div>
-                <label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label>
-                <select id="line-height-select" class="w-full p-2 themed-input border rounded-lg">
-                    <option value="1.5">Tight</option>
-                    <option value="1.6" selected>Normal</option>
-                    <option value="1.8">Relaxed</option>
-                </select>
-            </div>
-        </div>
-    </div>
-    <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-3-3 3-3"/><path d="M15 6l3 3-3 3"/><path d="M12 19.52A10 10 0 1 0 12 4.48"/><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
-    </button>
-
+    <!-- Floating Action Buttons & Settings Panel (unchanged) -->
+    <button id="settings-button" class="floating-action-button" title="Typography Settings"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>
+    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"><option value="'Inter', sans-serif">Inter</option><option value="'Lato', sans-serif">Lato</option><option value="'Roboto Slab', serif">Roboto Slab</option></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"><option value="0.9rem">Small</option><option value="1rem" selected>Medium</option><option value="1.1rem">Large</option></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"><option value="1.5">Tight</option><option value="1.6" selected>Normal</option><option value="1.8">Relaxed</option></select></div></div></div>
+    <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-3-3 3-3"/><path d="M15 6l3 3-3 3"/><path d="M12 19.52A10 10 0 1 0 12 4.48"/><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg></button>
 
     <script type="module">
         // --- Global Variables ---
         let apiKey = "";
         const root = document.documentElement;
         const allThemeData = {
-            chakras: getChakrasSeedData(),
-            meridians: getMeridiansSeedData(),
-            seasons: getSeasonsSeedData(),
-            styles: getModalitiesSeedData(),
-            holidays: getHolidaysSeedData(),
-            hinduHolidays: getHinduHolidaysSeedData(),
-            buddhistHolidays: getBuddhistHolidaysSeedData(),
-            moonPhases: getMoonPhasesSeedData()
+            chakras: getChakrasSeedData(), meridians: getMeridiansSeedData(), seasons: getSeasonsSeedData(), styles: getModalitiesSeedData(), holidays: getHolidaysSeedData(), hinduHolidays: getHinduHolidaysSeedData(), buddhistHolidays: getBuddhistHolidaysSeedData(), moonPhases: getMoonPhasesSeedData()
         };
         let originalGeneratedText = new Map();
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('apiKeyModal').classList.remove('hidden');
-            populateAllDropdowns();
             setupEventListeners();
-            // We call the AI to get tailoring options after the API key is submitted.
         });
+
+        // --- Visual Selectors ---
+        function populateVisualSelectors() {
+            populateChakraSelector();
+            populateSeasonSelector();
+            populateMoonPhaseSelector();
+            // Card Grids
+            populateCardGridSelector('styles-selector-visual', 'styles');
+            populateCardGridSelector('meridian-selector-visual', 'meridians');
+            populateCardGridSelector('holidays-selector-visual', 'holidays');
+            populateCardGridSelector('hindu-holidays-selector-visual', 'hinduHolidays');
+            populateCardGridSelector('buddhist-holidays-selector-visual', 'buddhistHolidays');
+        }
+
+        function populateChakraSelector() {
+            const container = document.getElementById('chakras-selector-visual');
+            if(!container) return;
+            const chakraColors = { muladhara: '#ff3b30', svadhisthana: '#ff9500', manipura: '#ffcc00', anahata: '#34c759', vishuddha: '#5ac8fa', ajna: '#5856d6', sahasrara: '#af52de' };
+            const sortedChakras = [...allThemeData.chakras].sort((a,b) => a.title.localeCompare(b.title));
+            container.innerHTML = sortedChakras.map(c => `
+                <div class="chakra-selector" style="background-color:${chakraColors[c.id]};" data-theme-id="${c.id}" data-theme-type="chakras">
+                    <div class="chakra-tooltip">${c.title.split(' ')[0]}</div>
+                </div>
+            `).join('');
+            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.chakra-selector')));
+        }
         
-        // --- NEW: Function to load tailoring options from AI ---
+        function populateSeasonSelector() {
+            const container = document.getElementById('seasons-selector-visual');
+            if(!container) return;
+            const sortedSeasons = [...allThemeData.seasons].sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
+            const seasonIcons = {
+                'spring-equinox': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2v2m-6.36 2.64L7.05 7.05M2 12h2m2.64 6.36L7.05 17m5-10a5 5 0 015 5h-5V7z" stroke="#34D399"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 12a5 5 0 01-5-5h5v5z" stroke="#6EE7B7"></path></svg>`,
+                'summer-solstice': `<svg fill="none" stroke="#FBBF24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2v2m0 16v2m-6.36-2.64L7.05 17M17 7.05L18.36 5.64M2 12h2m16 0h2m-2.64-6.36L17 7.05M7.05 7.05L5.64 5.64M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg>`,
+                'autumn-equinox': `<svg fill="none" stroke="#F97316" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 12H4M12 4v16m6-14l-4 4-4-4m8 10l-4-4-4 4"></path></svg>`,
+                'winter-solstice': `<svg fill="none" stroke="#60A5FA" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 10l7-7 7 7M5 14l7 7 7-7"></path></svg>`
+            };
+            container.innerHTML = sortedSeasons.map(s => `
+                <div class="season-selector" data-theme-id="${s.id}" data-theme-type="seasons" title="${s.title}">${seasonIcons[s.id]}</div>`).join('');
+            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.season-selector')));
+        }
+
+        function populateMoonPhaseSelector() {
+            const container = document.getElementById('moon-phases-selector-visual');
+            if(!container) return;
+            const sortedPhases = [...allThemeData.moonPhases].sort((a,b) => a.title.localeCompare(b.title));
+            const moonIcons = {
+                'new-moon': 'M12 2A10 10 0 1012 22 10 10 0 0012 2z', 'waxing-crescent': 'M12 2a10 10 0 100 20V2z', 'first-quarter': 'M2 12a10 10 0 1020 0H2z', 'waxing-gibbous': 'M12 2a10 10 0 000 20V2z', 'full-moon': 'M12 2a10 10 0 110 20 10 10 0 010-20z', 'waning-gibbous': 'M12 2v20a10 10 0 000-20z', 'last-quarter': 'M22 12a10 10 0 01-20 0h20z', 'waning-crescent': 'M12 2v20a10 10 0 010-20z'
+            };
+            const transforms = { 'waxing-crescent': '', 'first-quarter': 'transform -rotate-90', 'waxing-gibbous': 'transform scale-x-[-1]', 'waning-gibbous': '', 'last-quarter': 'transform -rotate-90', 'waning-crescent': 'transform scale-x-[-1]'};
+
+            container.innerHTML = sortedPhases.map(p => `
+                <div class="moon-phase-selector" data-theme-id="${p.id}" data-theme-type="moonPhases" title="${p.title}">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="${transforms[p.id] || ''}">
+                         <path fill="#e5e7eb" d="M12 2a10 10 0 110 20 10 10 0 010-20z"></path><path d="${moonIcons[p.id]}"></path>
+                    </svg>
+                </div>`).join('');
+            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.moon-phase-selector')));
+        }
+        
+        function populateCardGridSelector(containerId, themeType) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.innerHTML = `<input type="text" placeholder="Search..." class="themed-input w-full p-2 rounded-lg mb-2 search-bar" data-theme-type="${themeType}">
+                                 <div class="card-grid-container"></div>`;
+            const grid = container.querySelector('.card-grid-container');
+            const searchBar = container.querySelector('.search-bar');
+            
+            const renderGrid = (filter = '') => {
+                let data = [...allThemeData[themeType]];
+                const holidayTypes = ['holidays', 'hinduHolidays', 'buddhistHolidays', 'seasons'];
+                if (holidayTypes.includes(themeType)) {
+                    data.sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
+                } else {
+                    data.sort((a,b) => a.title.localeCompare(b.title));
+                }
+
+                grid.innerHTML = data
+                    .filter(item => item.title.toLowerCase().includes(filter.toLowerCase()))
+                    .map(item => `
+                    <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}">
+                        <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                        <span>${item.title}</span>
+                    </div>`).join('');
+            };
+
+            renderGrid();
+            searchBar.addEventListener('input', e => renderGrid(e.target.value));
+            grid.addEventListener('click', e => handleVisualSelect(e.target.closest('.grid-card-selector')));
+        }
+        
+        async function handleVisualSelect(target) {
+            if (!target) return;
+            const container = target.closest('.visual-selector-container, .card-grid-container');
+            const detailsContainer = container.closest('.card-content').querySelector('.details-container');
+            if(!checkApiKey(detailsContainer)) return;
+            
+            // Toggle active class
+            container.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+            target.classList.add('active');
+            
+            const { themeId, themeType } = target.dataset;
+            const theme = allThemeData[themeType].find(t => t.id === themeId);
+            
+            detailsContainer.innerHTML = getLoaderHTML('Generating theme details...');
+            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
+            const description = theme.description || theme.explanation;
+            let datePromptSection = '';
+            const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays'];
+            if (dateableThemes.includes(themeType)) {
+                datePromptSection = `The current year is ${new Date().getFullYear()}. First, state the next upcoming date for this event in the New York (EST) timezone for the current year, as a bolded line of text.\n\n`;
+            }
+            const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Feel free to structure it in any way you see fit using markdown.`;
+            try {
+                const markdownText = await callGeminiAPI(prompt);
+                originalGeneratedText.set(detailsContainer, markdownText);
+                detailsContainer.innerHTML = `<div class="prose-content">${robustMarkdownToHtml(markdownText)}</div>`;
+                addPostGenerationButtons(detailsContainer, theme.id, themeType);
+            } catch (error) {
+                detailsContainer.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
+            }
+        }
+        
+        // --- Event Listeners and other functions ---
+        function setupEventListeners() {
+            document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
+            document.getElementById('generate-theme-btn').addEventListener('click', handleVisualThemeGeneration);
+            document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
+            document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
+            document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
+            document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+            document.addEventListener('click', (e) => {
+                const inDepthModal = document.getElementById('inDepthModal');
+                if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) { if (inDepthModal) inDepthModal.classList.add('hidden'); }
+                const exploreBtn = e.target.closest('.explore-button');
+                if (exploreBtn) handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType);
+                const refineBtn = e.target.closest('.refine-button');
+                if (refineBtn) toggleRefineUI(refineBtn.parentElement);
+                const submitRefineBtn = e.target.closest('.submit-refinement-button');
+                if(submitRefineBtn) handleRefineRequest(submitRefineBtn.parentElement);
+                const header = e.target.closest('.accordion-header');
+                if (header) { const content = header.nextElementSibling; header.classList.toggle('active'); content.classList.toggle('open'); }
+                if (e.target.closest('#ai-help-button')) handleAIHelpRequest();
+                const settingsPanel = document.getElementById('settings-panel');
+                if (e.target.closest('#settings-button')) settingsPanel.classList.toggle('hidden');
+                else if (!settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) settingsPanel.classList.add('hidden');
+            });
+        }
+        function handleApiKeySubmit(e) { e.preventDefault(); const input = document.getElementById('apiKeyInput'); if (input.value.trim()) { apiKey = input.value.trim(); document.getElementById('apiKeyModal').classList.add('hidden'); loadDynamicPlaceholders(); loadAITailoringOptions(); populateVisualSelectors(); } }
+        async function handleGeminiSubmit(e) { e.preventDefault(); const resultContainer = document.getElementById('gemini-result-container'); if (!checkApiKey(resultContainer)) return; const userPrompt = document.getElementById('gemini-prompt').value.trim(); if (!userPrompt) { resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`; return; } const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active')).map(btn => btn.dataset.option); let tailoringInstruction = ''; if (selectedOptions.length > 0) { tailoringInstruction = `Please make sure to specifically include sections or suggestions for the following elements: ${selectedOptions.join(', ')}.`; } resultContainer.innerHTML = getLoaderHTML('Crafting your custom class plan...'); const fullPrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme. ${tailoringInstruction}`; try { const text = await callGeminiAPI(fullPrompt); originalGeneratedText.set(resultContainer, text); resultContainer.innerHTML = `<div class="prose-content p-4 border rounded-lg bg-white/50" style="border-color: var(--color-card-border);">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(resultContainer, userPrompt, 'custom'); } catch (error) { resultContainer.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
+        
         async function loadAITailoringOptions() {
             const container = document.getElementById('tailoring-buttons-container');
             if (!container || !checkApiKey(container)) return;
-
             container.innerHTML = getLoaderHTML('AI is generating tailoring options...');
             const fallbackOptions = ["Breathwork", "Essential Oils", "Chanting", "Poetry", "Props", "Meditation", "Mantra & Affirmations", "Partner Poses"];
-
             try {
-                const prompt = `You are an expert yoga instructor. Generate a list of 20 unique and creative optional elements or themes that can be added to a yoga class to tailor it. Return the list as a single JSON array of strings. For example: ["Mantra & Affirmations", "Partner Poses", "Journaling"]. Return only the JSON array.`;
-                const jsonText = await callGeminiAPI(prompt);
-                const tailoringOptions = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim());
+                const prompt = `Generate a list of 20 unique yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting.`;
+                const rawText = await callGeminiAPI(prompt);
+                
+                // More robust JSON extraction to handle potential conversational text from the AI
+                const match = rawText.match(/\[.*\]/s);
+                const jsonString = match ? match[0] : rawText;
+
+                const tailoringOptions = JSON.parse(jsonString);
                 populateTailoringButtons(tailoringOptions);
             } catch (error) {
                 console.error("Failed to load AI tailoring options, using fallback.", error);
@@ -437,446 +550,42 @@
                 populateTailoringButtons(fallbackOptions);
             }
         }
+
+        function populateTailoringButtons(options) { const container = document.getElementById('tailoring-buttons-container'); if (!container) return; container.innerHTML = ''; options.forEach(option => { const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm'); button.dataset.option = option; button.addEventListener('click', (e) => { e.preventDefault(); button.classList.toggle('active'); }); container.appendChild(button); }); }
         
-        // --- UPDATED: Function to populate tailoring buttons ---
-        function populateTailoringButtons(options) {
-            const container = document.getElementById('tailoring-buttons-container');
-            if (!container) return;
-            container.innerHTML = ''; // Clear loader or previous buttons
-            options.forEach(option => {
-                const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm');
-                button.dataset.option = option;
-                button.addEventListener('click', (e) => {
-                    e.preventDefault(); // Prevent form submission
-                    button.classList.toggle('active');
-                });
-                container.appendChild(button);
-            });
-        }
-
-        // --- Event Listeners Setup ---
-        function setupEventListeners() {
-            document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
-            document.getElementById('generate-theme-btn').addEventListener('click', handleVisualThemeGeneration);
-            document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
-            
-            document.querySelectorAll('#main-content select.theme-select').forEach(select => {
-                select.addEventListener('change', handleDropdownSelect);
-            });
-
-            document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
-            document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
-            document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
-            
-            document.addEventListener('click', (e) => {
-                const inDepthModal = document.getElementById('inDepthModal');
-                if (e.target.id === 'inDepthModal' || e.target.closest('#closeInDepthModal')) {
-                    if (inDepthModal) inDepthModal.classList.add('hidden');
-                }
-                const exploreBtn = e.target.closest('.explore-button');
-                if (exploreBtn) {
-                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType);
-                }
-                const refineBtn = e.target.closest('.refine-button');
-                if (refineBtn) {
-                    toggleRefineUI(refineBtn.parentElement);
-                }
-                const submitRefineBtn = e.target.closest('.submit-refinement-button');
-                if(submitRefineBtn){
-                    handleRefineRequest(submitRefineBtn.parentElement);
-                }
-                const header = e.target.closest('.accordion-header');
-                if (header) {
-                    const content = header.nextElementSibling;
-                    header.classList.toggle('active');
-                    content.classList.toggle('open');
-                }
-                if (e.target.closest('#ai-help-button')) {
-                    handleAIHelpRequest();
-                }
-                const settingsPanel = document.getElementById('settings-panel');
-                const settingsButton = document.getElementById('settings-button');
-                if (e.target.closest('#settings-button')) {
-                    settingsPanel.classList.toggle('hidden');
-                } else if (!settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
-                    settingsPanel.classList.add('hidden');
-                }
-            });
-        }
-        
-        // --- Handler Functions ---
-
-        function handleApiKeySubmit(e) {
-            e.preventDefault();
-            const input = document.getElementById('apiKeyInput');
-            if (input.value.trim()) {
-                apiKey = input.value.trim();
-                document.getElementById('apiKeyModal').classList.add('hidden');
-                loadDynamicPlaceholders();
-                loadAITailoringOptions(); // UPDATED: Load AI options after getting key
-            }
-        }
-        
-        async function handleVisualThemeGeneration() {
-            if (!checkApiKey()) return;
-            const prompt = document.getElementById('theme-prompt').value.trim();
-            if (!prompt) {
-                showThemeError("Please enter a description for your visual theme.");
-                return;
-            }
-            showThemeLoading(true);
-            const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`;
-            const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`;
-            
-            try {
-                const [colorResult, imageResult] = await Promise.allSettled([
-                    callColorGenAPI(colorPrompt), 
-                    callImageGenAPI(imagePrompt)
-                ]);
-
-                if (colorResult.status === 'fulfilled') {
-                    applyTheme(colorResult.value);
-                } else {
-                    showThemeError(generateErrorMessage(colorResult.reason, 'color'));
-                }
-
-                if (imageResult.status === 'fulfilled') {
-                    applyHeaderImage(imageResult.value);
-                } else {
-                    showThemeError(generateErrorMessage(imageResult.reason, 'image'));
-                }
-            } catch (error) {
-                 showThemeError(generateErrorMessage(error, 'visual theme'));
-            } finally {
-                showThemeLoading(false);
-            }
-        }
-
-        async function handleDropdownSelect(e) {
-            const themeId = e.target.value;
-            const container = e.target.closest('.card').querySelector('.details-container');
-            if (!themeId) { container.innerHTML = ''; return; }
-            if (!checkApiKey(container)) return;
-            const themeType = e.target.dataset.themeType;
-            const theme = allThemeData[themeType].find(t => t.id === themeId);
-            container.innerHTML = getLoaderHTML('Generating theme details...');
-            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
-            const description = theme.description || theme.explanation;
-            let datePromptSection = '';
-            const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
-            if (dateableThemes.includes(themeType)) {
-                datePromptSection = `The current year is ${new Date().getFullYear()}. First, state the next upcoming date for this event in the New York (EST) timezone for the current year, as a bolded line of text.\n\n`;
-            }
-            const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Feel free to structure it in any way you see fit using markdown.`;
-            try {
-                const markdownText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(container, markdownText);
-                container.innerHTML = `<div class="prose-content">${robustMarkdownToHtml(markdownText)}</div>`;
-                addPostGenerationButtons(container, theme.id, themeType);
-            } catch (error) {
-                container.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
-            }
-        }
-        
-        async function handleGeminiSubmit(e) {
-            e.preventDefault();
-            const resultContainer = document.getElementById('gemini-result-container');
-            if (!checkApiKey(resultContainer)) return;
-            const userPrompt = document.getElementById('gemini-prompt').value.trim();
-            if (!userPrompt) { resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`; return; }
-            
-            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
-                                         .map(btn => btn.dataset.option);
-            
-            let tailoringInstruction = '';
-            if (selectedOptions.length > 0) {
-                tailoringInstruction = `Please make sure to specifically include sections or suggestions for the following elements: ${selectedOptions.join(', ')}.`;
-            }
-
-            resultContainer.innerHTML = getLoaderHTML('Crafting your custom class plan...');
-            const fullPrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme. ${tailoringInstruction}`;
-            
-            try {
-                const text = await callGeminiAPI(fullPrompt);
-                originalGeneratedText.set(resultContainer, text);
-                resultContainer.innerHTML = `<div class="prose-content p-4 border rounded-lg bg-white/50" style="border-color: var(--color-card-border);">${convertMarkdownToAccordion(text)}</div>`;
-                addPostGenerationButtons(resultContainer, userPrompt, 'custom');
-            } catch (error) {
-                resultContainer.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
-            }
-        }
-
-        async function handleExploreInDepth(themeId, themeType) {
-            const modal = document.getElementById('inDepthModal');
-            const modalContent = document.getElementById('inDepthModalContent');
-            if (!checkApiKey(modalContent)) return;
-            const modalTitle = document.getElementById('inDepthModalTitle');
-            const modalFooter = document.getElementById('inDepthModalFooter');
-            const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId);
-            modalTitle.textContent = `Exploring: ${theme.title}`;
-            modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...');
-            modalFooter.innerHTML = '';
-            modal.classList.remove('hidden');
-            const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
-            const description = theme.description || theme.explanation;
-            let datePromptSection = '';
-            const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases'];
-            if (dateableThemes.includes(themeType)) {
-                datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`;
-            }
-            const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
-            try {
-                const text = await callGeminiAPI(prompt);
-                originalGeneratedText.set(modalContent, text);
-                modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`;
-                addPostGenerationButtons(modalFooter, themeId, themeType);
-            } catch (error) {
-                modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
-            }
-        }
-
-        async function handleAIHelpRequest() {
-            const modal = document.getElementById('inDepthModal');
-            const modalContent = document.getElementById('inDepthModalContent');
-            if (!checkApiKey(modalContent)) return;
-            const modalTitle = document.getElementById('inDepthModalTitle');
-            const modalFooter = document.getElementById('inDepthModalFooter');
-            modalTitle.textContent = "AI Help & Feedback";
-            modalContent.innerHTML = getLoaderHTML('Generating help and suggestions...');
-            modalFooter.innerHTML = '';
-            modal.classList.remove('hidden');
-            const pageStructure = document.getElementById('main-content').innerText;
-            const prompt = `You are a helpful UI/UX assistant. Based on the text content and structure of the application provided below, please do two things: 1. **Explain How It Works:** Briefly describe the main features of this "AI Yoga Class & Theme Generator" application. 2. **Suggest Improvements:** Offer a few specific, actionable suggestions to improve the user interface (UI) and overall user experience (UX). Structure your response with two main sections using '###' markdown headings: '### How This App Works' and '### UI/UX Improvement Suggestions'. Here is the text content of the app:\n${pageStructure}`;
-            try {
-                const text = await callGeminiAPI(prompt);
-                originalGeneratedText.set(modalContent, text);
-                modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`;
-                const exportButton = createButton('Copy Text', 'btn-secondary');
-                exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget));
-                modalFooter.appendChild(exportButton);
-            } catch (error)
- {
-                modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
-            }
-        }
-
-        async function handleRefineRequest(container) {
-            const parentContainer = container.parentElement;
-            const contentContainer = parentContainer.id === 'inDepthModalFooter' ? document.getElementById('inDepthModalContent') : parentContainer;
-            if(!contentContainer) return;
-
-            const refinementInstruction = container.querySelector('.refinement-input').value.trim();
-            if(!refinementInstruction) { alert("Please enter a refinement instruction."); return; }
-
-            const originalText = originalGeneratedText.get(contentContainer);
-            if(!originalText) { alert("Original text not found. Please generate content first."); return; }
-            
-            const contentArea = contentContainer.querySelector('.prose-content');
-            contentArea.innerHTML = getLoaderHTML('Refining your content...');
-
-            const prompt = `You are a yoga content editor. A user has provided an existing yoga plan and an instruction to refine it. Please generate the new, refined plan.
-            ---
-            ORIGINAL PLAN:
-            ${originalText}
-            ---
-            USER'S INSTRUCTION:
-            "${refinementInstruction}"
-            ---
-            REFINED PLAN:`;
-
-            try {
-                const newText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(contentContainer, newText);
-                const isAccordion = newText.includes('###');
-                contentArea.innerHTML = isAccordion ? convertMarkdownToAccordion(newText) : robustMarkdownToHtml(newText);
-                container.remove(); 
-            } catch (error) {
-                contentArea.innerHTML = robustMarkdownToHtml(originalText); 
-                alert(`Failed to refine content. ${generateErrorMessage(error, 'text')}`);
-            }
-        }
-
-        async function loadDynamicPlaceholders() {
-            if (!apiKey) { return; }
-            try {
-                const prompt = `Generate two short, creative, and distinct yoga class theme ideas to be used as placeholder text in an input field. Return the result as a JSON object with two keys, "theme1" and "theme2". Example: {"theme1": "Embracing the winds of change", "theme2": "Finding stillness in the storm"}`;
-                const jsonText = await callGeminiAPI(prompt);
-                const themes = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim());
-                if (themes.theme1) document.getElementById('theme-prompt').placeholder = `e.g., '${themes.theme1}'`;
-                if (themes.theme2) document.getElementById('gemini-prompt').placeholder = `e.g., '${themes.theme2}'`;
-            } catch (error) {
-                console.error("Could not load dynamic placeholders:", error);
-            }
-        }
-
-        // --- API Call Functions ---
+        // --- API Calls, UI Utilities, and other handlers ---
         async function callApi(apiUrl, payload) { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorBody = await response.text(); console.error("API Error Response:", errorBody); throw new Error(`API request failed with status ${response.status}`); } return await response.json(); }
         async function callGeminiAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }] }); if (result.candidates?.[0]?.content?.parts?.[0]?.text) { return result.candidates[0].content.parts[0].text; } else if (result.candidates?.[0]?.finishReason === 'SAFETY') { throw new Error("Request blocked for safety reasons."); } throw new Error("Invalid response structure from Gemini API."); }
         async function callColorGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (jsonText) return JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); throw new Error("Could not parse a valid color theme from the AI's response."); }
         async function callImageGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } }); const base64 = result.predictions?.[0]?.bytesBase64Encoded; if (base64) return `data:image/png;base64,${base64}`; throw new Error("Could not get a valid image from the AI's response."); }
-
-        // --- UI Utility Functions ---
         function checkApiKey(container) { if (!apiKey) { document.getElementById('apiKeyModal').classList.remove('hidden'); if(container) { container.innerHTML = `<p class="text-amber-600 p-2">Please enter your API key to continue.</p>`; } return false; } return true; }
+        function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
+        function createButton(text, className, type = 'button') { const button = document.createElement('button'); button.className = className; button.type = type; button.innerHTML = text; return button; }
+        function robustMarkdownToHtml(text) { if (!text) return ''; let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); const paragraphs = html.split('\n').filter(p => p.trim() !== ''); html = ''; let inList = false; paragraphs.forEach(p => { const trimmed = p.trim(); if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${trimmed.substring(2)}</li>`; } else { if (inList) { html += '</ul>'; inList = false; } html += `<p>${p}</p>`; } }); if(inList) { html += '</ul>'; } return html; }
+        function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return robustMarkdownToHtml(text); return '<div class="accordion">' + sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join('') + '</div>'; }
+        function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown ${type} error occurred. Check the console for details.`; const errorMessage = error.message.toLowerCase(); if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`; else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`; else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`; else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`; else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`; else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.'; return `Sorry, something went wrong. ${message}`; }
+        async function handleVisualThemeGeneration() { if (!checkApiKey()) return; const prompt = document.getElementById('theme-prompt').value.trim(); if (!prompt) { showThemeError("Please enter a description for your visual theme."); return; } showThemeLoading(true); const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`; const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`; try { const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]); if (colorResult.status === 'fulfilled') { applyTheme(colorResult.value); } else { showThemeError(generateErrorMessage(colorResult.reason, 'color')); } if (imageResult.status === 'fulfilled') { applyHeaderImage(imageResult.value); } else { showThemeError(generateErrorMessage(imageResult.reason, 'image')); } } catch (error) { showThemeError(generateErrorMessage(error, 'visual theme')); } finally { showThemeLoading(false); } }
+        async function handleExploreInDepth(themeId, themeType) { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); modalTitle.textContent = `Exploring: ${theme.title}`; modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'hinduHolidays', 'buddhistHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(modalFooter, themeId, themeType); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
+        async function handleAIHelpRequest() { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); modalTitle.textContent = "AI Help & Feedback"; modalContent.innerHTML = getLoaderHTML('Generating help and suggestions...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const pageStructure = document.getElementById('main-content').innerText; const prompt = `You are a helpful UI/UX assistant. Based on the text content and structure of the application provided below, please do two things: 1. **Explain How It Works:** Briefly describe the main features of this "AI Yoga Class & Theme Generator" application. 2. **Suggest Improvements:** Offer a few specific, actionable suggestions to improve the user interface (UI) and overall user experience (UX). Structure your response with two main sections using '###' markdown headings: '### How This App Works' and '### UI/UX Improvement Suggestions'. Here is the text content of the app:\n${pageStructure}`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; const exportButton = createButton('Copy Text', 'btn-secondary'); exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget)); modalFooter.appendChild(exportButton); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
+        function addPostGenerationButtons(container, themeId, themeType) { const buttonContainer = document.createElement('div'); buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6'; const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button'); const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto'); copyButton.addEventListener('click', (e) => copyElementTextToClipboard(container.querySelector('.prose-content'), e.currentTarget)); if(container.id !== 'inDepthModalFooter') { const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); exploreButton.dataset.themeId = themeId; exploreButton.dataset.themeType = themeType; buttonContainer.appendChild(exploreButton); } buttonContainer.appendChild(refineButton); buttonContainer.appendChild(copyButton); container.appendChild(buttonContainer); }
+        async function loadDynamicPlaceholders() { if (!apiKey) { return; } try { const prompt = `Generate two short, creative, and distinct yoga class theme ideas to be used as placeholder text in an input field. Return the result as a JSON object with two keys, "theme1" and "theme2". Example: {"theme1": "Embracing the winds of change", "theme2": "Finding stillness in the storm"}`; const jsonText = await callGeminiAPI(prompt); const themes = JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); if (themes.theme1) document.getElementById('theme-prompt').placeholder = `e.g., '${themes.theme1}'`; if (themes.theme2) document.getElementById('gemini-prompt').placeholder = `e.g., '${themes.theme2}'`; } catch (error) { console.error("Could not load dynamic placeholders:", error); } }
         function applyTheme(colors) { Object.keys(colors).forEach(key => { const cssVarName = '--color-' + key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`); root.style.setProperty(cssVarName, colors[key]); }); }
         function applyHeaderImage(imageUrl) { document.getElementById('header-bg-image').style.backgroundImage = `url('${imageUrl}')`; }
         function showThemeLoading(isLoading) { document.getElementById('theme-loader-container').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('flex', isLoading); document.getElementById('generate-theme-btn').disabled = isLoading; document.getElementById('generate-theme-btn').classList.toggle('opacity-50', isLoading); }
         function showThemeError(message) { const el = document.getElementById('theme-error-container'); el.textContent = message; el.classList.remove('hidden'); }
-        function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
+        function getIconForTheme(themeType, themeId) { /* A simple SVG icon system */ const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
+        function getNextHolidayDate(holiday) { const now = new Date(); const currentYear = now.getFullYear(); const [month, day] = holiday.date.split('/').map(Number); let holidayDate = new Date(currentYear, month - 1, day); if (holidayDate < now) { holidayDate.setFullYear(currentYear + 1); } return holidayDate; }
 
-        function createButton(text, className, type = 'button') {
-            const button = document.createElement('button');
-            button.className = className;
-            button.type = type;
-            button.innerHTML = text;
-            return button;
-        }
-
-        function addPostGenerationButtons(container, themeId, themeType) {
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6';
-
-            const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button');
-            const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto');
-            copyButton.addEventListener('click', (e) => copyElementTextToClipboard(container.querySelector('.prose-content'), e.currentTarget));
-            
-            if(container.id !== 'inDepthModalFooter') {
-                const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button');
-                exploreButton.dataset.themeId = themeId;
-                exploreButton.dataset.themeType = themeType;
-                buttonContainer.appendChild(exploreButton);
-            }
-            
-            buttonContainer.appendChild(refineButton);
-            buttonContainer.appendChild(copyButton);
-            container.appendChild(buttonContainer);
-        }
-
-        function toggleRefineUI(buttonContainer) {
-            let refineContainer = buttonContainer.nextElementSibling;
-            if(refineContainer && refineContainer.classList.contains('refine-container')) {
-                refineContainer.remove();
-            } else {
-                refineContainer = document.createElement('div');
-                refineContainer.className = 'refine-container';
-                refineContainer.innerHTML = `
-                    <label class="block text-sm font-medium themed-text-muted mb-1">Refinement Instruction:</label>
-                    <textarea class="w-full p-2 themed-input border rounded-lg refinement-input" rows="2" placeholder="e.g., 'Make it more gentle', 'Add more standing poses'"></textarea>
-                    <button class="btn-primary w-full mt-2 submit-refinement-button">Submit Refinement</button>
-                `;
-                buttonContainer.insertAdjacentElement('afterend', refineContainer);
-            }
-        }
-        
-        function copyElementTextToClipboard(element, button) {
-            if (!element) return;
-            const textToCopy = element.innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                if (button) {
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<span>Copied!</span>';
-                    button.disabled = true;
-                    setTimeout(() => { button.innerHTML = originalText; button.disabled = false; }, 2000);
-                }
-            }).catch(err => console.error('Oops, unable to copy', err));
-        }
-        
-        function populateAllDropdowns() {
-            populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra');
-            populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow');
-            populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season');
-            populateDropdown('styles-select', allThemeData.styles, 'Choose a style', true);
-            populateDropdown('holidays-select', allThemeData.holidays, 'Choose a holiday');
-            populateDropdown('hindu-holidays-select', allThemeData.hinduHolidays, 'Choose a holiday');
-            populateDropdown('buddhist-holidays-select', allThemeData.buddhistHolidays, 'Choose a holiday');
-            populateDropdown('moon-phases-select', allThemeData.moonPhases, 'Choose a phase');
-        }
-
-        function populateDropdown(selectId, data, placeholder, addTooltip = false) {
-            const selectElement = document.getElementById(selectId);
-            if (!selectElement) return;
-            selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
-            data.sort((a, b) => a.title.localeCompare(b.title));
-            data.forEach(theme => {
-                const option = document.createElement('option');
-                option.value = theme.id;
-                option.textContent = theme.title;
-                if (addTooltip) {
-                    option.title = `${theme.founder ? `Founder: ${theme.founder}\n` : ''}${theme.description || theme.explanation || ''}`;
-                }
-                selectElement.appendChild(option);
-            });
-        }
-        
-        function robustMarkdownToHtml(text) {
-            if (!text) return '';
-            let html = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>'); 
-
-            const paragraphs = html.split('\n').filter(p => p.trim() !== '');
-            html = '';
-            let inList = false;
-
-            paragraphs.forEach(p => {
-                const trimmed = p.trim();
-                if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                    if (!inList) {
-                        html += '<ul>';
-                        inList = true;
-                    }
-                    html += `<li>${trimmed.substring(2)}</li>`;
-                } else {
-                    if (inList) {
-                        html += '</ul>';
-                        inList = false;
-                    }
-                    html += `<p>${p}</p>`;
-                }
-            });
-
-            if(inList) {
-                html += '</ul>';
-            }
-            return html;
-        }
-
-        function convertMarkdownToAccordion(text, openFirst = true) {
-            const sections = text.split(/^(?:###) /m).slice(1);
-            if (sections.length === 0) return robustMarkdownToHtml(text);
-            return '<div class="accordion">' + sections.map((section, index) => {
-                const parts = section.split('\n');
-                const title = parts[0].trim().replace(/\*+/g, '');
-                const content = parts.slice(1).join('\n');
-                const isOpen = openFirst && index === 0;
-                return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`;
-            }).join('') + '</div>';
-        }
-
-        function generateErrorMessage(error, type = 'general') {
-            console.error(`Error during ${type} generation:`, error);
-            let message = `An unknown ${type} error occurred. Check the console for details.`;
-            const errorMessage = error.message.toLowerCase();
-            if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`;
-            else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`;
-            else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`;
-            else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`;
-            else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`;
-            else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.';
-            return `Sorry, something went wrong. ${message}`;
-        }
-        
-        // --- Seed Data Functions (Hardcoded data for dropdowns) ---
+        // --- Data ---
         function getModalitiesSeedData() { const csvData = `Modality,Founder/Key Figure,Description\nBhakti Yoga,,"The path of devotion and love."\nJnana Yoga,,"The path of knowledge and wisdom."\nKarma Yoga,,"The path of selfless action."\nRaja Yoga,,"The ""royal path"" of meditation and self-control."\nHatha Yoga,,"A general term for a slower-paced, foundational yoga class."\nTantra Yoga,,"Weaving together the physical and spiritual realms."\nYoga Nidra,,"Yogic sleep for deep relaxation."\nAshtanga Vinyasa Yoga,Sri K. Pattabhi Jois,"A rigorous and physically demanding style."\nIyengar Yoga,B.K.S. Iyengar,"Emphasis on precise anatomical alignment and props."\nViniyoga,T.K.V. Desikachar,"A therapeutic and highly individualized approach."\nSivananda Yoga,Swami Sivananda,"A holistic system based on five principles."\nKripalu Yoga,Swami Kripalu,"A gentle and introspective practice."\nVinyasa Yoga,,"A dynamic and flowing style where movement is synchronized with the breath."\nPower Yoga,,"An athletic and vigorous style of Vinyasa yoga."\nBikram Yoga,,"A specific sequence of 26 postures in a heated room."\nHot Yoga,,"Any style of yoga practiced in a heated environment."\nYin Yoga,,"A slow-paced, passive style where poses are held for longer periods."\nRestorative Yoga,,"A gentle and therapeutic practice that uses props extensively."\nJivamukti Yoga,David Life & Sharon Gannon,"A physically vigorous and intellectually stimulating style."\nAnusara Yoga,John Friend,"Emphasizes ""Universal Principles of Alignment"" and a heart-oriented philosophy."\nKundalini Yoga,Yogi Bhajan,"A dynamic practice to awaken energy at the base of the spine."\nAcroYoga,,"A partner-based practice blending yoga and acrobatics."\nAerial Yoga,,"Uses a silk hammock to support the body in various postures."\nChair Yoga,,"A modified form of yoga practiced while sitting in a chair."\nPrenatal Yoga,,"A gentle style designed specifically for pregnant women."\nForrest Yoga,Ana T. Forrest,"An intensely physical and internally focused style."`; const lines = csvData.trim().split('\n').slice(1); return lines.map(line => { const [title, founder, description] = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(field => field.trim().replace(/^"|"$/g, '')); return { id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: title, founder: founder, description: description }; }); }
         function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root)", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability." }, { id: "svadhisthana", title: "Svadhisthana (Sacral)", explanation: "Unleash your creative potential and embrace the flow of life." }, { id: "manipura", title: "Manipura (Solar Plexus)", explanation: "This empowering class is dedicated to activating the center of our personal power and self-esteem." }, { id: "anahata", title: "Anahata (Heart)", explanation: "Cultivate love, compassion, and connection in this heart-opening class." }, { id: "vishuddha", title: "Vishuddha (Throat)", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra." }, { id: "ajna", title: "Ajna (Third Eye)", explanation: "This introspective class is designed to awaken the center of intuition and inner wisdom." }, { id: "sahasrara", title: "Sahasrara (Crown)", explanation: "Experience a sense of unity and connection to something greater than yourself." } ]; }
         function getMeridiansSeedData() { return [ { id: "lung-large-intestine", title: "Lung & Large Intestine", explanation: "This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release." }, { id: "stomach-spleen", title: "Stomach & Spleen", explanation: "This grounding class uses poses that stretch the front of the body and stabilize the core to aid digestion and nourishment." }, { id: "heart-small-intestine", title: "Heart & Small Intestine", explanation: "This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders to cultivate joy." }, { id: "kidney-bladder", title: "Kidney & Bladder", explanation: "This deep, restorative class uses forward folds and gentle backbends to tap into our life force." }, { id: "pericardium-triple-burner", title: "Pericardium & Triple Burner", explanation: "This class focuses on creating healthy boundaries and balancing the body's systems." }, { id: "liver-gallbladder", title: "Liver & Gallbladder", explanation: "This dynamic class uses twists and side-body stretches to help with planning and decisiveness." } ]; }
-        function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox", explanation: "This class focuses on renewal, growth, and setting new intentions for the season of awakening." }, { id: "summer-solstice", title: "Summer Solstice", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class." }, { id: "autumn-equinox", title: "Autumn Equinox", explanation: "This class encourages introspection, balance, and the art of letting go of what no longer serves us." }, { id: "winter-solstice", title: "Winter Solstice", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class." } ]; }
-        function getHolidaysSeedData() { return [ { id: "new-years-day", title: "New Year's Day", explanation: "A practice to set intentions, release the old, and welcome new beginnings." }, { id: "martin-luther-king-jr-day", title: "Martin Luther King, Jr. Day", explanation: "A practice focused on equality, justice, and compassionate action." }, { id: "valentines-day", title: "Valentine's Day", explanation: "A heart-opening practice to cultivate self-love and connection with others." }, { id: "presidents-day", title: "Presidents' Day", explanation: "A practice to cultivate leadership qualities like integrity and clarity." }, { id: "st-patricks-day", title: "St. Patrick's Day", explanation: "A playful practice focused on luck, abundance, and finding the pot of gold within." }, { id: "easter", title: "Easter", explanation: "A practice themed around renewal, rebirth, and new possibilities." }, { id: "mothers-day", title: "Mother's Day", explanation: "A nurturing practice to honor the divine feminine and motherly energy." }, { id: "memorial-day", title: "Memorial Day", explanation: "A practice of remembrance, gratitude, and honoring sacrifice." }, { id: "fathers-day", title: "Father's Day", explanation: "A practice to cultivate strength, stability, and supportive energy." }, { id: "juneteenth", title: "Juneteenth", explanation: "A practice centered on freedom, liberation, and celebrating progress." }, { id: "independence-day", title: "Independence Day (4th of July)", explanation: "A practice celebrating freedom, inner fire, and joyful expression." }, { id: "labor-day", title: "Labor Day", explanation: "A practice to honor our work, find balance, and enjoy the fruits of our labor." }, { id: "halloween", title: "Halloween", explanation: "A practice to play with shadows, embrace transformation, and reveal our true selves." }, { id: "veterans-day", title: "Veterans Day", explanation: "A practice of gratitude and respect for those who have served." }, { id: "thanksgiving", title: "Thanksgiving", explanation: "A practice overflowing with gratitude, abundance, and mindful consumption." }, { id: "christmas", title: "Christmas", explanation: "A practice of peace, joy, and connecting to the light within." } ]; }
-        function getHinduHolidaysSeedData() { return [ { id: "diwali", title: "Diwali", explanation: "The festival of lights, celebrating the victory of light over darkness and good over evil." }, { id: "holi", title: "Holi", explanation: "The festival of colors, celebrating spring, love, and new life." }, { id: "navaratri", title: "Navaratri", explanation: "A nine-night festival dedicated to the worship of the goddess Durga." }, { id: "raksha-bandhan", title: "Raksha Bandhan", explanation: "Celebrating the bond between brothers and sisters." }, { id: "ganesh-chaturthi", title: "Ganesh Chaturthi", explanation: "Celebrating the birth of Lord Ganesha, the remover of obstacles." }, { id: "janmashtami", title: "Janmashtami", explanation: "Celebrating the birth of Lord Krishna." }, { id: "maha-shivaratri", title: "Maha Shivaratri", explanation: "The great night of Shiva, a day of introspection and meditation." } ]; }
-        function getBuddhistHolidaysSeedData() { return [ { id: "vesak", title: "Vesak (Buddha Day)", explanation: "Commemorating the birth, enlightenment, and death of Gautama Buddha." }, { id: "dharma-day", title: "Dharma Day (Asalha Puja)", explanation: "Commemorates the Buddha's first sermon." }, { id: "sangha-day", title: "Sangha Day (Magha Puja)", explanation: "Commemorates the first gathering of the Buddha's enlightened disciples." }, { id: "parinirvana-day", title: "Parinirvana Day", explanation: "Observes the death of the Buddha and his attainment of final nirvana." }, { id: "bodhi-day", title: "Bodhi Day", explanation: "Commemorating the day that the historical Buddha experienced enlightenment." } ]; }
+        // UPDATED with dates for sorting
+        function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox", date: "03/20", explanation: "This class focuses on renewal, growth, and setting new intentions for the season of awakening." }, { id: "summer-solstice", title: "Summer Solstice", date: "06/20", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class." }, { id: "autumn-equinox", title: "Autumn Equinox", date: "09/22", explanation: "This class encourages introspection, balance, and the art of letting go of what no longer serves us." }, { id: "winter-solstice", title: "Winter Solstice", date: "12/21", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class." } ]; }
+        function getHolidaysSeedData() { return [ { id: "new-years-day", title: "New Year's Day", date: "01/01", explanation: "A practice to set intentions, release the old, and welcome new beginnings." }, { id: "martin-luther-king-jr-day", title: "Martin Luther King, Jr. Day", date: "01/20", explanation: "A practice focused on equality, justice, and compassionate action." }, { id: "valentines-day", title: "Valentine's Day", date: "02/14", explanation: "A heart-opening practice to cultivate self-love and connection with others." }, { id: "presidents-day", title: "Presidents' Day", date: "02/17", explanation: "A practice to cultivate leadership qualities like integrity and clarity." }, { id: "st-patricks-day", title: "St. Patrick's Day", date: "03/17", explanation: "A playful practice focused on luck, abundance, and finding the pot of gold within." }, { id: "easter", title: "Easter", date: "04/20", explanation: "A practice themed around renewal, rebirth, and new possibilities." }, { id: "mothers-day", title: "Mother's Day", date: "05/11", explanation: "A nurturing practice to honor the divine feminine and motherly energy." }, { id: "memorial-day", title: "Memorial Day", date: "05/26", explanation: "A practice of remembrance, gratitude, and honoring sacrifice." }, { id: "juneteenth", title: "Juneteenth", date: "06/19", explanation: "A practice centered on freedom, liberation, and celebrating progress." }, { id: "fathers-day", title: "Father's Day", date: "06/15", explanation: "A practice to cultivate strength, stability, and supportive energy." }, { id: "independence-day", title: "Independence Day (4th of July)", date: "07/04", explanation: "A practice celebrating freedom, inner fire, and joyful expression." }, { id: "labor-day", title: "Labor Day", date: "09/01", explanation: "A practice to honor our work, find balance, and enjoy the fruits of our labor." }, { id: "halloween", title: "Halloween", date: "10/31", explanation: "A practice to play with shadows, embrace transformation, and reveal our true selves." }, { id: "veterans-day", title: "Veterans Day", date: "11/11", explanation: "A practice of gratitude and respect for those who have served." }, { id: "thanksgiving", title: "Thanksgiving", date: "11/27", explanation: "A practice overflowing with gratitude, abundance, and mindful consumption." }, { id: "christmas", title: "Christmas", date: "12/25", explanation: "A practice of peace, joy, and connecting to the light within." } ]; }
+        function getHinduHolidaysSeedData() { return [ { id: "diwali", title: "Diwali", date: "10/20", explanation: "The festival of lights, celebrating the victory of light over darkness and good over evil." }, { id: "holi", title: "Holi", date: "03/14", explanation: "The festival of colors, celebrating spring, love, and new life." }, { id: "navaratri", title: "Navaratri", date: "09/22", explanation: "A nine-night festival dedicated to the worship of the goddess Durga." }, { id: "raksha-bandhan", title: "Raksha Bandhan", date: "08/19", explanation: "Celebrating the bond between brothers and sisters." }, { id: "ganesh-chaturthi", title: "Ganesh Chaturthi", date: "08/27", explanation: "Celebrating the birth of Lord Ganesha, the remover of obstacles." }, { id: "janmashtami", title: "Janmashtami", date: "08/26", explanation: "Celebrating the birth of Lord Krishna." }, { id: "maha-shivaratri", title: "Maha Shivaratri", date: "02/26", explanation: "The great night of Shiva, a day of introspection and meditation." } ]; }
+        function getBuddhistHolidaysSeedData() { return [ { id: "vesak", title: "Vesak (Buddha Day)", date: "05/12", explanation: "Commemorating the birth, enlightenment, and death of Gautama Buddha." }, { id: "dharma-day", title: "Dharma Day (Asalha Puja)", date: "07/11", explanation: "Commemorates the Buddha's first sermon." }, { id: "sangha-day", title: "Sangha Day (Magha Puja)", date: "02/12", explanation: "Commemorates the first gathering of the Buddha's enlightened disciples." }, { id: "parinirvana-day", title: "Parinirvana Day", date: "02/15", explanation: "Observes the death of the Buddha and his attainment of final nirvana." }, { id: "bodhi-day", title: "Bodhi Day", date: "12/08", explanation: "Commemorating the day that the historical Buddha experienced enlightenment." } ]; }
         function getMoonPhasesSeedData() { return [ { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." }, { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." }, { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." }, { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." }, { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." }, { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." }, { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." }, { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." } ]; }
     </script>
 </body>
-</html>
+</ht
