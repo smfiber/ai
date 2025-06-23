@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v2.3</title>
+    <title>Yoga Class Themer v2.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -176,7 +176,7 @@
                 </h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Find inspiration for your next 1-hour yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.3</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.4</div>
         </header>
 
         <!-- Rounded Canvas for Cards -->
@@ -255,12 +255,20 @@
                         </div>
                     </div>
 
-                    <!-- Breathwork Card -->
+                    <!-- Yoga Styles Card -->
                     <div class="card">
                         <div class="p-8 card-content">
-                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Breathwork Library</h2>
-                            <p class="mb-6 text-gray-600">Explore powerful breathing techniques from various modalities to deepen your practice.</p>
-                            <button id="generate-breathwork-btn" class="btn-primary w-full mt-auto">Generate Breathwork Techniques</button>
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Yoga Styles</h2>
+                            <p class="mb-6 text-gray-600">Base your class around the principles of a specific yoga style.</p>
+                            
+                            <div class="mb-6 mt-auto">
+                                <label for="styles-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Yoga Style:</label>
+                                <select id="styles-select" data-theme-type="styles" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <option value="">-- Choose a style --</option>
+                                </select>
+                            </div>
+
+                            <div id="styles-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
 
@@ -271,8 +279,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 2.3 ---
+        // --- App Version: 2.4 ---
         // Changelog:
+        // v2.4: Added "Yoga Styles" theme card with seed data and UI functionality. Replaced the "Breathwork Library" card.
         // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number. Enhanced in-depth modal with accordion layout and fixed rendering.
         // v2.2: Adjusted AI prompt and rendering function for better readability.
         // v2.1: Added Affirmations, Poem, and Quotations to the main AI theme generator.
@@ -302,7 +311,8 @@
         const allThemeData = {
             chakras: getChakrasSeedData(),
             meridians: getMeridiansSeedData(),
-            seasons: getSeasonsSeedData()
+            seasons: getSeasonsSeedData(),
+            styles: getYogaStylesSeedData()
         };
 
         // --- App Initialization ---
@@ -310,6 +320,7 @@
             populateChakrasDropdown();
             populateMeridianDropdown();
             populateSeasonsDropdown();
+            populateStylesDropdown();
             
             initializeFirebase();
             setupEventListeners();
@@ -337,7 +348,8 @@
             await Promise.all([
                 seedCollection('public_themes/chakras/themes', allThemeData.chakras),
                 seedCollection('public_themes/meridians/themes', allThemeData.meridians),
-                seedCollection('public_themes/seasons/themes', allThemeData.seasons)
+                seedCollection('public_themes/seasons/themes', allThemeData.seasons),
+                seedCollection('public_themes/styles/themes', allThemeData.styles)
             ]);
         }
 
@@ -361,8 +373,8 @@
             document.getElementById('chakras-select').addEventListener('change', handleDropdownSelect);
             document.getElementById('meridian-select').addEventListener('change', handleDropdownSelect);
             document.getElementById('seasons-select').addEventListener('change', handleDropdownSelect);
+            document.getElementById('styles-select').addEventListener('change', handleDropdownSelect);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
-            document.getElementById('generate-breathwork-btn').addEventListener('click', handleBreathworkGenerate);
             
             const modal = document.getElementById('inDepthModal');
             modal.addEventListener('click', (e) => {
@@ -468,36 +480,6 @@ Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. U
             } catch (error) {
                 console.error("Error calling Gemini API for main theme:", error);
                 resultContainer.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.</p>`;
-            }
-        }
-
-        async function handleBreathworkGenerate() {
-            if (!geminiApiKey) {
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                return;
-            }
-            const modal = document.getElementById('inDepthModal');
-            const modalTitle = document.getElementById('inDepthModalTitle');
-            const modalContent = document.getElementById('inDepthModalContent');
-
-            modalTitle.textContent = `Breathwork Techniques`;
-            modalContent.innerHTML = '<p class="text-center">Generating breathwork library... ✨</p>';
-            modal.classList.remove('hidden');
-
-            const prompt = `
-Based on your comprehensive knowledge of breathwork, generate 5 distinct breathing techniques from various modalities. For each technique, please provide:
-1.  **Name of the Technique:** The common name for the practice.
-2.  **Modality of Origin:** Clearly state the modality it comes from (e.g., Pranayama, Holotropic Breathwork, Wim Hof Method, Buteyko, etc.).
-3.  **Instructional Process:** Write a clear, step-by-step process for a yoga instructor to guide a student through this technique. Use simple, direct language.
-
-Format the entire response in Markdown, with a clear heading for each of the 5 techniques.
-`;
-            try {
-                const text = await callGeminiAPI(prompt);
-                modalContent.innerHTML = convertMarkdownToAccordion(text, false);
-            } catch (error) {
-                console.error(`Error calling Gemini API for breathwork:`, error);
-                modalContent.innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the techniques. Please check the console for more information.</p>`;
             }
         }
         
@@ -607,6 +589,7 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
         function populateChakrasDropdown() { populateDropdown('chakras-select', allThemeData.chakras, 'Choose a chakra'); }
         function populateMeridianDropdown() { populateDropdown('meridian-select', allThemeData.meridians, 'Choose a flow'); }
         function populateSeasonsDropdown() { populateDropdown('seasons-select', allThemeData.seasons, 'Choose a season'); }
+        function populateStylesDropdown() { populateDropdown('styles-select', allThemeData.styles, 'Choose a style'); }
 
         function displayThemeDetails(theme, container, themeType) {
             if (!theme) {
@@ -735,6 +718,7 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
         function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root): Grounding and Stability", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability. We will focus on poses that strengthen the legs and connect the feet to the ground, cultivating a feeling of being rooted and supported. The gratitude theme centers on appreciating the foundational aspects of life: our bodies, our homes, and the earth that sustains us.", oils: "Cedarwood, Vetiver, Patchouli", ideas: { "Poses": "Mountain Pose, Warrior I & II, Tree Pose, Standing Forward Bend.", "Breathwork": "Deep, slow belly breathing.", "Meditation": "A guided meditation focused on visualizing roots growing from the feet into the earth.", "Mantra": "I am grounded, I am safe, I am grateful." } }, { id: "svadhisthana", title: "Svadhisthana (Sacral): Flowing with Creativity", explanation: "Unleash your creative potential and embrace the flow of life with this class centered on the sacral chakra. Through fluid movements and hip-opening postures, we will tap into our emotional intelligence and cultivate a sense of joy and abundance. The gratitude theme is for the gifts of creativity, pleasure, and emotional expression.", oils: "Orange, Ylang Ylang, Clary Sage", ideas: { "Poses": "Cat-Cow, Goddess Pose, Pigeon Pose, Bound Angle Pose.", "Breathwork": "Circular breathing to mimic the flow of water.", "Meditation": "A visualization of a flowing river, washing away creative blocks.", "Mantra": "I flow with creativity and grace. I am grateful for the sweetness of life." } }, { id: "manipura", title: "Manipura (Solar Plexus): Igniting Personal Power", explanation: "This empowering class is dedicated to activating the solar plexus chakra, the center of our personal power, self-esteem, and determination. Through core-strengthening poses and dynamic sequences, we will build inner fire and confidence. The gratitude theme focuses on acknowledging our inner strength, courage, and ability to manifest our intentions.", oils: "Lemon, Ginger, Peppermint", ideas: { "Poses": "Boat Pose, Plank Pose, Warrior III, Sun Salutations.", "Breathwork": "Breath of Fire (Kapalabhati).", "Meditation": "A meditation on the inner sun, radiating warmth and confidence.", "Mantra": "I am powerful, I am confident, I am grateful for my inner fire." } }, { id: "anahata", title: "Anahata (Heart): Opening to Love and Compassion", explanation: "Cultivate love, compassion, and connection in this heart-opening class focused on the Anahata chakra. Through chest-opening postures and practices of loving-kindness, we will dissolve emotional barriers and foster a sense of unity with all beings. The gratitude theme is for the love we give and receive, and the boundless compassion within us.", oils: "Rose, Geranium, Bergamot", ideas: { "Poses": "Camel Pose, Cobra Pose, Upward-Facing Dog, Bridge Pose.", "Breathwork": "Breathing into the heart space.", "Meditation": "A loving-kindness (Metta) meditation.", "Mantra": "My heart is open. I am grateful for the power of love." } }, { id: "vishuddha", title: "Vishuddha (Throat): Expressing Authentic Truth", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra. We will work with poses that open the neck and shoulders, encouraging clear communication and authentic self-expression. The gratitude theme is for the ability to communicate honestly, listen with compassion, and express our unique creativity.", oils: "Lavender, Eucalyptus, Roman Chamomile", ideas: { "Poses": "Fish Pose, Shoulder Stand, Plow Pose, Cat-Cow with neck movements.", "Breathwork": "Ujjayi breath (victorious breath).", "Meditation": "A meditation on finding and speaking one's truth.", "Mantra": "I speak my truth with clarity and grace. I am grateful for my authentic voice." } }, { id: "ajna", title: "Ajna (Third Eye): Cultivating Intuition", explanation: "This introspective class is designed to awaken the third eye chakra, the center of intuition, insight, and inner wisdom. Through focused gaze (drishti), meditation, and poses that stimulate the pineal gland, we will learn to trust our inner guidance. The gratitude theme is for the gift of intuition and the clarity it brings to our lives.", oils: "Frankincense, Sandalwood, Rosemary", ideas: { "Poses": "Child's Pose with forehead on the mat, Downward-Facing Dog, Seated Meditation.", "Breathwork": "Alternate Nostril Breathing (Nadi Shodhana).", "Meditation": "A third-eye meditation, focusing on the space between the eyebrows.", "Mantra": "I trust my intuition. I am grateful for my inner wisdom." } }, { id: "sahasrara", title: "Sahasrara (Crown): Connecting to Consciousness", explanation: "Experience a sense of unity and connection to something greater than yourself in this class focused on the crown chakra. Through meditation, inversions, and practices that quiet the ego, we will tap into a state of pure awareness and spiritual connection. The gratitude theme is for our connection to the divine and the infinite wisdom of the universe.", oils: "Frankincense, Myrrh, Neroli", ideas: { "Poses": "Headstand (or variations), Lotus Pose (or other meditative seats), Savasana.", "Breathwork": "Silent, mindful breathing.", "Meditation": "A meditation on universal consciousness and oneness.", "Mantra": "I am connected to all that is. I am grateful for this divine connection." } } ]; }
         function getMeridiansSeedData() { return [ { id: "lung-large-intestine", title: "Lung & Large Intestine: Embracing Grief & Letting Go", explanation: "In TCM, the Lung meridian (Yin) governs the intake of pure Qi and is associated with inspiration and the emotion of grief. Its partner, the Large Intestine meridian (Yang), is responsible for releasing waste. This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release.", oils: "Eucalyptus, Cypress, Frankincense", ideas: { "Poses": "Cow Face Pose (arms), Humble Warrior, Fish Pose, Reclined Spinal Twist.", "Breathwork": "Deep diaphragmatic breathing with a focus on long, complete exhales.", "Gratitude Focus": "Gratitude for the breath and the freedom of releasing burdens." }}, { id: "stomach-spleen", title: "Stomach & Spleen: Nourishing Ourselves", explanation: "This pair is central to digestion and nourishment. The Stomach meridian (Yang) processes food and information, while the Spleen meridian (Yin) transforms it into usable energy (Qi). Imbalance can lead to worry. This grounding class uses poses that stretch the front of the body and stabilize the core.", oils: "Ginger, Fennel, Rosemary", ideas: { "Poses": "Hero's Pose, Saddle Pose (Yin), Low Lunge, and gentle core work like Cat-Cow.", "Breathwork": "Deep belly breathing to gently massage the digestive organs.", "Gratitude Focus": "Gratitude for the earth's bounty and our ability to digest life's experiences." }}, { id: "heart-small-intestine", title: "Heart & Small Intestine: Cultivating Joy & Clarity", explanation: "The Heart meridian (Yin) houses the 'Shen' or Spirit and is associated with joy and love. Its partner, the Small Intestine meridian (Yang), provides clarity by separating the pure from the impure. This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders.", oils: "Rose, Bergamot, Neroli", ideas: { "Poses": "Wild Thing, Dancer's Pose, Camel Pose, Eagle Pose arms.", "Breathwork": "Breathing into the heart space; practicing loving-kindness (Metta) breath.", "Gratitude Focus": "Gratitude for connections that bring joy and inner wisdom." }}, { id: "kidney-bladder", title: "Kidney & Bladder: Accessing Willpower & Wisdom", explanation: "This pair relates to our fundamental life force. The Kidney meridian (Yin) stores our 'Jing' or life essence and governs willpower. The Bladder meridian (Yang) is the longest meridian, helping us manifest our potential. This deep, restorative class uses forward folds and gentle backbends.", oils: "Myrrh, Cedarwood, Juniper Berry", ideas: { "Poses": "Caterpillar (Yin), Seated Forward Bend, Sphinx and Seal Pose, Butterfly.", "Breathwork": "Slow, deep breathing into the low back (the area of the 'Ming Men').", "Gratitude Focus": "Gratitude for our endurance, inner strength, and the power of rest." }}, { id: "pericardium-triple-burner", title: "Pericardium & Triple Burner: Protecting the Heart", explanation: "The Pericardium (Yin) is the heart's protector, governing our intimate relationships. The Triple Burner (Yang) regulates temperature and the flow of Qi and fluids. This class focuses on creating healthy boundaries and balancing the body's systems.", oils: "Geranium, Spikenard, Vetiver", ideas: { "Poses": "Prayer Pose behind the back, Thread the Needle, and full-body flows like Sun Salutations.", "Breathwork": "Sama Vritti (Equal Ratio Breathing) to promote balance.", "Gratitude Focus": "Gratitude for healthy boundaries and our body's innate ability to maintain equilibrium." }}, { id: "liver-gallbladder", title: "Liver & Gallbladder: Finding Vision & Action", explanation: "This pair is the master planner and decision-maker. The Liver meridian (Yin) ensures the smooth flow of Qi and governs our ability to plan. The Gallbladder meridian (Yang) governs decisiveness and courage. This dynamic class uses twists and side-body stretches.", oils: "Lemon, Rosemary, Peppermint", ideas: { "Poses": "Gate Pose, Revolved Triangle, Side Angle Pose, Pigeon Pose, Lizard Lunge.", "Breathwork": "A cleansing breath like Breath of Fire (Kapalabhati), followed by smooth Ujjayi.", "Gratitude Focus": "Gratitude for our dreams and the personal power to move forward." }} ]; }
         function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox: Renewal and Rebirth", explanation: "As nature awakens from its winter slumber, this class focuses on renewal, growth, and setting new intentions. We will incorporate detoxifying twists, energizing flows, and heart-opening poses to welcome the fresh energy of spring.", oils: "Lemon (cleansing), Grapefruit (uplifting), Peppermint (energizing)", ideas: { "Poses": "Sun Salutations with twists, Revolved Chair Pose, Sprouting Seed (a creative flow from child's pose to upward salute).", "Breathwork": "Kapalabhati (Skull Shining Breath) for cleansing.", "Meditation": "A guided meditation on planting seeds of intention for the coming season.", "Gratitude Focus": "Gratitude for the return of light and the opportunity for a fresh start." }}, { id: "summer-solstice", title: "Summer Solstice: Radiance and Vitality", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class. We will embrace the fire element with dynamic sequences, heart-opening backbends, and playful balancing poses.", oils: "Bergamot (joyful), Ylang Ylang (euphoric), Jasmine (uplifting)", ideas: { "Poses": "Wild Thing, Dancer's Pose, Wheel Pose, Handstand variations.", "Breathwork": "Ujjayi breath to build internal heat.", "Meditation": "A meditation on the inner sun, radiating light and vitality.", "Gratitude Focus": "Gratitude for peak experiences, abundance, and the life-giving energy of the sun." }}, { id: "autumn-equinox", title: "Autumn Equinox: Balance and Letting Go", explanation: "As the days grow shorter, this class encourages introspection, balance, and the art of letting go. We will focus on grounding poses, mindful transitions, and forward folds to release what no longer serves us.", oils: "Cedarwood (grounding), Frankincense (introspective), Cypress (transitional)", ideas: { "Poses": "Standing Forward Bend, Seated Forward Bend, Eagle Pose, a 'Falling Leaves' flow with gentle, flowing movements.", "Breathwork": "Alternate Nostril Breathing (Nadi Shodhana) for balance.", "Meditation": "A guided meditation on releasing old patterns and embracing change.", "Gratitude Focus": "Gratitude for the abundance in our lives and the wisdom that comes from letting go." }}, { id: "winter-solstice", title: "Winter Solstice: Rest and Restoration", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class. We will embrace the stillness of winter with long-held yin poses, gentle stretches, and guided relaxation to replenish our energy reserves.", oils: "Lavender (calming), Sandalwood (meditative), Myrrh (restorative)", ideas: { "Poses": "Yin poses such as Sleeping Swan (Pigeon), Caterpillar (Seated Forward Bend), and Reclining Twist.", "Breathwork": "Deep, diaphragmatic breathing to calm the nervous system.", "Meditation": "Yoga Nidra (yogic sleep) for deep relaxation.", "Gratitude Focus": "Gratitude for the gift of rest, the opportunity for introspection, and the promise of returning light." }} ]; }
+        function getYogaStylesSeedData() { return [ { id: "vinyasa", title: "Vinyasa: Breath-Synchronized Flow", explanation: "A dynamic and fluid style of yoga, where poses are linked together with the breath. Vinyasa classes are known for their variety and creativity, building heat, strength, and flexibility.", oils: "Peppermint, Orange, Eucalyptus", ideas: { "Focus": "Continuous movement and smooth transitions.", "Poses": "Sun Salutation A & B, Warrior series, Chaturanga Dandasana, Crow Pose.", "Breathwork": "Ujjayi (Victorious) Breath throughout the practice.", "Mantra": "I flow with the rhythm of my breath and life." } }, { id: "hatha", title: "Hatha: Foundational Poses & Alignment", explanation: "Hatha is a general term for any type of physical yoga. In modern practice, it often refers to a slower-paced class focused on holding foundational poses to learn proper alignment and breathing.", oils: "Sandalwood, Lavender, Cedarwood", ideas: { "Focus": "Mindful alignment and holding postures.", "Poses": "Mountain Pose, Warrior II, Triangle Pose, Bridge Pose, Seated Forward Bend.", "Breathwork": "Natural, deep diaphragmatic breathing in each pose.", "Mantra": "I am steady, comfortable, and balanced." } }, { id: "yin", title: "Yin: Deep Connective Tissue Release", explanation: "A slow, meditative style of yoga where passive poses are held for several minutes. Yin yoga targets the deep connective tissues, like ligaments and fascia, to increase flexibility and encourage a state of release.", oils: "Frankincense, Myrrh, Patchouli", ideas: { "Focus": "Long holds, stillness, and mindful sensation.", "Poses": "Caterpillar Pose, Butterfly Pose, Dragon Pose, Sphinx Pose.", "Breathwork": "Slow, soft, and receptive breathing.", "Mantra": "I soften, I release, I let go." } }, { id: "restorative", title: "Restorative: Conscious Relaxation", explanation: "A practice of deep rest that uses props like bolsters, blankets, and blocks to support the body completely. Restorative yoga is designed to calm the nervous system and promote healing.", oils: "Chamomile, Lavender, Bergamot", ideas: { "Focus": "Total relaxation and support.", "Poses": "Supported Child's Pose, Supported Bridge Pose, Legs-Up-The-Wall, Reclining Bound Angle.", "Breathwork": "Natural, effortless breathing.", "Mantra": "I allow myself to rest and be restored." } }, { id: "ashtanga", title: "Ashtanga: Disciplined & Structured Series", explanation: "A physically demanding style of yoga that follows a specific, set sequence of postures. Ashtanga builds internal heat, purifies the body, and develops a strong, disciplined practice.", oils: "Tea Tree, Eucalyptus, Lemongrass", ideas: { "Focus": "Adherence to a set sequence, bandhas, and drishti.", "Poses": "Primary Series postures (e.g., Marichyasana A-D, Navasana).", "Breathwork": "Ujjayi breath with a specific count for each movement.", "Mantra": "I am disciplined, strong, and focused." } } ]; }
     </script>
 </body>
 </html>
