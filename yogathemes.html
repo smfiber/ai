@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v2.4</title>
+    <title>Yoga Class Themer v2.4.1</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -176,7 +176,7 @@
                 </h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Find inspiration for your next 1-hour yoga class.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.4</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.4.1</div>
         </header>
 
         <!-- Rounded Canvas for Cards -->
@@ -279,8 +279,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 2.4 ---
+        // --- App Version: 2.4.1 ---
         // Changelog:
+        // v2.4.1: Improved error handling for Gemini API calls to provide better user feedback on network or service issues.
         // v2.4: Added "Yoga Styles" theme card with seed data and UI functionality. Replaced the "Breathwork Library" card.
         // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number. Enhanced in-depth modal with accordion layout and fixed rendering.
         // v2.2: Adjusted AI prompt and rendering function for better readability.
@@ -479,7 +480,15 @@ Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. U
                 renderAIGeneratedTabs(text, resultContainer);
             } catch (error) {
                 console.error("Error calling Gemini API for main theme:", error);
-                resultContainer.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.</p>`;
+                let errorMessage = 'Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.';
+                if (error.message.includes('503') || error.message.includes('500')) {
+                    errorMessage = 'The AI service is temporarily unavailable. Please try again later.';
+                } else if (error.message.includes('400')) {
+                     errorMessage = 'There was a problem with the request (Bad Request). Please check your input and try again.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'A network error occurred. Please check your connection and try again.';
+                }
+                resultContainer.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
             }
         }
         
@@ -548,7 +557,15 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 document.getElementById('ai-generated-content').innerHTML = convertMarkdownToAccordion(text);
             } catch (error) {
                 console.error(`Error calling Gemini API for in-depth theme "${theme.title}":`, error);
-                document.getElementById('ai-generated-content').innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the detailed guide. Please check the console.</p>`;
+                let errorMessage = 'Sorry, something went wrong generating the detailed guide. Please ensure your API key is correct and try again.';
+                if (error.message.includes('503') || error.message.includes('500')) {
+                    errorMessage = 'The AI service is temporarily unavailable. Please try again later.';
+                } else if (error.message.includes('400')) {
+                     errorMessage = 'There was a problem with the request. Please check the theme and try again.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'A network error occurred. Please check your connection and try again.';
+                }
+                document.getElementById('ai-generated-content').innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
             }
         }
 
@@ -561,7 +578,7 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                const errorBody = await response.json();
+                const errorBody = await response.text(); // Use .text() in case response is not valid JSON
                 console.error("API Error Response:", errorBody);
                 throw new Error(`API request failed with status ${response.status}`);
             }
