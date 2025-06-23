@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yoga Class Themer v2.2</title>
+    <title>Yoga Class Themer v2.3</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -70,6 +70,24 @@
         .prose li {
             margin-bottom: 0.5rem;
         }
+        /* Styles for AI results tabs */
+        .ai-tabs .tab-button {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: #6b7280; /* Gray 500 */
+            font-weight: 500;
+        }
+        .ai-tabs .tab-button.active {
+            color: #9333ea; /* Purple 600 */
+            border-color: #9333ea;
+        }
+        .ai-tabs .tab-content {
+            display: none;
+        }
+        .ai-tabs .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-purple-50 text-gray-800">
@@ -118,6 +136,7 @@
                 </h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Find inspiration for your next 1-hour yoga class.</p>
             </div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.3</div>
         </header>
 
         <!-- Rounded Canvas for Cards -->
@@ -137,14 +156,14 @@
                             <button type="submit" class="btn-primary w-full">Generate AI Theme</button>
                         </form>
                         
-                        <div id="gemini-result" class="mt-6 prose max-w-none text-gray-700">
-                            <!-- AI-generated theme will appear here -->
+                        <div id="gemini-result-container" class="mt-6 text-gray-700">
+                             <!-- New AI results layout will appear here -->
                         </div>
                     </div>
                 </div>
 
                 <!-- Grid for Theme Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                      <!-- Chakras Card -->
                     <div class="card">
                         <div class="p-8 card-content">
@@ -195,6 +214,16 @@
                             <div id="seasons-details" class="details-container prose max-w-none text-gray-700"></div>
                         </div>
                     </div>
+
+                    <!-- Breathwork Card -->
+                    <div class="card">
+                        <div class="p-8 card-content">
+                            <h2 class="text-2xl font-bold mb-2 text-purple-600">Breathwork Library</h2>
+                            <p class="mb-6 text-gray-600">Explore powerful breathing techniques from various modalities to deepen your practice.</p>
+                            <button id="generate-breathwork-btn" class="btn-primary w-full mt-auto">Generate Breathwork Techniques</button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </main>
@@ -202,11 +231,12 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- App Version: 2.2 ---
+        // --- App Version: 2.3 ---
         // Changelog:
-        // v2.2: Adjusted AI prompt and rendering function to add more vertical spacing in generated content for better readability.
-        // v2.1: Added Affirmations, Poem, and Quotations to the main AI theme generator for more creative depth.
-        // v2.0: Added "Explore in Depth" feature with a dedicated modal for detailed AI generation on preset themes.
+        // v2.3: Modernized AI result UX with a tabbed interface. Added a "Breathwork" theme generator. Updated poem prompt to source from published spiritualists. Displayed version number.
+        // v2.2: Adjusted AI prompt and rendering function for better readability.
+        // v2.1: Added Affirmations, Poem, and Quotations to the main AI theme generator.
+        // v2.0: Added "Explore in Depth" feature with a dedicated modal for detailed AI generation.
     
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -290,6 +320,7 @@
             document.getElementById('meridian-select').addEventListener('change', handleMeridianSelect);
             document.getElementById('seasons-select').addEventListener('change', handleSeasonSelect);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
+            document.getElementById('generate-breathwork-btn').addEventListener('click', handleBreathworkGenerate);
             
             document.getElementById('closeInDepthModal').addEventListener('click', () => {
                 document.getElementById('inDepthModal').classList.add('hidden');
@@ -299,6 +330,19 @@
                 if (e.target.classList.contains('explore-button')) {
                     const themeTitle = e.target.dataset.themeTitle;
                     handleExploreInDepth(themeTitle);
+                }
+            });
+
+            // Event delegation for dynamically created tabs
+            document.getElementById('gemini-result-container').addEventListener('click', (e) => {
+                if (e.target.matches('.tab-button')) {
+                    const tabContainer = e.target.closest('.ai-tabs');
+                    tabContainer.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    tabContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    const targetContentId = e.target.dataset.target;
+                    document.getElementById(targetContentId).classList.add('active');
                 }
             });
         }
@@ -333,7 +377,7 @@
                 return;
             }
             const promptInput = document.getElementById('gemini-prompt');
-            const resultContainer = document.getElementById('gemini-result');
+            const resultContainer = document.getElementById('gemini-result-container');
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) {
                  resultContainer.innerHTML = `<p class="text-amber-600">Please enter a theme idea.</p>`;
@@ -355,7 +399,7 @@ Suggest 5 other ideas to search for that are similar to "${userPrompt}". Use a b
 Suggest 5 powerful affirmations related to "${userPrompt}".
 
 ### Poem
-Create a short, meaningful, 5-line poem inspired by "${userPrompt}".
+Find a short, meaningful, published poem from a known spiritualist or poet (e.g., Rumi, Hafiz, Mary Oliver) that is inspired by "${userPrompt}". Credit the author.
 
 ### Quotations
 Provide 5 insightful quotations that resonate with the theme of "${userPrompt}".
@@ -370,63 +414,82 @@ Suggest 5 essential oils. For each oil, provide its name in bold followed by its
 ### Music
 Suggest 5 songs. For each song, list the **Title**, **Artist**, and **Genre**. Use a bulleted list.
 
-\n\n
 ## Introspective Journey: Finding the "Why"
 Answer the following questions based on the theme "${userPrompt}", providing thoughtful and creative responses to guide the user's introspection.
 
 ### 1. What is currently inspiring me?
 (e.g., A book you've just read, a piece of art that moved you, a historical period that fascinates you, or a social cause you feel passionate about.)
 
-\n\n
 ### 2. What are the values I want to champion?
 (e.g., For a yoga class, this might be compassion, balance, or resilience. For a celebratory event, it could be community, gratitude, or joy.)
 
-\n\n
 ### 3. What is a story I feel compelled to tell?
 (e.g., Themes with a narrative arc, even a subtle one, are often the most engaging. This could be a personal story of triumph, a collective story of heritage, or a fictional story that encapsulates a particular feeling.)
 
-\n\n
 ### 4. What is an emotion I want to evoke?
 (e.g., Before considering colors, decorations, or activities, the most crucial element is the desired emotional landscape. Do you want guests to feel energized, reflective, whimsical, or a sense of awe?)
 
-\n\n
 ### 5. Why this theme for this specific occasion?
 (e.g., How does the theme genuinely connect with the purpose? The answer should go beyond aesthetics.)
 
-\n\n
 ### 6. What is the underlying message I want to convey?
 (e.g., A "vintage travel" theme for a farewell party isn't just about old suitcases; it's about celebrating a journey and embracing new adventures.)
 
-\n\n
 ### 7. How does this theme support the physical and spiritual practice?
 (e.g., A theme of "grounding" would inform the choice of poses (asanas), breathing exercises (pranayama), and meditative focus, creating a holistic and integrated experience.)
 
-\n\n
 ## The Emergence of a Vision: From Abstract to Tangible
 Answer the following questions about translating the theme into a tangible experience.
 
 ### 1. How can I translate this feeling into sensory experiences?
 (e.g., If the desired emotion is "tranquility," what colors, scents, sounds, and textures evoke that feeling?)
 
-\n\n
 ### 2. What symbols and metaphors align with my core message?
 (e.g., For a theme of "renewal," imagery of spring, blossoming flowers, or the rising sun can be powerful and consistent visual cues.)
 
-\n\n
 ### 3. How can the activities and interactions reinforce the theme's purpose?
 (e.g., For a party with a "community" theme, collaborative games or a shared storytelling session would be more meaningful than purely individualistic entertainment.)
 
-\n\n
 ## Core Message
 Based on the principles in the following text, create a 3-sentence core message for the theme "${userPrompt}": "${coreMessageInstructions}"
 `;
             
             try {
                 const text = await callGeminiAPI(fullPrompt);
-                resultContainer.innerHTML = convertMarkdownToHtml(text);
+                renderAIGeneratedTabs(text, resultContainer);
             } catch (error) {
                 console.error("Error calling Gemini API for main theme:", error);
                 resultContainer.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.</p>`;
+            }
+        }
+
+        async function handleBreathworkGenerate() {
+            if (!geminiApiKey) {
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                return;
+            }
+            const modal = document.getElementById('inDepthModal');
+            const modalTitle = document.getElementById('inDepthModalTitle');
+            const modalContent = document.getElementById('inDepthModalContent');
+
+            modalTitle.textContent = `Breathwork Techniques`;
+            modalContent.innerHTML = '<p class="text-center">Generating breathwork library... ✨</p>';
+            modal.classList.remove('hidden');
+
+            const prompt = `
+Based on your comprehensive knowledge of breathwork, generate 5 distinct breathing techniques from various modalities. For each technique, please provide:
+1.  **Name of the Technique:** The common name for the practice.
+2.  **Modality of Origin:** Clearly state the modality it comes from (e.g., Pranayama, Holotropic Breathwork, Wim Hof Method, Buteyko, etc.).
+3.  **Instructional Process:** Write a clear, step-by-step process for a yoga instructor to guide a student through this technique. Use simple, direct language.
+
+Format the entire response in Markdown, with a clear heading for each of the 5 techniques.
+`;
+            try {
+                const text = await callGeminiAPI(prompt);
+                modalContent.innerHTML = convertMarkdownToHtml(text);
+            } catch (error) {
+                console.error(`Error calling Gemini API for breathwork:`, error);
+                modalContent.innerHTML = `<p class="text-red-500">Sorry, something went wrong generating the techniques. Please check the console for more information.</p>`;
             }
         }
         
@@ -486,12 +549,15 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
+                const errorBody = await response.json();
+                console.error("API Error Response:", errorBody);
                 throw new Error(`API request failed with status ${response.status}`);
             }
             const result = await response.json();
             if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                 return result.candidates[0].content.parts[0].text;
             } else {
+               console.error("Invalid API Response Structure:", result);
                throw new Error("Invalid response structure from API.");
             }
         }
@@ -532,21 +598,84 @@ Suggest a specific pranayama technique and a meditation focus that would deepen 
             `;
         }
         
+        function renderAIGeneratedTabs(markdownText, container) {
+            const sections = {
+                "Inspiration": { title: "Creative Inspiration", content: "" },
+                "Class": { title: "Class Elements", content: "" },
+                "Introspection": { title: "Introspective Journey", content: "" },
+                "Vision": { title: "The Emergence of a Vision", content: ""},
+                "Other": { title: "Other Ideas to Search for", content: ""},
+                "Core": { title: "Core Message", content: ""}
+            };
+
+            const chunks = markdownText.split(/^## /m);
+            chunks.forEach(chunk => {
+                if (!chunk.trim()) return;
+                
+                if (chunk.startsWith("Creative Inspiration")) sections.Inspiration.content += chunk;
+                else if (chunk.startsWith("Class Elements")) sections.Class.content += chunk;
+                else if (chunk.startsWith("Introspective Journey")) sections.Introspection.content += chunk;
+                else if (chunk.startsWith("The Emergence of a Vision")) sections.Vision.content += chunk;
+                else if (chunk.startsWith("Other Ideas")) sections.Other.content += chunk;
+                else if (chunk.startsWith("Core Message")) sections.Core.content += chunk;
+            });
+            
+            const tabButtonsHtml = `
+                <button class="tab-button active" data-target="tab-content-inspiration">Inspiration</button>
+                <button class="tab-button" data-target="tab-content-class">Class Plan</button>
+                <button class="tab-button" data-target="tab-content-introspection">Introspection</button>
+            `;
+
+            const inspirationContent = `
+                ${sections.Inspiration.content}
+                ${sections.Other.content}
+            `;
+
+            const classContent = `
+                ${sections.Class.content}
+                ${sections.Core.content}
+            `;
+            
+            const introspectionContent = `
+                ${sections.Introspection.content}
+                ${sections.Vision.content}
+            `;
+
+            const tabContentsHtml = `
+                <div id="tab-content-inspiration" class="tab-content active p-4 border-t prose max-w-none">${convertMarkdownToHtml(inspirationContent)}</div>
+                <div id="tab-content-class" class="tab-content p-4 border-t prose max-w-none">${convertMarkdownToHtml(classContent)}</div>
+                <div id="tab-content-introspection" class="tab-content p-4 border-t prose max-w-none">${convertMarkdownToHtml(introspectionContent)}</div>
+            `;
+            
+            container.innerHTML = `
+                <div class="ai-tabs mt-4 border border-gray-200 rounded-lg">
+                    <div class="flex border-b border-gray-200 bg-gray-50/50 rounded-t-lg">
+                        ${tabButtonsHtml}
+                    </div>
+                    <div>
+                        ${tabContentsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
         // --- Utility Functions ---
         function convertMarkdownToHtml(text) {
-            text = text.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>');
-            text = text.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>');
-            text = text.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>');
-            text = text.replace(/^\*\*(.*:.*)\*\*$/gim, '<h4 class="font-semibold text-md text-purple-800 mt-4 mb-2">$1</h4>');
+            // Add a little more vertical space for lists
+            text = text.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-6 mb-2">$1</h3>');
+            text = text.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-8 mb-3">$1</h2>');
+            text = text.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-10 mb-4">$1</h1>');
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            text = text.replace(/^\* (.*$)/gim, '<ul><li class="mb-1 ml-4 list-disc">$1</li></ul>');
+            text = text.replace(/^\* (.*$)/gim, '<ul class="space-y-2"><li class="ml-4 list-disc">$1</li></ul>');
             text = text.replace(/<\/ul>\n?<ul>/g, '');
-            // Convert newlines to <br> tags, but allow double newlines to create more space
+             // Convert newlines to <br> tags, but protect them within list items
             text = text.replace(/\n/g, '<br>');
-            // Cleanup extra breaks after headings and before lists
+            text = text.replace(/<br>\s*<li/g, '<li');
+            text = text.replace(/<\/li><br>/g, '</li>');
+            // Cleanup extra breaks
             text = text.replace(/(<\/h[1-4]>)<br\s*\/?>/g, '$1');
-            text = text.replace(/<br\s*\/?>\s*<ul>/g, '<ul>');
+            text = text.replace(/<br\s*\/?>\s*<ul/g, '<ul>');
             return text;
         }
 
