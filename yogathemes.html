@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoga Class Themer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc; /* A light gray background */
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .btn-primary {
+            background-color: #5a67d8; /* Indigo */
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #4c51bf;
+        }
+        /* Style for the select dropdown */
+        .theme-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="%23a0aec0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.5em 1.5em;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md m-4">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Enter Your API Key</h2>
+            <p class="mb-6 text-gray-600">To use the AI theme generator, please provide your Gemini API key. This key is only stored for your current session.</p>
+            <form id="apiKeyForm">
+                <input type="password" id="apiKeyInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Your Gemini API Key" required>
+                <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-indigo-700">Yoga Class Theme Generator</h1>
+            <p class="text-lg text-gray-600 mt-2">Find inspiration for your next 1-hour yoga class.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Meridians Card -->
+            <div class="card">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-2 text-indigo-600">The Energetic Body: The Twelve Meridians</h2>
+                    <p class="mb-6 text-gray-600">Explore the twelve major meridians of Traditional Chinese Medicine. Each class aims to balance a specific meridian pair, fostering physical and emotional health.</p>
+                    
+                    <div class="mb-6">
+                        <label for="meridian-select" class="block text-sm font-medium text-gray-700 mb-1">Select a Meridian Theme:</label>
+                        <select id="meridian-select" class="theme-select w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="">-- Choose a flow --</option>
+                        </select>
+                    </div>
+
+                    <div id="meridian-details" class="details-container prose max-w-none text-gray-700">
+                        <!-- Meridian details will be dynamically injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gemini AI Card -->
+            <div class="card">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-2 text-indigo-600">AI-Powered Theme Generator</h2>
+                    <p class="mb-6 text-gray-600">Feeling creative? Enter a keyword or concept, and let Gemini craft a unique 1-hour class plan for you.</p>
+                    
+                    <form id="gemini-form">
+                        <div class="mb-4">
+                            <label for="gemini-prompt" class="block text-sm font-medium text-gray-700 mb-1">Enter a theme idea (e.g., "Finding Balance", "Morning Energy"):</label>
+                            <input type="text" id="gemini-prompt" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., 'Courage & Heart Opening'">
+                        </div>
+                        <button type="submit" class="btn-primary w-full">Generate AI Theme</button>
+                    </form>
+                    
+                    <div id="gemini-result" class="mt-6 prose max-w-none text-gray-700">
+                        <!-- AI-generated theme will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8jslbCV4JB1oIpg9yUbv_AwcyksObvf0",
+            authDomain: "yoga-themes.firebaseapp.com",
+            projectId: "yoga-themes",
+            storageBucket: "yoga-themes.appspot.com", // Corrected storage bucket
+            messagingSenderId: "62280816461",
+            appId: "1:62280816461:web:9f137f448ebe8508dc4904",
+            measurementId: "G-T8MBGPWSV4"
+        };
+        
+        // --- Global Variables ---
+        let db;
+        let auth;
+        let userId;
+        let geminiApiKey = "";
+
+        // --- Meridian Data Object ---
+        const meridianData = [
+            {
+                id: "lung-large-intestine",
+                title: "Lung & Large Intestine: Embracing Grief & Letting Go",
+                explanation: "In TCM, the Lung meridian (Yin) governs the intake of pure Qi and is associated with inspiration and the emotion of grief. Its partner, the Large Intestine meridian (Yang), is responsible for releasing waste. This class uses poses that open the chest, shoulders, and arms, along with twists, to process grief and cultivate release.",
+                oils: "Eucalyptus, Cypress, Frankincense",
+                ideas: {
+                    "Poses": "Cow Face Pose (arms), Humble Warrior, Fish Pose, Reclined Spinal Twist.",
+                    "Breathwork": "Deep diaphragmatic breathing with a focus on long, complete exhales.",
+                    "Gratitude Focus": "Gratitude for the breath and the freedom of releasing burdens."
+                }
+            },
+            {
+                id: "stomach-spleen",
+                title: "Stomach & Spleen: Nourishing Ourselves",
+                explanation: "This pair is central to digestion and nourishment. The Stomach meridian (Yang) processes food and information, while the Spleen meridian (Yin) transforms it into usable energy (Qi). Imbalance can lead to worry. This grounding class uses poses that stretch the front of the body and stabilize the core.",
+                oils: "Ginger, Fennel, Rosemary",
+                ideas: {
+                    "Poses": "Hero's Pose, Saddle Pose (Yin), Low Lunge, and gentle core work like Cat-Cow.",
+                    "Breathwork": "Deep belly breathing to gently massage the digestive organs.",
+                    "Gratitude Focus": "Gratitude for the earth's bounty and our ability to digest life's experiences."
+                }
+            },
+            {
+                id: "heart-small-intestine",
+                title: "Heart & Small Intestine: Cultivating Joy & Clarity",
+                explanation: "The Heart meridian (Yin) houses the 'Shen' or Spirit and is associated with joy and love. Its partner, the Small Intestine meridian (Yang), provides clarity by separating the pure from the impure. This class uses joyful, expansive heart-openers and poses that move through the arms and shoulders.",
+                oils: "Rose, Bergamot, Neroli",
+                ideas: {
+                    "Poses": "Wild Thing, Dancer's Pose, Camel Pose, Eagle Pose arms.",
+                    "Breathwork": "Breathing into the heart space; practicing loving-kindness (Metta) breath.",
+                    "Gratitude Focus": "Gratitude for connections that bring joy and inner wisdom."
+                }
+            },
+            {
+                id: "kidney-bladder",
+                title: "Kidney & Bladder: Accessing Willpower & Wisdom",
+                explanation: "This pair relates to our fundamental life force. The Kidney meridian (Yin) stores our 'Jing' or life essence and governs willpower. The Bladder meridian (Yang) is the longest meridian, helping us manifest our potential. This deep, restorative class uses forward folds and gentle backbends.",
+                oils: "Myrrh, Cedarwood, Juniper Berry",
+                ideas: {
+                    "Poses": "Caterpillar (Yin), Seated Forward Bend, Sphinx and Seal Pose, Butterfly.",
+                    "Breathwork": "Slow, deep breathing into the low back (the area of the 'Ming Men').",
+                    "Gratitude Focus": "Gratitude for our endurance, inner strength, and the power of rest."
+                }
+            },
+            {
+                id: "pericardium-triple-burner",
+                title: "Pericardium & Triple Burner: Protecting the Heart",
+                explanation: "The Pericardium (Yin) is the heart's protector, governing our intimate relationships. The Triple Burner (Yang) regulates temperature and the flow of Qi and fluids. This class focuses on creating healthy boundaries and balancing the body's systems.",
+                oils: "Geranium, Spikenard, Vetiver",
+                ideas: {
+                    "Poses": "Prayer Pose behind the back, Thread the Needle, and full-body flows like Sun Salutations.",
+                    "Breathwork": "Sama Vritti (Equal Ratio Breathing) to promote balance.",
+                    "Gratitude Focus": "Gratitude for healthy boundaries and our body's innate ability to maintain equilibrium."
+                }
+            },
+            {
+                id: "liver-gallbladder",
+                title: "Liver & Gallbladder: Finding Vision & Action",
+                explanation: "This pair is the master planner and decision-maker. The Liver meridian (Yin) ensures the smooth flow of Qi and governs our ability to plan. The Gallbladder meridian (Yang) governs decisiveness and courage. This dynamic class uses twists and side-body stretches.",
+                oils: "Lemon, Rosemary, Peppermint",
+                ideas: {
+                    "Poses": "Gate Pose, Revolved Triangle, Side Angle Pose, Pigeon Pose, Lizard Lunge.",
+                    "Breathwork": "A cleansing breath like Breath of Fire (Kapalabhati), followed by smooth Ujjayi.",
+                    "Gratitude Focus": "Gratitude for our dreams and the personal power to move forward."
+                }
+            }
+        ];
+
+        // --- App Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+            setupEventListeners();
+            populateMeridianDropdown();
+        });
+
+        function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User is signed in with UID:", userId);
+                        seedDataToFirestore(); 
+                    } else {
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                        });
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                alert("Could not connect to the database. Please check the console for more details.");
+            }
+        }
+        
+        // --- Data Seeding ---
+        async function seedDataToFirestore() {
+            if (!db) return;
+            const collectionRef = collection(db, 'public_themes');
+            const docSnap = await getDocs(collectionRef);
+            if (docSnap.empty) {
+                console.log("No meridian data found in Firestore. Seeding now...");
+                const seedPromises = meridianData.map(theme => {
+                    const docRef = doc(db, `public_themes/meridians/themes/${theme.id}`);
+                    return setDoc(docRef, theme);
+                });
+                try {
+                    await Promise.all(seedPromises);
+                    console.log("Successfully seeded meridian data to Firestore.");
+                } catch (error) {
+                    console.error("Error seeding data:", error);
+                }
+            } else {
+                console.log("Meridian data already exists in Firestore.");
+            }
+        }
+
+
+        // --- Event Listeners Setup ---
+        function setupEventListeners() {
+            const apiKeyForm = document.getElementById('apiKeyForm');
+            const meridianSelect = document.getElementById('meridian-select');
+            const geminiForm = document.getElementById('gemini-form');
+
+            apiKeyForm.addEventListener('submit', handleApiKeySubmit);
+            meridianSelect.addEventListener('change', handleMeridianSelect);
+            geminiForm.addEventListener('submit', handleGeminiSubmit);
+        }
+
+        // --- Event Handlers ---
+        function handleApiKeySubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('apiKeyInput');
+            if (input.value.trim()) {
+                geminiApiKey = input.value.trim();
+                document.getElementById('apiKeyModal').classList.add('hidden');
+            }
+        }
+
+        function handleMeridianSelect(e) {
+            const selectedId = e.target.value;
+            const detailsContainer = document.getElementById('meridian-details');
+            if (!selectedId) {
+                detailsContainer.innerHTML = '';
+                return;
+            }
+            const theme = meridianData.find(m => m.id === selectedId);
+            if (theme) {
+                displayMeridianDetails(theme);
+            }
+        }
+
+        async function handleGeminiSubmit(e) {
+            e.preventDefault();
+            if (!geminiApiKey) {
+                alert("Please enter your Gemini API key first.");
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                return;
+            }
+
+            const promptInput = document.getElementById('gemini-prompt');
+            const resultContainer = document.getElementById('gemini-result');
+            const userPrompt = promptInput.value.trim();
+
+            if (!userPrompt) {
+                alert("Please enter a theme idea.");
+                return;
+            }
+
+            resultContainer.innerHTML = '<p class="text-center">Generating your class plan... ✨</p>';
+            
+            const fullPrompt = `Generate a detailed 1-hour yoga class plan based on the theme: "${userPrompt}". Structure it with approximate timings for: 1. Opening/Centering (5 mins), 2. Warm-up (10 mins), 3. Main Sequence (30 mins), 4. Cool-down (10 mins), and 5. Savasana/Closing (5 mins). For each section, suggest specific poses and a brief explanation of how they relate to the theme. Format the response using Markdown.`;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+                const payload = {
+                    contents: [{
+                        parts: [{ text: fullPrompt }]
+                    }]
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    resultContainer.innerHTML = convertMarkdownToHtml(text);
+                } else {
+                   throw new Error("Invalid response structure from API.");
+                }
+
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                resultContainer.innerHTML = `<p class="text-red-500">Sorry, something went wrong. Check the console for details. Ensure your API key is correct and has the Gemini API enabled.</p>`;
+            }
+        }
+
+        // --- UI Population Functions ---
+        function populateMeridianDropdown() {
+            const selectElement = document.getElementById('meridian-select');
+            meridianData.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme.id;
+                option.textContent = theme.title;
+                selectElement.appendChild(option);
+            });
+        }
+
+        function displayMeridianDetails(theme) {
+            const container = document.getElementById('meridian-details');
+            let ideasHtml = '<ul>';
+            for (const [key, value] of Object.entries(theme.ideas)) {
+                ideasHtml += `<li><strong>${key}:</strong> ${value}</li>`;
+            }
+            ideasHtml += '</ul>';
+
+            container.innerHTML = `
+                <h3 class="text-xl font-bold mt-4 mb-2 text-indigo-500">${theme.title}</h3>
+                <p class="mb-4">${theme.explanation}</p>
+                <p class="mb-4"><strong>Suggested Oils:</strong> ${theme.oils}</p>
+                <h4 class="text-lg font-semibold mb-2">Themed Ideas:</h4>
+                ${ideasHtml}
+            `;
+        }
+        
+        // --- Utility Functions ---
+        function convertMarkdownToHtml(text) {
+            // Basic Markdown to HTML conversion
+            text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            text = text.replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/\*(.*)\*/g, '<em>$1</em>');
+            text = text.replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>');
+            text = text.replace(/<\/ul>\n<ul>/g, ''); // Join consecutive lists
+            text = text.replace(/\n/g, '<br>'); // Replace newlines with <br>
+            return text;
+        }
+
+    </script>
+</body>
+</html>
