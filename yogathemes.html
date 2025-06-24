@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.11</title>
+    <title>AI Yoga Class & Theme Generator v16.12</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -66,7 +66,8 @@
             flex-direction: column;
         }
         .card:hover {
-            transform: translateY(-5px) scale(1.02);
+            /* transform: translateY(-5px) scale(1.02); */ /* Removed to prevent interference with button clicks */
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Add subtle lift effect */
         }
         .card-content {
             flex-grow: 1;
@@ -320,10 +321,12 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.11</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.12</div>
         </header>
 
         <main id="main-content" class="space-y-8">
+            <nav id="breadcrumb-nav" aria-label="breadcrumb" class="mb-4 themed-text-muted text-sm hidden"></nav>
+            
             <div class="card">
                 <div class="p-8 card-content">
                     <h2 class="text-2xl font-bold mb-2 themed-text-primary">Custom Yoga Plan Generator</h2>
@@ -393,8 +396,52 @@
             document.getElementById('apiKeyModal').classList.remove('hidden');
             setupEventListeners();
             populateTypographySettings();
+            setupBreadcrumbListener();
         });
 
+        // --- Breadcrumb Functions ---
+        function updateBreadcrumbs(items = []) {
+            const nav = document.getElementById('breadcrumb-nav');
+            if (!nav) return;
+
+            if (items.length === 0) {
+                nav.innerHTML = '';
+                nav.classList.add('hidden');
+                return;
+            }
+            nav.classList.remove('hidden');
+
+            let html = '<ol class="flex items-center space-x-2 flex-wrap">';
+            items.forEach((item, index) => {
+                html += '<li class="flex items-center">';
+                if (index < items.length - 1) {
+                    // Make the 'Home' link special and clickable
+                    if (index === 0) {
+                         html += `<a href="#" data-crumb-index="0" class="themed-text-primary hover:underline">${item}</a>`;
+                    } else {
+                         html += `<span class="themed-text-accent">${item}</span>`; // Intermediate steps are not clickable
+                    }
+                    html += `<span class="mx-2 themed-text-muted">/</span>`;
+                } else {
+                    // The last item is the current page
+                    html += `<span class="font-semibold" aria-current="page">${item}</span>`;
+                }
+                html += '</li>';
+            });
+            html += '</ol>';
+            nav.innerHTML = html;
+        }
+
+        function setupBreadcrumbListener() {
+            document.getElementById('breadcrumb-nav').addEventListener('click', (e) => {
+                // Listen for clicks on the 'Home' breadcrumb link
+                if (e.target.matches('a[data-crumb-index="0"]')) {
+                    e.preventDefault();
+                    clearWorkspace();
+                }
+            });
+        }
+        
         // --- Function to clear the workspace ---
         function clearWorkspace() {
             document.getElementById('gemini-result-container').innerHTML = '';
@@ -407,6 +454,7 @@
                 bar.dispatchEvent(new Event('input'));
             });
             originalGeneratedText.clear();
+            updateBreadcrumbs(); // Clear breadcrumbs
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
@@ -549,6 +597,10 @@
             detailsContainer.dataset.themeType = themeType; 
             const theme = allThemeData[themeType].find(t => t.id === themeId);
             
+            // Update breadcrumbs when a grid item is selected
+            const categoryTitle = target.closest('.card').querySelector('h2').textContent;
+            updateBreadcrumbs(['Home', categoryTitle, theme.title]);
+
             detailsContainer.innerHTML = getLoaderHTML('Generating theme details...');
             const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : '';
             const description = theme.description || theme.explanation;
@@ -652,6 +704,9 @@
                 return;
             }
             
+            // Update breadcrumbs for custom plan
+            updateBreadcrumbs(['Home', `Custom Plan: ${userPrompt.substring(0, 25)}...`]);
+
             resultContainer.dataset.themeId = userPrompt; 
             resultContainer.dataset.themeType = 'custom'; 
 
@@ -1192,4 +1247,4 @@
         }
     </script>
 </body>
-</ht
+</html>
