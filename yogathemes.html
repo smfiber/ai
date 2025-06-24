@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v10.7</title>
+    <title>AI Yoga Class & Theme Generator v10.8</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -294,7 +294,7 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- API Key Modal & In-Depth Modal -->
+    <!-- All Modals -->
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Enter Your API Key</h2>
@@ -315,8 +315,6 @@
             <div id="inDepthModalFooter" class="p-4 border-t border-gray-200 text-right"></div>
         </div>
     </div>
-    
-    <!-- Theme Generator Modal -->
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -335,7 +333,24 @@
             </div>
         </div>
     </div>
+    <!-- NEW: Gemini Search Modal -->
+    <div id="geminiSearchModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="geminiSearchModalTitle" class="text-2xl font-bold text-gray-800">Gemini Search Results</h2>
+                <button id="closeGeminiSearchModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="geminiSearchModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+        </div>
+    </div>
 
+    <!-- NEW: Search with Gemini Popup -->
+    <div id="search-gemini-popup" class="fixed hidden bg-white shadow-lg rounded-lg p-2 z-50 border border-gray-200">
+        <button id="search-gemini-btn" class="flex items-center gap-2 text-sm text-gray-800 hover:text-purple-600 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-purple-500"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <span>Search with Gemini</span>
+        </button>
+    </div>
 
     <!-- Main Content -->
     <div class="container mx-auto">
@@ -350,7 +365,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.7</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.8</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -621,6 +636,14 @@
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+            
+            // Text selection listener
+            document.addEventListener('mouseup', handleTextSelection);
+            document.addEventListener('mousedown', () => {
+                // Hide popup when starting a new click/selection
+                document.getElementById('search-gemini-popup').classList.add('hidden');
+            });
+
             document.addEventListener('click', (e) => {
                 if (e.target.closest('#new-plan-button')) {
                     clearWorkspace();
@@ -630,6 +653,9 @@
                 }
                 if (e.target.closest('#closeThemeGeneratorModal') || e.target.id === 'themeGeneratorModal') {
                     document.getElementById('themeGeneratorModal').classList.add('hidden');
+                }
+                 if (e.target.closest('#closeGeminiSearchModal') || e.target.id === 'geminiSearchModal') {
+                    document.getElementById('geminiSearchModal').classList.add('hidden');
                 }
 
                 const inDepthModal = document.getElementById('inDepthModal');
@@ -1017,6 +1043,63 @@
             } catch (error) {
                 console.error("Failed to generate or populate new yoga categories:", error);
                 loaderCard.innerHTML = `<p class="text-red-500 p-2">Sorry, could not load the AI-generated categories. ${error.message}</p>`;
+            }
+        }
+        
+        // --- NEW: Text Selection and Gemini Search Functions ---
+        function handleTextSelection(e) {
+            const popup = document.getElementById('search-gemini-popup');
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length > 2) { // Only show for selections longer than 2 chars
+                // Do not show popup if selecting inside an input, textarea, or a button
+                if (e.target.closest('input, textarea, button, .floating-action-button')) {
+                    popup.classList.add('hidden');
+                    return;
+                }
+
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+
+                popup.style.left = `${rect.left + window.scrollX}px`;
+                popup.style.top = `${rect.bottom + window.scrollY + 8}px`; // Add a bit more space
+                popup.classList.remove('hidden');
+
+                const searchBtn = document.getElementById('search-gemini-btn');
+                
+                // Clone and replace to ensure the listener is fresh and not duplicated
+                const newSearchBtn = searchBtn.cloneNode(true);
+                searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
+                
+                newSearchBtn.addEventListener('click', () => {
+                    performGeminiSearch(selectedText);
+                    popup.classList.add('hidden');
+                });
+
+            } else {
+                popup.classList.add('hidden');
+            }
+        }
+        
+        async function performGeminiSearch(text) {
+            const modal = document.getElementById('geminiSearchModal');
+            const modalTitle = document.getElementById('geminiSearchModalTitle');
+            const modalContent = document.getElementById('geminiSearchModalContent');
+
+            if (!checkApiKey(modalContent)) return;
+
+            modalTitle.textContent = `Gemini Explains: "${text}"`;
+            modalContent.innerHTML = getLoaderHTML(`Searching for information about "${text}"...`);
+            modal.classList.remove('hidden');
+
+            const prompt = `Please provide a detailed, yet easy-to-understand explanation of the following concept, especially in the context of yoga, wellness, and spirituality: "${text}". Structure the response with a main heading using '###' for the title, followed by well-structured paragraphs.`;
+
+            try {
+                const resultText = await callGeminiAPI(prompt);
+                modalContent.innerHTML = `<div class="prose max-w-none">${convertMarkdownToAccordion(resultText)}</div>`;
+            } catch (error) {
+                modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
             }
         }
 
