@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v14.0</title>
+    <title>AI Yoga Class & Theme Generator v16.0</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -28,7 +28,7 @@
             --color-input-bg: #f9fafb;
             --color-input-border: #d1d5db;
             --color-button-text: #ffffff;
-            /* Typography Settings (UPDATED DEFAULTS) */
+            /* Typography Settings */
             --font-family: 'Open Sans', sans-serif;
             --font-size-base: 16px;
             --line-height-base: 1.5;
@@ -49,7 +49,6 @@
         }
         .prose p { margin-bottom: 1em; }
         .prose ul { margin-left: 1.5em; list-style-type: disc; }
-        /* Add margin to bolded subheadings */
         .prose strong:only-child {
             display: block;
             margin-top: 1.25em;
@@ -185,11 +184,10 @@
             background-size: cover; 
             background-position: center;
             opacity: 1;
-            transition: opacity 1.5s ease-in-out; /* Slower fade for header */
+            transition: opacity 1.5s ease-in-out;
         }
         .header-loader-spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; }
 
-        /* Accordion Styles */
         .accordion-item { border-bottom: 1px solid var(--color-card-border); }
         .accordion-header {
             width: 100%; text-align: left; padding: 1rem; display: flex;
@@ -209,7 +207,6 @@
             border-top: 1px solid var(--color-card-border);
         }
         
-        /* Card Grid Styles (Holidays, Styles, Meridians) */
         .card-grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -218,6 +215,8 @@
             padding: 0.5rem;
             border-radius: 8px;
             background: rgba(0,0,0,0.02);
+            max-height: 400px;
+            overflow-y: auto;
         }
         .grid-card-selector {
             background-color: white; border: 1px solid var(--color-card-border);
@@ -237,7 +236,7 @@
         }
 
         .holiday-subheading {
-            grid-column: 1 / -1; /* Span full width */
+            grid-column: 1 / -1;
             color: var(--color-accent);
             font-weight: 600;
             margin-top: 1rem;
@@ -289,7 +288,6 @@
             </div>
         </div>
     </div>
-    <!-- NEW: Gemini Search Modal -->
     <div id="geminiSearchModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -300,7 +298,6 @@
         </div>
     </div>
 
-    <!-- NEW: Search with Gemini Popup -->
     <div id="search-gemini-popup" class="fixed hidden bg-white shadow-lg rounded-lg p-2 z-50 border border-gray-200">
         <button id="search-gemini-btn" class="flex items-center gap-2 text-sm text-gray-800 hover:text-purple-600 font-semibold">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-purple-500"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -321,7 +318,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v14.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -332,7 +329,6 @@
                     <form id="gemini-form">
                         <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
                         
-                        <!-- Accordion for Tailoring Options -->
                         <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
                             <div class="accordion-item">
                                 <button type="button" class="accordion-header">
@@ -411,9 +407,9 @@
                 { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's seven primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, provide a unique "id" (kebab-case name, e.g., "muladhara"), a "title" (e.g., "Muladhara (Root)"), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", prompt: `Generate data for the 4 seasons. For each, provide a unique "id" (e.g., "spring-equinox"), a "title", its "date" in MM/DD format, and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'moonPhases', title: 'Moon Phases', description: "Align your practice with the energy of the lunar cycle.", prompt: `Generate data for the 8 phases of the moon. For each, provide a unique "id" (e.g., "new-moon"), a "title", and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
-                { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", prompt: `Generate a comprehensive list of major and niche yoga styles. For each style, provide a unique "id" (kebab-case), a "title", a "founder" (or key figure, can be an empty string), and a "description". Return ONLY a valid JSON array of objects.` },
-                { key: 'holidays', title: 'US Holidays', description: "Find themed yoga practices inspired by US holidays.", prompt: `Generate a comprehensive list of major US holidays suitable for yoga themes. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, and a brief "explanation". Return ONLY a valid JSON array of objects.` },
-                { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", prompt: `Generate a comprehensive list of major Hindu and Buddhist holidays. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, an "explanation", and a "tradition" ('Hindu' or 'Buddhist'). Return ONLY a valid JSON array of objects.` },
+                { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", prompt: `Generate an extensive list of 40 to 50 major and niche yoga styles. For each style, provide a unique "id" (kebab-case), a "title", a "founder" (or key figure, can be an empty string), and a "description". Return ONLY a valid JSON array of objects.` },
+                { key: 'holidays', title: 'US Holidays', description: "Find themed yoga practices inspired by US holidays.", prompt: `Generate an extensive list of 40 to 50 major US holidays suitable for yoga themes. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, and a brief "explanation". Return ONLY a valid JSON array of objects.` },
+                { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", prompt: `Generate an extensive list of 40 to 50 major Hindu and Buddhist holidays. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, an "explanation", and a "tradition" ('Hindu' or 'Buddhist'). Return ONLY a valid JSON array of objects.` },
                 { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", prompt: `Generate a list of the 6 primary Meridian pairs from TCM. For each pair, provide a unique "id" (kebab-case), a "title" (e.g., "Lung & Large Intestine"), and an "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` }
             ];
 
@@ -669,7 +665,7 @@
             container.innerHTML = getLoaderHTML('AI is generating tailoring options...');
             const fallbackOptions = ["Breathwork", "Essential Oils", "Chanting", "Poetry", "Props", "Meditation", "Mantra & Affirmations", "Partner Poses"];
             try {
-                const prompt = `Generate a comprehensive list of unique and creative yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting. Example: ["Sanskrit Focus", "Mudras", "Sound Bath"]`;
+                const prompt = `Generate an extensive list of 40 to 50 unique and creative yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting. Example: ["Sanskrit Focus", "Mudras", "Sound Bath"]`;
                 const tailoringOptions = await callGeminiAPI(prompt, true).then(JSON.parse);
                 populateTailoringButtons(tailoringOptions);
             } catch (error) {
@@ -736,16 +732,26 @@
 
         // --- API Calls, UI Utilities, and other handlers ---
         async function callApi(apiUrl, payload) { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorBody = await response.text(); console.error("API Error Response:", errorBody); throw new Error(`API request failed with status ${response.status}`); } return await response.json(); }
+        
         async function callGeminiAPI(prompt, isJson = false) { 
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
-            if (isJson) payload.generationConfig = { responseMimeType: "application/json" };
+            const payload = { 
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    maxOutputTokens: 8192 
+                }
+            };
+            if (isJson) {
+                payload.generationConfig.responseMimeType = "application/json";
+            }
             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, payload); 
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) return text.replace(/```json\n?|```/g, '').trim();
+            if (result.promptFeedback?.blockReason) throw new Error(`Request blocked for safety reasons: ${result.promptFeedback.blockReason}`);
             if (result.candidates?.[0]?.finishReason === 'SAFETY') throw new Error("Request blocked for safety reasons."); 
             throw new Error("Invalid response structure from Gemini API.");
         }
-        async function callColorGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (jsonText) return JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); throw new Error("Could not parse a valid color theme from the AI's response."); }
+
+        async function callColorGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 } }); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (jsonText) return JSON.parse(jsonText.replace(/```json\n?|```/g, '').trim()); throw new Error("Could not parse a valid color theme from the AI's response."); }
         async function callImageGenAPI(prompt) { const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } }); const base64 = result.predictions?.[0]?.bytesBase64Encoded; if (base64) return `data:image/png;base64,${base64}`; throw new Error("Could not get a valid image from the AI's response."); }
         function checkApiKey(container) { if (!apiKey) { document.getElementById('apiKeyModal').classList.remove('hidden'); if(container) { container.innerHTML = `<p class="text-amber-600 p-2">Please enter your API key to continue.</p>`; } return false; } return true; }
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
@@ -803,7 +809,7 @@
         function getIconForTheme(themeType, themeId) { const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>`, easternHolidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
         function getNextHolidayDate(holiday) {
              if (!holiday || !holiday.date || !/^\d{1,2}\/\d{1,2}$/.test(holiday.date)) {
-                return new Date(8640000000000000); // A very far future date for invalid entries
+                return new Date(8640000000000000); 
             }
             const now = new Date(); 
             const currentYear = now.getFullYear(); 
@@ -821,7 +827,7 @@
             loaderCard.innerHTML = getLoaderHTML('AI is generating new yoga categories...');
             mainGrid.appendChild(loaderCard);
 
-            const prompt = `Generate a comprehensive list of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a diverse list of different styles. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
+            const prompt = `Generate a comprehensive JSON object of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate an extensive list of 40 to 50 different styles. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
 
             try {
                 const newCategoriesData = await callGeminiAPI(prompt, true).then(JSON.parse);
@@ -841,7 +847,6 @@
             }
         }
         
-        // --- Text Selection and Gemini Search Functions ---
         function handleTextSelection(e) {
             const popup = document.getElementById('search-gemini-popup');
             const selection = window.getSelection();
