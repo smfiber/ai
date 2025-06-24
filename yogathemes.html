@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v10.2</title>
+    <title>AI Yoga Class & Theme Generator v10.3</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -28,10 +28,10 @@
             --color-input-bg: #f9fafb;
             --color-input-border: #d1d5db;
             --color-button-text: #ffffff;
-            /* Typography Settings */
-            --font-family: 'Arial', sans-serif;
-            --font-size-base: 13px;
-            --line-height-base: 1.15;
+            /* Typography Settings (UPDATED DEFAULTS) */
+            --font-family: 'Open Sans', sans-serif;
+            --font-size-base: 16px;
+            --line-height-base: 1.5;
         }
 
         /* Applying the theme variables */
@@ -313,7 +313,7 @@
         </div>
     </div>
     
-    <!-- NEW: Theme Generator Modal -->
+    <!-- Theme Generator Modal -->
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
@@ -347,7 +347,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.2</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.3</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -418,7 +418,7 @@
             populateTypographySettings();
         });
 
-        // --- NEW: Function to clear the workspace ---
+        // --- Function to clear the workspace ---
         function clearWorkspace() {
             // Clear result containers
             document.getElementById('gemini-result-container').innerHTML = '';
@@ -476,6 +476,7 @@
         function populateSeasonSelector() {
             const container = document.getElementById('seasons-selector-visual');
             if(!container) return;
+            // Sort seasons chronologically based on their next upcoming date
             const sortedSeasons = [...allThemeData.seasons].sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
             const seasonIcons = {
                 'spring-equinox': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2v2m-6.36 2.64L7.05 7.05M2 12h2m2.64 6.36L7.05 17m5-10a5 5 0 015 5h-5V7z" stroke="#34D399"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 12a5 5 0 01-5-5h5v5z" stroke="#6EE7B7"></path></svg>`,
@@ -490,30 +491,26 @@
 
         function populateMoonPhaseSelector() {
             const container = document.getElementById('moon-phases-selector-visual');
-            if(!container) return;
+            if (!container) return;
             const phaseOrder = ['new-moon', 'waxing-crescent', 'first-quarter', 'waxing-gibbous', 'full-moon', 'waning-gibbous', 'last-quarter', 'waning-crescent'];
             const sortedPhases = phaseOrder.map(id => allThemeData.moonPhases.find(p => p.id === id)).filter(Boolean);
             
+            // New, more accurate SVG icons for moon phases
             const moonIcons = {
-                'waxing-crescent': 'M12 2a10 10 0 100 20V2z', 'first-quarter': 'M2 12a10 10 0 1020 0H2z', 'waxing-gibbous': 'M12 2a10 10 0 000 20V2z', 'full-moon': 'M12 2a10 10 0 110 20 10 10 0 010-20z', 'waning-gibbous': 'M12 2v20a10 10 0 000-20z', 'last-quarter': 'M22 12a10 10 0 01-20 0h20z', 'waning-crescent': 'M12 2v20a10 10 0 010-20z'
+                'new-moon': `<svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.5"/></svg>`,
+                'waxing-crescent': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 A 10 10 0 0 1 12 22 A 6 10 0 0 0 12 2 Z" /></svg>`,
+                'first-quarter': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 v20 a10 10 0 0 0 0 -20" /></svg>`,
+                'waxing-gibbous': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 a10 10 0 0 1 0 20 a6 10 0 0 0 0-20" /></svg>`,
+                'full-moon': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" /></svg>`,
+                'waning-gibbous': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 a10 10 0 0 0 0 20 a6 10 0 0 1 0-20" /></svg>`,
+                'last-quarter': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 v20 a10 10 0 0 1 0 -20" /></svg>`,
+                'waning-crescent': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 A 10 10 0 0 0 12 22 A 6 10 0 0 1 12 2 Z" /></svg>`,
             };
-            const transforms = { 'waxing-crescent': '', 'first-quarter': 'transform -rotate-90', 'waxing-gibbous': 'transform scale-x-[-1]', 'waning-gibbous': '', 'last-quarter': 'transform -rotate-90', 'waning-crescent': 'transform scale-x-[-1]'};
             
-            container.innerHTML = sortedPhases.map(p => {
-                if (p.id === 'new-moon') {
-                    return `<div class="moon-phase-selector" data-theme-id="${p.id}" data-theme-type="moonPhases" title="${p.title}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <circle cx="12" cy="12" r="10" />
-                                </svg>
-                            </div>`;
-                }
-                return `<div class="moon-phase-selector" data-theme-id="${p.id}" data-theme-type="moonPhases" title="${p.title}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" class="${transforms[p.id] || ''}">
-                                 <path fill="#e5e7eb" d="M12 2a10 10 0 110 20 10 10 0 010-20z"></path>
-                                 <path d="${moonIcons[p.id]}"></path>
-                            </svg>
-                        </div>`;
-            }).join('');
+            container.innerHTML = sortedPhases.map(p => `
+                <div class="moon-phase-selector" data-theme-id="${p.id}" data-theme-type="moonPhases" title="${p.title}">
+                    ${moonIcons[p.id]}
+                </div>`).join('');
             container.addEventListener('click', e => handleVisualSelect(e.target.closest('.moon-phase-selector')));
         }
         
@@ -548,6 +545,7 @@
                     grid.innerHTML = html;
                 } else {
                      if (holidayTypes.includes(themeType)) {
+                        // Sort holidays chronologically by next upcoming date
                         data.sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
                     } else {
                         data.sort((a,b) => a.title.localeCompare(b.title));
@@ -581,7 +579,8 @@
             if (dateableThemes.includes(themeType)) {
                 datePromptSection = `The current year is ${new Date().getFullYear()}. First, state the next upcoming date for this event in the New York (EST) timezone for the current year, as a bolded line of text.\n\n`;
             }
-            const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Feel free to structure it in any way you see fit using markdown.`;
+            // UPDATED PROMPT for better structure
+            const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Present the information clearly, using paragraphs for descriptions and bullet points only for lists if necessary. Ensure the output is well-structured and easy to read, using markdown for formatting.`;
             try {
                 const markdownText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(detailsContainer, markdownText);
@@ -633,28 +632,27 @@
             const sizeSelect = document.getElementById('font-size-select');
             const heightSelect = document.getElementById('line-height-select');
 
-            // Fonts
-            const fonts = ['Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif', 'Courier New, monospace', 'Inter, sans-serif', 'Lato, sans-serif', 'Roboto Slab, serif', 'Open Sans, sans-serif', 'Montserrat, sans-serif'];
+            // Fonts - UPDATED to put Open Sans first
+            const fonts = ['Open Sans, sans-serif', 'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif', 'Courier New, monospace', 'Inter, sans-serif', 'Lato, sans-serif', 'Roboto Slab, serif', 'Montserrat, sans-serif'];
             fontSelect.innerHTML = fonts.map(font => {
                 const familyName = font.split(',')[0].replace(/'/g, '');
-                const isSelected = familyName === 'Arial' ? 'selected' : '';
+                const isSelected = familyName === 'Open Sans' ? 'selected' : '';
                 return `<option value="${font}" ${isSelected}>${familyName}</option>`
             }).join('');
 
-            // Font Sizes
+            // Font Sizes - UPDATED to default to 16px
             let sizeOptions = '';
-            for (let i = 10; i <= 30; i += 2) {
-                const isSelected = i === 12 ? 'selected' : ''; // Default is 13px, select the closest available (12)
+            for (let i = 12; i <= 24; i += 2) {
+                const isSelected = i === 16 ? 'selected' : '';
                 sizeOptions += `<option value="${i}px" ${isSelected}>${i}px</option>`;
             }
              sizeSelect.innerHTML = sizeOptions;
-             sizeSelect.value = '13px'; // Set the default
+             sizeSelect.value = '16px';
 
-
-            // Line Heights
-            const lineHeights = { '1.0': 'Single', '1.15': 'Default', '1.5': '1.5x' };
+            // Line Heights - UPDATED options and default
+            const lineHeights = { '1.2': 'Compact', '1.5': 'Default', '1.8': 'Spacious' };
             heightSelect.innerHTML = Object.entries(lineHeights).map(([val, text]) => {
-                const isSelected = val === '1.15' ? 'selected' : '';
+                const isSelected = val === '1.5' ? 'selected' : '';
                 return `<option value="${val}" ${isSelected}>${text}</option>`
             }).join('');
         }
@@ -675,7 +673,9 @@
                                              .map(btn => btn.dataset.option);
 
             resultContainer.innerHTML = getLoaderHTML('Crafting your base class plan...');
-            const basePrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
+            
+            // UPDATED PROMPT for better structure
+            const basePrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Structure the response in a logical, easy-to-follow format. Use paragraphs for explanations and only use bulleted or numbered lists for things like specific pose sequences. Organize the entire guide into several logical sections using '###' for each main heading. For example, you might have sections for an 'Introduction/Theme', 'Breathwork (Pranayama)', 'Warm-up', 'Main Sequence', 'Cool-down', and 'Closing Meditation (Savasana)'. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
             
             try {
                 const baseText = await callGeminiAPI(basePrompt);
@@ -695,7 +695,7 @@
                             accordionContainer.appendChild(componentLoader);
 
                             try {
-                                const componentPrompt = `You are a yoga expert. Provide a detailed explanation and a practical guide for incorporating "${option}" into a yoga class. Structure the response with a '###' for the main heading (e.g., '### Incorporating ${option}'). Be creative and thorough.`;
+                                const componentPrompt = `You are a yoga expert. Provide a detailed explanation and a practical guide for incorporating "${option}" into a yoga class. Structure the response with a '###' for the main heading (e.g., '### Incorporating ${option}'). Be creative and thorough. Use paragraphs for explanations and lists for steps or items.`;
                                 const componentText = await callGeminiAPI(componentPrompt);
                                 
                                 const accordionHtml = convertMarkdownToAccordion(componentText, false);
@@ -761,7 +761,10 @@
         function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return `<div class="accordion">${robustMarkdownToHtml(text)}</div>`; const accordionItems = sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join(''); return `<div class="accordion">${accordionItems}</div>`;}
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown ${type} error occurred. Check the console for details.`; const errorMessage = error.message.toLowerCase(); if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`; else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`; else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`; else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`; else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`; else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.'; return `Sorry, something went wrong. ${message}`; }
         async function handleVisualThemeGeneration() { if (!checkApiKey()) return; const prompt = document.getElementById('theme-prompt').value.trim(); if (!prompt) { showThemeError("Please enter a description for your visual theme."); return; } showThemeLoading(true); const colorPrompt = `Based on the following text, generate a color palette that reflects its mood. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Ensure high contrast and accessibility. Return only the JSON. Text: "${prompt}"`; const imagePrompt = `A beautiful, artistic, abstract background image inspired by the concept of "${prompt}". The style should be suitable for a yoga and wellness website header. Serene, calming, and visually appealing. Wide aspect ratio, photographic, cinematic lighting.`; try { const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]); if (colorResult.status === 'fulfilled') { applyTheme(colorResult.value); } else { showThemeError(generateErrorMessage(colorResult.reason, 'color')); } if (imageResult.status === 'fulfilled') { applyHeaderImage(imageResult.value); } else { showThemeError(generateErrorMessage(imageResult.reason, 'image')); } } catch (error) { showThemeError(generateErrorMessage(error, 'visual theme')); } finally { showThemeLoading(false); } }
-        async function handleExploreInDepth(themeId, themeType) { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); modalTitle.textContent = `Exploring: ${theme.title}`; modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'easternHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Please organize your guide into several logical sections using '###' for each main heading. The content, titles, and number of sections are entirely up to you to best suit the theme.`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(modalFooter, themeId, themeType); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
+        async function handleExploreInDepth(themeId, themeType) { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); modalTitle.textContent = `Exploring: ${theme.title}`; modalContent.innerHTML = getLoaderHTML('Generating your detailed guide...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'easternHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } 
+        // UPDATED PROMPT for better structure
+        const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Structure the response in a logical, easy-to-follow format. Use paragraphs for explanations and only use bulleted or numbered lists for things like specific pose sequences. Organize the entire guide into several logical sections using '###' for each main heading. For example, you might have sections for an 'Introduction/Theme', 'Breathwork (Pranayama)', 'Warm-up', 'Main Sequence', 'Cool-down', and 'Closing Meditation (Savasana)'. The content, titles, and number of sections are entirely up to you to best suit the theme.`; 
+        try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; addPostGenerationButtons(modalFooter, themeId, themeType); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
         async function handleAIHelpRequest() { const modal = document.getElementById('inDepthModal'); const modalContent = document.getElementById('inDepthModalContent'); if (!checkApiKey(modalContent)) return; const modalTitle = document.getElementById('inDepthModalTitle'); const modalFooter = document.getElementById('inDepthModalFooter'); modalTitle.textContent = "AI Help & Feedback"; modalContent.innerHTML = getLoaderHTML('Generating help and suggestions...'); modalFooter.innerHTML = ''; modal.classList.remove('hidden'); const pageStructure = document.getElementById('main-content').innerText; const prompt = `You are a helpful UI/UX assistant. Based on the text content and structure of the application provided below, please do two things: 1. **Explain How It Works:** Briefly describe the main features of this "AI Yoga Class & Theme Generator" application. 2. **Suggest Improvements:** Offer a few specific, actionable suggestions to improve the user interface (UI) and overall user experience (UX). Structure your response with two main sections using '###' markdown headings: '### How This App Works' and '### UI/UX Improvement Suggestions'. Here is the text content of the app:\n${pageStructure}`; try { const text = await callGeminiAPI(prompt); originalGeneratedText.set(modalContent, text); modalContent.innerHTML = `<div class="prose-content">${convertMarkdownToAccordion(text)}</div>`; const exportButton = createButton('Copy Text', 'btn-secondary'); exportButton.addEventListener('click', (e) => copyElementTextToClipboard(modalContent, e.currentTarget)); modalFooter.appendChild(exportButton); } catch (error) { modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`; } }
         
         function copyElementTextToClipboard(element, button) {
