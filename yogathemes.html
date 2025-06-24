@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.17</title>
+    <title>AI Yoga Class & Theme Generator v16.18</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -360,7 +360,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.17</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.18</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -454,69 +454,146 @@
             {
                 title: "Custom Plan Generator",
                 text: "This is where you can enter any keyword or concept, and the AI will generate a complete, unique class plan for you.",
-                element: '#gemini-prompt',
-                position: 'bottom',
-                eventType: 'focus',
-                interactive: false // Changed to false: no forced interaction
+                element: '#custom-plan-card', // Highlight the entire card
+                position: 'center', // Position modal relative to this card
+                interactive: false 
             },
             {
                 title: "AI Visual Theme Generator",
                 text: "Use this button to open the AI Visual Theme Generator. You can describe a mood or concept to generate a new color palette and header image for the app.",
                 element: '#theme-changer-button',
-                position: 'left',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
+                position: 'left', // Position to the left of the button
+                interactive: false 
             },
             {
                 title: "AI-Powered Categories",
                 text: "Explore pre-made themes by clicking on any of the cards below. Each card provides a category with specific themes you can use to generate a detailed yoga plan.",
-                element: '#hip-replacement-card-container .grid-card-selector', // Point to a specific element within the card container
-                position: 'top',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
+                element: '#main-grid', // Highlight the entire grid of categories
+                position: 'top', // Position above the grid
+                interactive: false 
             },
             {
-                title: "Discover More Topics",
-                text: "Click this button to dynamically generate and load more unique yoga topic categories for endless inspiration.",
-                element: '#discover-more-button',
-                position: 'top',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
-            },
-            {
-                title: "AI Help & Feedback",
-                text: "This button provides access to an AI assistant for help and suggestions on improving the app's features and user experience.",
-                element: '#ai-help-button',
-                position: 'left',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
-            },
-            {
-                title: "Typography Settings",
-                text: "Use this button to adjust the font family, font size, and line spacing of the app's text to suit your reading preferences.",
-                element: '#settings-button',
-                position: 'left',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
-            },
-            {
-                title: "Start a New Plan",
-                text: "Click this button at any time to clear the workspace and start generating a fresh yoga plan.",
-                element: '#new-plan-button',
-                position: 'left',
-                eventType: 'click',
-                interactive: false // Changed to false: no forced interaction
-            },
-            {
-                title: "Search with Gemini",
-                text: "You can highlight any text on the page, and a 'Search with Gemini' popup will appear, allowing you to get an in-depth explanation of the selected concept.",
-                element: '#custom-plan-card h2', // A visible element to highlight something on the main content
+                title: "Gentle Yoga After Hip Replacement",
+                text: "This dedicated section offers safe and modified yoga class plans specifically designed for recovery and mobility after hip surgery.",
+                element: '#hip-replacement-card-container', // Highlight this specific card
                 position: 'top',
                 interactive: false
             },
             {
+                title: "Chakras Category",
+                text: "Discover practices aligned with the body's seven primary energy centers. Each Chakra button provides a brief explanation and an option to generate a yoga plan.",
+                element: '.card[id*="chakras"]', // Target the specific card by ID part
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Astrology Category",
+                text: "Connect your yoga practice to the cosmos and the zodiac signs. Explore themes based on astrological energies and date ranges.",
+                element: '.card[id*="astrology"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Yoga for Artists Category",
+                text: "Find yoga concepts and themes specifically tailored to boost creativity and release tension for artists.",
+                element: '.card[id*="artists"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Yoga for Dancers Category",
+                text: "Enhance flexibility, strength, and aid recovery with yoga practices curated specifically for dancers.",
+                element: '.card[id*="dancers"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Yoga for Neurodiversity Category",
+                text: "Explore practices adapted for sensory regulation, mindfulness, and grounding, suitable for neurodiverse individuals.",
+                element: '.card[id*="neurodiversity"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Seasons Category",
+                text: "Align your yoga practice with the natural cycles of the earth and the energy of the four seasons.",
+                element: '.card[id*="seasons"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Moon Phases Category",
+                text: "Discover how to align your practice with the energy of the lunar cycle, from new moon intentions to full moon release.",
+                element: '.card[id*="moonPhases"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Yoga Styles Category",
+                text: "Base your class around the principles of a specific yoga style. This section offers an extensive list of major and niche styles.",
+                element: '.card[id*="styles"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "US Holidays Category",
+                text: "Find themed yoga practices inspired by major US holidays, perfect for special classes or personal reflection.",
+                element: '.card[id*="holidays"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Eastern Holidays Category",
+                text: "Explore yoga themes and practices inspired by significant Hindu and Buddhist traditions and festivals.",
+                element: '.card[id*="easternHolidays"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Meridians Category",
+                text: "Delve into the major meridians of Traditional Chinese Medicine and how they relate to energy flow in yoga.",
+                element: '.card[id*="meridians"]',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "Discover More Yoga Topics",
+                text: "Click this button to dynamically generate and load even more unique yoga topic categories for endless inspiration.",
+                element: '#discover-more-button',
+                position: 'top',
+                interactive: false
+            },
+            {
+                title: "AI Help & Feedback",
+                text: "This button provides quick access to an AI assistant for help, FAQs, and to provide feedback on the app's features and user experience.",
+                element: '#ai-help-button',
+                position: 'left',
+                interactive: false
+            },
+            {
+                title: "Typography Settings",
+                text: "Use this button to open display settings, allowing you to adjust the font family, font size, and line spacing of the app's text to suit your reading preferences.",
+                element: '#settings-button',
+                position: 'left',
+                interactive: false
+            },
+            {
+                title: "New Plan Button",
+                text: "This floating action button allows you to quickly clear the current workspace and start generating a fresh yoga plan or theme at any time.",
+                element: '#new-plan-button',
+                position: 'left',
+                interactive: false
+            },
+            {
+                title: "Search with Gemini",
+                text: "You can highlight any text on the page, and a 'Search with Gemini' popup will appear, offering you an option to get an in-depth explanation of the selected concept from Gemini AI.",
+                element: '#custom-plan-card h2', // A visible element to highlight something on the main content
+                position: 'bottom', // Position below the highlighted text
+                interactive: false
+            },
+            {
                 title: "You're All Set!",
-                text: "That's it! You're ready to start creating. Click 'Done' to close this tutorial and begin.",
+                text: "That's it! You've seen the core features of the AI Yoga Class & Theme Generator. Click 'Done' to close this tutorial and start creating!",
                 element: null,
                 position: 'center',
                 interactive: false
@@ -525,9 +602,6 @@
         
         function cleanupStepListeners() {
             if (activeTutorialListener) {
-                // Ensure the event listener is removed only if it was actually added.
-                // It was only added if `step.interactive` was true when `showOnboardingStep` was called.
-                // With `interactive: false` for all steps, this block primarily clears old listeners.
                 activeTutorialListener.element.removeEventListener(activeTutorialListener.eventType, activeTutorialListener.handler);
                 activeTutorialListener = null;
             }
@@ -573,6 +647,7 @@
             nextBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'none' : 'inline-flex';
             doneBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
             // Skip button: Hide on the last two steps (last real step, and the "You're All Set!" step)
+            // It advances to the next step, not ends the tutorial.
             skipBtn.style.display = (stepIndex >= onboardingSteps.length - 2) ? 'none' : 'inline-flex';
 
 
@@ -588,55 +663,48 @@
 
                     const rect = targetElement.getBoundingClientRect();
                     
-                    // Add listener ONLY if `interactive: true` for the step.
-                    // Since we're setting all interactive steps to `false` for forced progression,
-                    // this block will primarily clear previous listeners or not add new ones for non-forced steps.
-                    if (step.interactive) { // This condition will mostly be false now.
-                        const eventHandler = (e) => {
-                             e.preventDefault();
-                             e.stopPropagation();
-                             if(step.element === '#theme-changer-button'){
-                                 // Simulate opening and closing the modal for tutorial purposes
-                                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
-                                 setTimeout(()=> document.getElementById('themeGeneratorModal').classList.add('hidden'), 100);
-                             }
-                             // Advance tutorial upon interaction with the highlighted element
-                             moveToNextStep();
-                        };
-                        activeTutorialListener = {element: targetElement, eventType: step.eventType, handler: eventHandler};
-                        targetElement.addEventListener(step.eventType, eventHandler, { once: true });
-                    }
-
                     // Position the modal relative to the element
+                    // Default to center if no specific position or if element is off-screen
                     let modalLeft = rect.left + (rect.width / 2) - (modal.offsetWidth / 2);
                     let modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2);
 
+                    const padding = 15; // Padding from element and viewport edges
+
+                    // Adjust position based on step.position to avoid covering element
                     switch(step.position) {
                         case 'bottom':
-                            modalTop = rect.bottom + 15;
+                            modalTop = rect.bottom + padding;
                             break;
                         case 'top':
-                            modalTop = rect.top - modal.offsetHeight - 15;
+                            modalTop = rect.top - modal.offsetHeight - padding;
                             break;
                         case 'left':
-                            modalLeft = rect.left - modal.offsetWidth - 15;
-                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2); // Center vertically
+                            modalLeft = rect.left - modal.offsetWidth - padding;
+                            // Vertically center with the element if positioned left/right
+                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2);
                             break;
-                        case 'right': // Added for completeness, though not currently used
-                            modalLeft = rect.right + 15;
-                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2); // Center vertically
+                        case 'right':
+                            modalLeft = rect.right + padding;
+                            // Vertically center with the element if positioned left/right
+                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2);
                             break;
-                        default: // center (already handled by initial modalTop/modalLeft calculation)
+                        default: // 'center' or fallback
+                            // Keep default centered positioning relative to element's bounding box
                             break;
                     }
                     
-                    // Ensure modal stays within viewport boundaries
+                    // Ensure modal stays within viewport boundaries after initial positioning
                     modalLeft = Math.max(10, Math.min(modalLeft, window.innerWidth - modal.offsetWidth - 10));
                     modalTop = Math.max(10, Math.min(modalTop, window.innerHeight - modal.offsetHeight - 10));
 
                     modal.style.left = `${modalLeft}px`;
                     modal.style.top = `${modalTop}px`;
                     modal.style.transform = 'none'; // Remove center transform if it was applied
+                } else {
+                    // If element is not found, center the modal on screen (e.g., for welcome/end steps)
+                    modal.style.top = '50%';
+                    modal.style.left = '50%';
+                    modal.style.transform = 'translate(-50%, -50%)';
                 }
             } else { // Center non-element steps (like the welcome or final message)
                  modal.style.top = '50%';
@@ -956,7 +1024,13 @@
             // MODIFIED: Only hide popup if click is outside popup and not on a selectable element
             document.addEventListener('mousedown', (e) => {
                 const popup = document.getElementById('search-gemini-popup');
-                if (!popup.classList.contains('hidden') && !popup.contains(e.target) && !e.target.closest('input, textarea, button')) {
+                // Only hide if the click is outside the popup AND the clicked element is not an interactive control (input, button)
+                // AND there is no active text selection.
+                // This prevents the popup from hiding when interacting with its own button or when simply de-selecting text.
+                if (!popup.classList.contains('hidden') && 
+                    !popup.contains(e.target) && 
+                    !e.target.closest('input, textarea, button') && 
+                    window.getSelection().toString().trim() === '') { // Only hide if nothing is selected
                     popup.classList.add('hidden');
                 }
             });
@@ -1299,7 +1373,8 @@
                 const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(colorPrompt), callImageGenAPI(imagePrompt)]); 
                 if (colorResult.status === 'fulfilled') { applyTheme(colorResult.value); } else { throw colorResult.reason; } 
                 if (imageResult.status === 'fulfilled') { applyHeaderImage(imageResult.value); } else { throw imageResult.reason; } 
-            } catch (error) { 
+            } catch (error) 
+            { 
                 if (error.message === 'Invalid API Key') {
                     handleInvalidApiKey();
                 } else {
@@ -1555,7 +1630,11 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
                     popup.classList.add('hidden');
                 };
             } else {
-                popup.classList.add('hidden');
+                // Only hide the popup if there's no selection or if the click is not on the popup itself
+                // This prevents accidental hiding when simply clicking away after a selection
+                if (!popup.contains(e.target)) {
+                     popup.classList.add('hidden');
+                }
             }
         }
         
