@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.14</title>
+    <title>AI Yoga Class & Theme Generator v16.15</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -251,19 +251,20 @@
         #onboarding-modal {
             background-color: var(--color-card-bg);
             border: 1px solid var(--color-card-border);
+            z-index: 1060;
         }
         .onboarding-backdrop {
-            z-index: 999;
+            z-index: 1050;
         }
         .onboarding-step {
-            z-index: 1000;
+            z-index: 1060;
         }
         .highlight-element {
-            box-shadow: 0 0 0 4px var(--color-primary);
+            box-shadow: 0 0 0 4px var(--color-primary), 0 0 0 9999px rgba(0,0,0,0.5);
             border-radius: 8px;
             transition: box-shadow 0.3s ease;
             position: relative;
-            z-index: 1001; /* Ensure highlighted element is on top */
+            z-index: 1051;
         }
 
     </style>
@@ -271,16 +272,17 @@
 <body class="p-4 md:p-8">
     
     <!-- Onboarding Tutorial -->
-    <div id="onboarding-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden onboarding-backdrop"></div>
+    <div id="onboarding-backdrop" class="fixed inset-0 hidden onboarding-backdrop"></div>
     <div id="onboarding-modal" class="fixed hidden bg-white p-6 rounded-lg shadow-xl max-w-sm onboarding-step">
         <h3 id="onboarding-title" class="text-xl font-bold themed-text-primary mb-3"></h3>
         <p id="onboarding-text" class="themed-text-muted mb-4"></p>
         <div class="flex justify-between items-center">
             <div id="onboarding-progress" class="text-sm themed-text-muted"></div>
             <div>
-                <button id="onboarding-prev" class="btn-secondary text-sm">Prev</button>
-                <button id="onboarding-next" class="btn-primary text-sm">Next</button>
-                <button id="onboarding-done" class="btn-primary text-sm hidden">Done</button>
+                <button id="onboarding-skip" class="btn-secondary text-sm">Skip</button>
+                <button id="onboarding-prev" class="btn-secondary text-sm" title="Previous Step">Prev</button>
+                <button id="onboarding-next" class="btn-primary text-sm" title="Next Step">Next</button>
+                <button id="onboarding-done" class="btn-primary text-sm hidden" title="Finish Tutorial">Done</button>
             </div>
         </div>
     </div>
@@ -301,7 +303,7 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold text-gray-800">In-Depth Exploration</h2>
-                <button id="closeInDepthModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                <button id="closeInDepthModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
             <div id="inDepthModalFooter" class="p-4 border-t border-gray-200 text-right"></div>
@@ -311,12 +313,12 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-gray-800">AI Visual Theme Generator</h2>
-                <button id="closeThemeGeneratorModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                <button id="closeThemeGeneratorModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div class="p-6">
                 <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
                 <textarea id="theme-prompt" rows="3" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'A quiet, misty forest at dawn'"></textarea>
-                <button id="generate-theme-btn" class="btn-primary w-full mt-4">Generate Visuals</button>
+                <button id="generate-theme-btn" class="btn-primary w-full mt-4" title="Generate new app visuals based on your text">Generate Visuals</button>
                 <div id="theme-loader-container" class="hidden mt-4 flex items-center space-x-3">
                     <div class="loader themed-loader" style="width:25px; height:25px;"></div>
                     <span class="themed-text-muted">AI is generating colors & image...</span>
@@ -329,14 +331,14 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 id="geminiSearchModalTitle" class="text-2xl font-bold text-gray-800">Gemini Search Results</h2>
-                <button id="closeGeminiSearchModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                <button id="closeGeminiSearchModal" class="text-gray-500 hover:text-gray-800 text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="geminiSearchModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
         </div>
     </div>
 
     <div id="search-gemini-popup" class="fixed hidden bg-white shadow-lg rounded-lg p-2 z-50 border border-gray-200">
-        <button id="search-gemini-btn" class="flex items-center gap-2 text-sm text-gray-800 hover:text-purple-600 font-semibold">
+        <button id="search-gemini-btn" class="flex items-center gap-2 text-sm text-gray-800 hover:text-purple-600 font-semibold" title="Search for the selected text with Gemini">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-purple-500"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
             <span>Search with Gemini</span>
         </button>
@@ -355,7 +357,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.14</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.15</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -370,7 +372,7 @@
                         
                         <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
                             <div class="accordion-item">
-                                <button type="button" class="accordion-header">
+                                <button type="button" class="accordion-header" title="Click to see more options">
                                     <span>Tailor Your Plan with AI-Powered Options:</span>
                                     <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </button>
@@ -380,7 +382,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn-primary w-full mt-4">Generate AI Yoga Plan</button>
+                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom yoga plan based on your text">Generate AI Yoga Plan</button>
                     </form>
                     <div id="gemini-result-container" class="mt-6 text-gray-700"></div>
                 </div>
@@ -393,7 +395,7 @@
             </div>
             
             <div id="discover-more-container" class="text-center py-8">
-                 <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg">
+                 <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random yoga category">
                     <span class="flex items-center justify-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
                         Discover More Yoga Topics
@@ -427,6 +429,7 @@
         const allThemeData = {};
         let originalGeneratedText = new Map();
         let currentOnboardingStep = 0;
+        let activeTutorialListener = null;
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -442,40 +445,64 @@
                 title: "Welcome to the App!",
                 text: "Let's take a quick tour to see how everything works. This interactive guide will show you the main features.",
                 element: null, 
-                position: 'center'
+                position: 'center',
+                interactive: false
             },
             {
                 title: "Create a Custom Plan",
-                text: "Start here by typing any idea for a yoga class into this input field. The AI will generate a complete plan for you.",
-                element: '#custom-plan-card',
-                position: 'bottom'
+                text: "<b>Click the input field</b> to begin. Type any idea for a yoga class, and the AI will generate a complete plan for you.",
+                element: '#gemini-prompt',
+                position: 'bottom',
+                eventType: 'focus',
+                interactive: true
             },
             {
                 title: "Change the Visuals",
-                text: "Click this button anytime to open the theme generator. Describe a mood or concept to change the app's colors and header image.",
+                text: "<b>Click this button</b> to open the theme generator. You can describe a mood or concept to change the app's colors and header image.",
                 element: '#theme-changer-button',
-                position: 'left'
+                position: 'left',
+                eventType: 'click',
+                interactive: true
             },
             {
                 title: "Explore AI Categories",
-                text: "Or, you can explore themes from our AI-generated categories. Click on any card to see different options.",
-                element: '#hip-replacement-card-container .card',
-                position: 'top'
+                text: "Alternatively, explore pre-made themes. <b>Click on any of the options below</b> to see details and generate a plan.",
+                element: '#hip-replacement-card-container .grid-card-selector',
+                position: 'top',
+                eventType: 'click',
+                interactive: true
             },
             {
                 title: "You're All Set!",
-                text: "That's it! You're ready to start creating. Click 'Done' to close this tutorial.",
+                text: "That's it! You're ready to start creating. Click 'Done' to close this tutorial and begin.",
                 element: null,
-                position: 'center'
+                position: 'center',
+                interactive: false
             }
         ];
+        
+        function cleanupStepListeners() {
+            if (activeTutorialListener) {
+                activeTutorialListener.element.removeEventListener(activeTutorialListener.eventType, activeTutorialListener.handler);
+                activeTutorialListener = null;
+            }
+        }
+        
+        function moveToNextStep() {
+            if (currentOnboardingStep < onboardingSteps.length - 1) {
+                currentOnboardingStep++;
+                showOnboardingStep(currentOnboardingStep);
+            }
+        }
 
         function startOnboarding() {
+            currentOnboardingStep = 0;
             document.getElementById('onboarding-backdrop').classList.remove('hidden');
             showOnboardingStep(currentOnboardingStep);
         }
 
         function showOnboardingStep(stepIndex) {
+            cleanupStepListeners();
             const modal = document.getElementById('onboarding-modal');
             document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
 
@@ -486,25 +513,55 @@
 
             modal.classList.remove('hidden');
             
+            const nextBtn = document.getElementById('onboarding-next');
+            const skipBtn = document.getElementById('onboarding-skip');
+
+            if (step.interactive) {
+                nextBtn.classList.add('hidden');
+                skipBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                skipBtn.classList.add('hidden');
+            }
+            
             if (step.element) {
                 const targetElement = document.querySelector(step.element);
                 if (targetElement) {
                     targetElement.classList.add('highlight-element');
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
                     const rect = targetElement.getBoundingClientRect();
+                    
+                    // Add listener for interactive steps
+                    if (step.interactive) {
+                        const eventHandler = (e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             if(step.element === '#theme-changer-button'){
+                                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
+                                 setTimeout(()=> document.getElementById('themeGeneratorModal').classList.add('hidden'), 100);
+                             }
+                             moveToNextStep();
+                        };
+                        activeTutorialListener = {element: targetElement, eventType: step.eventType, handler: eventHandler};
+                        targetElement.addEventListener(step.eventType, eventHandler, { once: true });
+                    }
+
+                    // Position the modal relative to the element
+                    const modalHeight = modal.offsetHeight;
+                    const modalWidth = modal.offsetWidth;
                     switch(step.position) {
                         case 'bottom':
-                            modal.style.top = `${rect.bottom + 10}px`;
-                            modal.style.left = `${rect.left}px`;
+                            modal.style.top = `${rect.bottom + 15}px`;
+                            modal.style.left = `${rect.left + (rect.width / 2) - (modalWidth / 2)}px`;
                             break;
                         case 'top':
-                             modal.style.top = `${rect.top - modal.offsetHeight - 10}px`;
-                             modal.style.left = `${rect.left}px`;
+                             modal.style.top = `${rect.top - modalHeight - 15}px`;
+                             modal.style.left = `${rect.left + (rect.width / 2) - (modalWidth / 2)}px`;
                              break;
                         case 'left':
-                             modal.style.top = `${rect.top}px`;
-                             modal.style.left = `${rect.left - modal.offsetWidth - 10}px`;
+                             modal.style.top = `${rect.top + (rect.height / 2) - (modalHeight / 2)}px`;
+                             modal.style.left = `${rect.left - modalWidth - 15}px`;
                              break;
                         default: // center
                             modal.style.top = '50%';
@@ -512,18 +569,27 @@
                             modal.style.transform = 'translate(-50%, -50%)';
                     }
                 }
-            } else {
+            } else { // Center non-element steps
                  modal.style.top = '50%';
                  modal.style.left = '50%';
                  modal.style.transform = 'translate(-50%, -50%)';
             }
             
+            // Adjust modal position if it overflows the viewport
+            const modalRect = modal.getBoundingClientRect();
+            if(modalRect.right > window.innerWidth) modal.style.left = `${window.innerWidth - modalRect.width - 10}px`;
+            if(modalRect.left < 0) modal.style.left = `10px`;
+            if(modalRect.bottom > window.innerHeight) modal.style.top = `${window.innerHeight - modalRect.height - 10}px`;
+            if(modalRect.top < 0) modal.style.top = `10px`;
+
+
             document.getElementById('onboarding-prev').style.display = stepIndex === 0 ? 'none' : 'inline-flex';
-            document.getElementById('onboarding-next').style.display = stepIndex === onboardingSteps.length - 1 ? 'none' : 'inline-flex';
+            document.getElementById('onboarding-next').style.display = stepIndex === onboardingSteps.length - 1 || step.interactive ? 'none' : 'inline-flex';
             document.getElementById('onboarding-done').style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
         }
 
         function endOnboarding() {
+            cleanupStepListeners();
             document.getElementById('onboarding-backdrop').classList.add('hidden');
             document.getElementById('onboarding-modal').classList.add('hidden');
             document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
@@ -593,10 +659,12 @@
         
         // --- Main Content Loading Function ---
         async function loadAppContent() {
-            loadAITailoringOptions();
-            loadDynamicPlaceholders();
-            loadHipReplacementCard(); // Load the dedicated card
-
+            await Promise.allSettled([
+                loadAITailoringOptions(),
+                loadDynamicPlaceholders(),
+                loadHipReplacementCard() // Load the dedicated card first
+            ]);
+            
             const categoriesToGenerate = [
                 { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's seven primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, provide a unique "id" (kebab-case name, e.g., "muladhara"), a "title" (e.g., "Muladhara (Root)"), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos and the zodiac.", prompt: `Generate data for the 12 zodiac signs. For each, provide a unique "id" (kebab-case name, e.g., "aries"), a "title" (e.g., "Aries"), its "dateRange" (e.g., "Mar 21 - Apr 19"), its ruling "planet", and a brief "explanation" of its energy for a yoga context. Return ONLY a valid JSON array of objects.` },
@@ -615,7 +683,7 @@
             promises.push(generateInitialExtraCategories());
 
             await Promise.allSettled(promises);
-            startOnboarding(); // Start tutorial after content is loaded
+            startOnboarding();
         }
         
         // --- Specific Card Loader: Hip Replacement ---
@@ -811,9 +879,8 @@
             
             // Onboarding listeners
             document.getElementById('onboarding-next').addEventListener('click', () => {
-                if (currentOnboardingStep < onboardingSteps.length - 1) {
-                    currentOnboardingStep++;
-                    showOnboardingStep(currentOnboardingStep);
+                if (!onboardingSteps[currentOnboardingStep].interactive) {
+                     moveToNextStep();
                 }
             });
             document.getElementById('onboarding-prev').addEventListener('click', () => {
@@ -822,6 +889,7 @@
                     showOnboardingStep(currentOnboardingStep);
                 }
             });
+            document.getElementById('onboarding-skip').addEventListener('click', endOnboarding);
             document.getElementById('onboarding-done').addEventListener('click', endOnboarding);
 
 
@@ -971,7 +1039,7 @@
             }
         }
 
-        function populateTailoringButtons(options) { const container = document.getElementById('tailoring-buttons-container'); if (!container) return; container.innerHTML = ''; options.forEach(option => { const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm'); button.dataset.option = option; button.addEventListener('click', (e) => { e.preventDefault(); button.classList.toggle('active'); }); container.appendChild(button); }); }
+        function populateTailoringButtons(options) { const container = document.getElementById('tailoring-buttons-container'); if (!container) return; container.innerHTML = ''; options.forEach(option => { const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm'); button.dataset.option = option; button.title = `Toggle ${option}`; button.addEventListener('click', (e) => { e.preventDefault(); button.classList.toggle('active'); }); container.appendChild(button); }); }
         
         // --- Refine Functions ---
         function toggleRefineUI(buttonContainer) {
@@ -987,8 +1055,8 @@
                     <h4 class="font-semibold text-md mb-2 themed-text-accent">Refine This Plan</h4>
                     <textarea class="w-full p-2 themed-input border rounded-lg text-sm" rows="3" placeholder="e.g., 'Make it more beginner-friendly and add a peak pose.'"></textarea>
                     <div class="flex gap-2 mt-2">
-                        <button class="btn-primary flex-grow submit-refinement-button text-sm">Submit Refinement</button>
-                        <button class="btn-secondary text-sm" onclick="this.closest('.refine-container').remove()">Cancel</button>
+                        <button class="btn-primary flex-grow submit-refinement-button text-sm" title="Submit your refinement request">Submit Refinement</button>
+                        <button class="btn-secondary text-sm" onclick="this.closest('.refine-container').remove()" title="Cancel refinement">Cancel</button>
                     </div>`;
                 const targetForInsertion = contentArea.querySelector('.prose-content, .accordion, .button-actions-container');
                 if (targetForInsertion) targetForInsertion.insertAdjacentElement('afterend', refineContainer);
@@ -1119,7 +1187,7 @@
             return html;
         }
 
-        function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return `<div class="accordion">${robustMarkdownToHtml(text)}</div>`; const accordionItems = sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join(''); return `<div class="accordion">${accordionItems}</div>`;}
+        function convertMarkdownToAccordion(text, openFirst = true) { const sections = text.split(/^(?:###) /m).slice(1); if (sections.length === 0) return `<div class="accordion">${robustMarkdownToHtml(text)}</div>`; const accordionItems = sections.map((section, index) => { const parts = section.split('\n'); const title = parts[0].trim().replace(/\*+/g, ''); const content = parts.slice(1).join('\n'); const isOpen = openFirst && index === 0; return `<div class="accordion-item"><button class="accordion-header ${isOpen ? 'active' : ''}" title="Toggle section: ${title}"><span>${title}</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content ${isOpen ? 'open' : ''}"><div class="prose max-w-none p-4">${robustMarkdownToHtml(content)}</div></div></div>`; }).join(''); return `<div class="accordion">${accordionItems}</div>`;}
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown ${type} error occurred. Check the console for details.`; const errorMessage = error.message.toLowerCase(); if (errorMessage.includes('safety') || errorMessage.includes('blocked')) message = `The ${type} generation request was blocked for safety reasons. Please try a different prompt.`; else if (errorMessage.includes('400') && type === 'color') message = `The AI had trouble creating a color theme from that prompt. Try being more descriptive.`; else if (errorMessage.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid. Please check it and try again.`; else if (errorMessage.includes('401') || errorMessage.includes('403')) message = `Authentication failed for ${type} generation. Check your API key.`; else if (errorMessage.includes('429')) message = `You have exceeded your request limit for ${type} generation. Please wait and try again.`; else if (errorMessage.includes('failed to fetch')) message = 'Network Error: Could not connect to the API.'; else if (errorMessage.includes('max_tokens')) message = `The AI's response was too long and was cut short. Please try a simpler request or break it into smaller parts.`; return `Sorry, something went wrong. ${message}`; }
         
         async function generateAndApplyDefaultTheme() {
@@ -1270,9 +1338,11 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
             const buttonContainer = document.createElement('div'); 
             buttonContainer.className = 'button-actions-container flex flex-col md:flex-row gap-2 mt-6'; 
             const refineButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> <span>Refine</span>`, 'btn-secondary w-full md:w-auto refine-button'); 
+            refineButton.title = "Refine this generated content";
             const copyButton = createButton(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> <span>Copy Text</span>`, 'btn-secondary w-full md:w-auto'); 
+            copyButton.title = "Copy the text content to your clipboard";
             copyButton.addEventListener('click', (e) => { const contentToCopy = container.id === 'inDepthModalFooter' ? document.getElementById('inDepthModalContent') : container.querySelector('.prose-content, .accordion'); copyElementTextToClipboard(contentToCopy, e.currentTarget) }); 
-            if(container.id !== 'inDepthModalFooter') { const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); exploreButton.dataset.themeId = themeId; exploreButton.dataset.themeType = themeType; buttonContainer.appendChild(exploreButton); } 
+            if(container.id !== 'inDepthModalFooter') { const exploreButton = createButton('Explore in Depth', 'btn-primary w-full explore-button'); exploreButton.dataset.themeId = themeId; exploreButton.dataset.themeType = themeType; exploreButton.title="Get a more detailed plan in a new window"; buttonContainer.appendChild(exploreButton); } 
             buttonContainer.appendChild(refineButton); buttonContainer.appendChild(copyButton); container.appendChild(buttonContainer); 
         }
 
@@ -1442,4 +1512,4 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
         }
     </script>
 </body>
-</ht
+</ht>" in the immersive. Please remove the html, head and body tags and ensure the entire html file is corr
