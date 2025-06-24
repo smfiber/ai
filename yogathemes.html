@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.25</title>
+    <title>AI Yoga Class & Theme Generator v17.27</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -105,7 +105,6 @@
         #settings-button { bottom: 6.5rem; right: 2rem; }
         #theme-changer-button { bottom: 11rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
-        #tutorial-button { bottom: 6.5rem; left: 2rem; }
         
         #settings-panel {
             position: fixed; bottom: 11rem; right: 2rem;
@@ -173,9 +172,59 @@
         .week-by-week-grid .grid-card-selector { text-align: left; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; }
         .week-by-week-grid .icon { margin-bottom: 0; }
 
+        /* --- NEW: Dynamic Tutorial Styles --- */
+        .tour-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); z-index: 9998;
+            backdrop-filter: blur(4px);
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .tour-overlay.visible { opacity: 1; }
+
+        .tour-highlight {
+            position: relative; z-index: 9999;
+            box-shadow: 0 0 0 4px var(--color-primary), 0 0 20px 10px rgba(147, 51, 234, 0.5);
+            border-radius: 12px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .tour-popover {
+            position: absolute; z-index: 10000;
+            background-color: var(--color-card-bg);
+            border: 1px solid var(--color-card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 320px; max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .tour-popover.visible { opacity: 1; transform: translateY(0); }
+        .tour-popover h3 { font-size: 1.25rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; }
+        .tour-popover p { font-size: 0.95rem; color: var(--color-text-muted); margin-bottom: 1.5rem; }
+        .tour-popover-nav { display: flex; justify-content: space-between; align-items: center; }
+        .tour-popover-dots { display: flex; gap: 6px; }
+        .tour-popover-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-card-border); transition: background-color 0.3s; }
+        .tour-popover-dot.active { background-color: var(--color-primary); }
+
     </style>
 </head>
 <body class="p-4 md:p-8">
+
+    <!-- NEW: Dynamic Tutorial HTML -->
+    <div id="tour-overlay" class="tour-overlay"></div>
+    <div id="tour-popover" class="tour-popover">
+        <h3 id="tour-title"></h3>
+        <p id="tour-content"></p>
+        <div class="tour-popover-nav">
+            <div id="tour-dots" class="tour-popover-dots"></div>
+            <div class="flex gap-2">
+                <button id="tour-back-btn" class="btn-secondary text-sm">Back</button>
+                <button id="tour-next-btn" class="btn-primary text-sm">Next</button>
+                <button id="tour-finish-btn" class="btn-primary text-sm hidden">Finish</button>
+            </div>
+        </div>
+    </div>
     
     <!-- All Modals -->
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
@@ -185,6 +234,7 @@
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
+                 <button type="button" id="start-demo-btn" class="w-full btn-secondary mt-2">Or Use Demo Mode</button>
             </form>
         </div>
     </div>
@@ -238,7 +288,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.25</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.27</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -295,9 +345,6 @@
     </button>
     <button id="new-plan-button" class="floating-action-button" title="New Plan (Reload)">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-    </button>
-    <button id="tutorial-button" class="floating-action-button" title="Show App Tutorial & Demo">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
     </button>
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -416,6 +463,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             document.getElementById('apiKeyModal').classList.remove('hidden');
             setupEventListeners();
             populateTypographySettings();
+            setupTour();
         });
 
         function setupEventListeners() {
@@ -432,7 +480,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
                 if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
             });
-            document.getElementById('tutorial-button').addEventListener('click', showTutorialModal);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
             // Settings Panel
@@ -448,7 +495,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal', 'apiKeyModal'].forEach(id => {
                  document.getElementById(id).addEventListener('click', (e) => {
                      if (e.target.id === id || e.target.closest('[id^="close"]')) {
                          document.getElementById(id).classList.add('hidden');
@@ -458,7 +505,8 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
-                if(e.target.id === 'start-demo-btn'){
+                const demoBtn = e.target.closest('#start-demo-btn');
+                if(demoBtn){
                     startDemoMode();
                     return;
                 }
@@ -565,6 +613,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
              try {
                  await generateAndApplyDefaultTheme();
                  await loadAppContent(loadingMessageEl);
+                 startTour(); // <-- MODIFICATION: Start the new dynamic tutorial
              } catch (error) {
                  console.error("A critical error occurred during app initialization:", error.message);
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
@@ -1172,38 +1221,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             });
         }
         
-        function showTutorialModal() {
-            document.getElementById('apiKeyModal').classList.add('hidden');
-
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-
-            titleEl.textContent = "App Tutorial";
-            footerEl.innerHTML = `<button id="start-demo-btn" class="btn-primary mx-auto">Explore a Demo Version</button>`;
-            
-            modal.classList.remove('hidden');
-
-            const tutorialMarkdown = `
-### Welcome!
-This app uses AI to generate creative yoga class plans and visual themes. You can either enter your own API key to use the live AI features, or explore this demo version to see how it works.
-
-### Custom Plan Generator
-Enter any theme, idea, or feeling into the main text box (e.g., "Courage & Heart Opening"). The AI will then craft a complete, unique yoga class plan for you from scratch.
-
-### Pre-Built Categories
-Scroll down to explore a wide range of pre-built, AI-generated categories. Click on any item within a category to get a quick summary plan.
-
-### Visual Theme Generator (API Key Required)
-Click the floating button with the eye icon to open the AI Visual Theme Generator. Type in a descriptive phrase like "A quiet, misty forest at dawn," and the AI will generate a brand new color palette and header image for the entire app.
-
-### In-Depth Exploration & Refining (API Key Required)
-When you see a plan you like, use the "Explore In-Depth" and "Refine with AI" buttons to get more details or ask the AI to make changes.
-`;
-            createAccordionFromMarkdown(tutorialMarkdown, contentEl);
-        }
-        
         async function handleExploreInDepth(themeId, themeType) {
              if (isDemoMode) {
                 const modal = document.getElementById('inDepthModal');
@@ -1355,7 +1372,7 @@ When you see a plan you like, use the "Explore In-Depth" and "Refine with AI" bu
         // --- Demo Mode Functions ---
         async function startDemoMode() {
             isDemoMode = true;
-            document.getElementById('inDepthModal').classList.add('hidden');
+            document.getElementById('apiKeyModal').classList.add('hidden');
             const loadingModal = document.getElementById('loadingStateModal');
             const loadingMessageEl = document.getElementById('loading-message');
             loadingMessageEl.textContent = "Loading Demo Version...";
@@ -1411,6 +1428,125 @@ When you see a plan you like, use the "Explore In-Depth" and "Refine with AI" bu
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
         }
+
+        // --- NEW: Dynamic Tutorial Logic ---
+        let tourSteps = [];
+        let currentTourStep = 0;
+
+        function setupTour() {
+            tourSteps = [
+                {
+                    title: 'Welcome to the AI Yoga Generator!',
+                    content: 'This quick tour will show you the main features. You can exit at any time by clicking the backdrop.'
+                },
+                {
+                    element: '#custom-plan-card',
+                    title: 'Custom Plan Generator',
+                    content: 'This is the heart of the app. Type any theme or idea here, and the AI will craft a unique yoga class plan just for you.'
+                },
+                {
+                    element: '#main-grid',
+                    title: 'Pre-Built Categories',
+                    content: 'Scroll down to discover dozens of AI-generated categories. Click any item to get an instant class summary.'
+                },
+                {
+                    element: '#theme-changer-button',
+                    title: 'AI Visual Theme Generator',
+                    content: 'Feeling creative? Click this button, describe a mood or scene, and the AI will generate a new color palette and header image for the app.'
+                },
+                {
+                    element: '#main-grid .explore-button',
+                    title: 'Explore & Refine',
+                    content: 'Once a plan is generated, use these buttons to get a more detailed version or ask the AI to make specific changes.'
+                },
+                {
+                    title: 'You\'re All Set!',
+                    content: 'That\'s it for the main features. Enjoy exploring and creating your perfect yoga practice!'
+                }
+            ];
+
+            document.getElementById('tour-next-btn').addEventListener('click', () => showTourStep(currentTourStep + 1));
+            document.getElementById('tour-back-btn').addEventListener('click', () => showTourStep(currentTourStep - 1));
+            document.getElementById('tour-finish-btn').addEventListener('click', endTour);
+            document.getElementById('tour-overlay').addEventListener('click', endTour);
+        }
+        
+        function startTour() {
+            document.getElementById('tour-overlay').classList.add('visible');
+            document.getElementById('tour-popover').classList.add('visible');
+            showTourStep(0);
+        }
+
+        function endTour() {
+            document.getElementById('tour-overlay').classList.remove('visible');
+            document.getElementById('tour-popover').classList.remove('visible');
+            const highlighted = document.querySelector('.tour-highlight');
+            if (highlighted) {
+                highlighted.classList.remove('tour-highlight');
+            }
+        }
+        
+        function showTourStep(stepIndex) {
+            currentTourStep = stepIndex;
+
+            // Remove previous highlight
+            const previousHighlight = document.querySelector('.tour-highlight');
+            if (previousHighlight) previousHighlight.classList.remove('tour-highlight');
+            
+            const step = tourSteps[stepIndex];
+            if (!step) {
+                endTour();
+                return;
+            }
+
+            const popover = document.getElementById('tour-popover');
+            document.getElementById('tour-title').textContent = step.title;
+            document.getElementById('tour-content').textContent = step.content;
+
+            const nextBtn = document.getElementById('tour-next-btn');
+            const backBtn = document.getElementById('tour-back-btn');
+            const finishBtn = document.getElementById('tour-finish-btn');
+            
+            backBtn.classList.toggle('hidden', stepIndex === 0);
+            nextBtn.classList.toggle('hidden', stepIndex === tourSteps.length - 1);
+            finishBtn.classList.toggle('hidden', stepIndex !== tourSteps.length - 1);
+            
+            // Update dots
+            const dotsContainer = document.getElementById('tour-dots');
+            dotsContainer.innerHTML = tourSteps.map((_, i) => `<div class="tour-popover-dot ${i === stepIndex ? 'active' : ''}"></div>`).join('');
+
+
+            const targetElement = step.element ? document.querySelector(step.element) : null;
+            if (targetElement) {
+                targetElement.classList.add('tour-highlight');
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                const rect = targetElement.getBoundingClientRect();
+                const popoverRect = popover.getBoundingClientRect();
+                
+                let top = rect.bottom + 15;
+                let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+
+                if (top + popoverRect.height > window.innerHeight) {
+                    top = rect.top - popoverRect.height - 15;
+                }
+                
+                if (left < 10) left = 10;
+                if (left + popoverRect.width > window.innerWidth) {
+                    left = window.innerWidth - popoverRect.width - 10;
+                }
+
+                popover.style.top = `${top}px`;
+                popover.style.left = `${left}px`;
+
+            } else {
+                // Center popover for steps without an element
+                popover.style.top = '50%';
+                popover.style.left = '50%';
+                popover.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
 
     </script>
 </body>
