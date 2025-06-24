@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.15</title>
+    <title>AI Yoga Class & Theme Generator v16.16</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -274,7 +274,10 @@
     <!-- Onboarding Tutorial -->
     <div id="onboarding-backdrop" class="fixed inset-0 hidden onboarding-backdrop"></div>
     <div id="onboarding-modal" class="fixed hidden bg-white p-6 rounded-lg shadow-xl max-w-sm onboarding-step">
-        <h3 id="onboarding-title" class="text-xl font-bold themed-text-primary mb-3"></h3>
+        <div class="flex justify-between items-center mb-3">
+            <h3 id="onboarding-title" class="text-xl font-bold themed-text-primary"></h3>
+            <button id="onboarding-close-x" class="text-gray-500 hover:text-gray-800 text-3xl leading-none" title="Close Tutorial">&times;</button>
+        </div>
         <p id="onboarding-text" class="themed-text-muted mb-4"></p>
         <div class="flex justify-between items-center">
             <div id="onboarding-progress" class="text-sm themed-text-muted"></div>
@@ -357,7 +360,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.15</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.16</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -450,7 +453,7 @@
             },
             {
                 title: "Create a Custom Plan",
-                text: "<b>Click the input field</b> to begin. Type any idea for a yoga class, and the AI will generate a complete plan for you.",
+                text: "You can type any idea for a yoga class, and the AI will generate a complete plan for you. You don't have to interact with the input field right away to proceed with the tutorial.",
                 element: '#gemini-prompt',
                 position: 'bottom',
                 eventType: 'focus',
@@ -458,7 +461,7 @@
             },
             {
                 title: "Change the Visuals",
-                text: "<b>Click this button</b> to open the theme generator. You can describe a mood or concept to change the app's colors and header image.",
+                text: "You can describe a mood or concept to create a new color palette and header image for the app. You don't have to interact with this button right away to proceed with the tutorial.",
                 element: '#theme-changer-button',
                 position: 'left',
                 eventType: 'click',
@@ -466,8 +469,8 @@
             },
             {
                 title: "Explore AI Categories",
-                text: "Alternatively, explore pre-made themes. <b>Click on any of the options below</b> to see details and generate a plan.",
-                element: '#hip-replacement-card-container .grid-card-selector',
+                text: "Alternatively, explore pre-made themes. Click on any of the options below to see details and generate a plan. You don't have to interact with these options right away to proceed with the tutorial.",
+                element: '#hip-replacement-card-container .grid-card-selector', // Point to a specific element within the card container
                 position: 'top',
                 eventType: 'click',
                 interactive: true
@@ -492,6 +495,9 @@
             if (currentOnboardingStep < onboardingSteps.length - 1) {
                 currentOnboardingStep++;
                 showOnboardingStep(currentOnboardingStep);
+            } else {
+                // If it's the last step and "Next" is clicked, it means the tutorial is effectively done.
+                endOnboarding();
             }
         }
 
@@ -515,14 +521,18 @@
             
             const nextBtn = document.getElementById('onboarding-next');
             const skipBtn = document.getElementById('onboarding-skip');
+            const prevBtn = document.getElementById('onboarding-prev');
+            const doneBtn = document.getElementById('onboarding-done');
 
-            if (step.interactive) {
-                nextBtn.classList.add('hidden');
-                skipBtn.classList.remove('hidden');
-            } else {
-                nextBtn.classList.remove('hidden');
-                skipBtn.classList.add('hidden');
-            }
+            // Manage button visibility
+            prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-flex';
+            nextBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'none' : 'inline-flex';
+            doneBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
+            skipBtn.style.display = (stepIndex === onboardingSteps.length - 1 || stepIndex === onboardingSteps.length - 2) ? 'none' : 'inline-flex'; // Hide skip on the last two steps
+
+
+            // Next button is always enabled unless it's the very last step.
+            nextBtn.disabled = false;
             
             if (step.element) {
                 const targetElement = document.querySelector(step.element);
@@ -535,57 +545,61 @@
                     // Add listener for interactive steps
                     if (step.interactive) {
                         const eventHandler = (e) => {
+                             // This handler will still advance, but it's not the only way to advance
+                             // The user can now click 'Next' directly as well.
                              e.preventDefault();
                              e.stopPropagation();
                              if(step.element === '#theme-changer-button'){
+                                 // Simulate opening and closing the modal for tutorial purposes
                                  document.getElementById('themeGeneratorModal').classList.remove('hidden');
                                  setTimeout(()=> document.getElementById('themeGeneratorModal').classList.add('hidden'), 100);
                              }
-                             moveToNextStep();
+                             // Only move next if triggered by the interactive element and not already on the last step
+                             if (currentOnboardingStep < onboardingSteps.length - 1) { 
+                                 moveToNextStep();
+                             }
                         };
                         activeTutorialListener = {element: targetElement, eventType: step.eventType, handler: eventHandler};
                         targetElement.addEventListener(step.eventType, eventHandler, { once: true });
                     }
 
                     // Position the modal relative to the element
-                    const modalHeight = modal.offsetHeight;
-                    const modalWidth = modal.offsetWidth;
+                    let modalLeft = rect.left + (rect.width / 2) - (modal.offsetWidth / 2);
+                    let modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2);
+
                     switch(step.position) {
                         case 'bottom':
-                            modal.style.top = `${rect.bottom + 15}px`;
-                            modal.style.left = `${rect.left + (rect.width / 2) - (modalWidth / 2)}px`;
+                            modalTop = rect.bottom + 15;
                             break;
                         case 'top':
-                             modal.style.top = `${rect.top - modalHeight - 15}px`;
-                             modal.style.left = `${rect.left + (rect.width / 2) - (modalWidth / 2)}px`;
-                             break;
+                            modalTop = rect.top - modal.offsetHeight - 15;
+                            break;
                         case 'left':
-                             modal.style.top = `${rect.top + (rect.height / 2) - (modalHeight / 2)}px`;
-                             modal.style.left = `${rect.left - modalWidth - 15}px`;
-                             break;
-                        default: // center
-                            modal.style.top = '50%';
-                            modal.style.left = '50%';
-                            modal.style.transform = 'translate(-50%, -50%)';
+                            modalLeft = rect.left - modal.offsetWidth - 15;
+                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2); // Center vertically
+                            break;
+                        case 'right': // Added for completeness, though not currently used
+                            modalLeft = rect.right + 15;
+                            modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2); // Center vertically
+                            break;
+                        default: // center (already handled by initial modalTop/modalLeft)
+                            break;
                     }
+                    
+                    // Ensure modal stays within viewport
+                    modalLeft = Math.max(10, Math.min(modalLeft, window.innerWidth - modal.offsetWidth - 10));
+                    modalTop = Math.max(10, Math.min(modalTop, window.innerHeight - modal.offsetHeight - 10));
+
+                    modal.style.left = `${modalLeft}px`;
+                    modal.style.top = `${modalTop}px`;
+                    modal.style.transform = 'none'; // Remove center transform if set
+
                 }
             } else { // Center non-element steps
                  modal.style.top = '50%';
                  modal.style.left = '50%';
                  modal.style.transform = 'translate(-50%, -50%)';
             }
-            
-            // Adjust modal position if it overflows the viewport
-            const modalRect = modal.getBoundingClientRect();
-            if(modalRect.right > window.innerWidth) modal.style.left = `${window.innerWidth - modalRect.width - 10}px`;
-            if(modalRect.left < 0) modal.style.left = `10px`;
-            if(modalRect.bottom > window.innerHeight) modal.style.top = `${window.innerHeight - modalRect.height - 10}px`;
-            if(modalRect.top < 0) modal.style.top = `10px`;
-
-
-            document.getElementById('onboarding-prev').style.display = stepIndex === 0 ? 'none' : 'inline-flex';
-            document.getElementById('onboarding-next').style.display = stepIndex === onboardingSteps.length - 1 || step.interactive ? 'none' : 'inline-flex';
-            document.getElementById('onboarding-done').style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
         }
 
         function endOnboarding() {
@@ -593,6 +607,8 @@
             document.getElementById('onboarding-backdrop').classList.add('hidden');
             document.getElementById('onboarding-modal').classList.add('hidden');
             document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
+            // Scroll to the top of the page when the tutorial ends
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
 
@@ -668,9 +684,9 @@
             const categoriesToGenerate = [
                 { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's seven primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, provide a unique "id" (kebab-case name, e.g., "muladhara"), a "title" (e.g., "Muladhara (Root)"), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos and the zodiac.", prompt: `Generate data for the 12 zodiac signs. For each, provide a unique "id" (kebab-case name, e.g., "aries"), a "title" (e.g., "Aries"), its "dateRange" (e.g., "Mar 21 - Apr 19"), its ruling "planet", and a brief "explanation" of its energy for a yoga context. Return ONLY a valid JSON array of objects.` },
-                { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with practices tailored for artists.", prompt: `Generate a list of 10-15 yoga concepts or themes tailored for artists to boost creativity and release tension. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
-                { key: 'dancers', title: 'Yoga for Dancers', description: "Enhance flexibility, strength, and recovery with yoga for dancers.", prompt: `Generate a list of 10-15 yoga concepts or poses specifically beneficial for dancers, focusing on flexibility, strength, and recovery. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
-                { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices adapted for sensory regulation, mindfulness, and grounding.", prompt: `Generate a list of 10-15 yoga themes or practices adapted for neurodiverse individuals, focusing on sensory regulation, mindfulness, and grounding. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
+                { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with practices tailored for artists.", prompt: `Generate an extensive list of 40 to 50 yoga concepts or themes tailored for artists to boost creativity and release tension. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
+                { key: 'dancers', title: 'Yoga for Dancers', description: "Enhance flexibility, strength, and recovery with yoga for dancers.", prompt: `Generate an extensive list of 40 to 50 yoga concepts or poses specifically beneficial for dancers, focusing on flexibility, strength, and recovery. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
+                { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices adapted for sensory regulation, mindfulness, and grounding.", prompt: `Generate an extensive list of 40 to 50 yoga themes or practices adapted for neurodiverse individuals, focusing on sensory regulation, mindfulness, and grounding. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
                 { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", prompt: `Generate data for the 4 seasons. For each, provide a unique "id" (e.g., "spring-equinox"), a "title", its "date" in MM/DD format, and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'moonPhases', title: 'Moon Phases', description: "Align your practice with the energy of the lunar cycle.", prompt: `Generate data for the 8 phases of the moon. For each, provide a unique "id" (e.g., "new-moon"), a "title", and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", prompt: `Generate an extensive list of 40 to 50 major and niche yoga styles. For each style, provide a unique "id" (kebab-case), a "title", a "founder" (or key figure, can be an empty string), and a "description". Return ONLY a valid JSON array of objects.` },
@@ -692,7 +708,8 @@
             const categoryKey = 'hipReplacement';
             const categoryTitle = 'Gentle Yoga After Hip Replacement Surgery';
             const categoryDescription = "Safe, modified practices to support recovery and mobility after hip surgery.";
-            const prompt = `Generate a list of 10-15 extremely gentle and safe yoga poses or concepts suitable for someone recovering from hip replacement surgery. Emphasize modifications and what to avoid. For each, provide a unique "id" (kebab-case), "title", and a "description" focused on safety and gentle movement. Return ONLY a valid JSON array of objects.`;
+            // PROMPT MODIFIED: Ask for a class plan, not just poses/concepts
+            const prompt = `Generate a list of 10-15 very gentle and safe yoga class plans or sequences suitable for someone recovering from hip replacement surgery. For each plan, provide a unique "id" (kebab-case), a concise "title" (e.g., "Supported Supine Flow"), and a "description" that outlines the plan's focus, emphasizing modifications and what to avoid. Return ONLY a valid JSON array of objects.`;
 
             const card = document.createElement('div');
             card.className = 'card mb-8'; // Added margin-bottom
@@ -878,23 +895,28 @@
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Onboarding listeners
-            document.getElementById('onboarding-next').addEventListener('click', () => {
-                if (!onboardingSteps[currentOnboardingStep].interactive) {
-                     moveToNextStep();
-                }
-            });
+            document.getElementById('onboarding-next').addEventListener('click', moveToNextStep);
             document.getElementById('onboarding-prev').addEventListener('click', () => {
                  if (currentOnboardingStep > 0) {
                     currentOnboardingStep--;
                     showOnboardingStep(currentOnboardingStep);
                 }
             });
-            document.getElementById('onboarding-skip').addEventListener('click', endOnboarding);
+            // MODIFIED: Skip button now moves to the next step, not ends the tutorial
+            document.getElementById('onboarding-skip').addEventListener('click', moveToNextStep); 
             document.getElementById('onboarding-done').addEventListener('click', endOnboarding);
+            // NEW: Listener for the 'X' close button
+            document.getElementById('onboarding-close-x').addEventListener('click', endOnboarding);
 
 
             document.addEventListener('mouseup', handleTextSelection);
-            document.addEventListener('mousedown', () => document.getElementById('search-gemini-popup').classList.add('hidden'));
+            // MODIFIED: Only hide popup if click is outside popup and not on a selectable element
+            document.addEventListener('mousedown', (e) => {
+                const popup = document.getElementById('search-gemini-popup');
+                if (!popup.classList.contains('hidden') && !popup.contains(e.target) && !e.target.closest('input, textarea, button')) {
+                    popup.classList.add('hidden');
+                }
+            });
 
             document.addEventListener('click', (e) => {
                 if (e.target.closest('#new-plan-button')) clearWorkspace();
@@ -972,7 +994,8 @@
 
             resultContainer.innerHTML = getLoaderHTML('Crafting your base class plan...');
             
-            const basePrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Structure the response in a logical, easy-to-follow format. Organize the entire guide into several logical sections using '###' for each main heading (e.g., ### Introduction). For subheadings within a section, use bold text like **This is a Subheading**. For lists of items (like poses), use bullet points that start with a hyphen. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
+            // MODIFIED PROMPT: Request ~20 items in the custom plan
+            const basePrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your goal is to provide a rich and detailed plan, including approximately 20 distinct elements such as poses, breathing techniques, meditation cues, or philosophical insights, organized into logical sections. Structure the response in a logical, easy-to-follow format. Organize the entire guide into several logical sections using '###' for each main heading (e.g., ### Introduction). For subheadings within a section, use bold text like **This is a Subheading**. For lists of items (like poses), use bullet points that start with a hyphen. Ensure the output is well-structured and provides around 20 actionable or conceptual items for the class.`;
             
             try {
                 const baseText = await callGeminiAPI(basePrompt);
@@ -1024,6 +1047,7 @@
             container.innerHTML = getLoaderHTML('AI is generating tailoring options...');
             const fallbackOptions = ["Breathwork", "Essential Oils", "Chanting", "Poetry", "Props", "Meditation", "Mantra & Affirmations", "Partner Poses"];
             try {
+                // PROMPT MODIFIED: Ask for 40-50 unique options
                 const prompt = `Generate an extensive list of 40 to 50 unique and creative yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting. Example: ["Sanskrit Focus", "Mudras", "Sound Bath"]`;
                 const tailoringOptions = await callGeminiAPI(prompt, true).then(JSON.parse);
                 populateTailoringButtons(tailoringOptions);
@@ -1380,7 +1404,8 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
             loaderCard.innerHTML = getLoaderHTML('AI is generating initial yoga categories...');
             mainGrid.appendChild(loaderCard);
 
-            const prompt = `Generate a comprehensive JSON object of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a list of 10 to 15 different styles. Each item in the "styles" array must be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid, complete, and perfectly formatted JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting, comments, or incomplete structures. The final output must be parsable by a standard JSON parser.`;
+            // PROMPT MODIFIED: Request 15-20 styles per sub-category for initial load
+            const prompt = `Generate a comprehensive JSON object of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a list of 15 to 20 different styles. Each item in the "styles" array must be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid, complete, and perfectly formatted JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting, comments, or incomplete structures. The final output must be parsable by a standard JSON parser.`;
 
             let jsonText;
             try {
@@ -1435,7 +1460,8 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
             errorP.textContent = '';
             
             const existingTitles = Array.from(document.querySelectorAll('#main-grid .card h2')).map(h2 => h2.textContent);
-            const prompt = `Generate a JSON object for one new, creative, and unique yoga-related category. The category's title must NOT be in the following list of existing titles: [${existingTitles.join(', ')}]. The JSON object should have a single root key, which must be a camelCase version of the new category's title (e.g., "yogaForAthletes"). The value for this key should be an object containing three properties: "categoryTitle" (string), "categoryDescription" (string), and a "styles" array. The "styles" array should contain 15-20 style objects, where each object has an "id" (kebab-case string), "title" (string), and "description" (string). Return ONLY the raw, valid JSON object with no other text or markdown.`;
+            // PROMPT MODIFIED: Request 15-20 styles for discover more category
+            const prompt = `Generate a JSON object for one new, creative, and unique yoga-related category. The category's title must NOT be in the following list of existing titles: [${existingTitles.join(', ')}]. The JSON object should have a single root key, which must be a camelCase version of the new category's title (e.g., "yogaForAthletes"). The value for this key should be an object containing three properties: "categoryTitle" (string), "categoryDescription" (string), and a "styles" array. The "styles" array should contain 15 to 20 style objects, where each object has an "id" (kebab-case string), "title" (string), and "description" (string). Return ONLY the raw, valid JSON object with no other text or markdown.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1472,7 +1498,8 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
 
-            if (selectedText.length > 2 && !e.target.closest('input, textarea, button, .floating-action-button')) {
+            // Ensure selection is not empty, not within an input/textarea, and not within certain interactive elements
+            if (selectedText.length > 2 && !e.target.closest('input, textarea, button, .floating-action-button, .btn-secondary, .btn-primary')) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
                 popup.style.left = `${rect.left + window.scrollX}px`;
@@ -1480,7 +1507,7 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
                 popup.classList.remove('hidden');
                 
                 const searchBtn = document.getElementById('search-gemini-btn');
-                searchBtn.onclick = () => {
+                searchBtn.onclick = () => { // Ensure this re-assigns the click handler with the current text
                     performGeminiSearch(selectedText);
                     popup.classList.add('hidden');
                 };
@@ -1493,7 +1520,7 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
             const modal = document.getElementById('geminiSearchModal');
             const modalTitle = document.getElementById('geminiSearchModalTitle');
             const modalContent = document.getElementById('geminiSearchModalContent');
-            if (!checkApiKey(modalContent)) return;
+            if (!checkApiKey(modalContent)) return; // Check API key before proceeding
 
             modalTitle.textContent = `Gemini Explains: "${text}"`;
             modalContent.innerHTML = getLoaderHTML(`Searching for information about "${text}"...`);
