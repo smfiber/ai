@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.29</title>
+    <title>AI Yoga Class & Theme Generator v17.30</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -172,17 +172,17 @@
         .week-by-week-grid .grid-card-selector { text-align: left; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; }
         .week-by-week-grid .icon { margin-bottom: 0; }
 
-        /* --- Dynamic Tutorial Styles --- */
+        /* --- Dynamic Tutorial & Tooltip Styles --- */
         .tour-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.6); z-index: 9998;
             backdrop-filter: blur(4px);
             opacity: 0; transition: opacity 0.3s ease;
-            pointer-events: none; /* FIX: Prevents overlay from blocking clicks when invisible */
+            pointer-events: none;
         }
         .tour-overlay.visible { 
             opacity: 1; 
-            pointer-events: auto; /* FIX: Allows clicks only when visible */
+            pointer-events: auto;
         }
 
         .tour-highlight {
@@ -202,8 +202,9 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             opacity: 0; transform: translateY(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
+            visibility: hidden;
         }
-        .tour-popover.visible { opacity: 1; transform: translateY(0); }
+        .tour-popover.visible { opacity: 1; transform: translateY(0); visibility: visible; }
         .tour-popover h3 { font-size: 1.25rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; }
         .tour-popover p { font-size: 0.95rem; color: var(--color-text-muted); margin-bottom: 1.5rem; }
         .tour-popover-nav { display: flex; justify-content: space-between; align-items: center; }
@@ -219,6 +220,39 @@
             cursor: pointer;
         }
         #tour-skip-btn:hover { text-decoration: underline; }
+
+        .tooltip-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-icon {
+            color: var(--color-text-muted);
+            cursor: pointer;
+        }
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background-color: var(--color-accent);
+            color: var(--color-button-text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            width: max-content;
+            max-width: 250px;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 60;
+        }
+        .tooltip-container:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
 
     </style>
 </head>
@@ -243,7 +277,13 @@
     <!-- All Modals -->
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
-            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
+            <div class="flex justify-between items-start">
+                <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
+                <div class="tooltip-container ml-2">
+                    <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div class="tooltip">An API key is required to use the AI generation features of this application. Your key is stored securely in your browser and not shared.</div>
+                </div>
+            </div>
             <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser.</p>
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
@@ -263,7 +303,13 @@
         <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Exploration</h2>
-                <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <div class="flex items-center gap-4">
+                    <div class="tooltip-container">
+                         <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
+                    </div>
+                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                </div>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
             <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2 justify-center" style="border-color: var(--color-card-border);"></div>
@@ -271,9 +317,15 @@
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-lg m-4 flex flex-col">
-            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">AI Visual Theme Generator</h2>
-                <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <div class="flex items-center gap-4">
+                     <div class="tooltip-container">
+                         <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
+                    </div>
+                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                </div>
             </div>
             <div class="p-6">
                 <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
@@ -301,7 +353,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.29</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.30</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -384,7 +436,6 @@
         
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            // No longer hiding the API key modal by default. It's the first thing the user sees.
             setupEventListeners();
             populateTypographySettings();
             setupTour();
@@ -1273,14 +1324,7 @@
                 { element: '#gemini-prompt', title: 'Enter Your Theme', content: 'Type any theme, idea, or feeling here. For example, "A class for releasing anxiety" or "Morning energy flow".' },
                 { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal options to fine-tune your request, like focusing on "Flexibility" or "Strength".' },
                 { element: '#generate-plan-btn', title: 'Generate Your Plan', content: 'Once you\'ve entered a prompt, click here to let the AI craft a unique yoga class plan just for you.' },
-                { element: '#gemini-result-container', title: 'Your Custom Plan', content: 'Your generated plan will appear here in an easy-to-read accordion format.' },
                 { element: '#main-grid', title: 'Pre-Built Categories', content: 'Scroll down to discover dozens of AI-generated categories, from yoga styles to seasonal themes.' },
-                { element: '#chakras-card', title: 'Category Card', content: 'Each of these cards contains a collection of related yoga themes to explore.' },
-                { element: '#chakras-card .grid-card-selector', title: 'Select a Theme', content: 'Click on any item within a category to get an instant, AI-generated summary for a class plan.' },
-                { element: '#chakras-details', title: 'Class Summary', content: 'A brief summary of the selected theme appears here, giving you a quick overview of the class.' },
-                { element: '#chakras-details .explore-button', title: 'Explore In-Depth', content: 'Click this button to open a modal with a much more detailed, descriptive version of the class plan.' },
-                { element: '#chakras-details .refine-button', title: 'Refine with AI', content: 'Don\'t like the summary? Click here to open a text box and ask the AI to make specific changes.' },
-                { element: '#chakras-details .copy-button', title: 'Copy Text', content: 'Easily copy the text of the generated plan to your clipboard for use in other applications.' },
                 { element: '#discover-more-button', title: 'Discover More', content: 'Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
                 { element: '#jump-to-nav-container', title: 'Quick Navigation', content: 'Once the page loads, this navigation bar appears to let you quickly jump to any category on the page.' },
                 { element: '#theme-changer-button', title: 'AI Visual Theme Generator', content: 'Feeling creative? Click this floating button, describe a mood or scene, and the AI will generate a new color palette and header image.' },
@@ -1352,15 +1396,14 @@
                     let top = rect.bottom + 15;
                     let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
 
+                    // Adjust if popover goes off-screen
                     if (top + popoverRect.height > window.innerHeight) {
                         top = rect.top - popoverRect.height - 15;
                     }
-                    
                     if (left < 10) left = 10;
                     if (left + popoverRect.width > window.innerWidth) {
                         left = window.innerWidth - popoverRect.width - 10;
                     }
-                    
                     if (top < 10) top = 10;
 
 
