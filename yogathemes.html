@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v10.5</title>
+    <title>AI Yoga Class & Theme Generator v10.6</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -350,7 +350,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.5</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.6</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -370,7 +370,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Align your practice with the body's seven primary energy centers. Select a chakra to focus on, and let the AI generate a corresponding theme and short description to guide your session.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2><p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p><div id="seasons-selector-visual" class="visual-selector-container mt-auto"></div><div id="seasons-details" class="details-container prose max-w-none"></div></div></div>
                 
@@ -380,6 +380,7 @@
                 <div class="card md:col-span-2"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p><div id="holidays-selector-visual" class="w-full"></div><div id="holidays-details" class="details-container prose max-w-none"></div></div></div>
                 <div class="card md:col-span-2"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Eastern Holidays</h2><p class="mb-6 themed-text-muted">Explore themes from Hindu and Buddhist traditions.</p><div id="eastern-holidays-selector-visual" class="w-full"></div><div id="eastern-holidays-details" class="details-container prose max-w-none"></div></div></div>
 
+                 <!-- NEW CATEGORIES WILL BE INSERTED HERE DYNAMICALLY -->
             </div>
         </main>
     </div>
@@ -456,11 +457,15 @@
             populateChakraSelector();
             populateSeasonSelector();
             populateMoonPhaseSelector();
-            // Card Grids
+            
+            // Card Grids for existing categories
             populateCardGridSelector('styles-selector-visual', 'styles');
             populateCardGridSelector('meridian-selector-visual', 'meridians');
             populateCardGridSelector('holidays-selector-visual', 'holidays');
             populateCardGridSelector('eastern-holidays-selector-visual', 'easternHolidays');
+            
+            // NEW: Populate the dynamically added categories
+            populateNewCategoryCards();
         }
 
         function populateChakraSelector() {
@@ -529,17 +534,15 @@
                 let data = [...allThemeData[themeType]];
                 const holidayTypes = ['holidays', 'easternHolidays'];
                 
-                // UPDATED createCardHtml function to include the date
                 const createCardHtml = item => {
                     let dateHtml = '';
                     if (holidayTypes.includes(themeType) && item.date) {
                         const [monthNum, dayNum] = item.date.split('/');
-                        const date = new Date(2000, monthNum - 1, parseInt(dayNum)); // Using a non-leap year is fine for month/day
+                        const date = new Date(2000, monthNum - 1, parseInt(dayNum)); 
                         const dateString = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
                         dateHtml = `<small class="block themed-text-muted mt-1 text-xs">${dateString}</small>`;
                     }
 
-                    // Added flexbox classes for vertical alignment
                     return `
                     <div class="grid-card-selector flex flex-col justify-between h-full" data-theme-id="${item.id}" data-theme-type="${themeType}">
                         <div>
@@ -563,7 +566,6 @@
                     grid.innerHTML = html;
                 } else {
                      if (holidayTypes.includes(themeType)) {
-                        // Sort holidays chronologically by next upcoming date
                         data.sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
                     } else {
                         data.sort((a,b) => a.title.localeCompare(b.title));
@@ -599,7 +601,7 @@
             if (dateableThemes.includes(themeType)) {
                 datePromptSection = `The current year is ${new Date().getFullYear()}. First, state the next upcoming date for this event in the New York (EST) timezone for the current year, as a bolded line of text.\n\n`;
             }
-            // UPDATED PROMPT for better structure
+
             const prompt = `${datePromptSection}You are a creative yoga instructor. For a yoga class themed "${theme.title}" (which is about "${description}" ${founderInfo}), generate a short, engaging, and unique preview for a student. Present the information clearly, using paragraphs for descriptions and bullet points only for lists if necessary. Ensure the output is well-structured and easy to read, using markdown for formatting.`;
             try {
                 const markdownText = await callGeminiAPI(prompt);
@@ -635,7 +637,6 @@
                 const exploreBtn = e.target.closest('.explore-button');
                 if (exploreBtn) handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType);
                 
-                // --- FIXED Refine Button Listeners ---
                 const refineBtn = e.target.closest('.refine-button');
                 if (refineBtn) toggleRefineUI(refineBtn.parentElement); // parent is .button-actions-container
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
@@ -655,7 +656,6 @@
             const sizeSelect = document.getElementById('font-size-select');
             const heightSelect = document.getElementById('line-height-select');
 
-            // Fonts - UPDATED to put Open Sans first
             const fonts = ['Open Sans, sans-serif', 'Arial, sans-serif', 'Verdana, sans-serif', 'Georgia, serif', 'Times New Roman, serif', 'Courier New, monospace', 'Inter, sans-serif', 'Lato, sans-serif', 'Roboto Slab, serif', 'Montserrat, sans-serif'];
             fontSelect.innerHTML = fonts.map(font => {
                 const familyName = font.split(',')[0].replace(/'/g, '');
@@ -663,7 +663,6 @@
                 return `<option value="${font}" ${isSelected}>${familyName}</option>`
             }).join('');
 
-            // Font Sizes - UPDATED to default to 16px
             let sizeOptions = '';
             for (let i = 12; i <= 24; i += 2) {
                 const isSelected = i === 16 ? 'selected' : '';
@@ -672,7 +671,6 @@
              sizeSelect.innerHTML = sizeOptions;
              sizeSelect.value = '16px';
 
-            // Line Heights - UPDATED options and default
             const lineHeights = { '1.2': 'Compact', '1.5': 'Default', '1.8': 'Spacious' };
             heightSelect.innerHTML = Object.entries(lineHeights).map(([val, text]) => {
                 const isSelected = val === '1.5' ? 'selected' : '';
@@ -693,16 +691,14 @@
                 return;
             }
             
-            resultContainer.dataset.themeId = userPrompt; // Add metadata for refine
-            resultContainer.dataset.themeType = 'custom'; // Add metadata for refine
-
+            resultContainer.dataset.themeId = userPrompt; 
+            resultContainer.dataset.themeType = 'custom'; 
 
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                              .map(btn => btn.dataset.option);
 
             resultContainer.innerHTML = getLoaderHTML('Crafting your base class plan...');
             
-            // UPDATED PROMPT for better structure
             const basePrompt = `You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${userPrompt}". Your guide should be exceptionally thorough and inspiring for another yoga teacher. Structure the response in a logical, easy-to-follow format. Use paragraphs for explanations and only use bulleted or numbered lists for things like specific pose sequences. Organize the entire guide into several logical sections using '###' for each main heading. For example, you might have sections for an 'Introduction/Theme', 'Breathwork (Pranayama)', 'Warm-up', 'Main Sequence', 'Cool-down', and 'Closing Meditation (Savasana)'. The content, titles, and number of sections are entirely up to you to best suit the theme.`;
             
             try {
@@ -714,7 +710,7 @@
                 if (selectedOptions.length > 0) {
                     const accordionContainer = resultContainer.querySelector('.prose-content .accordion');
                     
-                    if (accordionContainer) { // Check if the accordion container exists
+                    if (accordionContainer) { 
                         for (const option of selectedOptions) {
                             const loaderId = `loader-${option.replace(/\s+/g, '-')}`;
                             const componentLoader = document.createElement('div');
@@ -729,9 +725,8 @@
                                 const accordionHtml = convertMarkdownToAccordion(componentText, false);
                                 const loaderElement = document.getElementById(loaderId);
                                 if (loaderElement) {
-                                    loaderElement.outerHTML = accordionHtml; // Replace loader with content
+                                    loaderElement.outerHTML = accordionHtml; 
                                 }
-
 
                                 let currentText = originalGeneratedText.get(resultContainer) || "";
                                 currentText += `\n\n${componentText}`;
@@ -777,11 +772,10 @@
 
         function populateTailoringButtons(options) { const container = document.getElementById('tailoring-buttons-container'); if (!container) return; container.innerHTML = ''; options.forEach(option => { const button = createButton(option, 'btn-toggle px-3 py-1.5 rounded-full text-sm'); button.dataset.option = option; button.addEventListener('click', (e) => { e.preventDefault(); button.classList.toggle('active'); }); container.appendChild(button); }); }
         
-        // --- NEW: Refine Functions ---
+        // --- Refine Functions ---
         function toggleRefineUI(buttonContainer) {
             const mainContentContainer = buttonContainer.parentElement;
 
-            // Special handling for the modal, where buttons are in the footer
             const contentArea = (mainContentContainer.id === 'inDepthModalFooter')
                 ? document.getElementById('inDepthModalContent')
                 : mainContentContainer;
@@ -879,8 +873,8 @@
             const modalFooter = document.getElementById('inDepthModalFooter');
             if (!checkApiKey(modalContent)) return; 
             
-            modalContent.dataset.themeId = themeId; // Add metadata for refine
-            modalContent.dataset.themeType = themeType; // Add metadata for refine
+            modalContent.dataset.themeId = themeId; 
+            modalContent.dataset.themeType = themeType; 
             
             const modalTitle = document.getElementById('inDepthModalTitle'); 
             const theme = (themeType === 'custom') ? { title: themeId, description: 'A custom user-generated theme.' } : allThemeData[themeType].find(t => t.id === themeId); 
@@ -889,7 +883,7 @@
             modalFooter.innerHTML = ''; 
             modal.classList.remove('hidden'); 
             const founderInfo = theme.founder ? `It was founded or popularized by ${theme.founder}.` : ''; const description = theme.description || theme.explanation; let datePromptSection = ''; const dateableThemes = ['seasons', 'holidays', 'easternHolidays', 'moonPhases']; if (dateableThemes.includes(themeType)) { datePromptSection = `The current year is ${new Date().getFullYear()}. First, as a standalone bolded line, state the next upcoming date for this event in the New York (EST) timezone for the current year.\n\n`; } 
-            // UPDATED PROMPT for better structure
+
             const prompt = `${datePromptSection}You are a master yoga instructor creating a comprehensive and creative guide for a yoga class themed "${theme.title}", which is described as: "${description}". ${founderInfo}. Create a guide that is exceptionally thorough and inspiring for another yoga teacher. Structure the response in a logical, easy-to-follow format. Use paragraphs for explanations and only use bulleted or numbered lists for things like specific pose sequences. Organize the entire guide into several logical sections using '###' for each main heading. For example, you might have sections for an 'Introduction/Theme', 'Breathwork (Pranayama)', 'Warm-up', 'Main Sequence', 'Cool-down', and 'Closing Meditation (Savasana)'. The content, titles, and number of sections are entirely up to you to best suit the theme.`; 
             try { 
                 const text = await callGeminiAPI(prompt); 
@@ -907,11 +901,9 @@
             if (!element) return;
             const textToCopy = element.innerText;
             
-            // Create a temporary textarea element
             const textArea = document.createElement("textarea");
             textArea.value = textToCopy;
-
-            // Make it invisible
+            
             textArea.style.position = "fixed";
             textArea.style.top = 0;
             textArea.style.left = 0;
@@ -974,10 +966,8 @@
             const headerBg = document.getElementById('header-bg-image');
             headerBg.style.opacity = 0; // Fade out
             
-            // Preload the image
             const img = new Image();
             img.onload = () => {
-                // When loaded, set as background and fade in
                 headerBg.style.backgroundImage = `url('${imageUrl}')`;
                 headerBg.style.opacity = 1; // Fade in
             };
@@ -986,8 +976,35 @@
 
         function showThemeLoading(isLoading) { document.getElementById('theme-loader-container').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('flex', isLoading); document.getElementById('generate-theme-btn').disabled = isLoading; document.getElementById('generate-theme-btn').classList.toggle('opacity-50', isLoading); }
         function showThemeError(message) { const el = document.getElementById('theme-error-container'); el.textContent = message; el.classList.remove('hidden'); }
-        function getIconForTheme(themeType, themeId) { /* A simple SVG icon system */ const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>`, easternHolidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
+        function getIconForTheme(themeType, themeId) { const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>`, easternHolidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
         function getNextHolidayDate(holiday) { const now = new Date(); const currentYear = now.getFullYear(); const [month, day] = holiday.date.split('/').map(Number); let holidayDate = new Date(currentYear, month - 1, day); if (holidayDate < now) { holidayDate.setFullYear(currentYear + 1); } return holidayDate; }
+        
+        // --- NEW: Function to populate the new categories ---
+        function populateNewCategoryCards() {
+            const newCategoriesData = getNewYogaCategories();
+            const mainGrid = document.getElementById('main-grid');
+            
+            for (const [key, category] of Object.entries(newCategoriesData)) {
+                // Add the styles to the global theme data object
+                allThemeData[key] = category.styles;
+
+                // Create the card element
+                const card = document.createElement('div');
+                card.className = 'card md:col-span-2';
+                card.innerHTML = `
+                    <div class="p-8 card-content">
+                        <h2 class="text-2xl font-bold mb-2 themed-text-primary">${category.categoryTitle}</h2>
+                        <p class="mb-6 themed-text-muted">${category.categoryDescription}</p>
+                        <div id="${key}-selector-visual" class="w-full"></div>
+                        <div id="${key}-details" class="details-container prose max-w-none"></div>
+                    </div>
+                `;
+                mainGrid.appendChild(card);
+
+                // Populate the grid inside the newly created card
+                populateCardGridSelector(`${key}-selector-visual`, key);
+            }
+        }
 
         // --- Data ---
         function getModalitiesSeedData() { const csvData = `Modality,Founder/Key Figure,Description\nBhakti Yoga,,"The path of devotion and love."\nJnana Yoga,,"The path of knowledge and wisdom."\nKarma Yoga,,"The path of selfless action."\nRaja Yoga,,"The ""royal path"" of meditation and self-control."\nHatha Yoga,,"A general term for a slower-paced, foundational yoga class."\nTantra Yoga,,"Weaving together the physical and spiritual realms."\nYoga Nidra,,"Yogic sleep for deep relaxation."\nAshtanga Vinyasa Yoga,Sri K. Pattabhi Jois,"A rigorous and physically demanding style."\nIyengar Yoga,B.K.S. Iyengar,"Emphasis on precise anatomical alignment and props."\nViniyoga,T.K.V. Desikachar,"A therapeutic and highly individualized approach."\nSivananda Yoga,Swami Sivananda,"A holistic system based on five principles."\nKripalu Yoga,Swami Kripalu,"A gentle and introspective practice."\nVinyasa Yoga,,"A dynamic and flowing style where movement is synchronized with the breath."\nPower Yoga,,"An athletic and vigorous style of Vinyasa yoga."\nBikram Yoga,,"A specific sequence of 26 postures in a heated room."\nHot Yoga,,"Any style of yoga practiced in a heated environment."\nYin Yoga,,"A slow-paced, passive style where poses are held for longer periods."\nRestorative Yoga,,"A gentle and therapeutic practice that uses props extensively."\nJivamukti Yoga,David Life & Sharon Gannon,"A physically vigorous and intellectually stimulating style."\nAnusara Yoga,John Friend,"Emphasizes ""Universal Principles of Alignment"" and a heart-oriented philosophy."\nKundalini Yoga,Yogi Bhajan,"A dynamic practice to awaken energy at the base of the spine."\nAcroYoga,,"A partner-based practice blending yoga and acrobatics."\nAerial Yoga,,"Uses a silk hammock to support the body in various postures."\nChair Yoga,,"A modified form of yoga practiced while sitting in a chair."\nPrenatal Yoga,,"A gentle style designed specifically for pregnant women."\nForrest Yoga,Ana T. Forrest,"An intensely physical and internally focused style."`; const lines = csvData.trim().split('\n').slice(1); return lines.map(line => { const [title, founder, description] = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(field => field.trim().replace(/^"|"$/g, '')); return { id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), title: title, founder: founder, description: description }; }); }
@@ -998,6 +1015,18 @@
         function getHinduHolidaysSeedData() { return [ { id: "diwali", title: "Diwali", date: "10/20", explanation: "The festival of lights, celebrating the victory of light over darkness and good over evil." }, { id: "holi", title: "Holi", date: "03/14", explanation: "The festival of colors, celebrating spring, love, and new life." }, { id: "navaratri", title: "Navaratri", date: "09/22", explanation: "A nine-night festival dedicated to the worship of the goddess Durga." }, { id: "raksha-bandhan", title: "Raksha Bandhan", date: "08/19", explanation: "Celebrating the bond between brothers and sisters." }, { id: "ganesh-chaturthi", title: "Ganesh Chaturthi", date: "08/27", explanation: "Celebrating the birth of Lord Ganesha, the remover of obstacles." }, { id: "janmashtami", title: "Janmashtami", date: "08/26", explanation: "Celebrating the birth of Lord Krishna." }, { id: "maha-shivaratri", title: "Maha Shivaratri", date: "02/26", explanation: "The great night of Shiva, a day of introspection and meditation." } ]; }
         function getBuddhistHolidaysSeedData() { return [ { id: "vesak", title: "Vesak (Buddha Day)", date: "05/12", explanation: "Commemorating the birth, enlightenment, and death of Gautama Buddha." }, { id: "dharma-day", title: "Dharma Day (Asalha Puja)", date: "07/11", explanation: "Commemorates the Buddha's first sermon." }, { id: "sangha-day", title: "Sangha Day (Magha Puja)", date: "02/12", explanation: "Commemorates the first gathering of the Buddha's enlightened disciples." }, { id: "parinirvana-day", title: "Parinirvana Day", date: "02/15", explanation: "Observes the death of the Buddha and his attainment of final nirvana." }, { id: "bodhi-day", title: "Bodhi Day", date: "12/08", explanation: "Commemorating the day that the historical Buddha experienced enlightenment." } ]; }
         function getMoonPhasesSeedData() { return [ { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." }, { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." }, { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." }, { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." }, { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." }, { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." }, { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." }, { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." } ]; }
+        
+        // NEW: AI-Generated data for additional categories
+        function getNewYogaCategories() {
+            return {
+              "therapeuticYoga": { "categoryTitle": "Therapeutic & Rehabilitative Yoga", "categoryDescription": "Focus on healing and recovery with practices designed to address specific physical or mental health conditions.", "styles": [ { "id": "trauma-informed-yoga", "title": "Trauma-Informed", "description": "A sensitive approach that creates a safe space for healing from trauma, emphasizing choice and empowerment." }, { "id": "yoga-for-back-pain", "title": "Yoga for Back Pain", "description": "Targets the muscles supporting the back and spine to relieve tension and improve posture." }, { "id": "yoga-for-arthritis", "title": "Yoga for Arthritis", "description": "Gentle movements and modifications to increase joint mobility and reduce pain." }, { "id": "somatic-yoga", "title": "Somatic Yoga", "description": "Internal awareness-based movements to release chronic tension and re-pattern the neuromuscular system." } ] },
+              "spiritualYoga": { "categoryTitle": "Spiritually-Oriented Yoga", "categoryDescription": "Deepen your connection to self and spirit through practices rich in philosophy, chanting, and meditation.", "styles": [ { "id": "kirtan-and-chanting", "title": "Kirtan & Chanting", "description": "A devotional practice using music and mantra to open the heart and quiet the mind." }, { "id": "yoga-sutras-study", "title": "Yoga Sutras Study", "description": "Integrates the philosophical teachings of Patanjali into a physical asana practice." }, { "id": "chakra-balancing-flow", "title": "Chakra Balancing Flow", "description": "A vinyasa practice designed to align and activate the body's seven main energy centers." }, { "id": "pranayama-and-meditation", "title": "Pranayama & Meditation", "description": "Focuses primarily on breath control techniques and guided meditation for spiritual insight." } ] },
+              "demographicsYoga": { "categoryTitle": "Yoga for Life Stages", "categoryDescription": "Tailored practices that honor the unique needs of different age groups and life phases.", "styles": [ { "id": "seniors-yoga", "title": "Seniors Yoga", "description": "Modified poses, often using chairs, to enhance mobility, balance, and vitality for older adults." }, { "id": "kids-yoga", "title": "Kids Yoga", "description": "A playful and imaginative approach to yoga that uses games and stories to teach poses." }, { "id": "postnatal-yoga", "title": "Postnatal Yoga", "description": "Helps new mothers reconnect with and strengthen their bodies after childbirth." }, { "id": "yoga-for-athletes", "title": "Yoga for Athletes", "description": "Focuses on flexibility, injury prevention, and mental focus to complement athletic training." } ] },
+              "fusionYoga": { "categoryTitle": "Yoga Blends & Fusions", "categoryDescription": "Experience creative and modern interpretations of yoga that blend asana with other movement disciplines.", "styles": [ { "id": "yoga-pilates-fusion", "title": "Yoga Pilates Fusion", "description": "Combines the core-strengthening focus of Pilates with the flexibility and flow of yoga." }, { "id": "yoga-dance-flow", "title": "Yoga Dance Flow", "description": "A fluid and expressive practice that merges vinyasa yoga with elements of contemporary dance." }, { "id": "buti-yoga", "title": "Buti Yoga", "description": "A high-intensity fusion of power yoga, tribal dance, and plyometrics." }, { "id": "hiit-yoga", "title": "HIIT Yoga", "description": "Alternates between high-intensity interval training (HIIT) exercises and yoga poses for a full-body workout." } ] },
+              "lineageYoga": { "categoryTitle": "Historical & Traditional Lineages", "categoryDescription": "Explore practices rooted in specific, time-honored teaching traditions passed down through generations.", "styles": [ { "id": "kriya-yoga", "title": "Kriya Yoga", "description": "A comprehensive spiritual path, popularized by Paramahansa Yogananda, involving meditation and pranayama." }, { "id": "ishta-yoga", "title": "ISHTA Yoga", "description": "An acronym for Integrated Science of Hatha, Tantra, and Ayurveda, creating a personalized practice." }, { "id": "para-yoga", "title": "ParaYoga", "description": "A style rooted in the Tantric Hatha tradition, focusing on the esoteric aspects of practice." }, { "id": "tibetan-heart-yoga", "title": "Tibetan Heart Yoga", "description": "Blends asana with Mahayana Buddhist principles of compassion and wisdom." } ] },
+              "environmentYoga": { "categoryTitle": "Environment & Tool-Based Yoga", "categoryDescription": "Engage with your practice in unique settings or with the help of specialized equipment.", "styles": [ { "id": "sup-yoga", "title": "SUP Yoga", "description": "Stand-up paddleboard yoga, performed on water to challenge balance and connect with nature." }, { "id": "rope-wall-yoga", "title": "Rope Wall Yoga", "description": "Uses a system of wall ropes, inspired by Iyengar, to deepen stretches and explore gravity." }, { "id": "beach-yoga", "title": "Beach Yoga", "description": "A practice set on the sand, incorporating the sounds and sensations of the ocean." }, { "id": "silent-disco-yoga", "title": "Silent Disco Yoga", "description": "An immersive experience where participants wear wireless headphones to follow the instructor's voice and music." } ] }
+            };
+        }
     </script>
 </body>
 </html>
