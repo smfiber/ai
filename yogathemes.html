@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.24</title>
+    <title>AI Yoga Class & Theme Generator v17.25</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -103,10 +103,8 @@
         .floating-action-button:hover { transform: translateY(-3px) scale(1.05); }
         #new-plan-button { bottom: 2rem; right: 2rem; }
         #settings-button { bottom: 6.5rem; right: 2rem; }
-        #ai-help-button { bottom: 11rem; right: 2rem; }
-        #theme-changer-button { bottom: 15.5rem; right: 2rem; }
+        #theme-changer-button { bottom: 11rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
-        /* NEW: Style for the dedicated tutorial button */
         #tutorial-button { bottom: 6.5rem; left: 2rem; }
         
         #settings-panel {
@@ -183,7 +181,7 @@
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
-            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "Tutorial" button to learn more without a key.</p>
+            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser. You can also click the tutorial button (bottom-left) to explore a demo without a key.</p>
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
@@ -205,7 +203,7 @@
                 <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2" style="border-color: var(--color-card-border);"></div>
+            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2 justify-center" style="border-color: var(--color-card-border);"></div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -226,16 +224,7 @@
             </div>
         </div>
     </div>
-    <div id="geminiSearchModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
-            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 id="geminiSearchModalTitle" class="text-2xl font-bold themed-text-primary">Gemini Search Results</h2>
-                <button id="closeGeminiSearchModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
-            </div>
-            <div id="geminiSearchModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-        </div>
-    </div>
-
+    
     <!-- Main Content -->
     <div class="container mx-auto">
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
@@ -249,7 +238,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.24</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.25</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -301,17 +290,13 @@
     <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
     </button>
-    <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
-    </button>
     <button id="settings-button" class="floating-action-button" title="Typography Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
     </button>
     <button id="new-plan-button" class="floating-action-button" title="New Plan (Reload)">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </button>
-    <!-- NEW: Dedicated tutorial button -->
-    <button id="tutorial-button" class="floating-action-button" title="Show App Tutorial">
+    <button id="tutorial-button" class="floating-action-button" title="Show App Tutorial & Demo">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
     </button>
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
@@ -332,11 +317,100 @@
     <script type="module">
         // --- Global State & Configuration ---
         let apiKey = "";
+        let isDemoMode = false;
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
         
+        // --- Mock Data for Demo Mode ---
+        const MOCK_DATA = {
+            chakras: {
+                title: "The Seven Chakras",
+                description: "Align your practice with the body's primary energy centers.",
+                items: [
+                    { id: "root", title: "Root Chakra", explanation: "Muladhara - Foundation and being grounded." },
+                    { id: "sacral", title: "Sacral Chakra", explanation: "Svadhisthana - Creativity and joy." },
+                    { id: "solarPlexus", title: "Solar Plexus Chakra", explanation: "Manipura - Personal power and confidence." },
+                    { id: "heart", title: "Heart Chakra", explanation: "Anahata - Love and compassion." },
+                    { id: "throat", title: "Throat Chakra", explanation: "Vishuddha - Communication and truth." },
+                    { id: "thirdEye", title: "Third Eye Chakra", explanation: "Ajna - Intuition and imagination." },
+                    { id: "crown", title: "Crown Chakra", explanation: "Sahasrara - Spiritual connection." }
+                ]
+            },
+            styles: {
+                title: "Yoga Styles",
+                description: "Base your class around a specific yoga style.",
+                items: [
+                    { id: "hatha", title: "Hatha", description: "A gentle introduction to basic yoga poses." },
+                    { id: "vinyasa", title: "Vinyasa", description: "Flowing, dynamic sequences of poses." },
+                    { id: "yin", title: "Yin", description: "Slow-paced style with long-held poses." },
+                    { id: "restorative", title: "Restorative", description: "Deep relaxation and rest." },
+                    { id: "ashtanga", title: "Ashtanga", description: "Physically demanding, structured sequence." }
+                ]
+            },
+            seasons: {
+                title: "The Four Seasons",
+                description: "Align your practice with the natural cycles of the earth.",
+                items: [
+                   { id: "spring", title: "Spring", date: "03/20", explanation: "Themes of renewal, growth, and new beginnings." },
+                   { id: "summer", title: "Summer", date: "06/21", explanation: "Themes of energy, expansion, and vitality." },
+                   { id: "autumn", title: "Autumn", date: "09/22", explanation: "Themes of grounding, letting go, and harvest." },
+                   { id: "winter", title: "Winter", date: "12/21", explanation: "Themes of introspection, rest, and renewal." }
+                ]
+            },
+            mockSummaries: {
+                root: "* **Theme Introduction:** Connect with the earth's energy to feel stable and secure.\n* **Warm-up:** Gentle hip circles and ankle rolls to awaken the lower body.\n* **Main Sequence:** Focus on standing poses like Mountain Pose and Warrior II to build a strong foundation.",
+                hatha: "* **Theme Introduction:** Explore foundational poses with mindful awareness.\n* **Warm-up:** Practice a few rounds of a gentle Sun Salutation A.\n* **Main Sequence:** Hold poses like Triangle, Bridge, and seated forward folds to understand alignment.",
+                spring: "* **Theme Introduction:** Embrace themes of renewal and growth.\n* **Warm-up:** Flowing Cat-Cow and gentle spinal twists to awaken the body.\n* **Main Sequence:** Incorporate poses that create space, like Crescent Lunge and Wild Thing."
+            },
+            mockCustomPlan: `
+### Theme Introduction
+This is a demonstration of a custom-generated yoga plan. In the full version, the AI would create a unique plan based on your prompt, like "Courage and Heart Opening."
+
+### Opening Meditation & Breathwork
+Begin by finding a comfortable seat. Close your eyes and bring your awareness to your breath. Notice the sensation of the air entering and leaving your body. This is a sample meditation to center yourself.
+
+### Warm-up Sequence
+- **Cat-Cow:** Gently move between arching and rounding your spine to warm up the back.
+- **Neck Rolls:** Slowly circle your head to release tension in the neck and shoulders.
+- **Shoulder Shrugs:** Inhale to lift your shoulders to your ears, exhale to release them down.
+
+### Main Sequence
+- **Warrior II:** A powerful standing pose to build strength and confidence.
+- **Triangle Pose:** Stretches the hamstrings, hips, and groin while opening the chest.
+- **Bridge Pose:** A gentle backbend to open the heart and strengthen the back body.
+
+### Cool-down & Stretches
+- **Reclined Pigeon:** A deep stretch for the hips and glutes.
+- **Supine Twist:** Gently wring out the spine and release tension.
+
+### Savasana & Closing
+Lie down on your back in Savasana, allowing your body to fully relax and absorb the benefits of the practice. This is where you find stillness.
+`,
+            mockExploreInDepth: `
+### Theme Introduction
+This is an in-depth exploration of a demo plan. In the full version with an API key, this section would be much more detailed and evocative, weaving the theme throughout the practice with rich descriptions and cues.
+
+### Opening Meditation & Breathwork
+Find a comfortable seat on your mat, perhaps on a cushion or block to elevate your hips. Allow your hands to rest gently on your knees, palms facing up or down. Close your eyes and feel the length in your spine. Bring your awareness to the natural rhythm of your breath. For the next few moments, simply observe. Is the breath shallow or deep? Fast or slow? There's no need to change anything, just notice. This observation is the first step in connecting mind and body.
+
+### Warm-up Sequence
+- **Cat-Cow (Marjaryasana-Bitilasana):** From a tabletop position with wrists under shoulders and knees under hips, inhale as you drop your belly, lift your gaze, and open your chest into Cow Pose. Exhale as you press into your hands, round your spine towards the ceiling, and tuck your chin to your chest for Cat Pose. Flow between these two poses for 5-8 rounds, linking your breath to the movement.
+- **Gentle Neck Rolls:** Come back to a neutral spine. Gently drop your right ear towards your right shoulder, feeling a stretch along the left side of your neck. Hold for a breath, then slowly roll your chin down to your chest and over to the left side. Repeat 3 times on each side.
+
+### Main Sequence
+- **Warrior II (Virabhadrasana II):** From standing, step your feet wide apart. Turn your right foot out 90 degrees and your left foot in slightly. Extend your arms parallel to the floor, gazing over your right fingertips. Bend your right knee so it's directly over your ankle. Press firmly into the outer edge of your back foot. Hold for 5 deep breaths, feeling the strength and stability in this powerful pose.
+- **Triangle Pose (Trikonasana):** From Warrior II, straighten your front leg. Hinge at your front hip, reaching forward, and then bring your right hand down to your shin, a block, or the floor. Extend your left arm to the ceiling, opening your chest. Keep both legs engaged. Gaze can be up at your top hand, or down at the floor if it's more comfortable for your neck. Hold for 5 breaths.
+
+### Cool-down & Stretches
+- **Reclined Pigeon (Supta Kapotasana):** Lie on your back with your knees bent. Cross your right ankle over your left thigh. Thread your right hand through the space between your legs and interlace your fingers behind your left thigh. Gently pull your left knee towards your chest to deepen the stretch in your right hip. Keep your head and shoulders on the mat. Hold for 30-60 seconds and switch sides.
+
+### Savasana & Closing
+Release the stretch and extend your legs long on the mat. Let your feet fall open naturally. Allow your arms to rest by your sides, palms facing up. Close your eyes and let go of any controlled breathing. Allow your entire body to feel heavy and supported by the floor. Rest here in stillness for at least 5 minutes, allowing your body and mind to integrate the practice. To come out, slowly wiggle your fingers and toes, and gently bring yourself back to a seated position.
+`
+        };
+
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('apiKeyModal').classList.remove('hidden');
@@ -354,15 +428,11 @@
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!apiKey) {
-                    alert('Please enter your API key to use the theme generator.');
-                    return;
-                }
+                if(isDemoMode){ showNotification("Visual theme generator is disabled in demo mode.", true); return; }
+                if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
             });
-            document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
-            // NEW: Event listener for the dedicated tutorial button
-            document.getElementById('tutorial-button').addEventListener('click', handleAIHelpRequest);
+            document.getElementById('tutorial-button').addEventListener('click', showTutorialModal);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
             // Settings Panel
@@ -378,7 +448,7 @@
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'geminiSearchModal', 'loadingStateModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
                  document.getElementById(id).addEventListener('click', (e) => {
                      if (e.target.id === id || e.target.closest('[id^="close"]')) {
                          document.getElementById(id).classList.add('hidden');
@@ -388,6 +458,11 @@
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
+                if(e.target.id === 'start-demo-btn'){
+                    startDemoMode();
+                    return;
+                }
+
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -511,12 +586,7 @@
                     { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", initialPrompt: `Generate the 6 primary Meridian pairs from TCM. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate the 6 primary Meridian pairs from TCM with detailed explanations. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.` },
                     { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's primary energy centers.", initialPrompt: `Generate data for the 7 primary chakras. For each, give "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 7 primary chakras with detailed explanations. For each, give "id", "title", and "explanation". Return ONLY a valid JSON array.` },
                     { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", initialPrompt: `Generate data for the 4 seasons. For each, give a unique "id", "title", "date" (MM/DD), and "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 4 seasons with detailed explanations. For each, give a unique "id", "title", "date" (MM/DD), and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
-                    { key: 'styles', title: 'Yoga Styles', description: "Base your class around a specific yoga style.", initialPrompt: `Generate 10 major yoga styles. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos.", initialPrompt: `Generate data for the 12 zodiac signs. For each, give an "id", "title", "dateRange", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 12 zodiac signs with detailed explanations. For each, give an "id", "title", "dateRange", "planet", and "explanation". Return ONLY a valid JSON array.` },
-                    { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with tailored practices.", initialPrompt: `Generate 10 yoga concepts for artists. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga concepts for artists. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'dancers', title: 'Yoga for Dancers', description: "Enhance flexibility, strength, and recovery for dancers.", initialPrompt: `Generate 10 yoga concepts for dancers. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga concepts for dancers. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", initialPrompt: `Generate 10 Hindu & Buddhist holidays. For each, give an "id", "title", "date" (MM/DD), "explanation", and "tradition". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 Hindu & Buddhist holidays. For each, give an "id", "title", "date" (MM/DD), "explanation", and "tradition". Return ONLY a valid JSON array.` },
-                    { key: 'holidays', title: 'US Holidays', description: "Themed practices for US holidays.", initialPrompt: `Generate 10 US holidays for yoga themes. For each, give a unique "id", "title", and "date" (MM/DD). Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 US holidays for yoga themes. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'styles', title: 'Yoga Styles', description: "Base your class around a specific yoga style.", initialPrompt: `Generate 10 major yoga styles. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` }
                 ];
 
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
@@ -611,7 +681,7 @@
                 </div>`;
             }).join('');
             
-            const fullPrompt = fullPrompts[themeType];
+            const fullPrompt = isDemoMode ? null : fullPrompts[themeType];
             let showAllButtonHtml = '';
             
             if (fullPrompt && !isWeekByWeek && data.length < 35 && data.length > 0) {
@@ -627,6 +697,7 @@
         }
         
         async function handleShowAllClick(button) {
+            if(isDemoMode){ showNotification("This feature is disabled in demo mode.", true); return; }
             const { containerId, themeType } = button.dataset;
             const container = document.getElementById(containerId);
             const fullPrompt = fullPrompts[themeType];
@@ -658,8 +729,11 @@
                 return;
             }
 
-            if (themeType === 'hipReplacement') {
-                handleExploreInDepth(themeId, themeType);
+            if(isDemoMode) {
+                const resultContainer = document.getElementById(`${themeType}-details`);
+                const mockSummary = MOCK_DATA.mockSummaries[themeId] || `* **Summary:** This is a demo summary for ${item.title}. The full version would have more detail.`;
+                resultContainer.innerHTML = robustMarkdownToHtml(mockSummary, true);
+                addPostGenerationButtons(resultContainer, themeId, themeType);
                 return;
             }
             
@@ -684,6 +758,15 @@
             let userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
+            const resultContainer = document.getElementById('gemini-result-container');
+
+            if(isDemoMode) {
+                createAccordionFromMarkdown(MOCK_DATA.mockCustomPlan, resultContainer);
+                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
+                showNotification("Custom plan generation is disabled in demo mode. Showing a sample plan instead.");
+                return;
+            }
+
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
@@ -695,7 +778,6 @@
                 fullPrompt = `Generate a creative and inspiring yoga class plan based on the user's theme: "${userPrompt}". The class plan should be structured with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Make each section detailed and evocative. Return as a single markdown string.`;
             }
 
-            const resultContainer = document.getElementById('gemini-result-container');
             resultContainer.innerHTML = getLoaderHTML('Generating your custom AI yoga plan...');
 
             try {
@@ -827,6 +909,10 @@
         
         async function loadDynamicPlaceholders() {
             const promptInput = document.getElementById('gemini-prompt');
+            if(isDemoMode){
+                promptInput.placeholder = "e.g., 'Ocean Breath & Fluid Movement'";
+                return;
+            }
             const prompt = `Generate a JSON array of 3 creative yoga class theme ideas for input placeholders. Examples: "Ocean Breath & Fluid Movement", "Finding Stillness in Chaos". Return ONLY the valid JSON array of strings.`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -916,6 +1002,7 @@
         }
 
         async function handleDiscoverMoreClick() {
+            if(isDemoMode){ showNotification("Discovering more topics is disabled in demo mode.", true); return; }
             const button = document.getElementById('discover-more-button');
             const errorP = document.getElementById('discover-more-error');
             errorP.textContent = '';
@@ -939,6 +1026,7 @@
         }
         
         async function handleCustomVisualThemeGeneration() {
+            if(isDemoMode){ showNotification("Visual theme generator is disabled in demo mode.", true); return; }
             const prompt = document.getElementById('theme-prompt').value;
             if(!prompt) return;
 
@@ -976,6 +1064,10 @@
         }
 
         async function generateJumpToButtons() {
+            if(isDemoMode){
+                document.getElementById('jump-to-nav-container').classList.add('hidden');
+                return;
+            }
             const container = document.getElementById('jump-to-nav-container');
             const cards = Array.from(document.querySelectorAll('#custom-plan-card, #main-grid .card'));
             if (cards.length <= 1) return;
@@ -1080,44 +1172,55 @@
             });
         }
         
-        function handleAIHelpRequest() {
+        function showTutorialModal() {
+            document.getElementById('apiKeyModal').classList.add('hidden');
+
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
 
-            titleEl.textContent = "App Tutorial"; // Changed title for clarity
-            footerEl.innerHTML = '';
+            titleEl.textContent = "App Tutorial";
+            footerEl.innerHTML = `<button id="start-demo-btn" class="btn-primary mx-auto">Explore a Demo Version</button>`;
+            
             modal.classList.remove('hidden');
 
             const tutorialMarkdown = `
-### Custom Plan Generator
-This is the heart of the app! Enter any theme, idea, or feeling into the main text box (e.g., "Courage & Heart Opening" or "A Gentle Rainy Day Practice"). The AI will then craft a complete, unique yoga class plan for you from scratch, including an introduction, warm-up, main sequence, and cool-down.
+### Welcome!
+This app uses AI to generate creative yoga class plans and visual themes. You can either enter your own API key to use the live AI features, or explore this demo version to see how it works.
 
-### AI-Powered Options
-Just below the main prompt box, you'll find a set of "Tailor Your Plan" buttons. Click the dropdown to reveal options like "Flexibility," "Stress Relief," or "Core Work." You can select multiple options to give the AI more specific instructions for your custom plan.
+### Custom Plan Generator
+Enter any theme, idea, or feeling into the main text box (e.g., "Courage & Heart Opening"). The AI will then craft a complete, unique yoga class plan for you from scratch.
 
 ### Pre-Built Categories
-Scroll down to explore a wide range of pre-built, AI-generated categories. These include themes like "The Seven Chakras," "Yoga for Artists," or even a week-by-week "Gentle Yoga After Hip Replacement" guide. Click on any item within a category to get a quick summary plan.
+Scroll down to explore a wide range of pre-built, AI-generated categories. Click on any item within a category to get a quick summary plan.
 
-### Visual Theme Generator
-Want to change the app's look and feel? Click the floating button with the eye icon. This opens the AI Visual Theme Generator. Type in a descriptive phrase like "A quiet, misty forest at dawn" or "Vibrant desert sunset," and the AI will generate a brand new color palette and header image for the entire app.
+### Visual Theme Generator (API Key Required)
+Click the floating button with the eye icon to open the AI Visual Theme Generator. Type in a descriptive phrase like "A quiet, misty forest at dawn," and the AI will generate a brand new color palette and header image for the entire app.
 
-### In-Depth Exploration
-When you see a summary plan that you like, click the "Explore In-Depth" button. This will open a new view where the AI generates a much more detailed, descriptive version of the class, perfect for teaching or a deep personal practice.
-
-### Refining Content
-After any plan is generated (both summaries and in-depth views), you'll see a "Refine with AI" button. Click this to open a text box where you can give the AI further instructions. For example, you could type "Make it more gentle," "Add more hip openers," or "Adapt this for beginners." The AI will then rewrite the plan based on your feedback.
-
-### Other Features
-- **New Plan (Reload):** The floating refresh button reloads the entire application, giving you a fresh start.
-- **Typography Settings:** The floating button with the font icon opens a panel where you can change the app's font, text size, and line spacing for better readability.
-- **Copy Text:** Easily copy any generated plan to your clipboard.
+### In-Depth Exploration & Refining (API Key Required)
+When you see a plan you like, use the "Explore In-Depth" and "Refine with AI" buttons to get more details or ask the AI to make changes.
 `;
             createAccordionFromMarkdown(tutorialMarkdown, contentEl);
         }
         
         async function handleExploreInDepth(themeId, themeType) {
+             if (isDemoMode) {
+                const modal = document.getElementById('inDepthModal');
+                const titleEl = document.getElementById('inDepthModalTitle');
+                const contentEl = document.getElementById('inDepthModalContent');
+                const footerEl = document.getElementById('inDepthModalFooter');
+
+                titleEl.textContent = `In-Depth: Demo`;
+                contentEl.innerHTML = '';
+                createAccordionFromMarkdown(MOCK_DATA.mockExploreInDepth, contentEl);
+                footerEl.innerHTML = `<button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
+                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                modal.classList.remove('hidden');
+                showNotification("Showing a sample in-depth plan for demo purposes.");
+                return;
+            }
+
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
             if (!item) {
                 console.error("Could not find item for in-depth view", {themeId, themeType});
@@ -1152,13 +1255,7 @@ After any plan is generated (both summaries and in-depth views), you'll see a "R
                     routines.forEach((routine, index) => {
                         const accordionItem = document.createElement('div');
                         accordionItem.className = 'accordion-item';
-                        accordionItem.innerHTML = `
-                            <button type="button" class="accordion-header">
-                                <span class="text-left">${routine.title}</span>
-                                <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>
-                        `;
+                        accordionItem.innerHTML = `<button type="button" class="accordion-header"><span class="text-left">${routine.title}</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>`;
                         contentEl.appendChild(accordionItem);
                         if (index === 0) {
                             accordionItem.querySelector('.accordion-header').classList.add('active');
@@ -1169,10 +1266,7 @@ After any plan is generated (both summaries and in-depth views), you'll see a "R
                      createAccordionFromMarkdown(resultText, contentEl);
                 }
 
-                footerEl.innerHTML = `
-                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
-                `;
+                footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
                 footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
 
             } catch (error) {
@@ -1181,6 +1275,8 @@ After any plan is generated (both summaries and in-depth views), you'll see a "R
         }
         
         function toggleRefineUI(buttonContainer, isModal = false) {
+            if (isDemoMode) { showNotification("Refining with AI is disabled in demo mode.", true); return; }
+
             let refineContainer = buttonContainer.nextElementSibling;
             if (refineContainer && refineContainer.classList.contains('refine-container')) {
                 refineContainer.remove();
@@ -1189,15 +1285,13 @@ After any plan is generated (both summaries and in-depth views), you'll see a "R
 
             refineContainer = document.createElement('div');
             refineContainer.className = 'refine-container w-full';
-            refineContainer.innerHTML = `
-                <textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it more gentle' or 'Add more hip openers'"></textarea>
-                <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>
-            `;
+            refineContainer.innerHTML = `<textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it more gentle' or 'Add more hip openers'"></textarea><button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>`;
             buttonContainer.insertAdjacentElement('afterend', refineContainer);
             refineContainer.querySelector('textarea').focus();
         }
 
         async function handleRefineRequest(refineContainer) {
+            if (isDemoMode) { showNotification("Refining with AI is disabled in demo mode.", true); return; }
             const promptText = refineContainer.querySelector('textarea').value;
             if (!promptText) return;
 
@@ -1218,17 +1312,7 @@ After any plan is generated (both summaries and in-depth views), you'll see a "R
             
             contentArea.innerHTML = getLoaderHTML(`Refining plan based on your request...`);
             
-            const prompt = `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to change it. Your task is to rewrite the entire yoga plan to incorporate the user's request.
-
-**ORIGINAL YOGA PLAN:**
----
-${originalText}
----
-
-**USER'S REFINEMENT REQUEST:**
-"${promptText}"
-
-Rewrite the full yoga plan based on the user's request. Maintain the original structure (e.g., JSON format for weekly plans, or '###' markdown headers for regular plans) and level of detail. Return only the new, complete, and rewritten plan in the original format.`;
+            const prompt = `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to change it. Your task is to rewrite the entire yoga plan to incorporate the user's request. **ORIGINAL YOGA PLAN:**\n---\n${originalText}\n---\n\n**USER'S REFINEMENT REQUEST:**\n"${promptText}"\n\nRewrite the full yoga plan based on the user's request. Maintain the original structure (e.g., JSON format for weekly plans, or '###' markdown headers for regular plans) and level of detail. Return only the new, complete, and rewritten plan in the original format.`;
             
             const isWeeklyPlan = isModal && footerEl.dataset.themeType === 'hipReplacement';
 
@@ -1243,39 +1327,15 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
                 
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
-                    
                     if (isWeeklyPlan) {
-                        const routines = parseJsonWithCorrections(newText);
-                        contentEl.innerHTML = '';
-                        routines.forEach((routine, index) => {
-                            const accordionItem = document.createElement('div');
-                            accordionItem.className = 'accordion-item';
-                            accordionItem.innerHTML = `
-                                <button type="button" class="accordion-header">
-                                    <span class="text-left">${routine.title}</span>
-                                    <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
-                                <div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>
-                            `;
-                            contentEl.appendChild(accordionItem);
-                            if (index === 0) {
-                                accordionItem.querySelector('.accordion-header').classList.add('active');
-                                accordionItem.querySelector('.accordion-content').classList.add('open');
-                            }
-                        });
+                         const routines = parseJsonWithCorrections(newText);
+                         createAccordionFromMarkdown(routines.map(r => `### ${r.title}\n${r.content}`).join('\n'), contentEl);
                     } else {
                         createAccordionFromMarkdown(newText, contentEl);
                     }
-
-                    footerEl.innerHTML = `
-                        <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                        <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
-                    `;
+                    footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
                     footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
-                    
-                    if (refineContainer) {
-                        refineContainer.remove();
-                    }
+                    if (refineContainer) refineContainer.remove();
                 } else {
                     createAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
@@ -1291,6 +1351,66 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
         
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
+
+        // --- Demo Mode Functions ---
+        async function startDemoMode() {
+            isDemoMode = true;
+            document.getElementById('inDepthModal').classList.add('hidden');
+            const loadingModal = document.getElementById('loadingStateModal');
+            const loadingMessageEl = document.getElementById('loading-message');
+            loadingMessageEl.textContent = "Loading Demo Version...";
+            loadingModal.classList.remove('hidden');
+
+            applyTheme({ bg: '#f3e8ff', text: '#374151', primary: '#9333ea', primaryDark: '#7e22ce', accent: '#581c87', cardBg: 'rgba(255, 255, 255, 0.9)', cardBorder: '#e9d5ff', textMuted: '#6b7280', inputBg: '#f9fafb', inputBorder: '#d1d5db', buttonText: '#ffffff' });
+            applyHeaderImage('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png');
+            await loadAppWithMockData();
+            loadingModal.classList.add('hidden');
+            showNotification("Demo Mode Activated. Some AI features are disabled.");
+        }
+
+        async function loadAppWithMockData() {
+            document.getElementById('main-grid').innerHTML = '';
+            document.getElementById('gemini-result-container').innerHTML = '';
+            populateTailoringButtons(["Mindfulness", "Balance", "Flexibility", "Strength", "Relaxation"]);
+            document.getElementById('gemini-prompt').placeholder = "e.g., 'Ocean Breath & Fluid Movement'";
+            
+            const categories = Object.keys(MOCK_DATA).filter(k => typeof MOCK_DATA[k] === 'object' && MOCK_DATA[k].items);
+
+            for (const key of categories) {
+                const categoryData = MOCK_DATA[key];
+                const mainGrid = document.getElementById('main-grid');
+                const card = document.createElement('div');
+                card.className = 'card md:col-span-2';
+                card.id = `${key}-card`;
+                const selectorId = `${key}-selector-visual`;
+                card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${categoryData.title}</h2><p class="mb-6 themed-text-muted">${categoryData.description}</p><div id="${selectorId}" class="w-full"></div><div id="${key}-details" class="details-container prose max-w-none mt-4"></div></div>`;
+                mainGrid.appendChild(card);
+                allThemeData[key] = categoryData.items;
+                populateCardGridSelector(selectorId, key);
+            }
+            document.getElementById('jump-to-nav-container').innerHTML = '';
+        }
+
+        function showNotification(message, isError = false) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-50 transition-all duration-300 opacity-0 transform -translate-y-5';
+            if(isError) {
+                notification.classList.add('bg-red-500');
+            } else {
+                notification.style.background = `linear-gradient(to right, var(--color-primary), var(--color-primary-dark))`;
+            }
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            requestAnimationFrame(() => {
+                notification.classList.remove('opacity-0', '-translate-y-5');
+            });
+
+            setTimeout(() => {
+                notification.classList.add('opacity-0');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
 
     </script>
 </body>
