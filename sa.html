@@ -27,6 +27,8 @@
             --color-input-bg: #f9fafb;
             --color-input-border: #d1d5db;
             --color-button-text: #ffffff;
+            --code-bg: #282c34;
+            --code-text: #abb2bf;
         }
 
         /* Applying the theme variables */
@@ -78,6 +80,50 @@
             display: block;
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
+        }
+
+        /* Code Block Styling */
+        .code-block-container {
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(0,0,0,0.2);
+            padding: 0.5rem 1rem;
+            color: #d1d5db;
+            font-size: 0.875rem;
+            font-family: 'Inter', sans-serif;
+        }
+        .copy-code-button {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background-color 0.2s;
+        }
+        .copy-code-button:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        .prose pre {
+            background-color: transparent !important;
+            margin: 0;
+            padding: 1rem;
+            color: var(--code-text);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .prose code {
+             font-family: 'Menlo', 'Consolas', monospace;
+             font-size: 0.9em;
         }
 
 
@@ -280,7 +326,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- DEV NOTE: Remember to increment the version number with each significant change. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.5</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.7</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -413,6 +459,12 @@
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('copy-code-button')) {
+                    const codeBlock = e.target.closest('.code-block-container').querySelector('code');
+                    copyElementTextToClipboard(codeBlock, e.target);
+                    return;
+                }
+
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -871,39 +923,68 @@
             loader.classList.toggle('flex', isLoading);
         }
         
+        // DEV NOTE: This function defines the master prompt for generating detailed guides.
+        // It's designed to be flexible for both new content and user-requested refinements.
         function getEnhancedPrompt(task, options = '', originalText = '') {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-            const refinementText = originalText ? `**ORIGINAL IT GUIDE:**\n---\n${originalText}\n---\n\n**USER'S REFINEMENT REQUEST:**` : 'Generate a comprehensive and practical guide for the task:';
+            
+            // This logic block handles refinements of existing text.
+            if (originalText) {
+                return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
-            return `You are an expert senior IT administrator AI. ${refinementText} "${task}". ${optionsText}
+**ORIGINAL IT GUIDE:**
+---
+${originalText}
+---
 
-The guide must be structured with the following detailed, descriptive sections using '###' markdown headers:
-- "Task"
-- "Prerequisites"
-- "Step-by-Step Guide"
-- "Verification Steps"
-- "Potential Issues & Troubleshooting"
-- "Helpful Resources"
+**USER'S REFINEMENT REQUEST:**
+"${task}"
 
-When generating the guide, ensure the following requirements are met for the specific technology being discussed:
-
-1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources where appropriate.
-2.  **Provide Specific Examples:** The "Step-by-Step Guide" must include at least one concrete, high-impact example relevant to the task (e.g., a sample script, a key configuration setting, or a specific policy to create).
-3.  **Detail Specific Requirements:** The "Prerequisites" section must detail relevant administrative roles or permissions and any specific licensing requirements needed for full functionality.
-4.  **Practical Verification:** The "Verification Steps" must mention practical, real-world details, such as typical time delays for changes to apply or specific logs to check.
-5.  **Address Real-World Problems:** The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face with this technology or task.
-6.  **Helpful Resources:** Provide a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools in the "Helpful Resources" section.
-7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide', include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear description of what the screenshot should show].
+**Instructions for rewriting:**
+1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
+2.  **Integrate:** Seamlessly integrate the user's request into the guide.
+3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
+    * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
+    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
+    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial, using the format: [Screenshot: A clear description of what the screenshot should show].
+    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
+    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
 
 Return only the new, complete, and rewritten markdown guide.`;
+            }
+
+            // This is the prompt for generating new content from scratch.
+            return `You are an expert senior IT administrator AI. Generate a comprehensive and practical guide for the task: "${task}". ${optionsText}
+
+Your task is to structure this guide into the most logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed and practical.
+
+When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
+
+1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
+2.  **Code Blocks:** When providing code examples (like PowerShell), wrap them in markdown code fences with the language specified, like \`\`\`powershell... \`\`\`.
+3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
+4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
+5.  **Troubleshooting:** Include a section covering common problems that administrators face.
+6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
+7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear description of what the screenshot should show].
+
+Return only the complete markdown guide.`;
         }
 
         function robustMarkdownToHtml(text, isCondensed = false) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
-            let cleanText = text.replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            
+            // First, handle and extract fenced code blocks
+            const codeBlocks = [];
+            let cleanText = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
+                codeBlocks.push({ lang: lang || 'text', code: code.trim() });
+                return placeholder;
+            });
 
+            // Process the rest of the markdown
             if (isCondensed) {
-                let listItems = cleanText
+                 let listItems = cleanText
                     .split('\n')
                     .map(line => line.trim())
                     .filter(line => line.startsWith('*'))
@@ -917,7 +998,6 @@ Return only the new, complete, and rewritten markdown guide.`;
                 return `<ul>${listItems}</ul>`;
             }
 
-            // General markdown processing for in-depth/accordion views
             let html = cleanText
                 .replace(/</g, "&lt;").replace(/>/g, "&gt;")
                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
@@ -926,39 +1006,56 @@ Return only the new, complete, and rewritten markdown guide.`;
                 .replace(/\[Screenshot: (.*?)\]/g, '<div class="screenshot-placeholder">$1</div>')
                 .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
                 .replace(/^\s*\n/gm, '<br>');
-
+            
             const lines = html.split('<br>');
             let resultHtml = '';
             let inList = false;
+            let listTag = '';
 
             lines.forEach(line => {
                 line = line.trim();
-                if (line.match(/^\d+\. /) || line.startsWith('* ')) {
-                    if (!inList) {
+                const isOl = line.match(/^\d+\. /);
+                const isUl = line.startsWith('* ');
+
+                if (isOl || isUl) {
+                    const currentListTag = isOl ? 'ol' : 'ul';
+                    if (!inList || listTag !== currentListTag) {
+                        if (inList) resultHtml += `</${listTag}>`;
                         inList = true;
-                        const listTag = line.match(/^\d+\. /) ? 'ol' : 'ul';
+                        listTag = currentListTag;
                         resultHtml += `<${listTag}>`;
                     }
                     const itemContent = line.replace(/^\d+\. |^\* /, '');
                     resultHtml += `<li>${itemContent}</li>`;
                 } else {
                     if (inList) {
+                        resultHtml += `</${listTag}>`;
                         inList = false;
-                        resultHtml += `</${resultHtml.slice(-4, -1)}>`; // Close the correct list type
                     }
-                    if (line.startsWith('<h3')) {
+                     if (line.startsWith('<h3') || line.startsWith('<div')) {
                         resultHtml += line;
                     } else if (line) {
-                        resultHtml += `<p>${line}</p>`;
+                         resultHtml += `<p>${line}</p>`;
                     }
                 }
             });
+            if (inList) resultHtml += `</${listTag}>`;
 
-            if (inList) {
-                 resultHtml += `</${resultHtml.slice(-4, -1)}>`;
-            }
-
-            return resultHtml.replace(/<p><h3>/g, '<h3>').replace(/<\/h3><\/p>/g, '</h3>');
+            // Re-insert the formatted code blocks
+            codeBlocks.forEach((block, index) => {
+                const codeHtml = `<div class="code-block-container">
+                    <div class="code-block-header">
+                        <span>${block.lang}</span>
+                        <button class="copy-code-button">Copy</button>
+                    </div>
+                    <pre><code class="language-${block.lang}">${block.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+                </div>`;
+                resultHtml = resultHtml.replace(`__CODEBLOCK_${index}__`, codeHtml);
+            });
+            
+            return resultHtml.replace(/<p><h3>/g, '<h3>').replace(/<\/h3><\/p>/g, '</h3>')
+                           .replace(/<p><div class="code-block-container">/g, '<div class="code-block-container">')
+                           .replace(/<\/div><\/p>/g, '</div>');
         }
 
         function addPostGenerationButtons(container, themeId, themeType) {
@@ -1104,9 +1201,9 @@ Return only the new, complete, and rewritten markdown guide.`;
             textarea.select();
             try {
                 document.execCommand('copy');
-                const originalText = button.innerHTML;
+                const originalText = button.textContent;
                 button.textContent = 'Copied!';
-                setTimeout(() => { button.innerHTML = originalText; }, 2000);
+                setTimeout(() => { button.textContent = originalText; }, 2000);
             } catch (err) {
                 console.error('Fallback: Oops, unable to copy', err);
             }
@@ -1310,4 +1407,4 @@ After any guide is generated, you'll see a "Refine with AI" button. Click this t
 
     </script>
 </body>
-</ht
+</html>
