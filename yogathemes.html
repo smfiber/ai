@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v11.0</title>
+    <title>AI Yoga Class & Theme Generator v14.0</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -198,7 +198,7 @@
             transition: background-color 0.2s;
         }
         .accordion-header:hover { background-color: rgba(0,0,0,0.03); }
-        .accordion-content { padding: 0 1rem 1rem 1rem; display: none; }
+        .accordion-content { padding: 1rem; display: none; }
         .accordion-content.open { display: block; }
         .accordion-header .icon { transition: transform 0.3s ease; }
         .accordion-header.active .icon { transform: rotate(180deg); }
@@ -208,56 +208,6 @@
             padding-top: 1rem;
             border-top: 1px solid var(--color-card-border);
         }
-        
-        /* --- Visual Selector Styles --- */
-        .visual-selector-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: center;
-            align-items: center;
-            margin-top: 1rem;
-        }
-        /* Chakra Styles */
-        .chakra-selector {
-            width: 3rem; height: 3rem; border-radius: 50%; cursor: pointer;
-            transition: all 0.3s ease; border: 3px solid transparent;
-            display: flex; align-items: center; justify-content: center;
-            position: relative;
-        }
-        .chakra-selector:hover { transform: scale(1.1); }
-        .chakra-selector.active {
-            border-color: var(--color-accent);
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        }
-        .chakra-tooltip {
-            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
-            background-color: var(--color-accent); color: white; padding: 0.25rem 0.5rem;
-            border-radius: 4px; font-size: 0.75rem; white-space: nowrap;
-            opacity: 0; transition: opacity 0.2s; pointer-events: none;
-        }
-        .chakra-selector:hover .chakra-tooltip { opacity: 1; }
-        
-        /* Seasons Styles */
-        .season-selector {
-            cursor: pointer; transition: all 0.3s ease; padding: 0.5rem;
-            border-radius: 50%; border: 3px solid transparent;
-        }
-        .season-selector:hover { transform: scale(1.1) rotate(5deg); }
-        .season-selector.active {
-            border-color: var(--color-primary);
-            background-color: rgba(147, 51, 234, 0.1);
-        }
-        .season-selector svg { width: 4rem; height: 4rem; }
-        
-        /* Moon Phases Styles */
-        .moon-phase-selector {
-            cursor: pointer; transition: all 0.3s ease;
-            padding: 0.5rem; border-radius: 8px; border: 2px solid transparent;
-        }
-        .moon-phase-selector:hover { background-color: rgba(0,0,0,0.05); }
-        .moon-phase-selector.active { border-color: var(--color-accent); }
-        .moon-phase-selector svg { width: 3rem; height: 3rem; }
         
         /* Card Grid Styles (Holidays, Styles, Meridians) */
         .card-grid-container {
@@ -371,7 +321,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v11.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v14.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -381,10 +331,20 @@
                     <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
                     <form id="gemini-form">
                         <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
-                        <div class="my-4">
-                            <label class="block text-sm font-medium themed-text-muted mb-2">Tailor Your Plan with AI-Powered Options:</label>
-                            <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
+                        
+                        <!-- Accordion for Tailoring Options -->
+                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
+                            <div class="accordion-item">
+                                <button type="button" class="accordion-header">
+                                    <span>Tailor Your Plan with AI-Powered Options:</span>
+                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div class="accordion-content">
+                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
                         </div>
+
                         <button type="submit" class="btn-primary w-full mt-4">Generate AI Yoga Plan</button>
                     </form>
                     <div id="gemini-result-container" class="mt-6 text-gray-700"></div>
@@ -392,17 +352,7 @@
             </div>
 
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Seven Chakras</h2><p class="mb-6 themed-text-muted">Align your practice with the body's seven primary energy centers. Select a chakra to focus on, and let the AI generate a corresponding theme and short description to guide your session.</p><div id="chakras-selector-visual" class="visual-selector-container mt-auto"></div><div id="chakras-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Four Seasons</h2><p class="mb-6 themed-text-muted">Align your practice with the natural cycles of the earth.</p><div id="seasons-selector-visual" class="visual-selector-container mt-auto"></div><div id="seasons-details" class="details-container prose max-w-none"></div></div></div>
-                
-                <!-- AI-Generated Cards -->
-                <div class="card md:col-span-2"><div class="p-8 card-content" id="meridians-card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">The Twelve Meridians</h2><p class="mb-6 themed-text-muted">Explore the major meridians of Traditional Chinese Medicine.</p><div id="meridian-selector-visual" class="w-full"></div><div id="meridian-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card md:col-span-2"><div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Moon Phases</h2><p class="mb-6 themed-text-muted">Align your practice with the energy of the lunar cycle.</p><div id="moon-phases-selector-visual" class="visual-selector-container mt-auto"></div><div id="moon-phases-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card md:col-span-2"><div class="p-8 card-content" id="styles-card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Yoga Styles</h2><p class="mb-6 themed-text-muted">Base your class around the principles of a specific yoga style.</p><div id="styles-selector-visual" class="w-full"></div><div id="styles-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card md:col-span-2"><div class="p-8 card-content" id="holidays-card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">US Holidays</h2><p class="mb-6 themed-text-muted">Find themed yoga practices inspired by US holidays.</p><div id="holidays-selector-visual" class="w-full"></div><div id="holidays-details" class="details-container prose max-w-none"></div></div></div>
-                <div class="card md:col-span-2"><div class="p-8 card-content" id="eastern-holidays-card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">Eastern Holidays</h2><p class="mb-6 themed-text-muted">Explore themes from Hindu and Buddhist traditions.</p><div id="eastern-holidays-selector-visual" class="w-full"></div><div id="eastern-holidays-details" class="details-container prose max-w-none"></div></div></div>
-
-                 <!-- NEW CATEGORIES WILL BE INSERTED HERE DYNAMICALLY -->
+                <!-- All cards below will be generated by AI -->
             </div>
         </main>
     </div>
@@ -427,12 +377,7 @@
         // --- Global Variables ---
         let apiKey = "";
         const root = document.documentElement;
-        const allThemeData = {
-            chakras: getChakrasSeedData(),
-            seasons: getSeasonsSeedData(),
-            moonPhases: getMoonPhasesSeedData(),
-            // AI-generated categories will be populated here
-        };
+        const allThemeData = {};
         let originalGeneratedText = new Map();
 
         // --- App Initialization ---
@@ -448,7 +393,7 @@
             document.querySelectorAll('.details-container').forEach(el => el.innerHTML = '');
             document.getElementById('gemini-prompt').value = '';
             document.getElementById('theme-prompt').value = '';
-            document.querySelectorAll('.btn-toggle.active, .visual-selector-container .active, .card-grid-container .active').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.btn-toggle.active, .grid-card-selector.active').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.search-bar').forEach(bar => {
                 bar.value = '';
                 bar.dispatchEvent(new Event('input'));
@@ -459,95 +404,58 @@
         
         // --- Main Content Loading Function ---
         async function loadAppContent() {
-            // Populate static selectors immediately
-            populateChakraSelector();
-            populateSeasonSelector();
-            populateMoonPhaseSelector();
-            
-            // Start all AI content generation in parallel
             loadAITailoringOptions();
             loadDynamicPlaceholders();
-            
-            await Promise.allSettled([
-                generateAndPopulateAICategory('styles', 'Yoga Styles', 'styles-card-content', 'styles-selector-visual', `Generate a comprehensive list of major yoga styles. For each style, provide a unique "id" (kebab-case), a "title", a "founder" (or key figure, can be an empty string), and a "description". Return ONLY a valid JSON array of objects.`),
-                generateAndPopulateAICategory('holidays', 'US Holidays', 'holidays-card-content', 'holidays-selector-visual', `Generate a list of major US holidays suitable for yoga themes. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, and a brief "explanation". Return ONLY a valid JSON array of objects.`),
-                generateAndPopulateAICategory('easternHolidays', 'Eastern Holidays', 'eastern-holidays-card-content', 'eastern-holidays-selector-visual', `Generate a list of major Hindu and Buddhist holidays. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, an "explanation", and a "tradition" ('Hindu' or 'Buddhist'). Return ONLY a valid JSON array of objects.`),
-                generateAndPopulateAICategory('meridians', 'The Twelve Meridians', 'meridians-card-content', 'meridian-selector-visual', `Generate a list of the 6 primary Meridian pairs from Traditional Chinese Medicine. For each pair, provide a unique "id" (kebab-case), a "title" (e.g., "Lung & Large Intestine"), and an "explanation" suitable for a yoga context. Return ONLY a valid JSON array of objects.`),
-                generateAndPopulateNewCategories() // Existing function for even more categories
-            ]);
-        }
 
-        // --- Visual Selectors & AI Category Generation ---
-        function populateChakraSelector() {
-            const container = document.getElementById('chakras-selector-visual');
-            if(!container) return;
-            const chakraColors = { muladhara: '#ff3b30', svadhisthana: '#ff9500', manipura: '#ffcc00', anahata: '#34c759', vishuddha: '#5ac8fa', ajna: '#5856d6', sahasrara: '#af52de' };
-            const sortedChakras = [...allThemeData.chakras].sort((a,b) => a.title.localeCompare(b.title));
-            container.innerHTML = sortedChakras.map(c => `
-                <div class="chakra-selector" style="background-color:${chakraColors[c.id]};" data-theme-id="${c.id}" data-theme-type="chakras">
-                    <div class="chakra-tooltip">${c.title.split(' ')[0]}</div>
-                </div>
-            `).join('');
-            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.chakra-selector')));
-        }
-        
-        function populateSeasonSelector() {
-            const container = document.getElementById('seasons-selector-visual');
-            if(!container) return;
-            const sortedSeasons = [...allThemeData.seasons].sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
-            const seasonIcons = {
-                'spring-equinox': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2v2m-6.36 2.64L7.05 7.05M2 12h2m2.64 6.36L7.05 17m5-10a5 5 0 015 5h-5V7z" stroke="#34D399"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 12a5 5 0 01-5-5h5v5z" stroke="#6EE7B7"></path></svg>`,
-                'summer-solstice': `<svg fill="none" stroke="#FBBF24" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2v2m0 16v2m-6.36-2.64L7.05 17M17 7.05L18.36 5.64M2 12h2m16 0h2m-2.64-6.36L17 7.05M7.05 7.05L5.64 5.64M12 18a6 6 0 100-12 6 6 0 000 12z"></path></svg>`,
-                'autumn-equinox': `<svg fill="none" stroke="#F97316" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 12H4M12 4v16m6-14l-4 4-4-4m8 10l-4-4-4 4"></path></svg>`,
-                'winter-solstice': `<svg fill="none" stroke="#60A5FA" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 10l7-7 7 7M5 14l7 7 7-7"></path></svg>`
-            };
-            container.innerHTML = sortedSeasons.map(s => `
-                <div class="season-selector" data-theme-id="${s.id}" data-theme-type="seasons" title="${s.title}">${seasonIcons[s.id]}</div>`).join('');
-            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.season-selector')));
-        }
+            const categoriesToGenerate = [
+                { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's seven primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, provide a unique "id" (kebab-case name, e.g., "muladhara"), a "title" (e.g., "Muladhara (Root)"), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
+                { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", prompt: `Generate data for the 4 seasons. For each, provide a unique "id" (e.g., "spring-equinox"), a "title", its "date" in MM/DD format, and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
+                { key: 'moonPhases', title: 'Moon Phases', description: "Align your practice with the energy of the lunar cycle.", prompt: `Generate data for the 8 phases of the moon. For each, provide a unique "id" (e.g., "new-moon"), a "title", and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
+                { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", prompt: `Generate a comprehensive list of major and niche yoga styles. For each style, provide a unique "id" (kebab-case), a "title", a "founder" (or key figure, can be an empty string), and a "description". Return ONLY a valid JSON array of objects.` },
+                { key: 'holidays', title: 'US Holidays', description: "Find themed yoga practices inspired by US holidays.", prompt: `Generate a comprehensive list of major US holidays suitable for yoga themes. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, and a brief "explanation". Return ONLY a valid JSON array of objects.` },
+                { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", prompt: `Generate a comprehensive list of major Hindu and Buddhist holidays. For each, provide a unique "id" (kebab-case), a "title", its "date" in MM/DD format, an "explanation", and a "tradition" ('Hindu' or 'Buddhist'). Return ONLY a valid JSON array of objects.` },
+                { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", prompt: `Generate a list of the 6 primary Meridian pairs from TCM. For each pair, provide a unique "id" (kebab-case), a "title" (e.g., "Lung & Large Intestine"), and an "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` }
+            ];
 
-        function populateMoonPhaseSelector() {
-            const container = document.getElementById('moon-phases-selector-visual');
-            if (!container) return;
-            const phaseOrder = ['new-moon', 'waxing-crescent', 'first-quarter', 'waxing-gibbous', 'full-moon', 'waning-gibbous', 'last-quarter', 'waning-crescent'];
-            const sortedPhases = phaseOrder.map(id => allThemeData.moonPhases.find(p => p.id === id)).filter(Boolean);
-            const moonIcons = {
-                'new-moon': `<svg viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.5"/></svg>`,
-                'waxing-crescent': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 A 10 10 0 0 1 12 22 A 6 10 0 0 0 12 2 Z" /></svg>`,
-                'first-quarter': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 v20 a10 10 0 0 0 0 -20" /></svg>`,
-                'waxing-gibbous': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 a10 10 0 0 1 0 20 a6 10 0 0 0 0-20" /></svg>`,
-                'full-moon': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" /></svg>`,
-                'waning-gibbous': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 a10 10 0 0 0 0 20 a6 10 0 0 1 0-20" /></svg>`,
-                'last-quarter': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 v20 a10 10 0 0 1 0 -20" /></svg>`,
-                'waning-crescent': `<svg viewBox="0 0 24 24" fill="var(--color-accent)"><circle cx="12" cy="12" r="10" fill="#e5e7eb" /><path d="M12 2 A 10 10 0 0 0 12 22 A 6 10 0 0 1 12 2 Z" /></svg>`,
-            };
-            container.innerHTML = sortedPhases.map(p => `
-                <div class="moon-phase-selector" data-theme-id="${p.id}" data-theme-type="moonPhases" title="${p.title}">${moonIcons[p.id]}</div>`).join('');
-            container.addEventListener('click', e => handleVisualSelect(e.target.closest('.moon-phase-selector')));
+            const promises = categoriesToGenerate.map(cat => generateAndPopulateAICategory(cat.key, cat.title, cat.description, cat.prompt));
+            promises.push(generateAndPopulateNewCategories());
+
+            await Promise.allSettled(promises);
         }
         
         // --- Generic AI Category Loader ---
-        async function generateAndPopulateAICategory(categoryKey, categoryTitle, contentId, selectorId, prompt) {
-            const contentContainer = document.getElementById(contentId);
+        async function generateAndPopulateAICategory(categoryKey, categoryTitle, categoryDescription, prompt) {
+            const mainGrid = document.getElementById('main-grid');
+            
+            const card = document.createElement('div');
+            card.className = 'card md:col-span-2';
+            const selectorId = `${categoryKey}-selector-visual`;
+            card.innerHTML = `
+                <div class="p-8 card-content">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">${categoryTitle}</h2>
+                    <p class="mb-6 themed-text-muted">${categoryDescription}</p>
+                    <div id="${selectorId}" class="w-full"></div>
+                    <div id="${categoryKey}-details" class="details-container prose max-w-none"></div>
+                </div>
+            `;
+            mainGrid.appendChild(card);
+            
             const selectorContainer = document.getElementById(selectorId);
-            if (!contentContainer || !selectorContainer) return;
-
             selectorContainer.innerHTML = getLoaderHTML(`AI is generating ${categoryTitle}...`);
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 const jsonData = JSON.parse(jsonText);
-
                 allThemeData[categoryKey] = jsonData;
                 selectorContainer.innerHTML = ''; // Clear loader
                 populateCardGridSelector(selectorId, categoryKey);
-
             } catch (error) {
                 console.error(`Failed to generate or populate ${categoryTitle}:`, error);
-                selectorContainer.innerHTML = `<p class="text-red-500 p-2 text-center">Sorry, could not load the AI-generated ${categoryTitle}. ${error.message}</p>`;
+                selectorContainer.innerHTML = `<p class="text-red-500 p-2 text-center">Sorry, could not load ${categoryTitle}. ${error.message}</p>`;
             }
         }
 
+        // --- UI Population Functions ---
         function populateCardGridSelector(containerId, themeType) {
             const container = document.getElementById(containerId);
             if(!container) return;
@@ -563,10 +471,12 @@
                 const createCardHtml = item => {
                     let dateHtml = '';
                     if (holidayTypes.includes(themeType) && item.date) {
-                        const [monthNum, dayNum] = item.date.split('/');
-                        const date = new Date(2000, monthNum - 1, parseInt(dayNum)); 
-                        const dateString = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
-                        dateHtml = `<small class="block themed-text-muted mt-1 text-xs">${dateString}</small>`;
+                        try {
+                            const [monthNum, dayNum] = item.date.split('/');
+                            const date = new Date(2000, monthNum - 1, parseInt(dayNum)); 
+                            const dateString = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+                            dateHtml = `<small class="block themed-text-muted mt-1 text-xs">${dateString}</small>`;
+                        } catch(e) { /* ignore date if format is wrong */ }
                     }
 
                     return `
@@ -591,7 +501,7 @@
                     }
                     grid.innerHTML = html;
                 } else {
-                     if (holidayTypes.includes(themeType)) {
+                     if (holidayTypes.includes(themeType) || themeType === 'seasons') {
                         data.sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
                     } else {
                         data.sort((a,b) => a.title.localeCompare(b.title));
@@ -602,12 +512,12 @@
 
             renderGrid();
             searchBar.addEventListener('input', e => renderGrid(e.target.value));
-            grid.addEventListener('click', e => handleVisualSelect(e.target.closest('.grid-card-selector')));
+            grid.addEventListener('click', e => handleGridSelect(e.target.closest('.grid-card-selector')));
         }
         
-        async function handleVisualSelect(target) {
+        async function handleGridSelect(target) {
             if (!target) return;
-            const container = target.closest('.visual-selector-container, .card-grid-container');
+            const container = target.closest('.card-grid-container');
             const detailsContainer = container.closest('.card-content').querySelector('.details-container');
             if(!checkApiKey(detailsContainer)) return;
             
@@ -759,11 +669,12 @@
             container.innerHTML = getLoaderHTML('AI is generating tailoring options...');
             const fallbackOptions = ["Breathwork", "Essential Oils", "Chanting", "Poetry", "Props", "Meditation", "Mantra & Affirmations", "Partner Poses"];
             try {
-                const prompt = `Generate a list of up to 50 unique and creative yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting. Example: ["Sanskrit Focus", "Mudras", "Sound Bath"]`;
+                const prompt = `Generate a comprehensive list of unique and creative yoga class components suitable for integration into a yoga app. The elements should enrich a user's practice, rather than being types of classes. Return ONLY a valid JSON array of strings, with no other text, explanation, or markdown formatting. Example: ["Sanskrit Focus", "Mudras", "Sound Bath"]`;
                 const tailoringOptions = await callGeminiAPI(prompt, true).then(JSON.parse);
                 populateTailoringButtons(tailoringOptions);
             } catch (error) {
                 console.error("Failed to load AI tailoring options, using fallback.", error);
+                container.parentElement.previousElementSibling.click(); // Open the accordion on error to show message
                 container.innerHTML = `<p class="text-amber-600 text-sm">Could not load AI options. Using defaults.</p>`;
                 populateTailoringButtons(fallbackOptions);
             }
@@ -890,7 +801,17 @@
         function showThemeLoading(isLoading) { document.getElementById('theme-loader-container').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('hidden', !isLoading); document.getElementById('header-loader').classList.toggle('flex', isLoading); document.getElementById('generate-theme-btn').disabled = isLoading; document.getElementById('generate-theme-btn').classList.toggle('opacity-50', isLoading); }
         function showThemeError(message) { const el = document.getElementById('theme-error-container'); el.textContent = message; el.classList.remove('hidden'); }
         function getIconForTheme(themeType, themeId) { const defaultIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>`; const icons = { styles: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 16.5a2 2 0 100-4 2 2 0 000 4zM18.5 16.5a2 2 0 100-4 2 2 0 000 4zM2 10h2.5M19.5 10H22M12 2v2.5M12 19.5V22M4.5 4.5l2 2M17.5 4.5l-2 2M4.5 19.5l2-2M17.5 19.5l-2-2"></path>`, holidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>`, easternHolidays: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>` }; return `<svg class="themed-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[themeType] || defaultIcon}</svg>`; }
-        function getNextHolidayDate(holiday) { const now = new Date(); const currentYear = now.getFullYear(); const [month, day] = holiday.date.split('/').map(Number); let holidayDate = new Date(currentYear, month - 1, day); if (holidayDate < now) { holidayDate.setFullYear(currentYear + 1); } return holidayDate; }
+        function getNextHolidayDate(holiday) {
+             if (!holiday || !holiday.date || !/^\d{1,2}\/\d{1,2}$/.test(holiday.date)) {
+                return new Date(8640000000000000); // A very far future date for invalid entries
+            }
+            const now = new Date(); 
+            const currentYear = now.getFullYear(); 
+            const [month, day] = holiday.date.split('/').map(Number); 
+            let holidayDate = new Date(currentYear, month - 1, day); 
+            if (holidayDate < now) { holidayDate.setFullYear(currentYear + 1); } 
+            return holidayDate; 
+        }
         
         async function generateAndPopulateNewCategories() {
             const mainGrid = document.getElementById('main-grid');
@@ -900,7 +821,7 @@
             loaderCard.innerHTML = getLoaderHTML('AI is generating new yoga categories...');
             mainGrid.appendChild(loaderCard);
 
-            const prompt = `Generate a comprehensive list of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a diverse list of at least 8-12 different styles. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
+            const prompt = `Generate a comprehensive list of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a diverse list of different styles. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
 
             try {
                 const newCategoriesData = await callGeminiAPI(prompt, true).then(JSON.parse);
@@ -958,12 +879,6 @@
                 modalContent.innerHTML = `<p class="text-red-500 p-2">${generateErrorMessage(error, 'text')}</p>`;
             }
         }
-
-        // --- Static Data ---
-        function getChakrasSeedData() { return [ { id: "muladhara", title: "Muladhara (Root)", explanation: "This class is designed to connect you to the earth, fostering a sense of security and stability." }, { id: "svadhisthana", title: "Svadhisthana (Sacral)", explanation: "Unleash your creative potential and embrace the flow of life." }, { id: "manipura", title: "Manipura (Solar Plexus)", explanation: "This empowering class is dedicated to activating the center of our personal power and self-esteem." }, { id: "anahata", title: "Anahata (Heart)", explanation: "Cultivate love, compassion, and connection in this heart-opening class." }, { id: "vishuddha", title: "Vishuddha (Throat)", explanation: "Find your voice and speak your truth in this class dedicated to the throat chakra." }, { id: "ajna", title: "Ajna (Third Eye)", explanation: "This introspective class is designed to awaken the center of intuition and inner wisdom." }, { id: "sahasrara", title: "Sahasrara (Crown)", explanation: "Experience a sense of unity and connection to something greater than yourself." } ]; }
-        function getSeasonsSeedData() { return [ { id: "spring-equinox", title: "Spring Equinox", date: "03/20", explanation: "This class focuses on renewal, growth, and setting new intentions for the season of awakening." }, { id: "summer-solstice", title: "Summer Solstice", date: "06/20", explanation: "Celebrate the peak of the sun's energy with this vibrant and expansive yoga class." }, { id: "autumn-equinox", title: "Autumn Equinox", date: "09/22", explanation: "This class encourages introspection, balance, and the art of letting go of what no longer serves us." }, { id: "winter-solstice", title: "Winter Solstice", date: "12/21", explanation: "Honor the darkest day of the year with this deeply restorative and introspective yoga class." } ]; }
-        function getMoonPhasesSeedData() { return [ { id: "new-moon", title: "New Moon", explanation: "A time for setting intentions, new beginnings, and planting seeds for the future." }, { id: "waxing-crescent", title: "Waxing Crescent", explanation: "A time to build momentum, refine intentions, and take initial actions." }, { id: "first-quarter", title: "First Quarter", explanation: "A time for decision-making, meeting challenges, and pushing through resistance." }, { id: "waxing-gibbous", title: "Waxing Gibbous", explanation: "A time of refinement, adjustment, and building anticipation for fullness." }, { id: "full-moon", title: "Full Moon", explanation: "A time of peak energy, illumination, celebration, and releasing what no longer serves." }, { id: "waning-gibbous", title: "Waning Gibbous", explanation: "A time for gratitude, sharing wisdom, and beginning to let go." }, { id: "last-quarter", title: "Last Quarter", explanation: "A time for release, forgiveness, and cleansing before the new cycle." }, { id: "waning-crescent", title: "Waning Crescent", explanation: "A time for surrender, rest, and introspection before the new moon." } ]; }
-        
     </script>
 </body>
 </html>
