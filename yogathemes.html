@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.23</title>
+    <title>AI Yoga Class & Theme Generator v17.24</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -106,6 +106,8 @@
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
+        /* NEW: Style for the dedicated tutorial button */
+        #tutorial-button { bottom: 6.5rem; left: 2rem; }
         
         #settings-panel {
             position: fixed; bottom: 11rem; right: 2rem;
@@ -181,7 +183,7 @@
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
-            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "AI Help" button to learn more without a key.</p>
+            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "Tutorial" button to learn more without a key.</p>
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
@@ -247,7 +249,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.23</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.24</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -308,6 +310,10 @@
     <button id="new-plan-button" class="floating-action-button" title="New Plan (Reload)">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </button>
+    <!-- NEW: Dedicated tutorial button -->
+    <button id="tutorial-button" class="floating-action-button" title="Show App Tutorial">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+    </button>
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
@@ -355,6 +361,8 @@
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
+            // NEW: Event listener for the dedicated tutorial button
+            document.getElementById('tutorial-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
             // Settings Panel
@@ -1078,11 +1086,10 @@
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
 
-            titleEl.textContent = "AI Help & Feedback";
+            titleEl.textContent = "App Tutorial"; // Changed title for clarity
             footerEl.innerHTML = '';
             modal.classList.remove('hidden');
 
-            // --- CHANGE: Use static markdown instead of an API call ---
             const tutorialMarkdown = `
 ### Custom Plan Generator
 This is the heart of the app! Enter any theme, idea, or feeling into the main text box (e.g., "Courage & Heart Opening" or "A Gentle Rainy Day Practice"). The AI will then craft a complete, unique yoga class plan for you from scratch, including an introduction, warm-up, main sequence, and cool-down.
@@ -1234,7 +1241,6 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
 
                 originalGeneratedText.set(textKey, newText);
                 
-                // BUG FIX: Instead of re-calling handleExploreInDepth, render the new content directly.
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
                     
@@ -1261,7 +1267,6 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
                         createAccordionFromMarkdown(newText, contentEl);
                     }
 
-                    // Restore the footer buttons and remove the refine UI.
                     footerEl.innerHTML = `
                         <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                         <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
@@ -1272,7 +1277,6 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
                         refineContainer.remove();
                     }
                 } else {
-                    // This part was correct, for non-modal refinements.
                     createAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                 }
