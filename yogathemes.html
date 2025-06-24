@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.21</title>
+    <title>AI Yoga Class & Theme Generator v17.22</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -181,7 +181,7 @@
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
-            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only for your current session.</p>
+            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "AI Help" button to learn more without a key.</p>
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
@@ -247,7 +247,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.21</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.22</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -300,7 +300,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
     </button>
     <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-3-3 3-3"/><path d="M15 6l3 3-3 3"/><path d="M12 19.52A10 10 0 1 0 12 4.48"/><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
     </button>
     <button id="settings-button" class="floating-action-button" title="Typography Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
@@ -347,7 +347,13 @@
 
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
-            document.getElementById('theme-changer-button').addEventListener('click', () => document.getElementById('themeGeneratorModal').classList.remove('hidden'));
+            document.getElementById('theme-changer-button').addEventListener('click', () => {
+                if(!apiKey) {
+                    alert('Please enter your API key to use the theme generator.');
+                    return;
+                }
+                document.getElementById('themeGeneratorModal').classList.remove('hidden');
+            });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
@@ -1066,24 +1072,42 @@
             });
         }
         
-        async function handleAIHelpRequest() {
+        function handleAIHelpRequest() {
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
 
             titleEl.textContent = "AI Help & Feedback";
-            contentEl.innerHTML = getLoaderHTML("Loading help content...");
             footerEl.innerHTML = '';
             modal.classList.remove('hidden');
 
-            const prompt = "Provide a helpful guide to this AI Yoga Generator app. Explain main features clearly. Use markdown with '###' headings for: 'Custom Plan Generator', 'AI-Powered Options', 'Pre-Built Categories', 'Visual Theme Generator', 'In-Depth Exploration', 'Refining Content', and 'Other Features'.";
-            try {
-                const resultText = await callGeminiAPI(prompt);
-                createAccordionFromMarkdown(resultText, contentEl);
-            } catch (error) {
-                handleApiError(error, contentEl, 'help content');
-            }
+            // --- CHANGE: Use static markdown instead of an API call ---
+            const tutorialMarkdown = `
+### Custom Plan Generator
+This is the heart of the app! Enter any theme, idea, or feeling into the main text box (e.g., "Courage & Heart Opening" or "A Gentle Rainy Day Practice"). The AI will then craft a complete, unique yoga class plan for you from scratch, including an introduction, warm-up, main sequence, and cool-down.
+
+### AI-Powered Options
+Just below the main prompt box, you'll find a set of "Tailor Your Plan" buttons. Click the dropdown to reveal options like "Flexibility," "Stress Relief," or "Core Work." You can select multiple options to give the AI more specific instructions for your custom plan.
+
+### Pre-Built Categories
+Scroll down to explore a wide range of pre-built, AI-generated categories. These include themes like "The Seven Chakras," "Yoga for Artists," or even a week-by-week "Gentle Yoga After Hip Replacement" guide. Click on any item within a category to get a quick summary plan.
+
+### Visual Theme Generator
+Want to change the app's look and feel? Click the floating button with the eye icon. This opens the AI Visual Theme Generator. Type in a descriptive phrase like "A quiet, misty forest at dawn" or "Vibrant desert sunset," and the AI will generate a brand new color palette and header image for the entire app.
+
+### In-Depth Exploration
+When you see a summary plan that you like, click the "Explore In-Depth" button. This will open a new view where the AI generates a much more detailed, descriptive version of the class, perfect for teaching or a deep personal practice.
+
+### Refining Content
+After any plan is generated (both summaries and in-depth views), you'll see a "Refine with AI" button. Click this to open a text box where you can give the AI further instructions. For example, you could type "Make it more gentle," "Add more hip openers," or "Adapt this for beginners." The AI will then rewrite the plan based on your feedback.
+
+### Other Features
+- **New Plan (Reload):** The floating refresh button reloads the entire application, giving you a fresh start.
+- **Typography Settings:** The floating button with the font icon opens a panel where you can change the app's font, text size, and line spacing for better readability.
+- **Copy Text:** Easily copy any generated plan to your clipboard.
+`;
+            createAccordionFromMarkdown(tutorialMarkdown, contentEl);
         }
         
         async function handleExploreInDepth(themeId, themeType) {
@@ -1225,7 +1249,7 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
         
-        function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, something went wrong. ${message}`; }
+        function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
 
     </script>
 </body>
