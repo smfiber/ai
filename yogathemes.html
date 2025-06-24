@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.16</title>
+    <title>AI Yoga Class & Theme Generator v16.17</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -360,7 +360,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.16</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.17</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -452,28 +452,67 @@
                 interactive: false
             },
             {
-                title: "Create a Custom Plan",
-                text: "You can type any idea for a yoga class, and the AI will generate a complete plan for you. You don't have to interact with the input field right away to proceed with the tutorial.",
+                title: "Custom Plan Generator",
+                text: "This is where you can enter any keyword or concept, and the AI will generate a complete, unique class plan for you.",
                 element: '#gemini-prompt',
                 position: 'bottom',
                 eventType: 'focus',
-                interactive: true
+                interactive: false // Changed to false: no forced interaction
             },
             {
-                title: "Change the Visuals",
-                text: "You can describe a mood or concept to create a new color palette and header image for the app. You don't have to interact with this button right away to proceed with the tutorial.",
+                title: "AI Visual Theme Generator",
+                text: "Use this button to open the AI Visual Theme Generator. You can describe a mood or concept to generate a new color palette and header image for the app.",
                 element: '#theme-changer-button',
                 position: 'left',
                 eventType: 'click',
-                interactive: true
+                interactive: false // Changed to false: no forced interaction
             },
             {
-                title: "Explore AI Categories",
-                text: "Alternatively, explore pre-made themes. Click on any of the options below to see details and generate a plan. You don't have to interact with these options right away to proceed with the tutorial.",
+                title: "AI-Powered Categories",
+                text: "Explore pre-made themes by clicking on any of the cards below. Each card provides a category with specific themes you can use to generate a detailed yoga plan.",
                 element: '#hip-replacement-card-container .grid-card-selector', // Point to a specific element within the card container
                 position: 'top',
                 eventType: 'click',
-                interactive: true
+                interactive: false // Changed to false: no forced interaction
+            },
+            {
+                title: "Discover More Topics",
+                text: "Click this button to dynamically generate and load more unique yoga topic categories for endless inspiration.",
+                element: '#discover-more-button',
+                position: 'top',
+                eventType: 'click',
+                interactive: false // Changed to false: no forced interaction
+            },
+            {
+                title: "AI Help & Feedback",
+                text: "This button provides access to an AI assistant for help and suggestions on improving the app's features and user experience.",
+                element: '#ai-help-button',
+                position: 'left',
+                eventType: 'click',
+                interactive: false // Changed to false: no forced interaction
+            },
+            {
+                title: "Typography Settings",
+                text: "Use this button to adjust the font family, font size, and line spacing of the app's text to suit your reading preferences.",
+                element: '#settings-button',
+                position: 'left',
+                eventType: 'click',
+                interactive: false // Changed to false: no forced interaction
+            },
+            {
+                title: "Start a New Plan",
+                text: "Click this button at any time to clear the workspace and start generating a fresh yoga plan.",
+                element: '#new-plan-button',
+                position: 'left',
+                eventType: 'click',
+                interactive: false // Changed to false: no forced interaction
+            },
+            {
+                title: "Search with Gemini",
+                text: "You can highlight any text on the page, and a 'Search with Gemini' popup will appear, allowing you to get an in-depth explanation of the selected concept.",
+                element: '#custom-plan-card h2', // A visible element to highlight something on the main content
+                position: 'top',
+                interactive: false
             },
             {
                 title: "You're All Set!",
@@ -486,6 +525,9 @@
         
         function cleanupStepListeners() {
             if (activeTutorialListener) {
+                // Ensure the event listener is removed only if it was actually added.
+                // It was only added if `step.interactive` was true when `showOnboardingStep` was called.
+                // With `interactive: false` for all steps, this block primarily clears old listeners.
                 activeTutorialListener.element.removeEventListener(activeTutorialListener.eventType, activeTutorialListener.handler);
                 activeTutorialListener = null;
             }
@@ -508,8 +550,10 @@
         }
 
         function showOnboardingStep(stepIndex) {
-            cleanupStepListeners();
+            cleanupStepListeners(); // Clean up listeners from the previous step
+
             const modal = document.getElementById('onboarding-modal');
+            // Remove highlight from any previously highlighted element
             document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
 
             const step = onboardingSteps[stepIndex];
@@ -528,25 +572,27 @@
             prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-flex';
             nextBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'none' : 'inline-flex';
             doneBtn.style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
-            skipBtn.style.display = (stepIndex === onboardingSteps.length - 1 || stepIndex === onboardingSteps.length - 2) ? 'none' : 'inline-flex'; // Hide skip on the last two steps
+            // Skip button: Hide on the last two steps (last real step, and the "You're All Set!" step)
+            skipBtn.style.display = (stepIndex >= onboardingSteps.length - 2) ? 'none' : 'inline-flex';
 
 
             // Next button is always enabled unless it's the very last step.
-            nextBtn.disabled = false;
+            nextBtn.disabled = false; // Always enable the next button, as interaction is no longer forced.
             
             if (step.element) {
                 const targetElement = document.querySelector(step.element);
                 if (targetElement) {
+                    // Add highlight and scroll into view for the current step's element
                     targetElement.classList.add('highlight-element');
                     targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
                     const rect = targetElement.getBoundingClientRect();
                     
-                    // Add listener for interactive steps
-                    if (step.interactive) {
+                    // Add listener ONLY if `interactive: true` for the step.
+                    // Since we're setting all interactive steps to `false` for forced progression,
+                    // this block will primarily clear previous listeners or not add new ones for non-forced steps.
+                    if (step.interactive) { // This condition will mostly be false now.
                         const eventHandler = (e) => {
-                             // This handler will still advance, but it's not the only way to advance
-                             // The user can now click 'Next' directly as well.
                              e.preventDefault();
                              e.stopPropagation();
                              if(step.element === '#theme-changer-button'){
@@ -554,10 +600,8 @@
                                  document.getElementById('themeGeneratorModal').classList.remove('hidden');
                                  setTimeout(()=> document.getElementById('themeGeneratorModal').classList.add('hidden'), 100);
                              }
-                             // Only move next if triggered by the interactive element and not already on the last step
-                             if (currentOnboardingStep < onboardingSteps.length - 1) { 
-                                 moveToNextStep();
-                             }
+                             // Advance tutorial upon interaction with the highlighted element
+                             moveToNextStep();
                         };
                         activeTutorialListener = {element: targetElement, eventType: step.eventType, handler: eventHandler};
                         targetElement.addEventListener(step.eventType, eventHandler, { once: true });
@@ -582,20 +626,19 @@
                             modalLeft = rect.right + 15;
                             modalTop = rect.top + (rect.height / 2) - (modal.offsetHeight / 2); // Center vertically
                             break;
-                        default: // center (already handled by initial modalTop/modalLeft)
+                        default: // center (already handled by initial modalTop/modalLeft calculation)
                             break;
                     }
                     
-                    // Ensure modal stays within viewport
+                    // Ensure modal stays within viewport boundaries
                     modalLeft = Math.max(10, Math.min(modalLeft, window.innerWidth - modal.offsetWidth - 10));
                     modalTop = Math.max(10, Math.min(modalTop, window.innerHeight - modal.offsetHeight - 10));
 
                     modal.style.left = `${modalLeft}px`;
                     modal.style.top = `${modalTop}px`;
-                    modal.style.transform = 'none'; // Remove center transform if set
-
+                    modal.style.transform = 'none'; // Remove center transform if it was applied
                 }
-            } else { // Center non-element steps
+            } else { // Center non-element steps (like the welcome or final message)
                  modal.style.top = '50%';
                  modal.style.left = '50%';
                  modal.style.transform = 'translate(-50%, -50%)';
