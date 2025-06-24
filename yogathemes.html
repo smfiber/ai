@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.10</title>
+    <title>AI Yoga Class & Theme Generator v17.11</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -73,7 +73,8 @@
             transition: all 0.2s ease; display: inline-flex;
             align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-secondary:hover { background-color: #e5e7eb; color: var(--color-accent); }
+        .btn-secondary:hover:not(:disabled) { background-color: #e5e7eb; color: var(--color-accent); }
+        .btn-secondary:disabled { opacity: 0.7; cursor: not-allowed;}
         
         .btn-toggle {
             background-color: var(--color-input-bg); color: var(--color-text-muted);
@@ -279,7 +280,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.10</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.11</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -361,6 +362,7 @@
         let apiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
+        const fullPrompts = {}; // NEW: To store prompts for loading full data
         let originalGeneratedText = new Map();
         let currentOnboardingStep = 0;
         
@@ -457,6 +459,10 @@
 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                
+                // NEW: Handle "Show All" button clicks
+                const showAllBtn = e.target.closest('.show-all-button');
+                if (showAllBtn) handleShowAllClick(showAllBtn);
 
                 const accordionHeader = e.target.closest('.accordion-header');
                 if (accordionHeader) { 
@@ -608,19 +614,20 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
+                // MODIFIED: Prompts are now split into initial and full
                 const categoriesToGenerate = [
-                    { key: 'hipReplacement', title: 'Gentle Yoga After Hip Replacement', description: "Safe, modified practices to support recovery and mobility.", prompt: `Generate an extensive list of 40-50 gentle yoga class plans for hip replacement recovery. For each, give a unique "id", a "title", and a "description" emphasizing safety. Return ONLY a valid JSON array.` },
-                    { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices for sensory regulation, mindfulness, and grounding.", prompt: `Generate 40-50 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
-                    { key: 'moonPhases', title: 'Moon Phases', description: "Align your practice with the energy of the lunar cycle.", prompt: `Generate data for the 8 moon phases. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
-                    { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", prompt: `Generate the 6 primary Meridian pairs from TCM. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
-                    { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
-                    { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", prompt: `Generate data for the 4 seasons. For each, give a unique "id", "title", its "date" (MM/DD), and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
-                    { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", prompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos and the zodiac.", prompt: `Generate data for the 12 zodiac signs. For each, give an "id", "title", "dateRange", "planet", and "explanation". Return ONLY a valid JSON array.` },
-                    { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with tailored practices.", prompt: `Generate 40-50 yoga concepts for artists. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'dancers', title: 'Yoga for Dancers', description: "Enhance flexibility, strength, and recovery for dancers.", prompt: `Generate 40-50 yoga concepts for dancers. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
-                    { key: 'holidays', title: 'US Holidays', description: "Find themed yoga practices inspired by US holidays.", prompt: `Generate 40-50 US holidays for yoga themes. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.` },
-                    { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", prompt: `Generate 40-50 Hindu & Buddhist holidays. For each, give an "id", "title", "date" (MM/DD), "explanation", and "tradition". Return ONLY a valid JSON array.` }
+                    { key: 'hipReplacement', title: 'Gentle Yoga After Hip Replacement', description: "Safe, modified practices to support recovery and mobility.", initialPrompt: `Generate a list of 15 gentle yoga class plans for hip replacement recovery. For each, give a unique "id", a "title", and a short "description" emphasizing safety. Return ONLY a valid JSON array.`, fullPrompt: `Generate an extensive list of 40-50 gentle yoga class plans for hip replacement recovery. For each, give a unique "id", a "title", and a "description" emphasizing safety. Return ONLY a valid JSON array.` },
+                    { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices for sensory regulation, mindfulness, and grounding.", initialPrompt: `Generate 15 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
+                    { key: 'moonPhases', title: 'Moon Phases', description: "Align your practice with the energy of the lunar cycle.", initialPrompt: `Generate data for the 8 moon phases. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 8 moon phases with detailed explanations. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", initialPrompt: `Generate the 6 primary Meridian pairs from TCM. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate the 6 primary Meridian pairs from TCM with detailed explanations. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's primary energy centers.", initialPrompt: `Generate data for the 7 primary chakras. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 7 primary chakras with detailed explanations. For each, give a unique "id", "title", and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", initialPrompt: `Generate data for the 4 seasons. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 4 seasons with detailed explanations. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'styles', title: 'Yoga Styles', description: "Base your class around the principles of a specific yoga style.", initialPrompt: `Generate 15 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` },
+                    { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos and the zodiac.", initialPrompt: `Generate data for the 12 zodiac signs. For each, give an "id", "title", "dateRange", "planet", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 12 zodiac signs with detailed explanations. For each, give an "id", "title", "dateRange", "planet", and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with tailored practices.", initialPrompt: `Generate 15 yoga concepts for artists. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga concepts for artists. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
+                    { key: 'dancers', title: 'Yoga for Dancers', description: "Enhance flexibility, strength, and recovery for dancers.", initialPrompt: `Generate 15 yoga concepts for dancers. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga concepts for dancers. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.` },
+                    { key: 'holidays', title: 'US Holidays', description: "Find themed yoga practices inspired by US holidays.", initialPrompt: `Generate 15 US holidays for yoga themes. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 US holidays for yoga themes. For each, give a unique "id", "title", "date" (MM/DD), and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'easternHolidays', title: 'Eastern Holidays', description: "Explore themes from Hindu and Buddhist traditions.", initialPrompt: `Generate 15 Hindu & Buddhist holidays. For each, give an "id", "title", "date" (MM/DD), "explanation", and "tradition". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 Hindu & Buddhist holidays. For each, give an "id", "title", "date" (MM/DD), "explanation", and "tradition". Return ONLY a valid JSON array.` }
                 ];
 
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
@@ -653,7 +660,7 @@
             }
         }
         
-        async function generateAndPopulateAICategory({key, title, description, prompt}) {
+        async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
             const mainGrid = document.getElementById('main-grid');
             const card = document.createElement('div');
             card.className = 'card md:col-span-2';
@@ -661,8 +668,13 @@
             const selectorId = `${key}-selector-visual`;
             card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" class="w-full">${getLoaderHTML(`AI is generating ${title}...`)}</div><div id="${key}-details" class="details-container prose max-w-none"></div></div>`;
             mainGrid.appendChild(card);
+            
+            // NEW: Store the full prompt for later use
+            fullPrompts[key] = fullPrompt;
+
             try {
-                const jsonText = await callGeminiAPI(prompt, true);
+                // MODIFIED: Use the initial prompt for the first load
+                const jsonText = await callGeminiAPI(initialPrompt, true);
                 if (!jsonText) {
                     throw new Error(`API returned empty content for ${title}.`);
                 }
@@ -673,22 +685,37 @@
                 throw error; // Re-throw error to allow the loop to catch it
             }
         }
-
+        
+        // MODIFIED: This function now handles adding a "Show All" button
         function populateCardGridSelector(containerId, themeType) {
             const container = document.getElementById(containerId);
             const data = allThemeData[themeType];
             if (!container || !data || !Array.isArray(data)) {
-                container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
+                if (container) container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
                 return;
             }
 
-            container.innerHTML = `<div class="card-grid-container">${data.map(item => `
+            const itemsHtml = data.map(item => `
                 <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.explanation || ''}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <strong class="text-sm">${item.title}</strong>
                     <small class="block text-xs themed-text-muted">${item.dateRange || item.founder || item.tradition || ''}</small>
-                </div>`).join('')}
-            </div>`;
+                </div>`).join('');
+            
+            const fullPrompt = fullPrompts[themeType];
+            let showAllButtonHtml = '';
+            
+            // NEW: Logic to add a "Show All" button if the list is partial
+            if (fullPrompt && data.length < 35 && data.length > 0) {
+                 showAllButtonHtml = `
+                    <div class="col-span-full text-center mt-4">
+                        <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
+                            Show All (${data.length} of ~50 shown)
+                        </button>
+                    </div>`;
+            }
+
+            container.innerHTML = `<div class="card-grid-container">${itemsHtml}</div>${showAllButtonHtml}`;
 
             container.addEventListener('click', (e) => {
                 const selector = e.target.closest('.grid-card-selector');
@@ -701,6 +728,41 @@
             });
         }
         
+        // NEW: Function to handle clicking the "Show All" button
+        async function handleShowAllClick(button) {
+            const { containerId, themeType } = button.dataset;
+            const container = document.getElementById(containerId);
+            const fullPrompt = fullPrompts[themeType];
+
+            if (!container || !fullPrompt) {
+                console.error("Could not find container or full prompt for 'Show All'");
+                return;
+            }
+
+            button.disabled = true;
+            button.innerHTML = `
+                <span class="flex items-center justify-center gap-2">
+                    <div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>
+                    Loading all themes...
+                </span>`;
+
+            try {
+                const jsonText = await callGeminiAPI(fullPrompt, true);
+                if (!jsonText) {
+                    throw new Error(`API returned empty content for ${themeType} (full list).`);
+                }
+                allThemeData[themeType] = JSON.parse(jsonText);
+                // Re-populate the same container with the full list.
+                populateCardGridSelector(containerId, themeType);
+            } catch (error) {
+                // Instead of clearing the container, show error on the button
+                button.disabled = false;
+                button.classList.add('bg-red-100', 'text-red-700');
+                button.textContent = "Error loading. Click to try again.";
+                console.error(`Error loading full list for ${themeType}:`, error);
+            }
+        }
+
         async function handleGridSelect(target) {
             const { themeId, themeType } = target.dataset;
             const item = allThemeData[themeType]?.find(d => d.id === themeId);
@@ -859,7 +921,7 @@
         }
         
         async function generateInitialExtraCategories() {
-            const prompt = `Generate 2 new, creative, and distinct high-level yoga categories that are NOT already on this list: Gentle Yoga After Hip Replacement, Yoga for Neurodiversity, Moon Phases, The Twelve Meridians, The Seven Chakras, The Four Seasons, Yoga Styles, Yoga and Astrology, Yoga for Artists, Yoga for Dancers, US Holidays, Eastern Holidays. For each category, provide a "key" (camelCase, e.g., 'yogaForAthletes'), a "title", a short "description", and a detailed "prompt" for the AI to generate 40-50 sub-items later. The prompt should ask for a JSON array of objects, each with an id, title, and description/explanation. Return ONLY a valid JSON array of these two category objects.`;
+            const prompt = `Generate 2 new, creative, and distinct high-level yoga categories that are NOT already on this list: Gentle Yoga After Hip Replacement, Yoga for Neurodiversity, Moon Phases, The Twelve Meridians, The Seven Chakras, The Four Seasons, Yoga Styles, Yoga and Astrology, Yoga for Artists, Yoga for Dancers, US Holidays, Eastern Holidays. For each category, provide a "key" (camelCase, e.g., 'yogaForAthletes'), a "title", a short "description", and a detailed "initialPrompt" for the AI to generate 15 sub-items, and a "fullPrompt" for 40-50 items. The prompts should ask for a JSON array of objects, each with an id, title, and description/explanation. Return ONLY a valid JSON array of these two category objects.`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 if(!jsonText) return; // Fail silently if no categories are returned
@@ -957,7 +1019,7 @@
             button.disabled = true;
 
             const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent);
-            const prompt = `Generate 1 new, creative, and distinct high-level yoga category that is NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, e.g., 'yogaForAthletes'), a "title", a short "description", and a detailed "prompt" for the AI to generate 40-50 sub-items later. The sub-item prompt should ask for a JSON array of objects, each with an id, title, and description/explanation. Return ONLY a valid JSON object for this single new category, not an array.`;
+            const prompt = `Generate 1 new, creative, and distinct high-level yoga category that is NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, e.g., 'yogaForAthletes'), a "title", a short "description", and a detailed "initialPrompt" (for 15 items) and "fullPrompt" (for 40-50 items). The prompts should ask for a JSON array of objects, each with an id, title, and description/explanation. Return ONLY a valid JSON object for this single new category, not an array.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
