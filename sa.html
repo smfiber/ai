@@ -65,7 +65,7 @@
              margin-bottom: 0.5em;
         }
         
-        .screenshot-placeholder {
+        .screenshot-placeholder, .image-generation-container {
             border: 2px dashed var(--color-card-border);
             border-radius: 8px;
             padding: 1rem;
@@ -73,13 +73,22 @@
             background-color: var(--color-input-bg);
             text-align: center;
             color: var(--color-text-muted);
-            font-style: italic;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
         }
         .screenshot-placeholder::before {
             content: '📷';
             display: block;
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
+        }
+        .image-generation-container img {
+             max-width: 100%;
+             border-radius: 6px;
+             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         /* Code Block Styling */
@@ -326,7 +335,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- DEV NOTE: Remember to increment the version number with each significant change. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.7</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.8</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -762,8 +771,10 @@
                 const resultText = await callGeminiAPI(prompt);
                 
                 originalGeneratedText.set('custom-plan', resultText);
-                createAccordionFromMarkdown(resultText, resultContainer);
+                const contentHtml = createAccordionFromMarkdown(resultText, resultContainer);
                 addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
+                generateAndInjectImages(contentHtml, resultContainer);
+
 
             } catch(error) {
                 handleApiError(error, resultContainer, 'custom IT guide');
@@ -946,7 +957,7 @@ ${originalText}
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
     * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial, using the format: [Screenshot: A clear description of what the screenshot should show].
+    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
 
@@ -966,7 +977,7 @@ When generating the guide, ensure the guide as a whole meets the following requi
 4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
 5.  **Troubleshooting:** Include a section covering common problems that administrators face.
 6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
-7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear description of what the screenshot should show].
+7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
 
 Return only the complete markdown guide.`;
         }
@@ -1000,16 +1011,32 @@ Return only the complete markdown guide.`;
                     }).join('');
                 return `<ul>${listItems}</ul>`;
             }
+            
+            // Replace screenshot placeholders with divs for async image loading
+            let imagePlaceholderCount = 0;
+            cleanText = cleanText.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
+                const placeholderId = `image-placeholder-${Date.now()}-${imagePlaceholderCount++}`;
+                return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
+                            <div class="loader themed-loader"></div>
+                            <p class="mt-2 text-sm italic">${description}</p>
+                        </div>`;
+            });
+
 
             let html = cleanText
                 .replace(/</g, "&lt;").replace(/>/g, "&gt;")
                 .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\[Screenshot: (.*?)\]/g, '<div class="screenshot-placeholder">$1</div>')
                 .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
                 .replace(/^\s*\n/gm, '<br>');
-            
+             
+            html = html.replace(/&lt;div id="image-placeholder-(.*?)" class="image-generation-container" data-prompt="(.*?)"&gt;/g, '<div id="image-placeholder-$1" class="image-generation-container" data-prompt="$2">')
+                       .replace(/&lt;\/div&gt;/g, '</div>')
+                       .replace(/&lt;p class="mt-2 text-sm italic"&gt;(.*?)&lt;\/p&gt;/g, '<p class="mt-2 text-sm italic">$1</p>')
+                       .replace(/&lt;div class="loader themed-loader"&gt;&lt;\/div&gt;/g, '<div class="loader themed-loader"></div>');
+
+
             const lines = html.split('<br>');
             let resultHtml = '';
             let inList = false;
@@ -1023,43 +1050,69 @@ Return only the complete markdown guide.`;
                 if (isOl || isUl) {
                     const currentListTag = isOl ? 'ol' : 'ul';
                     if (!inList || listTag !== currentListTag) {
-                        if (inList) resultHtml += `</${listTag}>`;
+                        if (inList) resultHtml += `&lt;/${listTag}&gt;`;
                         inList = true;
                         listTag = currentListTag;
-                        resultHtml += `<${listTag}>`;
+                        resultHtml += `&lt;${listTag}&gt;`;
                     }
                     const itemContent = line.replace(/^\d+\. |^\* /, '');
-                    resultHtml += `<li>${itemContent}</li>`;
+                    resultHtml += `&lt;li&gt;${itemContent}&lt;/li&gt;`;
                 } else {
                     if (inList) {
-                        resultHtml += `</${listTag}>`;
+                        resultHtml += `&lt;/${listTag}&gt;`;
                         inList = false;
                     }
-                     if (line.startsWith('<h3') || line.startsWith('<div')) {
+                     if (line.startsWith('&lt;h3') || line.startsWith('&lt;div')) {
                         resultHtml += line;
                     } else if (line) {
-                         resultHtml += `<p>${line}</p>`;
+                         resultHtml += `&lt;p&gt;${line}&lt;/p&gt;`;
                     }
                 }
             });
-            if (inList) resultHtml += `</${listTag}>`;
+            if (inList) resultHtml += `&lt;/${listTag}&gt;`;
 
             // Re-insert the formatted code blocks
             codeBlocks.forEach((block, index) => {
-                const codeHtml = `<div class="code-block-container">
-                    <div class="code-block-header">
-                        <span>${block.lang}</span>
-                        <button class="copy-code-button">Copy</button>
-                    </div>
-                    <pre><code class="language-${block.lang}">${block.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
-                </div>`;
+                const codeHtml = `&lt;div class="code-block-container"&gt;
+                    &lt;div class="code-block-header"&gt;
+                        &lt;span&gt;${block.lang}&lt;/span&gt;
+                        &lt;button class="copy-code-button"&gt;Copy&lt;/button&gt;
+                    &lt;/div&gt;
+                    &lt;pre&gt;&lt;code class="language-${block.lang}"&gt;${block.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}&lt;/code&gt;&lt;/pre&gt;
+                &lt;/div&gt;`;
                 resultHtml = resultHtml.replace(`__CODEBLOCK_${index}__`, codeHtml);
             });
             
+            // Final cleanup of encoded tags
+             resultHtml = resultHtml.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
             return resultHtml.replace(/<p><h3>/g, '<h3>').replace(/<\/h3><\/p>/g, '</h3>')
                            .replace(/<p><div class="code-block-container">/g, '<div class="code-block-container">')
-                           .replace(/<\/div><\/p>/g, '</div>');
+                           .replace(/<\/div><\/p>/g, '</div>')
+                           .replace(/<p><div class="image-generation-container">/g, '<div class="image-generation-container">');
         }
+
+        async function generateAndInjectImages(htmlContent, container) {
+            const placeholders = container.querySelectorAll('.image-generation-container');
+            if (placeholders.length === 0) return;
+
+            placeholders.forEach(async (placeholder) => {
+                const prompt = placeholder.dataset.prompt;
+                const imagePrompt = `UI Screenshot for an IT Administration guide showing: ${prompt}. Clean, professional, minimal.`;
+                try {
+                    const imageUrl = await callImageGenAPI(imagePrompt);
+                    if (imageUrl) {
+                        placeholder.innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
+                    } else {
+                        throw new Error('API returned no image.');
+                    }
+                } catch (error) {
+                    console.error(`Failed to generate image for prompt: "${prompt}"`, error);
+                    placeholder.innerHTML = `<p class="text-red-500 text-sm">Image generation failed.</p><p class="text-xs">${prompt}</p>`;
+                }
+            });
+        }
+
 
         function addPostGenerationButtons(container, themeId, themeType) {
             let buttonBar = container.querySelector('.button-bar');
@@ -1220,6 +1273,7 @@ Return only the complete markdown guide.`;
                 return;
             }
             const sections = markdownText.split(/(?=###)/);
+            let fullHtml = '';
 
             sections.forEach((sectionText, index) => {
                 if (!sectionText.trim()) return;
@@ -1251,7 +1305,9 @@ Return only the complete markdown guide.`;
                     accordionItem.querySelector('.accordion-header').classList.add('active');
                     accordionItem.querySelector('.accordion-content').classList.add('open');
                 }
+                fullHtml += accordionItem.innerHTML;
             });
+            return fullHtml;
         }
         
         async function handleAIHelpRequest() {
@@ -1272,7 +1328,7 @@ Return only the complete markdown guide.`;
                 2. Tailoring Options: Buttons to refine the custom guide (e.g., 'Security', 'For Beginners').
                 3. Pre-Built Categories: AI-generated topics like VMware, Windows Server, etc.
                 4. Visual Theme Generator: User describes a mood, AI creates a new color theme and header image.
-                5. In-Depth Exploration: Expanding a summary to see a full, detailed guide.
+                5. In-Depth Exploration: Expanding a summary to see a full, detailed guide, now with AI-generated images for screenshots.
                 6. Refining Content: Taking an existing guide and giving the AI further instructions to rewrite it.
                 Format the output as a markdown document with '###' for each section title.
             `;
@@ -1311,7 +1367,8 @@ Return only the complete markdown guide.`;
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                createAccordionFromMarkdown(resultText, contentEl);
+                const contentHtml = createAccordionFromMarkdown(resultText, contentEl);
+                generateAndInjectImages(contentHtml, contentEl);
 
                 footerEl.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -1375,7 +1432,9 @@ Return only the complete markdown guide.`;
                 
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
-                    createAccordionFromMarkdown(newText, contentEl);
+                    const newHtml = createAccordionFromMarkdown(newText, contentEl);
+                    generateAndInjectImages(newHtml, contentEl);
+
                     footerEl.innerHTML = `
                         <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                         <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
@@ -1383,8 +1442,9 @@ Return only the complete markdown guide.`;
                     footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
                     if (refineContainer) refineContainer.remove();
                 } else {
-                    createAccordionFromMarkdown(newText, contentArea);
+                    const newHtml = createAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
+                    generateAndInjectImages(newHtml, contentArea);
                 }
 
             } catch(error) {
