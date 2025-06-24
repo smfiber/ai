@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v10.9</title>
+    <title>AI Yoga Class & Theme Generator v10.10</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -371,7 +371,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.9</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.10</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -1057,7 +1057,7 @@
             loaderCard.innerHTML = getLoaderHTML('AI is generating new yoga categories...');
             mainGrid.appendChild(loaderCard);
 
-            const prompt = `Generate a comprehensive list of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories should be: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Ensure there is no limit to the number of styles per category. Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
+            const prompt = `Generate a comprehensive list of yoga categories beyond the basics. For each category, provide a "categoryTitle", a "categoryDescription", and a "styles" array. For each "styles" array, generate a diverse list of at least 8-12 different styles. Each item in the "styles" array should be an object with an "id" (kebab-case), a "title", and a "description". The categories to generate are: "Therapeutic & Rehabilitative Yoga", "Spiritually-Oriented Yoga", "Yoga for Life Stages", "Yoga Blends & Fusions", "Historical & Traditional Lineages", and "Environment & Tool-Based Yoga". Return ONLY a valid JSON object where keys are camelCase versions of the category titles (e.g., "therapeuticRehabilitativeYoga"). Do not include any markdown formatting.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt);
@@ -1160,14 +1160,3 @@
     </script>
 </body>
 </html>
-```
-
-Thank you for your patience while I researched this, and for providing the screenshots. I see the problem. The AI is formatting subheadings as bullet points, which my markdown converter then turns into list items.
-
-To resolve this, I'm making two adjustments:
-
-First, I'm updating my prompts to be more specific, telling the AI to use bold text for subheadings and hyphens for lists. This should prevent the issue from happening in the future.
-
-Second, I've improved the markdown converter to better handle spacing and ensure that bolded subheadings are properly displayed.
-
-I've updated the code in the Canvas. Please let me know if you have any other questio
