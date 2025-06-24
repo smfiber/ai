@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.13</title>
+    <title>AI Yoga Class & Theme Generator v16.14</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -247,9 +247,44 @@
             border-bottom: 2px solid var(--color-card-border);
         }
 
+        /* --- Onboarding Tutorial Styles --- */
+        #onboarding-modal {
+            background-color: var(--color-card-bg);
+            border: 1px solid var(--color-card-border);
+        }
+        .onboarding-backdrop {
+            z-index: 999;
+        }
+        .onboarding-step {
+            z-index: 1000;
+        }
+        .highlight-element {
+            box-shadow: 0 0 0 4px var(--color-primary);
+            border-radius: 8px;
+            transition: box-shadow 0.3s ease;
+            position: relative;
+            z-index: 1001; /* Ensure highlighted element is on top */
+        }
+
     </style>
 </head>
 <body class="p-4 md:p-8">
+    
+    <!-- Onboarding Tutorial -->
+    <div id="onboarding-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden onboarding-backdrop"></div>
+    <div id="onboarding-modal" class="fixed hidden bg-white p-6 rounded-lg shadow-xl max-w-sm onboarding-step">
+        <h3 id="onboarding-title" class="text-xl font-bold themed-text-primary mb-3"></h3>
+        <p id="onboarding-text" class="themed-text-muted mb-4"></p>
+        <div class="flex justify-between items-center">
+            <div id="onboarding-progress" class="text-sm themed-text-muted"></div>
+            <div>
+                <button id="onboarding-prev" class="btn-secondary text-sm">Prev</button>
+                <button id="onboarding-next" class="btn-primary text-sm">Next</button>
+                <button id="onboarding-done" class="btn-primary text-sm hidden">Done</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- All Modals -->
      <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
@@ -320,13 +355,13 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.13</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.14</div>
         </header>
 
         <main id="main-content" class="space-y-8">
             <nav id="breadcrumb-nav" aria-label="breadcrumb" class="mb-4 themed-text-muted text-sm hidden"></nav>
             
-            <div class="card">
+            <div id="custom-plan-card" class="card">
                 <div class="p-8 card-content">
                     <h2 class="text-2xl font-bold mb-2 themed-text-primary">Custom Yoga Plan Generator</h2>
                     <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
@@ -391,6 +426,7 @@
         const root = document.documentElement;
         const allThemeData = {};
         let originalGeneratedText = new Map();
+        let currentOnboardingStep = 0;
 
         // --- App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -399,6 +435,100 @@
             populateTypographySettings();
             setupBreadcrumbListener();
         });
+
+        // --- Onboarding Tutorial ---
+        const onboardingSteps = [
+            {
+                title: "Welcome to the App!",
+                text: "Let's take a quick tour to see how everything works. This interactive guide will show you the main features.",
+                element: null, 
+                position: 'center'
+            },
+            {
+                title: "Create a Custom Plan",
+                text: "Start here by typing any idea for a yoga class into this input field. The AI will generate a complete plan for you.",
+                element: '#custom-plan-card',
+                position: 'bottom'
+            },
+            {
+                title: "Change the Visuals",
+                text: "Click this button anytime to open the theme generator. Describe a mood or concept to change the app's colors and header image.",
+                element: '#theme-changer-button',
+                position: 'left'
+            },
+            {
+                title: "Explore AI Categories",
+                text: "Or, you can explore themes from our AI-generated categories. Click on any card to see different options.",
+                element: '#hip-replacement-card-container .card',
+                position: 'top'
+            },
+            {
+                title: "You're All Set!",
+                text: "That's it! You're ready to start creating. Click 'Done' to close this tutorial.",
+                element: null,
+                position: 'center'
+            }
+        ];
+
+        function startOnboarding() {
+            document.getElementById('onboarding-backdrop').classList.remove('hidden');
+            showOnboardingStep(currentOnboardingStep);
+        }
+
+        function showOnboardingStep(stepIndex) {
+            const modal = document.getElementById('onboarding-modal');
+            document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
+
+            const step = onboardingSteps[stepIndex];
+            document.getElementById('onboarding-title').textContent = step.title;
+            document.getElementById('onboarding-text').innerHTML = step.text;
+            document.getElementById('onboarding-progress').textContent = `Step ${stepIndex + 1} of ${onboardingSteps.length}`;
+
+            modal.classList.remove('hidden');
+            
+            if (step.element) {
+                const targetElement = document.querySelector(step.element);
+                if (targetElement) {
+                    targetElement.classList.add('highlight-element');
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    const rect = targetElement.getBoundingClientRect();
+                    switch(step.position) {
+                        case 'bottom':
+                            modal.style.top = `${rect.bottom + 10}px`;
+                            modal.style.left = `${rect.left}px`;
+                            break;
+                        case 'top':
+                             modal.style.top = `${rect.top - modal.offsetHeight - 10}px`;
+                             modal.style.left = `${rect.left}px`;
+                             break;
+                        case 'left':
+                             modal.style.top = `${rect.top}px`;
+                             modal.style.left = `${rect.left - modal.offsetWidth - 10}px`;
+                             break;
+                        default: // center
+                            modal.style.top = '50%';
+                            modal.style.left = '50%';
+                            modal.style.transform = 'translate(-50%, -50%)';
+                    }
+                }
+            } else {
+                 modal.style.top = '50%';
+                 modal.style.left = '50%';
+                 modal.style.transform = 'translate(-50%, -50%)';
+            }
+            
+            document.getElementById('onboarding-prev').style.display = stepIndex === 0 ? 'none' : 'inline-flex';
+            document.getElementById('onboarding-next').style.display = stepIndex === onboardingSteps.length - 1 ? 'none' : 'inline-flex';
+            document.getElementById('onboarding-done').style.display = stepIndex === onboardingSteps.length - 1 ? 'inline-flex' : 'none';
+        }
+
+        function endOnboarding() {
+            document.getElementById('onboarding-backdrop').classList.add('hidden');
+            document.getElementById('onboarding-modal').classList.add('hidden');
+            document.querySelectorAll('.highlight-element').forEach(el => el.classList.remove('highlight-element'));
+        }
+
 
         // --- Breadcrumb Functions ---
         function updateBreadcrumbs(items = []) {
@@ -485,6 +615,7 @@
             promises.push(generateInitialExtraCategories());
 
             await Promise.allSettled(promises);
+            startOnboarding(); // Start tutorial after content is loaded
         }
         
         // --- Specific Card Loader: Hip Replacement ---
@@ -678,6 +809,22 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
+            // Onboarding listeners
+            document.getElementById('onboarding-next').addEventListener('click', () => {
+                if (currentOnboardingStep < onboardingSteps.length - 1) {
+                    currentOnboardingStep++;
+                    showOnboardingStep(currentOnboardingStep);
+                }
+            });
+            document.getElementById('onboarding-prev').addEventListener('click', () => {
+                 if (currentOnboardingStep > 0) {
+                    currentOnboardingStep--;
+                    showOnboardingStep(currentOnboardingStep);
+                }
+            });
+            document.getElementById('onboarding-done').addEventListener('click', endOnboarding);
+
+
             document.addEventListener('mouseup', handleTextSelection);
             document.addEventListener('mousedown', () => document.getElementById('search-gemini-popup').classList.add('hidden'));
 
@@ -1295,4 +1442,4 @@ Under '### UI/UX Improvement Suggestions', offer a few specific, actionable idea
         }
     </script>
 </body>
-</html>
+</ht
