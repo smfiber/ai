@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v16.9</title>
+    <title>AI Yoga Class & Theme Generator v16.10</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -320,7 +320,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.9</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v16.10</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -416,6 +416,7 @@
             loadDynamicPlaceholders();
 
             const categoriesToGenerate = [
+                { key: 'hipReplacement', title: 'Gentle Yoga After Hip Replacement Surgery', description: "Safe, modified practices to support recovery and mobility after hip surgery.", prompt: `Generate a list of 10-15 extremely gentle and safe yoga poses or concepts suitable for someone recovering from hip replacement surgery. Emphasize modifications and what to avoid. For each, provide a unique "id" (kebab-case), "title", and a "description" focused on safety and gentle movement. Return ONLY a valid JSON array of objects.` },
                 { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's seven primary energy centers.", prompt: `Generate data for the 7 primary chakras. For each, provide a unique "id" (kebab-case name, e.g., "muladhara"), a "title" (e.g., "Muladhara (Root)"), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'astrology', title: 'Yoga and Astrology', description: "Connect your practice to the cosmos and the zodiac.", prompt: `Generate data for the 12 zodiac signs. For each, provide a unique "id" (kebab-case name, e.g., "aries"), a "title" (e.g., "Aries"), its "dateRange" (e.g., "Mar 21 - Apr 19"), its ruling "planet", and a brief "explanation" of its energy for a yoga context. Return ONLY a valid JSON array of objects.` },
                 { key: 'artists', title: 'Yoga for Artists', description: "Unlock creativity and release tension with practices tailored for artists.", prompt: `Generate a list of 10-15 yoga concepts or themes tailored for artists to boost creativity and release tension. For each, provide a unique "id" (kebab-case), "title", and a short "description". Return ONLY a valid JSON array of objects.` },
@@ -1122,10 +1123,14 @@
                 popup.style.left = `${rect.left + window.scrollX}px`;
                 popup.style.top = `${rect.bottom + window.scrollY + 8}px`;
                 popup.classList.remove('hidden');
+                
                 const searchBtn = document.getElementById('search-gemini-btn');
-                const newSearchBtn = searchBtn.cloneNode(true);
-                searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
-                newSearchBtn.addEventListener('click', () => { performGeminiSearch(selectedText); popup.classList.add('hidden'); });
+                // The cloneNode/replaceChild pattern is unreliable for event listeners. 
+                // A better approach is a fresh event listener.
+                searchBtn.onclick = () => {
+                    performGeminiSearch(selectedText);
+                    popup.classList.add('hidden');
+                };
             } else {
                 popup.classList.add('hidden');
             }
@@ -1155,3 +1160,5 @@
     </script>
 </body>
 </html>
+"
+The Gemini search button is still not worki
