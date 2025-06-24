@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.22</title>
+    <title>AI Yoga Class & Theme Generator v17.23</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -247,7 +247,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.22</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.23</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1234,12 +1234,49 @@ Rewrite the full yoga plan based on the user's request. Maintain the original st
 
                 originalGeneratedText.set(textKey, newText);
                 
+                // BUG FIX: Instead of re-calling handleExploreInDepth, render the new content directly.
                 if (isModal) {
-                     handleExploreInDepth(themeId, footerEl.dataset.themeType);
+                    const contentEl = document.getElementById('inDepthModalContent');
+                    
+                    if (isWeeklyPlan) {
+                        const routines = parseJsonWithCorrections(newText);
+                        contentEl.innerHTML = '';
+                        routines.forEach((routine, index) => {
+                            const accordionItem = document.createElement('div');
+                            accordionItem.className = 'accordion-item';
+                            accordionItem.innerHTML = `
+                                <button type="button" class="accordion-header">
+                                    <span class="text-left">${routine.title}</span>
+                                    <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>
+                            `;
+                            contentEl.appendChild(accordionItem);
+                            if (index === 0) {
+                                accordionItem.querySelector('.accordion-header').classList.add('active');
+                                accordionItem.querySelector('.accordion-content').classList.add('open');
+                            }
+                        });
+                    } else {
+                        createAccordionFromMarkdown(newText, contentEl);
+                    }
+
+                    // Restore the footer buttons and remove the refine UI.
+                    footerEl.innerHTML = `
+                        <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                        <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
+                    `;
+                    footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                    
+                    if (refineContainer) {
+                        refineContainer.remove();
+                    }
                 } else {
+                    // This part was correct, for non-modal refinements.
                     createAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                 }
+
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
             }
