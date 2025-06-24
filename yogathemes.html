@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v10.3</title>
+    <title>AI Yoga Class & Theme Generator v10.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat -->
@@ -276,6 +276,9 @@
         }
         .grid-card-selector .icon { margin-bottom: 0.5rem; }
         .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
+        .grid-card-selector.active small {
+            color: rgba(255, 255, 255, 0.8);
+        }
 
         .holiday-subheading {
             grid-column: 1 / -1; /* Span full width */
@@ -347,7 +350,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.3</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v10.4</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -526,11 +529,26 @@
                 let data = [...allThemeData[themeType]];
                 const holidayTypes = ['holidays', 'easternHolidays'];
                 
-                const createCardHtml = item => `
-                    <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}">
-                        <div class="icon">${getIconForTheme(themeType, item.id)}</div>
-                        <span>${item.title}</span>
+                // UPDATED createCardHtml function to include the date
+                const createCardHtml = item => {
+                    let dateHtml = '';
+                    if (holidayTypes.includes(themeType) && item.date) {
+                        const [monthNum, dayNum] = item.date.split('/');
+                        const date = new Date(2000, monthNum - 1, parseInt(dayNum)); // Using a non-leap year is fine for month/day
+                        const dateString = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+                        dateHtml = `<small class="block themed-text-muted mt-1 text-xs">${dateString}</small>`;
+                    }
+
+                    // Added flexbox classes for vertical alignment
+                    return `
+                    <div class="grid-card-selector flex flex-col justify-between h-full" data-theme-id="${item.id}" data-theme-type="${themeType}">
+                        <div>
+                            <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                            <span>${item.title}</span>
+                        </div>
+                        ${dateHtml}
                     </div>`;
+                };
 
                 if (themeType === 'easternHolidays') {
                     const hinduHolidays = data.filter(h => h.tradition === 'Hindu' && h.title.toLowerCase().includes(filter.toLowerCase())).sort((a,b) => getNextHolidayDate(a) - getNextHolidayDate(b));
