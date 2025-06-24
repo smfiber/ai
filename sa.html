@@ -62,6 +62,24 @@
              margin-top: 1.5em;
              margin-bottom: 0.5em;
         }
+        
+        .screenshot-placeholder {
+            border: 2px dashed var(--color-card-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            background-color: var(--color-input-bg);
+            text-align: center;
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+        .screenshot-placeholder::before {
+            content: '📷';
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
 
         .card {
             background-color: var(--color-card-bg);
@@ -262,7 +280,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- DEV NOTE: Remember to increment the version number with each significant change. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.4</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.5</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -658,7 +676,7 @@
                 return;
             }
             
-            const prompt = `Generate a very brief, condensed summary for an IT administration guide on the topic: "${item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Rollback), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
+            const prompt = `Generate a very brief, condensed summary for an IT administration guide on the topic: "${item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             
             const resultContainer = document.getElementById(`${themeType}-details`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
@@ -865,7 +883,7 @@ The guide must be structured with the following detailed, descriptive sections u
 - "Step-by-Step Guide"
 - "Verification Steps"
 - "Potential Issues & Troubleshooting"
-- "Rollback Plan"
+- "Helpful Resources"
 
 When generating the guide, ensure the following requirements are met for the specific technology being discussed:
 
@@ -874,7 +892,8 @@ When generating the guide, ensure the following requirements are met for the spe
 3.  **Detail Specific Requirements:** The "Prerequisites" section must detail relevant administrative roles or permissions and any specific licensing requirements needed for full functionality.
 4.  **Practical Verification:** The "Verification Steps" must mention practical, real-world details, such as typical time delays for changes to apply or specific logs to check.
 5.  **Address Real-World Problems:** The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face with this technology or task.
-6.  **Actionable Rollback Plan:** The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide.
+6.  **Helpful Resources:** Provide a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools in the "Helpful Resources" section.
+7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide', include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear description of what the screenshot should show].
 
 Return only the new, complete, and rewritten markdown guide.`;
         }
@@ -901,9 +920,10 @@ Return only the new, complete, and rewritten markdown guide.`;
             // General markdown processing for in-depth/accordion views
             let html = cleanText
                 .replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold themed-text-accent mt-6 mb-2">$1</h3>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\[Screenshot: (.*?)\]/g, '<div class="screenshot-placeholder">$1</div>')
                 .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
                 .replace(/^\s*\n/gm, '<br>');
 
@@ -938,7 +958,7 @@ Return only the new, complete, and rewritten markdown guide.`;
                  resultHtml += `</${resultHtml.slice(-4, -1)}>`;
             }
 
-            return resultHtml.replace(/<\/p><p>/g, '</p><p>');
+            return resultHtml.replace(/<p><h3>/g, '<h3>').replace(/<\/h3><\/p>/g, '</h3>');
         }
 
         function addPostGenerationButtons(container, themeId, themeType) {
@@ -1290,4 +1310,4 @@ After any guide is generated, you'll see a "Refine with AI" button. Click this t
 
     </script>
 </body>
-</html>
+</ht
