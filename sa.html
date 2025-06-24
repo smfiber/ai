@@ -39,13 +39,29 @@
             line-height: var(--line-height-base, 1.5);
             transition: background-color 0.5s ease, color 0.5s ease;
         }
-        .prose { font-size: inherit; line-height: inherit; }
-        .prose p { margin-bottom: 1em; }
-        .prose ul { margin-left: 1.5em; list-style-type: disc; padding-left: 1em; }
-        .prose li { margin-bottom: 0.5em; }
-        .prose strong:only-child { display: block; margin-top: 1.25em; margin-bottom: 0.75em; }
-        .prose a { color: var(--color-primary); text-decoration: underline; }
-        .prose a:hover { color: var(--color-primary-dark); }
+        
+        /* General Prose styling for AI-generated content */
+        .prose { font-size: inherit; line-height: 1.6; }
+        .prose p { margin-bottom: 1rem; }
+        .prose ul, .prose ol { 
+            margin-bottom: 1rem;
+            padding-left: 1.75rem;
+        }
+        .prose ul { list-style-type: disc; }
+        .prose ol { list-style-type: decimal; }
+        .prose li { margin-bottom: 0.5rem; padding-left: 0.25rem; }
+        .prose li > p { margin-bottom: 0.25rem; }
+        .prose li > ul, .prose li > ol { margin-top: 0.5rem; }
+        .prose strong { font-weight: 600; color: var(--color-text); }
+        .prose a { color: var(--color-primary); text-decoration: none; border-bottom: 1px solid var(--color-primary); }
+        .prose a:hover { color: var(--color-primary-dark); border-bottom-color: var(--color-primary-dark); }
+        .prose h3 {
+             font-size: 1.25rem;
+             font-weight: 600;
+             color: var(--color-accent);
+             margin-top: 1.5em;
+             margin-bottom: 0.5em;
+        }
 
         .card {
             background-color: var(--color-card-bg);
@@ -245,7 +261,8 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.2</div>
+            <!-- DEV NOTE: Remember to increment the version number with each significant change. -->
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.4</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -666,37 +683,13 @@
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
 
-            let fullPrompt;
-            const basePrompt = `
-Act as an expert senior IT administrator. Generate a comprehensive and practical guide for the task: "Improving the ${userPrompt}".
-The guide must be structured with the following detailed, descriptive sections using ### markdown headers:
-"Task",
-"Prerequisites",
-"Step-by-Step Guide",
-"Verification Steps",
-"Potential Issues & Troubleshooting",
-and "Rollback Plan".
-
-When generating the guide, ensure the following requirements are met:
-
-Include Authoritative Links: Throughout the guide, embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (like the Defender or Entra portal), and other authoritative sources where appropriate.
-Provide Specific Examples: The "Step-by-Step Guide" must include at least one concrete, high-impact example, such as how to enforce MFA for administrative roles using a Conditional Access policy.
-Detail Specific Requirements:The "Prerequisites" section must detail the specific Microsoft Entra roles (e.g., Security Reader, Security Administrator) and the different licensing requirements (e.g., P1/P2, E3/E5) needed for full functionality.
-The "Verification Steps" must mention practical, real-world details, such as the typical time delay (24-48 hours) for score updates to appear.
-Address Real-World Problems: The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face, such as score synchronization delays, unexpected score drops, or issues with third-party controls.
-Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide (e.g., how to disable the specific Conditional Access policy that was created).`;
-            
-            if (selectedOptions) {
-                fullPrompt = `With a special focus on these elements: ${selectedOptions}, ${basePrompt}`;
-            } else {
-                fullPrompt = basePrompt;
-            }
+            const prompt = getEnhancedPrompt(userPrompt, selectedOptions);
 
             const resultContainer = document.getElementById('gemini-result-container');
             resultContainer.innerHTML = getLoaderHTML('Generating your custom AI guide...');
 
             try {
-                const resultText = await callGeminiAPI(fullPrompt);
+                const resultText = await callGeminiAPI(prompt);
                 
                 originalGeneratedText.set('custom-plan', resultText);
                 createAccordionFromMarkdown(resultText, resultContainer);
@@ -859,6 +852,32 @@ Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, acti
             loader.classList.toggle('hidden', !isLoading);
             loader.classList.toggle('flex', isLoading);
         }
+        
+        function getEnhancedPrompt(task, options = '', originalText = '') {
+            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
+            const refinementText = originalText ? `**ORIGINAL IT GUIDE:**\n---\n${originalText}\n---\n\n**USER'S REFINEMENT REQUEST:**` : 'Generate a comprehensive and practical guide for the task:';
+
+            return `You are an expert senior IT administrator AI. ${refinementText} "${task}". ${optionsText}
+
+The guide must be structured with the following detailed, descriptive sections using '###' markdown headers:
+- "Task"
+- "Prerequisites"
+- "Step-by-Step Guide"
+- "Verification Steps"
+- "Potential Issues & Troubleshooting"
+- "Rollback Plan"
+
+When generating the guide, ensure the following requirements are met for the specific technology being discussed:
+
+1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources where appropriate.
+2.  **Provide Specific Examples:** The "Step-by-Step Guide" must include at least one concrete, high-impact example relevant to the task (e.g., a sample script, a key configuration setting, or a specific policy to create).
+3.  **Detail Specific Requirements:** The "Prerequisites" section must detail relevant administrative roles or permissions and any specific licensing requirements needed for full functionality.
+4.  **Practical Verification:** The "Verification Steps" must mention practical, real-world details, such as typical time delays for changes to apply or specific logs to check.
+5.  **Address Real-World Problems:** The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face with this technology or task.
+6.  **Actionable Rollback Plan:** The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide.
+
+Return only the new, complete, and rewritten markdown guide.`;
+        }
 
         function robustMarkdownToHtml(text, isCondensed = false) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
@@ -870,29 +889,56 @@ Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, acti
                     .map(line => line.trim())
                     .filter(line => line.startsWith('*'))
                     .map(line => {
-                        line = line.substring(1).trim();
-                        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        line = line.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-                        line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                        line = line.substring(1).trim()
+                                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                   .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                                   .replace(/\*(.*?)\*/g, '<em>$1</em>');
                         return `<li>${line}</li>`;
                     }).join('');
-                return `<ul class="list-disc pl-5">${listItems}</ul>`;
+                return `<ul>${listItems}</ul>`;
             }
-            
+
+            // General markdown processing for in-depth/accordion views
             let html = cleanText
                 .replace(/</g, "&lt;").replace(/>/g, "&gt;")
                 .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold themed-text-accent mt-6 mb-2">$1</h3>')
-                .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-3">$1</h2>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-                .replace(/^\* (.*$)/gim, '<li>$1</li>');
+                .replace(/^\s*\n/gm, '<br>');
 
-            return html.split('\n').map(line => line.trim()).filter(line => line).map(line => {
-                if (line.startsWith('<li>')) return line;
-                if (line.startsWith('<h')) return line;
-                return `<p>${line}</p>`;
-            }).join('').replace(/<\/li><p>/g, '</li>').replace(/<\/p><li>/g, '<li>').replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>').replace(/<\/ul>\s*<ul>/g, '');
+            const lines = html.split('<br>');
+            let resultHtml = '';
+            let inList = false;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (line.match(/^\d+\. /) || line.startsWith('* ')) {
+                    if (!inList) {
+                        inList = true;
+                        const listTag = line.match(/^\d+\. /) ? 'ol' : 'ul';
+                        resultHtml += `<${listTag}>`;
+                    }
+                    const itemContent = line.replace(/^\d+\. |^\* /, '');
+                    resultHtml += `<li>${itemContent}</li>`;
+                } else {
+                    if (inList) {
+                        inList = false;
+                        resultHtml += `</${resultHtml.slice(-4, -1)}>`; // Close the correct list type
+                    }
+                    if (line.startsWith('<h3')) {
+                        resultHtml += line;
+                    } else if (line) {
+                        resultHtml += `<p>${line}</p>`;
+                    }
+                }
+            });
+
+            if (inList) {
+                 resultHtml += `</${resultHtml.slice(-4, -1)}>`;
+            }
+
+            return resultHtml.replace(/<\/p><p>/g, '</p><p>');
         }
 
         function addPostGenerationButtons(container, themeId, themeType) {
@@ -1053,22 +1099,31 @@ Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, acti
                 containerElement.innerHTML = robustMarkdownToHtml(null);
                 return;
             }
-            const sections = markdownText.split(/\n(?=### |## )/);
+            const sections = markdownText.split(/(?=###)/);
+
             sections.forEach((sectionText, index) => {
                 if (!sectionText.trim()) return;
-
+                
                 const firstLineEnd = sectionText.indexOf('\n');
-                const title = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd).replace(/### |## /g, '').trim() : sectionText.replace(/### |## /g, '').trim();
-                const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
+                let title = sectionText.replace(/### /g, '').trim();
+                let content = '';
+
+                if (firstLineEnd !== -1) {
+                    title = sectionText.substring(0, firstLineEnd).replace(/### /g, '').trim();
+                    content = sectionText.substring(firstLineEnd + 1).trim();
+                }
 
                 const accordionItem = document.createElement('div');
                 accordionItem.className = 'accordion-item';
+                
+                const contentHtml = robustMarkdownToHtml(content);
+
                 accordionItem.innerHTML = `
                     <button type="button" class="accordion-header">
                         <span class="text-left">${title}</span>
                         <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
-                    <div class="accordion-content">${robustMarkdownToHtml(content)}</div>
+                    <div class="accordion-content">${contentHtml}</div>
                 `;
                 containerElement.appendChild(accordionItem);
 
@@ -1131,24 +1186,7 @@ After any guide is generated, you'll see a "Refine with AI" button. Click this t
 
             modal.classList.remove('hidden');
             
-            const prompt = `
-Act as an expert senior IT administrator. Generate a comprehensive and practical guide for the task: "Improving the ${item.title}".
-The guide must be structured with the following detailed, descriptive sections using ### markdown headers:
-"Task",
-"Prerequisites",
-"Step-by-Step Guide",
-"Verification Steps",
-"Potential Issues & Troubleshooting",
-and "Rollback Plan".
-
-When generating the guide, ensure the following requirements are met:
-
-Include Authoritative Links: Throughout the guide, embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (like the Defender or Entra portal), and other authoritative sources where appropriate.
-Provide Specific Examples: The "Step-by-Step Guide" must include at least one concrete, high-impact example, such as how to enforce MFA for administrative roles using a Conditional Access policy.
-Detail Specific Requirements:The "Prerequisites" section must detail the specific Microsoft Entra roles (e.g., Security Reader, Security Administrator) and the different licensing requirements (e.g., P1/P2, E3/E5) needed for full functionality.
-The "Verification Steps" must mention practical, real-world details, such as the typical time delay (24-48 hours) for score updates to appear.
-Address Real-World Problems: The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face, such as score synchronization delays, unexpected score drops, or issues with third-party controls.
-Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide (e.g., how to disable the specific Conditional Access policy that was created).`;
+            const prompt = getEnhancedPrompt(item.title);
 
             try {
                 const resultText = await callGeminiAPI(prompt);
@@ -1185,8 +1223,8 @@ Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, acti
         }
 
         async function handleRefineRequest(refineContainer) {
-            const promptText = refineContainer.querySelector('textarea').value;
-            if (!promptText) return;
+            const refinementRequest = refineContainer.querySelector('textarea').value;
+            if (!refinementRequest) return;
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
@@ -1205,36 +1243,7 @@ Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, acti
             
             contentArea.innerHTML = getLoaderHTML(`Refining guide based on your request...`);
             
-            const prompt = `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request while adhering to strict quality standards.
-
-**ORIGINAL IT GUIDE:**
----
-${originalText}
----
-
-**USER'S REFINEMENT REQUEST:**
-"${promptText}"
-
-Rewrite the **entire** guide to incorporate the user's request. The new guide must follow this structure and meet these requirements:
-
-**Structure:**
-Use the following detailed, descriptive sections with ### markdown headers:
-- "Task"
-- "Prerequisites"
-- "Step-by-Step Guide"
-- "Verification Steps"
-- "Potential Issues & Troubleshooting"
-- "Rollback Plan"
-
-**Requirements for the Rewritten Guide:**
-1.  **Authoritative Links:** Embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (e.g., Defender, Entra), and other authoritative sources.
-2.  **Specific Examples:** Include at least one concrete, high-impact example in the "Step-by-Step Guide".
-3.  **Detailed Prerequisites:** Detail specific Microsoft Entra roles (e.g., Security Administrator) and licensing requirements (e.g., P1/P2, E3/E5).
-4.  **Practical Verification:** Mention practical, real-world verification details (e.g., typical time delays for updates).
-5.  **Real-World Problems:** Cover common, real-world troubleshooting issues.
-6.  **Actionable Rollback:** Provide a clear, actionable rollback plan related to the guide's examples.
-
-Return only the new, complete, and rewritten markdown guide.`;
+            const prompt = getEnhancedPrompt(refinementRequest, '', originalText);
             
             try {
                 const newText = await callGeminiAPI(prompt);
