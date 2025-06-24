@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.32</title>
+    <title>AI Yoga Class & Theme Generator v17.33</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -368,7 +368,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.32</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.33</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -968,9 +968,19 @@
             loader.classList.toggle('flex', isLoading);
         }
 
+        // UPDATE: Improved markdown cleaning and error handling
         function robustMarkdownToHtml(text, isCondensed = false) {
-            if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
+            const errorMessage = '<p class="themed-text-muted">No content was generated. Please try a different prompt or refine your request.</p>';
+            
+            if (!text || text.trim() === '' || text.includes('No content received from AI')) {
+                return errorMessage;
+            }
+
             let cleanText = text.replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            
+            if (!cleanText) {
+                return errorMessage;
+            }
 
             if (isCondensed) {
                 let listItems = cleanText
@@ -1155,34 +1165,36 @@
 
         function createAccordionFromMarkdown(markdownText, containerElement) {
             containerElement.innerHTML = ''; 
-            if (!markdownText) {
-                containerElement.innerHTML = robustMarkdownToHtml(null);
-                return;
+            const htmlContent = robustMarkdownToHtml(markdownText);
+            
+            if (htmlContent.includes('<h3')) {
+                 const sections = markdownText.split(/\n(?=### |## )/);
+                 sections.forEach((sectionText, index) => {
+                    if (!sectionText.trim()) return;
+
+                    const firstLineEnd = sectionText.indexOf('\n');
+                    const title = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd).replace(/### |## /g, '').trim() : sectionText.replace(/### |## /g, '').trim();
+                    const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
+
+                    const accordionItem = document.createElement('div');
+                    accordionItem.className = 'accordion-item';
+                    accordionItem.innerHTML = `
+                        <button type="button" class="accordion-header">
+                            <span class="text-left">${title}</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="accordion-content">${robustMarkdownToHtml(content)}</div>
+                    `;
+                    containerElement.appendChild(accordionItem);
+
+                    if (index === 0) {
+                        accordionItem.querySelector('.accordion-header').classList.add('active');
+                        accordionItem.querySelector('.accordion-content').classList.add('open');
+                    }
+                });
+            } else {
+                 containerElement.innerHTML = htmlContent;
             }
-            const sections = markdownText.split(/\n(?=### |## )/);
-            sections.forEach((sectionText, index) => {
-                if (!sectionText.trim()) return;
-
-                const firstLineEnd = sectionText.indexOf('\n');
-                const title = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd).replace(/### |## /g, '').trim() : sectionText.replace(/### |## /g, '').trim();
-                const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
-
-                const accordionItem = document.createElement('div');
-                accordionItem.className = 'accordion-item';
-                accordionItem.innerHTML = `
-                    <button type="button" class="accordion-header">
-                        <span class="text-left">${title}</span>
-                        <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content">${robustMarkdownToHtml(content)}</div>
-                `;
-                containerElement.appendChild(accordionItem);
-
-                if (index === 0) {
-                    accordionItem.querySelector('.accordion-header').classList.add('active');
-                    accordionItem.querySelector('.accordion-content').classList.add('open');
-                }
-            });
         }
         
         async function handleExploreInDepth(themeId, themeType) {
