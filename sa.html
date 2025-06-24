@@ -982,6 +982,9 @@ Return only the complete markdown guide.`;
                 return placeholder;
             });
 
+            // FIX: Pre-process text to add newlines before list items that are on the same line.
+            cleanText = cleanText.replace(/ \*/g, '\n*');
+
             // Process the rest of the markdown
             if (isCondensed) {
                  let listItems = cleanText
@@ -1251,7 +1254,7 @@ Return only the complete markdown guide.`;
             });
         }
         
-        function handleAIHelpRequest() {
+        async function handleAIHelpRequest() {
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
@@ -1259,28 +1262,27 @@ Return only the complete markdown guide.`;
 
             titleEl.textContent = "AI Help & Feedback";
             footerEl.innerHTML = '';
+            contentEl.innerHTML = getLoaderHTML('Generating help guide...');
             modal.classList.remove('hidden');
 
-            const tutorialMarkdown = `
-### Custom Guide Generator
-This is the heart of the app! Enter any IT task, technology, or problem into the main text box (e.g., "Set up a new VLAN" or "Troubleshoot Active Directory replication"). The AI will then craft a complete, step-by-step guide for you from scratch.
-
-### AI-Powered Options
-Just below the main prompt box, you'll find "Tailor Your Guide" buttons. Click the dropdown to reveal options like "Security Hardening," "For Beginners," or "PowerShell Script." You can select multiple options to give the AI more specific instructions for your custom guide.
-
-### Pre-Built Categories
-Scroll down to explore a wide range of pre-built, AI-generated categories for major platforms like VMware, Windows Server, and Microsoft 365. Click on any item within a category to get a quick summary guide.
-
-### Visual Theme Generator
-Want to change the app's look and feel? Click the floating button with the eye icon. This opens the AI Visual Theme Generator. Type in a descriptive phrase like "Blue server room" or "Cloud infrastructure," and the AI will generate a brand new color palette and header image for the entire app.
-
-### In-Depth Exploration
-When you see a summary guide that you like, click the "Explore In-Depth" button. This will open a new view where the AI generates a much more detailed, descriptive version of the guide, perfect for complex tasks.
-
-### Refining Content
-After any guide is generated, you'll see a "Refine with AI" button. Click this to open a text box where you can give the AI further instructions. For example, you could type "Make it for a junior admin," "Add PowerShell examples," or "Include troubleshooting steps for error code X." The AI will then rewrite the guide based on your feedback.
-`;
-            createAccordionFromMarkdown(tutorialMarkdown, contentEl);
+            const prompt = `
+                Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
+                The features are: 
+                1. Custom Task Generator: User enters a task, AI creates a guide.
+                2. Tailoring Options: Buttons to refine the custom guide (e.g., 'Security', 'For Beginners').
+                3. Pre-Built Categories: AI-generated topics like VMware, Windows Server, etc.
+                4. Visual Theme Generator: User describes a mood, AI creates a new color theme and header image.
+                5. In-Depth Exploration: Expanding a summary to see a full, detailed guide.
+                6. Refining Content: Taking an existing guide and giving the AI further instructions to rewrite it.
+                Format the output as a markdown document with '###' for each section title.
+            `;
+            
+            try {
+                const resultText = await callGeminiAPI(prompt);
+                createAccordionFromMarkdown(resultText, contentEl);
+            } catch (error) {
+                handleApiError(error, contentEl, 'AI help content');
+            }
         }
         
         async function handleExploreInDepth(themeId, themeType) {
