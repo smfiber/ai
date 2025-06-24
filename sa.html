@@ -44,6 +44,8 @@
         .prose ul { margin-left: 1.5em; list-style-type: disc; padding-left: 1em; }
         .prose li { margin-bottom: 0.5em; }
         .prose strong:only-child { display: block; margin-top: 1.25em; margin-bottom: 0.75em; }
+        .prose a { color: var(--color-primary); text-decoration: underline; }
+        .prose a:hover { color: var(--color-primary-dark); }
 
         .card {
             background-color: var(--color-card-bg);
@@ -243,7 +245,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v1.2</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -665,10 +667,29 @@
                                          .join(', ');
 
             let fullPrompt;
+            const basePrompt = `
+Act as an expert senior IT administrator. Generate a comprehensive and practical guide for the task: "Improving the ${userPrompt}".
+The guide must be structured with the following detailed, descriptive sections using ### markdown headers:
+"Task",
+"Prerequisites",
+"Step-by-Step Guide",
+"Verification Steps",
+"Potential Issues & Troubleshooting",
+and "Rollback Plan".
+
+When generating the guide, ensure the following requirements are met:
+
+Include Authoritative Links: Throughout the guide, embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (like the Defender or Entra portal), and other authoritative sources where appropriate.
+Provide Specific Examples: The "Step-by-Step Guide" must include at least one concrete, high-impact example, such as how to enforce MFA for administrative roles using a Conditional Access policy.
+Detail Specific Requirements:The "Prerequisites" section must detail the specific Microsoft Entra roles (e.g., Security Reader, Security Administrator) and the different licensing requirements (e.g., P1/P2, E3/E5) needed for full functionality.
+The "Verification Steps" must mention practical, real-world details, such as the typical time delay (24-48 hours) for score updates to appear.
+Address Real-World Problems: The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face, such as score synchronization delays, unexpected score drops, or issues with third-party controls.
+Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide (e.g., how to disable the specific Conditional Access policy that was created).`;
+            
             if (selectedOptions) {
-                fullPrompt = `Generate a comprehensive IT administration guide for the task: "${userPrompt}", with a special focus on these elements: ${selectedOptions}. Structure the guide with detailed, descriptive sections using '###' markdown headers: "Objective", "Prerequisites", "Step-by-Step Guide", "Verification Steps", "Potential Issues & Troubleshooting", and "Rollback Plan". Integrate the requested elements naturally within these sections. Return as a single markdown string.`;
+                fullPrompt = `With a special focus on these elements: ${selectedOptions}, ${basePrompt}`;
             } else {
-                fullPrompt = `Generate a comprehensive IT administration guide for the task: "${userPrompt}". The guide should be structured with detailed, descriptive sections using '###' markdown headers: "Objective", "Prerequisites", "Step-by-Step Guide", "Verification Steps", "Potential Issues & Troubleshooting", and "Rollback Plan". Make each section detailed and clear. Return as a single markdown string.`;
+                fullPrompt = basePrompt;
             }
 
             const resultContainer = document.getElementById('gemini-result-container');
@@ -851,6 +872,7 @@
                     .map(line => {
                         line = line.substring(1).trim();
                         line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        line = line.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
                         line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
                         return `<li>${line}</li>`;
                     }).join('');
@@ -863,6 +885,7 @@
                 .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-3">$1</h2>')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
                 .replace(/^\* (.*$)/gim, '<li>$1</li>');
 
             return html.split('\n').map(line => line.trim()).filter(line => line).map(line => {
@@ -1108,7 +1131,24 @@ After any guide is generated, you'll see a "Refine with AI" button. Click this t
 
             modal.classList.remove('hidden');
             
-            const prompt = `Generate a comprehensive IT administration guide for the task: "${item.title}". Structure the guide with detailed, descriptive sections using '###' markdown headers: "Objective", "Prerequisites", "Step-by-Step Guide", "Verification Steps", "Potential Issues & Troubleshooting", and "Rollback Plan". Make each section very detailed and clear. Return as a single markdown string.`;
+            const prompt = `
+Act as an expert senior IT administrator. Generate a comprehensive and practical guide for the task: "Improving the ${item.title}".
+The guide must be structured with the following detailed, descriptive sections using ### markdown headers:
+"Task",
+"Prerequisites",
+"Step-by-Step Guide",
+"Verification Steps",
+"Potential Issues & Troubleshooting",
+and "Rollback Plan".
+
+When generating the guide, ensure the following requirements are met:
+
+Include Authoritative Links: Throughout the guide, embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (like the Defender or Entra portal), and other authoritative sources where appropriate.
+Provide Specific Examples: The "Step-by-Step Guide" must include at least one concrete, high-impact example, such as how to enforce MFA for administrative roles using a Conditional Access policy.
+Detail Specific Requirements:The "Prerequisites" section must detail the specific Microsoft Entra roles (e.g., Security Reader, Security Administrator) and the different licensing requirements (e.g., P1/P2, E3/E5) needed for full functionality.
+The "Verification Steps" must mention practical, real-world details, such as the typical time delay (24-48 hours) for score updates to appear.
+Address Real-World Problems: The "Potential Issues & Troubleshooting" section should cover common problems that administrators actually face, such as score synchronization delays, unexpected score drops, or issues with third-party controls.
+Create an Actionable Rollback Plan: The "Rollback Plan" must provide clear, actionable steps that are directly related to the examples given in the guide (e.g., how to disable the specific Conditional Access policy that was created).`;
 
             try {
                 const resultText = await callGeminiAPI(prompt);
@@ -1165,7 +1205,7 @@ After any guide is generated, you'll see a "Refine with AI" button. Click this t
             
             contentArea.innerHTML = getLoaderHTML(`Refining guide based on your request...`);
             
-            const prompt = `You are an expert IT administrator AI. A user has provided an IT guide and a request to change it. Your task is to rewrite the entire guide to incorporate the user's request.
+            const prompt = `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request while adhering to strict quality standards.
 
 **ORIGINAL IT GUIDE:**
 ---
@@ -1175,7 +1215,26 @@ ${originalText}
 **USER'S REFINEMENT REQUEST:**
 "${promptText}"
 
-Rewrite the full IT guide based on the user's request. Maintain the original structure (e.g., '###' markdown headers) and level of detail. Return only the new, complete, and rewritten guide.`;
+Rewrite the **entire** guide to incorporate the user's request. The new guide must follow this structure and meet these requirements:
+
+**Structure:**
+Use the following detailed, descriptive sections with ### markdown headers:
+- "Task"
+- "Prerequisites"
+- "Step-by-Step Guide"
+- "Verification Steps"
+- "Potential Issues & Troubleshooting"
+- "Rollback Plan"
+
+**Requirements for the Rewritten Guide:**
+1.  **Authoritative Links:** Embed hyperlinks to official Microsoft Learn documentation, relevant admin portals (e.g., Defender, Entra), and other authoritative sources.
+2.  **Specific Examples:** Include at least one concrete, high-impact example in the "Step-by-Step Guide".
+3.  **Detailed Prerequisites:** Detail specific Microsoft Entra roles (e.g., Security Administrator) and licensing requirements (e.g., P1/P2, E3/E5).
+4.  **Practical Verification:** Mention practical, real-world verification details (e.g., typical time delays for updates).
+5.  **Real-World Problems:** Cover common, real-world troubleshooting issues.
+6.  **Actionable Rollback:** Provide a clear, actionable rollback plan related to the guide's examples.
+
+Return only the new, complete, and rewritten markdown guide.`;
             
             try {
                 const newText = await callGeminiAPI(prompt);
@@ -1223,4 +1282,3 @@ Rewrite the full IT guide based on the user's request. Maintain the original str
     </script>
 </body>
 </html>
-
