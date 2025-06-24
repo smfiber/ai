@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.27</title>
+    <title>AI Yoga Class & Theme Generator v17.29</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -172,14 +172,18 @@
         .week-by-week-grid .grid-card-selector { text-align: left; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; }
         .week-by-week-grid .icon { margin-bottom: 0; }
 
-        /* --- NEW: Dynamic Tutorial Styles --- */
+        /* --- Dynamic Tutorial Styles --- */
         .tour-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.6); z-index: 9998;
             backdrop-filter: blur(4px);
             opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none; /* FIX: Prevents overlay from blocking clicks when invisible */
         }
-        .tour-overlay.visible { opacity: 1; }
+        .tour-overlay.visible { 
+            opacity: 1; 
+            pointer-events: auto; /* FIX: Allows clicks only when visible */
+        }
 
         .tour-highlight {
             position: relative; z-index: 9999;
@@ -206,17 +210,27 @@
         .tour-popover-dots { display: flex; gap: 6px; }
         .tour-popover-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-card-border); transition: background-color 0.3s; }
         .tour-popover-dot.active { background-color: var(--color-primary); }
+        #tour-skip-btn {
+            background-color: transparent;
+            color: var(--color-text-muted);
+            border: none;
+            padding: 0;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+        #tour-skip-btn:hover { text-decoration: underline; }
 
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- NEW: Dynamic Tutorial HTML -->
+    <!-- Dynamic Tutorial HTML -->
     <div id="tour-overlay" class="tour-overlay"></div>
     <div id="tour-popover" class="tour-popover">
         <h3 id="tour-title"></h3>
         <p id="tour-content"></p>
         <div class="tour-popover-nav">
+            <button id="tour-skip-btn">Skip Tour</button>
             <div id="tour-dots" class="tour-popover-dots"></div>
             <div class="flex gap-2">
                 <button id="tour-back-btn" class="btn-secondary text-sm">Back</button>
@@ -227,14 +241,13 @@
     </div>
     
     <!-- All Modals -->
-     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
-            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser. You can also click the tutorial button (bottom-left) to explore a demo without a key.</p>
+            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser.</p>
             <form id="apiKeyForm">
                 <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
                 <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
-                 <button type="button" id="start-demo-btn" class="w-full btn-secondary mt-2">Or Use Demo Mode</button>
             </form>
         </div>
     </div>
@@ -277,7 +290,7 @@
     
     <!-- Main Content -->
     <div class="container mx-auto">
-        <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
+        <header id="app-header" class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
                 <div class="loader header-loader-spinner"></div>
                 <p class="text-white mt-4 text-lg">Generating new header image...</p>
@@ -288,7 +301,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.27</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.29</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -302,7 +315,7 @@
                     <form id="gemini-form">
                         <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
                         
-                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
+                        <div id="tailor-accordion" class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
                             <div class="accordion-item">
                                 <button type="button" class="accordion-header" title="Click to see more options">
                                     <span>Tailor Your Plan:</span>
@@ -314,7 +327,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom yoga plan based on your text">Generate AI Yoga Plan</button>
+                        <button id="generate-plan-btn" type="submit" class="btn-primary w-full mt-4" title="Generate a custom yoga plan based on your text">Generate AI Yoga Plan</button>
                     </form>
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
@@ -364,103 +377,14 @@
     <script type="module">
         // --- Global State & Configuration ---
         let apiKey = "";
-        let isDemoMode = false;
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
         
-        // --- Mock Data for Demo Mode ---
-        const MOCK_DATA = {
-            chakras: {
-                title: "The Seven Chakras",
-                description: "Align your practice with the body's primary energy centers.",
-                items: [
-                    { id: "root", title: "Root Chakra", explanation: "Muladhara - Foundation and being grounded." },
-                    { id: "sacral", title: "Sacral Chakra", explanation: "Svadhisthana - Creativity and joy." },
-                    { id: "solarPlexus", title: "Solar Plexus Chakra", explanation: "Manipura - Personal power and confidence." },
-                    { id: "heart", title: "Heart Chakra", explanation: "Anahata - Love and compassion." },
-                    { id: "throat", title: "Throat Chakra", explanation: "Vishuddha - Communication and truth." },
-                    { id: "thirdEye", title: "Third Eye Chakra", explanation: "Ajna - Intuition and imagination." },
-                    { id: "crown", title: "Crown Chakra", explanation: "Sahasrara - Spiritual connection." }
-                ]
-            },
-            styles: {
-                title: "Yoga Styles",
-                description: "Base your class around a specific yoga style.",
-                items: [
-                    { id: "hatha", title: "Hatha", description: "A gentle introduction to basic yoga poses." },
-                    { id: "vinyasa", title: "Vinyasa", description: "Flowing, dynamic sequences of poses." },
-                    { id: "yin", title: "Yin", description: "Slow-paced style with long-held poses." },
-                    { id: "restorative", title: "Restorative", description: "Deep relaxation and rest." },
-                    { id: "ashtanga", title: "Ashtanga", description: "Physically demanding, structured sequence." }
-                ]
-            },
-            seasons: {
-                title: "The Four Seasons",
-                description: "Align your practice with the natural cycles of the earth.",
-                items: [
-                   { id: "spring", title: "Spring", date: "03/20", explanation: "Themes of renewal, growth, and new beginnings." },
-                   { id: "summer", title: "Summer", date: "06/21", explanation: "Themes of energy, expansion, and vitality." },
-                   { id: "autumn", title: "Autumn", date: "09/22", explanation: "Themes of grounding, letting go, and harvest." },
-                   { id: "winter", title: "Winter", date: "12/21", explanation: "Themes of introspection, rest, and renewal." }
-                ]
-            },
-            mockSummaries: {
-                root: "* **Theme Introduction:** Connect with the earth's energy to feel stable and secure.\n* **Warm-up:** Gentle hip circles and ankle rolls to awaken the lower body.\n* **Main Sequence:** Focus on standing poses like Mountain Pose and Warrior II to build a strong foundation.",
-                hatha: "* **Theme Introduction:** Explore foundational poses with mindful awareness.\n* **Warm-up:** Practice a few rounds of a gentle Sun Salutation A.\n* **Main Sequence:** Hold poses like Triangle, Bridge, and seated forward folds to understand alignment.",
-                spring: "* **Theme Introduction:** Embrace themes of renewal and growth.\n* **Warm-up:** Flowing Cat-Cow and gentle spinal twists to awaken the body.\n* **Main Sequence:** Incorporate poses that create space, like Crescent Lunge and Wild Thing."
-            },
-            mockCustomPlan: `
-### Theme Introduction
-This is a demonstration of a custom-generated yoga plan. In the full version, the AI would create a unique plan based on your prompt, like "Courage and Heart Opening."
-
-### Opening Meditation & Breathwork
-Begin by finding a comfortable seat. Close your eyes and bring your awareness to your breath. Notice the sensation of the air entering and leaving your body. This is a sample meditation to center yourself.
-
-### Warm-up Sequence
-- **Cat-Cow:** Gently move between arching and rounding your spine to warm up the back.
-- **Neck Rolls:** Slowly circle your head to release tension in the neck and shoulders.
-- **Shoulder Shrugs:** Inhale to lift your shoulders to your ears, exhale to release them down.
-
-### Main Sequence
-- **Warrior II:** A powerful standing pose to build strength and confidence.
-- **Triangle Pose:** Stretches the hamstrings, hips, and groin while opening the chest.
-- **Bridge Pose:** A gentle backbend to open the heart and strengthen the back body.
-
-### Cool-down & Stretches
-- **Reclined Pigeon:** A deep stretch for the hips and glutes.
-- **Supine Twist:** Gently wring out the spine and release tension.
-
-### Savasana & Closing
-Lie down on your back in Savasana, allowing your body to fully relax and absorb the benefits of the practice. This is where you find stillness.
-`,
-            mockExploreInDepth: `
-### Theme Introduction
-This is an in-depth exploration of a demo plan. In the full version with an API key, this section would be much more detailed and evocative, weaving the theme throughout the practice with rich descriptions and cues.
-
-### Opening Meditation & Breathwork
-Find a comfortable seat on your mat, perhaps on a cushion or block to elevate your hips. Allow your hands to rest gently on your knees, palms facing up or down. Close your eyes and feel the length in your spine. Bring your awareness to the natural rhythm of your breath. For the next few moments, simply observe. Is the breath shallow or deep? Fast or slow? There's no need to change anything, just notice. This observation is the first step in connecting mind and body.
-
-### Warm-up Sequence
-- **Cat-Cow (Marjaryasana-Bitilasana):** From a tabletop position with wrists under shoulders and knees under hips, inhale as you drop your belly, lift your gaze, and open your chest into Cow Pose. Exhale as you press into your hands, round your spine towards the ceiling, and tuck your chin to your chest for Cat Pose. Flow between these two poses for 5-8 rounds, linking your breath to the movement.
-- **Gentle Neck Rolls:** Come back to a neutral spine. Gently drop your right ear towards your right shoulder, feeling a stretch along the left side of your neck. Hold for a breath, then slowly roll your chin down to your chest and over to the left side. Repeat 3 times on each side.
-
-### Main Sequence
-- **Warrior II (Virabhadrasana II):** From standing, step your feet wide apart. Turn your right foot out 90 degrees and your left foot in slightly. Extend your arms parallel to the floor, gazing over your right fingertips. Bend your right knee so it's directly over your ankle. Press firmly into the outer edge of your back foot. Hold for 5 deep breaths, feeling the strength and stability in this powerful pose.
-- **Triangle Pose (Trikonasana):** From Warrior II, straighten your front leg. Hinge at your front hip, reaching forward, and then bring your right hand down to your shin, a block, or the floor. Extend your left arm to the ceiling, opening your chest. Keep both legs engaged. Gaze can be up at your top hand, or down at the floor if it's more comfortable for your neck. Hold for 5 breaths.
-
-### Cool-down & Stretches
-- **Reclined Pigeon (Supta Kapotasana):** Lie on your back with your knees bent. Cross your right ankle over your left thigh. Thread your right hand through the space between your legs and interlace your fingers behind your left thigh. Gently pull your left knee towards your chest to deepen the stretch in your right hip. Keep your head and shoulders on the mat. Hold for 30-60 seconds and switch sides.
-
-### Savasana & Closing
-Release the stretch and extend your legs long on the mat. Let your feet fall open naturally. Allow your arms to rest by your sides, palms facing up. Close your eyes and let go of any controlled breathing. Allow your entire body to feel heavy and supported by the floor. Rest here in stillness for at least 5 minutes, allowing your body and mind to integrate the practice. To come out, slowly wiggle your fingers and toes, and gently bring yourself back to a seated position.
-`
-        };
-
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiKeyModal').classList.remove('hidden');
+            // No longer hiding the API key modal by default. It's the first thing the user sees.
             setupEventListeners();
             populateTypographySettings();
             setupTour();
@@ -476,7 +400,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(isDemoMode){ showNotification("Visual theme generator is disabled in demo mode.", true); return; }
                 if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
             });
@@ -495,7 +418,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal', 'apiKeyModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
                  document.getElementById(id).addEventListener('click', (e) => {
                      if (e.target.id === id || e.target.closest('[id^="close"]')) {
                          document.getElementById(id).classList.add('hidden');
@@ -505,12 +428,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
-                const demoBtn = e.target.closest('#start-demo-btn');
-                if(demoBtn){
-                    startDemoMode();
-                    return;
-                }
-
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -613,7 +530,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
              try {
                  await generateAndApplyDefaultTheme();
                  await loadAppContent(loadingMessageEl);
-                 startTour(); // <-- MODIFICATION: Start the new dynamic tutorial
+                 startTour();
              } catch (error) {
                  console.error("A critical error occurred during app initialization:", error.message);
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
@@ -730,7 +647,7 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
                 </div>`;
             }).join('');
             
-            const fullPrompt = isDemoMode ? null : fullPrompts[themeType];
+            const fullPrompt = fullPrompts[themeType];
             let showAllButtonHtml = '';
             
             if (fullPrompt && !isWeekByWeek && data.length < 35 && data.length > 0) {
@@ -746,7 +663,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
         
         async function handleShowAllClick(button) {
-            if(isDemoMode){ showNotification("This feature is disabled in demo mode.", true); return; }
             const { containerId, themeType } = button.dataset;
             const container = document.getElementById(containerId);
             const fullPrompt = fullPrompts[themeType];
@@ -778,14 +694,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
                 return;
             }
 
-            if(isDemoMode) {
-                const resultContainer = document.getElementById(`${themeType}-details`);
-                const mockSummary = MOCK_DATA.mockSummaries[themeId] || `* **Summary:** This is a demo summary for ${item.title}. The full version would have more detail.`;
-                resultContainer.innerHTML = robustMarkdownToHtml(mockSummary, true);
-                addPostGenerationButtons(resultContainer, themeId, themeType);
-                return;
-            }
-            
             const prompt = `Generate a very brief, condensed summary for a yoga class plan based on the theme: "${item.title}". For each section (Theme Introduction, Breathwork, Warm-up, Main Sequence, Cool-down, Savasana), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             
             const resultContainer = document.getElementById(`${themeType}-details`);
@@ -808,14 +716,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             if (!userPrompt) return;
 
             const resultContainer = document.getElementById('gemini-result-container');
-
-            if(isDemoMode) {
-                createAccordionFromMarkdown(MOCK_DATA.mockCustomPlan, resultContainer);
-                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
-                showNotification("Custom plan generation is disabled in demo mode. Showing a sample plan instead.");
-                return;
-            }
-
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
@@ -958,10 +858,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         
         async function loadDynamicPlaceholders() {
             const promptInput = document.getElementById('gemini-prompt');
-            if(isDemoMode){
-                promptInput.placeholder = "e.g., 'Ocean Breath & Fluid Movement'";
-                return;
-            }
             const prompt = `Generate a JSON array of 3 creative yoga class theme ideas for input placeholders. Examples: "Ocean Breath & Fluid Movement", "Finding Stillness in Chaos". Return ONLY the valid JSON array of strings.`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1051,7 +947,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
 
         async function handleDiscoverMoreClick() {
-            if(isDemoMode){ showNotification("Discovering more topics is disabled in demo mode.", true); return; }
             const button = document.getElementById('discover-more-button');
             const errorP = document.getElementById('discover-more-error');
             errorP.textContent = '';
@@ -1075,7 +970,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
         
         async function handleCustomVisualThemeGeneration() {
-            if(isDemoMode){ showNotification("Visual theme generator is disabled in demo mode.", true); return; }
             const prompt = document.getElementById('theme-prompt').value;
             if(!prompt) return;
 
@@ -1113,10 +1007,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
 
         async function generateJumpToButtons() {
-            if(isDemoMode){
-                document.getElementById('jump-to-nav-container').classList.add('hidden');
-                return;
-            }
             const container = document.getElementById('jump-to-nav-container');
             const cards = Array.from(document.querySelectorAll('#custom-plan-card, #main-grid .card'));
             if (cards.length <= 1) return;
@@ -1222,22 +1112,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
         
         async function handleExploreInDepth(themeId, themeType) {
-             if (isDemoMode) {
-                const modal = document.getElementById('inDepthModal');
-                const titleEl = document.getElementById('inDepthModalTitle');
-                const contentEl = document.getElementById('inDepthModalContent');
-                const footerEl = document.getElementById('inDepthModalFooter');
-
-                titleEl.textContent = `In-Depth: Demo`;
-                contentEl.innerHTML = '';
-                createAccordionFromMarkdown(MOCK_DATA.mockExploreInDepth, contentEl);
-                footerEl.innerHTML = `<button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
-                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
-                modal.classList.remove('hidden');
-                showNotification("Showing a sample in-depth plan for demo purposes.");
-                return;
-            }
-
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
             if (!item) {
                 console.error("Could not find item for in-depth view", {themeId, themeType});
@@ -1292,8 +1166,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
         
         function toggleRefineUI(buttonContainer, isModal = false) {
-            if (isDemoMode) { showNotification("Refining with AI is disabled in demo mode.", true); return; }
-
             let refineContainer = buttonContainer.nextElementSibling;
             if (refineContainer && refineContainer.classList.contains('refine-container')) {
                 refineContainer.remove();
@@ -1308,7 +1180,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         }
 
         async function handleRefineRequest(refineContainer) {
-            if (isDemoMode) { showNotification("Refining with AI is disabled in demo mode.", true); return; }
             const promptText = refineContainer.querySelector('textarea').value;
             if (!promptText) return;
 
@@ -1369,45 +1240,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
         
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
 
-        // --- Demo Mode Functions ---
-        async function startDemoMode() {
-            isDemoMode = true;
-            document.getElementById('apiKeyModal').classList.add('hidden');
-            const loadingModal = document.getElementById('loadingStateModal');
-            const loadingMessageEl = document.getElementById('loading-message');
-            loadingMessageEl.textContent = "Loading Demo Version...";
-            loadingModal.classList.remove('hidden');
-
-            applyTheme({ bg: '#f3e8ff', text: '#374151', primary: '#9333ea', primaryDark: '#7e22ce', accent: '#581c87', cardBg: 'rgba(255, 255, 255, 0.9)', cardBorder: '#e9d5ff', textMuted: '#6b7280', inputBg: '#f9fafb', inputBorder: '#d1d5db', buttonText: '#ffffff' });
-            applyHeaderImage('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png');
-            await loadAppWithMockData();
-            loadingModal.classList.add('hidden');
-            showNotification("Demo Mode Activated. Some AI features are disabled.");
-        }
-
-        async function loadAppWithMockData() {
-            document.getElementById('main-grid').innerHTML = '';
-            document.getElementById('gemini-result-container').innerHTML = '';
-            populateTailoringButtons(["Mindfulness", "Balance", "Flexibility", "Strength", "Relaxation"]);
-            document.getElementById('gemini-prompt').placeholder = "e.g., 'Ocean Breath & Fluid Movement'";
-            
-            const categories = Object.keys(MOCK_DATA).filter(k => typeof MOCK_DATA[k] === 'object' && MOCK_DATA[k].items);
-
-            for (const key of categories) {
-                const categoryData = MOCK_DATA[key];
-                const mainGrid = document.getElementById('main-grid');
-                const card = document.createElement('div');
-                card.className = 'card md:col-span-2';
-                card.id = `${key}-card`;
-                const selectorId = `${key}-selector-visual`;
-                card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${categoryData.title}</h2><p class="mb-6 themed-text-muted">${categoryData.description}</p><div id="${selectorId}" class="w-full"></div><div id="${key}-details" class="details-container prose max-w-none mt-4"></div></div>`;
-                mainGrid.appendChild(card);
-                allThemeData[key] = categoryData.items;
-                populateCardGridSelector(selectorId, key);
-            }
-            document.getElementById('jump-to-nav-container').innerHTML = '';
-        }
-
         function showNotification(message, isError = false) {
             const notification = document.createElement('div');
             notification.className = 'fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-50 transition-all duration-300 opacity-0 transform -translate-y-5';
@@ -1429,45 +1261,38 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             }, 3000);
         }
 
-        // --- NEW: Dynamic Tutorial Logic ---
+        // --- Dynamic Tutorial Logic ---
         let tourSteps = [];
         let currentTourStep = 0;
 
         function setupTour() {
             tourSteps = [
-                {
-                    title: 'Welcome to the AI Yoga Generator!',
-                    content: 'This quick tour will show you the main features. You can exit at any time by clicking the backdrop.'
-                },
-                {
-                    element: '#custom-plan-card',
-                    title: 'Custom Plan Generator',
-                    content: 'This is the heart of the app. Type any theme or idea here, and the AI will craft a unique yoga class plan just for you.'
-                },
-                {
-                    element: '#main-grid',
-                    title: 'Pre-Built Categories',
-                    content: 'Scroll down to discover dozens of AI-generated categories. Click any item to get an instant class summary.'
-                },
-                {
-                    element: '#theme-changer-button',
-                    title: 'AI Visual Theme Generator',
-                    content: 'Feeling creative? Click this button, describe a mood or scene, and the AI will generate a new color palette and header image for the app.'
-                },
-                {
-                    element: '#main-grid .explore-button',
-                    title: 'Explore & Refine',
-                    content: 'Once a plan is generated, use these buttons to get a more detailed version or ask the AI to make specific changes.'
-                },
-                {
-                    title: 'You\'re All Set!',
-                    content: 'That\'s it for the main features. Enjoy exploring and creating your perfect yoga practice!'
-                }
+                { title: 'Welcome!', content: 'This quick tour will show you the main features. You can exit at any time by clicking the backdrop or the "Skip" button.' },
+                { element: '#app-header', title: 'The Header', content: 'This is the main header of the application. The AI can generate new background images for it!' },
+                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by creating your own unique yoga plan.' },
+                { element: '#gemini-prompt', title: 'Enter Your Theme', content: 'Type any theme, idea, or feeling here. For example, "A class for releasing anxiety" or "Morning energy flow".' },
+                { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal options to fine-tune your request, like focusing on "Flexibility" or "Strength".' },
+                { element: '#generate-plan-btn', title: 'Generate Your Plan', content: 'Once you\'ve entered a prompt, click here to let the AI craft a unique yoga class plan just for you.' },
+                { element: '#gemini-result-container', title: 'Your Custom Plan', content: 'Your generated plan will appear here in an easy-to-read accordion format.' },
+                { element: '#main-grid', title: 'Pre-Built Categories', content: 'Scroll down to discover dozens of AI-generated categories, from yoga styles to seasonal themes.' },
+                { element: '#chakras-card', title: 'Category Card', content: 'Each of these cards contains a collection of related yoga themes to explore.' },
+                { element: '#chakras-card .grid-card-selector', title: 'Select a Theme', content: 'Click on any item within a category to get an instant, AI-generated summary for a class plan.' },
+                { element: '#chakras-details', title: 'Class Summary', content: 'A brief summary of the selected theme appears here, giving you a quick overview of the class.' },
+                { element: '#chakras-details .explore-button', title: 'Explore In-Depth', content: 'Click this button to open a modal with a much more detailed, descriptive version of the class plan.' },
+                { element: '#chakras-details .refine-button', title: 'Refine with AI', content: 'Don\'t like the summary? Click here to open a text box and ask the AI to make specific changes.' },
+                { element: '#chakras-details .copy-button', title: 'Copy Text', content: 'Easily copy the text of the generated plan to your clipboard for use in other applications.' },
+                { element: '#discover-more-button', title: 'Discover More', content: 'Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
+                { element: '#jump-to-nav-container', title: 'Quick Navigation', content: 'Once the page loads, this navigation bar appears to let you quickly jump to any category on the page.' },
+                { element: '#theme-changer-button', title: 'AI Visual Theme Generator', content: 'Feeling creative? Click this floating button, describe a mood or scene, and the AI will generate a new color palette and header image.' },
+                { element: '#settings-button', title: 'Display Settings', content: 'Customize the look and feel of the app by changing the font family, font size, and line spacing.' },
+                { element: '#scroll-to-top-button', title: 'Scroll to Top', content: 'After you scroll down, this button will appear to quickly take you back to the top of the page.' },
+                { title: 'You\'re All Set!', content: 'That\'s it for the main features. Enjoy exploring and creating your perfect yoga practice!' }
             ];
 
             document.getElementById('tour-next-btn').addEventListener('click', () => showTourStep(currentTourStep + 1));
             document.getElementById('tour-back-btn').addEventListener('click', () => showTourStep(currentTourStep - 1));
             document.getElementById('tour-finish-btn').addEventListener('click', endTour);
+            document.getElementById('tour-skip-btn').addEventListener('click', endTour);
             document.getElementById('tour-overlay').addEventListener('click', endTour);
         }
         
@@ -1515,29 +1340,35 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
             const dotsContainer = document.getElementById('tour-dots');
             dotsContainer.innerHTML = tourSteps.map((_, i) => `<div class="tour-popover-dot ${i === stepIndex ? 'active' : ''}"></div>`).join('');
 
-
             const targetElement = step.element ? document.querySelector(step.element) : null;
             if (targetElement) {
                 targetElement.classList.add('tour-highlight');
                 targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-                const rect = targetElement.getBoundingClientRect();
-                const popoverRect = popover.getBoundingClientRect();
-                
-                let top = rect.bottom + 15;
-                let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+                setTimeout(() => {
+                    const rect = targetElement.getBoundingClientRect();
+                    const popoverRect = popover.getBoundingClientRect();
+                    
+                    let top = rect.bottom + 15;
+                    let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
 
-                if (top + popoverRect.height > window.innerHeight) {
-                    top = rect.top - popoverRect.height - 15;
-                }
-                
-                if (left < 10) left = 10;
-                if (left + popoverRect.width > window.innerWidth) {
-                    left = window.innerWidth - popoverRect.width - 10;
-                }
+                    if (top + popoverRect.height > window.innerHeight) {
+                        top = rect.top - popoverRect.height - 15;
+                    }
+                    
+                    if (left < 10) left = 10;
+                    if (left + popoverRect.width > window.innerWidth) {
+                        left = window.innerWidth - popoverRect.width - 10;
+                    }
+                    
+                    if (top < 10) top = 10;
 
-                popover.style.top = `${top}px`;
-                popover.style.left = `${left}px`;
+
+                    popover.style.top = `${top}px`;
+                    popover.style.left = `${left}px`;
+                    popover.style.transform = 'translate(0, 0)';
+
+                }, 300); // Delay to allow scroll to finish
 
             } else {
                 // Center popover for steps without an element
@@ -1546,7 +1377,6 @@ Release the stretch and extend your legs long on the mat. Let your feet fall ope
                 popover.style.transform = 'translate(-50%, -50%)';
             }
         }
-
 
     </script>
 </body>
