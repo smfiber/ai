@@ -1358,14 +1358,36 @@ Return only the complete markdown guide.`;
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                renderAccordionFromMarkdown(resultText, contentEl);
-                generateAndInjectImages(contentEl);
+                // Create containers for raw markdown and rendered HTML
+                contentEl.innerHTML = `
+                    <div id="raw-markdown-section" class="mb-8">
+                        <h3 class="text-lg font-semibold mb-2 themed-text-accent border-b pb-2">Raw Markdown</h3>
+                        <div class="code-block-container !m-0">
+                             <div class="code-block-header">
+                                 <span>markdown</span>
+                                 <button class="copy-code-button">Copy</button>
+                             </div>
+                             <pre><code class="language-markdown">${(resultText || " ").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+                        </div>
+                    </div>
+                    <div id="rendered-html-section">
+                        <h3 class="text-lg font-semibold mb-2 themed-text-accent border-b pb-2">Rendered Preview</h3>
+                        <div id="rendered-content-container" class="prose max-w-none"></div>
+                    </div>
+                `;
 
+                // Render the HTML part
+                const renderedContainer = document.getElementById('rendered-content-container');
+                renderAccordionFromMarkdown(resultText, renderedContainer);
+                generateAndInjectImages(renderedContainer);
+
+                // Setup footer buttons
                 footerEl.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
+                    <button class="btn-secondary text-sm modal-copy-button">Copy Rendered Text</button>
                 `;
-                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                // Make copy button in footer copy the rendered text
+                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(renderedContainer, e.currentTarget));
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
