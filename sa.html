@@ -353,7 +353,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1790,7 +1790,25 @@ Return only the complete markdown guide.`;
                 
                 contentEl.innerHTML = ''; // Clear loader
 
-                // Create Markdown Accordion
+                 // 1. Create Rendered HTML Accordion (Open by default)
+                const htmlAccordion = document.createElement('div');
+                htmlAccordion.className = 'accordion-item';
+                const renderTarget = document.createElement('div');
+                renderTarget.className = 'accordion-content open'; // Content is open
+                
+                htmlAccordion.innerHTML = `
+                    <button type="button" class="accordion-header active">
+                        <span>Rendered Preview</span>
+                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                `;
+                htmlAccordion.appendChild(renderTarget);
+                contentEl.appendChild(htmlAccordion);
+                
+                // Populate the rendered content
+                renderAccordionFromMarkdown(resultText, renderTarget, false);
+
+                // 2. Create Markdown Accordion (Closed by default)
                 const mdAccordion = document.createElement('div');
                 mdAccordion.className = 'accordion-item';
                 mdAccordion.innerHTML = `
@@ -1810,22 +1828,9 @@ Return only the complete markdown guide.`;
                 `;
                 mdAccordion.querySelector('code').textContent = resultText;
                 contentEl.appendChild(mdAccordion);
-
-                // Create and Render HTML Preview Accordion
-                const htmlAccordion = document.createElement('div');
-                htmlAccordion.className = 'accordion-item';
-                const renderTarget = document.createElement('div');
-                htmlAccordion.appendChild(renderTarget);
-                contentEl.appendChild(htmlAccordion);
                 
-                renderAccordionFromMarkdown(resultText, renderTarget, false);
-                
-                // Ensure the first rendered content accordion is open
-                const firstRenderedAccordion = renderTarget.querySelector('.accordion-item .accordion-header');
-                if(firstRenderedAccordion) {
-                    firstRenderedAccordion.classList.add('active');
-                    firstRenderedAccordion.nextElementSibling.classList.add('open');
-                }
+                // Ensure the icons are in the correct state
+                 htmlAccordion.querySelector('.icon').style.transform = 'rotate(180deg)';
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -1913,59 +1918,4 @@ Return only the complete markdown guide.`;
 
     </script>
 </body>
-</html>" is a part of the document. You should be able to answer my query based on the selected code and the document.
-Let's remove this HTML:
-```html
-<div id="generative-ai-prompt-card" class="card">
-                <div class="p-8 card-content">
-                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Generative AI Prompt</h2>
-                    <p class="mb-6 themed-text-muted">Need a guide for a specific task? Enter any keyword or concept, and let AI craft a step-by-step plan for you.</p>
-                    <form id="gemini-form">
-                        <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
-                        
-                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
-                            <div class="accordion-item">
-                                <button type="button" class="accordion-header" title="Click to see more options">
-                                    <span>Tailor Your Guide:</span>
-                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
-                                <div class="accordion-content">
-                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
-                    </form>
-                    <div id="gemini-result-container" class="mt-6"></div>
-                </div>
-            </div>
-```
-and replace with this:
-```html
- <div id="generative-ai-prompt-card" class="card">
-                <div class="p-8 card-content">
-                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Generative AI Prompt</h2>
-                    <p class="mb-6 themed-text-muted">Need a guide for a specific task? Enter any keyword or concept, and let AI craft a step-by-step plan for you.</p>
-                    <form id="gemini-form">
-                        <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
-                        
-                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
-                            <div class="accordion-item">
-                                <button type="button" class="accordion-header" title="Click to see more options">
-                                    <span>Tailor Your Guide:</span>
-                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
-                                <div class="accordion-content">
-                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
-                    </form>
-                    <div id="gemini-result-container" class="mt-6"></div>
-                </div>
-            </div>
-```
-Can you also check the version of this a
+</html>
