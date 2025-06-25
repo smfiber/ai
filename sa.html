@@ -193,13 +193,14 @@
             color: var(--color-button-text); width: 56px; height: 56px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
-            cursor: pointer; transition: all 0.3s ease; z-index: 40;
+            cursor: pointer; transition: all 0.3s ease; z-index: 50;
         }
         .floating-action-button:hover { transform: translateY(-3px) scale(1.05); }
         #new-plan-button { bottom: 2rem; right: 2rem; }
         #settings-button { bottom: 6.5rem; right: 2rem; }
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
+        #prompts-button { bottom: 20rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -329,13 +330,13 @@
             </div>
         </div>
     </div>
-    <div id="geminiSearchModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
+    <div id="promptsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 id="geminiSearchModalTitle" class="text-2xl font-bold themed-text-primary">Gemini Search Results</h2>
-                <button id="closeGeminiSearchModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <h2 class="text-2xl font-bold themed-text-primary">Application AI Prompts</h2>
+                <button id="closePromptsModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
-            <div id="geminiSearchModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="promptsModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
 
@@ -352,7 +353,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.3</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.4</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -402,6 +403,9 @@
     </div>
 
     <!-- Floating Action Buttons -->
+    <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+    </button>
     <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
     </button>
@@ -474,6 +478,7 @@
 
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
+            document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!apiKey) {
                     alert('Please enter your API key to use the theme generator.');
@@ -496,7 +501,7 @@
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'geminiSearchModal', 'loadingStateModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal'].forEach(id => {
                 document.getElementById(id).addEventListener('click', (e) => {
                     if (e.target.id === id || e.target.closest('[id^="close"]')) {
                         document.getElementById(id).classList.add('hidden');
@@ -507,7 +512,7 @@
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
                 if (e.target.classList.contains('copy-code-button')) {
-                    const codeBlock = e.target.closest('.code-block-container').querySelector('code');
+                    const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
                     copyElementTextToClipboard(codeBlock, e.target);
                     return;
                 }
@@ -623,7 +628,7 @@
                 console.error("A critical error occurred during app initialization:", error.message);
                 const modalMessage = document.querySelector('#apiKeyModal p');
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
-                    modalMessage.textContent = 'An error occurred during setup. Please check your API key and connection.';
+                    modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
                     modalMessage.classList.add('text-red-600', 'font-bold');
                     document.getElementById('apiKeyModal').classList.remove('hidden');
                 }
@@ -1293,6 +1298,55 @@
             loader.classList.toggle('flex', isLoading);
         }
         
+        function getAppPrompts() {
+            return {
+                "Generate Detailed Guide": getEnhancedPrompt("{task}", "{options}"),
+                "Refine Existing Guide": getEnhancedPrompt("{refinement_request}", "", "{original_text}"),
+                "Generate In-Depth Guide": getEnhancedPrompt("{item_title}"),
+                "Generate Summary": `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`,
+                "Generate UI Screenshot": `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`,
+                "Generate Color Theme": `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`,
+                "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`,
+            };
+        }
+        
+        function displayPromptsInModal() {
+            const modal = document.getElementById('promptsModal');
+            const contentEl = document.getElementById('promptsModalContent');
+            contentEl.innerHTML = ''; 
+
+            const prompts = getAppPrompts();
+
+            for (const [title, promptText] of Object.entries(prompts)) {
+                const promptContainer = document.createElement('div');
+                promptContainer.className = 'mb-6';
+                
+                const promptTitle = document.createElement('h3');
+                promptTitle.className = 'text-lg font-semibold themed-text-accent mb-2';
+                promptTitle.textContent = title;
+                promptContainer.appendChild(promptTitle);
+
+                const codeBlockContainer = document.createElement('div');
+                codeBlockContainer.className = 'code-block-container !mt-0';
+                
+                const header = document.createElement('div');
+                header.className = 'code-block-header';
+                header.innerHTML = `<span>Prompt</span><button class="copy-code-button">Copy</button>`;
+                codeBlockContainer.appendChild(header);
+
+                const pre = document.createElement('pre');
+                pre.className = 'text-sm';
+                pre.textContent = promptText;
+                codeBlockContainer.appendChild(pre);
+                
+                promptContainer.appendChild(codeBlockContainer);
+                contentEl.appendChild(promptContainer);
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+
         // DEV NOTE: This function defines the master prompt for generating detailed guides.
         // It's designed to be flexible for both new content and user-requested refinements.
         function getEnhancedPrompt(task, options = '', originalText = '') {
@@ -1796,3 +1850,4 @@ Return only the complete markdown guide.`;
     </script>
 </body>
 </html>
+", could we a new floating button "Generative AI" that opens a modal, then displays the current prompts that this app is using to retrieve its generative AI. I would like to be able to copy these prompts for editing the code in the futu
