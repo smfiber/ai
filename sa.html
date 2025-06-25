@@ -6,6 +6,8 @@
     <title>IT Administration Hub</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for Markdown to HTML conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,11 +60,11 @@
         .prose a { color: var(--color-primary); text-decoration: none; border-bottom: 1px solid var(--color-primary); }
         .prose a:hover { color: var(--color-primary-dark); border-bottom-color: var(--color-primary-dark); }
         .prose h3 {
-             font-size: 1.25rem;
-             font-weight: 600;
-             color: var(--color-accent);
-             margin-top: 1.5em;
-             margin-bottom: 0.5em;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-accent);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
         }
         
         .screenshot-placeholder, .image-generation-container {
@@ -80,15 +82,15 @@
             flex-direction: column;
         }
         .screenshot-placeholder::before {
-            content: '�';
+            content: '🖼️';
             display: block;
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
         }
         .image-generation-container img {
-             max-width: 100%;
-             border-radius: 6px;
-             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 100%;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         /* Code Block Styling */
@@ -131,8 +133,8 @@
             word-wrap: break-word;
         }
         .prose code {
-             font-family: 'Menlo', 'Consolas', monospace;
-             font-size: 0.9em;
+            font-family: 'Menlo', 'Consolas', monospace;
+            font-size: 0.9em;
         }
 
 
@@ -265,7 +267,7 @@
 <body class="p-4 md:p-8">
     
     <!-- All Modals -->
-     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
             <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "AI Help" button to learn more without a key.</p>
@@ -331,10 +333,10 @@
             <div id="header-bg-image" class="absolute inset-0 header-bg-image"></div>
             <div class="absolute inset-0 bg-black opacity-40"></div>
             <div class="relative z-10 py-24 px-12 text-white">
-                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
+                <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v3.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -371,7 +373,7 @@
             </div>
             
             <div id="discover-more-container" class="text-center py-8">
-                 <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random IT category">
+                <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random IT category">
                     <span class="flex items-center justify-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
                         Discover More IT Topics
@@ -423,6 +425,17 @@
             document.getElementById('apiKeyModal').classList.remove('hidden');
             setupEventListeners();
             populateTypographySettings();
+            // Configure Marked.js to handle code blocks and other elements correctly
+            marked.setOptions({
+                renderer: new marked.Renderer(),
+                highlight: function(code, lang) {
+                    // This is a basic highlighter. For production, you might use a library like highlight.js
+                    return code;
+                },
+                langPrefix: 'language-',
+                gfm: true,
+                breaks: true, // Converts single line breaks into <br> tags
+            });
         });
 
         function setupEventListeners() {
@@ -458,11 +471,11 @@
             
             // Modal Closing Listeners
             ['themeGeneratorModal', 'inDepthModal', 'geminiSearchModal', 'loadingStateModal'].forEach(id => {
-                 document.getElementById(id).addEventListener('click', (e) => {
-                     if (e.target.id === id || e.target.closest('[id^="close"]')) {
-                         document.getElementById(id).classList.add('hidden');
-                     }
-                 });
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                        document.getElementById(id).classList.add('hidden');
+                    }
+                });
             });
 
             // Global Clicks for dynamic content and closing panels
@@ -502,7 +515,7 @@
                 }
 
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
-                 if (modalRefineBtn) {
+                if (modalRefineBtn) {
                     toggleRefineUI(modalRefineBtn.parentElement, true);
                     return;
                 }
@@ -553,38 +566,38 @@
         }
         
         async function handleApiKeySubmit(e) {
-             e.preventDefault();
-             const input = document.getElementById('apiKeyInput');
-             if (!input.value.trim()) return;
-             apiKey = input.value.trim();
-             document.getElementById('apiKeyModal').classList.add('hidden');
+            e.preventDefault();
+            const input = document.getElementById('apiKeyInput');
+            if (!input.value.trim()) return;
+            apiKey = input.value.trim();
+            document.getElementById('apiKeyModal').classList.add('hidden');
 
-             const loadingModal = document.getElementById('loadingStateModal');
-             const loadingMessageEl = document.getElementById('loading-message');
-             loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
-             loadingModal.classList.remove('hidden');
+            const loadingModal = document.getElementById('loadingStateModal');
+            const loadingMessageEl = document.getElementById('loading-message');
+            loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
+            loadingModal.classList.remove('hidden');
 
-             const modalMessage = document.querySelector('#apiKeyModal p');
-             modalMessage.textContent = 'To use the AI generators, please provide your API key...';
-             modalMessage.classList.remove('text-red-600', 'font-bold');
-             document.getElementById('main-grid').innerHTML = '';
-             document.getElementById('jump-to-nav-container').innerHTML = '';
-             document.getElementById('gemini-result-container').innerHTML = '';
-             document.getElementById('discover-more-error').innerHTML = '';
+            const modalMessage = document.querySelector('#apiKeyModal p');
+            modalMessage.textContent = 'To use the AI generators, please provide your API key...';
+            modalMessage.classList.remove('text-red-600', 'font-bold');
+            document.getElementById('main-grid').innerHTML = '';
+            document.getElementById('jump-to-nav-container').innerHTML = '';
+            document.getElementById('gemini-result-container').innerHTML = '';
+            document.getElementById('discover-more-error').innerHTML = '';
 
-             try {
-                 await generateAndApplyDefaultTheme();
-                 await loadAppContent(loadingMessageEl);
-             } catch (error) {
-                 console.error("A critical error occurred during app initialization:", error.message);
+            try {
+                await generateAndApplyDefaultTheme();
+                await loadAppContent(loadingMessageEl);
+            } catch (error) {
+                console.error("A critical error occurred during app initialization:", error.message);
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
                     modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
                     modalMessage.classList.add('text-red-600', 'font-bold');
                     document.getElementById('apiKeyModal').classList.remove('hidden');
                 }
-             } finally {
-                 loadingModal.classList.add('hidden');
-             }
+            } finally {
+                loadingModal.classList.add('hidden');
+            }
         }
 
         async function loadAppContent(loadingMessageEl) {
@@ -633,7 +646,7 @@
                 const results = await Promise.all(generationPromises);
                 const firstFailure = results.find(r => r && r.error);
                 if(firstFailure){
-                   throw new Error(`One or more AI content categories failed to load, starting with ${firstFailure.key}. The process has been stopped.`);
+                    throw new Error(`One or more AI content categories failed to load, starting with ${firstFailure.key}. The process has been stopped.`);
                 }
                 
                 if (loadingMessageEl) loadingMessageEl.textContent = `Building navigation...`;
@@ -693,7 +706,7 @@
             let showAllButtonHtml = '';
             
             if (fullPrompt && data.length < 35 && data.length > 0) {
-                 showAllButtonHtml = `
+                showAllButtonHtml = `
                     <div class="col-span-full text-center mt-4">
                         <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
                             Show All (${data.length} of ~50 shown)
@@ -744,7 +757,7 @@
             try {
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId, resultText); 
-                resultContainer.innerHTML = robustMarkdownToHtml(resultText, true);
+                resultContainer.innerHTML = convertMarkdownToHtml(resultText);
                 addPostGenerationButtons(resultContainer, themeId, themeType);
             } catch (error) {
                 handleApiError(error, resultContainer, `guide for ${item.title}`);
@@ -758,8 +771,8 @@
             if (!userPrompt) return;
 
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
-                                         .map(btn => btn.textContent.trim())
-                                         .join(', ');
+                                        .map(btn => btn.textContent.trim())
+                                        .join(', ');
 
             const prompt = getEnhancedPrompt(userPrompt, selectedOptions);
 
@@ -770,7 +783,7 @@
                 const resultText = await callGeminiAPI(prompt);
                 
                 originalGeneratedText.set('custom-plan', resultText);
-                createAccordionFromMarkdown(resultText, resultContainer);
+                renderAccordionFromMarkdown(resultText, resultContainer);
                 addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
                 generateAndInjectImages(resultContainer);
 
@@ -835,17 +848,17 @@
         }
 
         async function callImageGenAPI(prompt) {
-             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, payload);
-             const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
-             return base64 ? `data:image/png;base64,${base64}` : null;
+            const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, payload);
+            const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
+            return base64 ? `data:image/png;base64,${base64}` : null;
         }
         
         async function callColorGenAPI(prompt) {
-             const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
-             const jsonText = await callGeminiAPI(fullPrompt, true);
-             if (jsonText) return parseJsonWithCorrections(jsonText);
-             throw new Error("Could not parse a valid color theme from API response.");
+            const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
+            const jsonText = await callGeminiAPI(fullPrompt, true);
+            if (jsonText) return parseJsonWithCorrections(jsonText);
+            throw new Error("Could not parse a valid color theme from API response.");
         }
 
         function handleApiError(error, container, contentType = 'content') {
@@ -870,8 +883,8 @@
                 else throw imageResult.reason || new Error("Failed to generate header image.");
 
             } catch (error) {
-                 handleApiError(null, null, 'default theme');
-                 throw error;
+                handleApiError(null, null, 'default theme');
+                throw error;
             } finally {
                 showThemeLoading(false);
             }
@@ -989,112 +1002,50 @@ When generating the guide, ensure the guide as a whole meets the following requi
 
 Return only the complete markdown guide.`;
         }
-
-        function robustMarkdownToHtml(text, isCondensed = false) {
+        
+        /**
+         * Converts a markdown string to sanitized HTML using marked.js,
+         * and prepares special placeholders for screenshots and code blocks.
+         */
+        function convertMarkdownToHtml(text) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
-            
-            // First, handle and extract fenced code blocks
-            const codeBlocks = [];
-            let cleanText = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-                const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
-                codeBlocks.push({ lang: lang || 'text', code: code.trim() });
-                return placeholder;
-            });
 
-            // FIX: Pre-process text to add newlines before list items that are on the same line.
-            cleanText = cleanText.replace(/ \*/g, '\n*');
-
-            // Process the rest of the markdown
-            if (isCondensed) {
-                 let listItems = cleanText
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.startsWith('*'))
-                    .map(line => {
-                        line = line.substring(1).trim()
-                                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                   .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-                                   .replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        return `<li>${line}</li>`;
-                    }).join('');
-                return `<ul>${listItems}</ul>`;
-            }
-            
-            // Replace screenshot placeholders with divs for async image loading
-            let imagePlaceholderCount = 0;
-            cleanText = cleanText.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
-                const placeholderId = `image-placeholder-${Date.now()}-${imagePlaceholderCount++}`;
+            // First, process our custom placeholders before passing to marked.js
+            let processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
+                const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
                 return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
                             <div class="loader themed-loader"></div>
                             <p class="mt-2 text-sm italic">${description}</p>
                         </div>`;
             });
 
+            // Convert markdown to HTML using the marked library
+            let html = marked.parse(processedText);
 
-            let html = cleanText
-                .replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-                .replace(/^\s*\n/gm, '<br>');
-             
-            html = html.replace(/&lt;div id="image-placeholder-(.*?)" class="image-generation-container" data-prompt="(.*?)"&gt;/g, '<div id="image-placeholder-$1" class="image-generation-container" data-prompt="$2">')
-                       .replace(/&lt;\/div&gt;/g, '</div>')
-                       .replace(/&lt;p class="mt-2 text-sm italic"&gt;(.*?)&lt;\/p&gt;/g, '<p class="mt-2 text-sm italic">$1</p>')
-                       .replace(/&lt;div class="loader themed-loader"&gt;&lt;\/div&gt;/g, '<div class="loader themed-loader"></div>');
+            // Post-processing to add copy buttons to code blocks
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
 
+            tempDiv.querySelectorAll('pre code').forEach(codeBlock => {
+                const pre = codeBlock.parentElement;
+                const lang = Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text';
+                
+                const container = document.createElement('div');
+                container.className = 'code-block-container';
+                
+                const header = document.createElement('div');
+                header.className = 'code-block-header';
+                header.innerHTML = `
+                    <span>${lang}</span>
+                    <button class="copy-code-button">Copy</button>
+                `;
 
-            const lines = html.split('<br>');
-            let resultHtml = '';
-            let inList = false;
-            let listTag = '';
-
-            lines.forEach(line => {
-                line = line.trim();
-                const isOl = line.match(/^\d+\. /);
-                const isUl = line.startsWith('* ');
-
-                if (isOl || isUl) {
-                    const currentListTag = isOl ? 'ol' : 'ul';
-                    if (!inList || listTag !== currentListTag) {
-                        if (inList) resultHtml += `</${listTag}>`;
-                        inList = true;
-                        listTag = currentListTag;
-                        resultHtml += `<${listTag}>`;
-                    }
-                    const itemContent = line.replace(/^\d+\. |^\* /, '');
-                    resultHtml += `<li>${itemContent}</li>`;
-                } else {
-                    if (inList) {
-                        resultHtml += `</${listTag}>`;
-                        inList = false;
-                    }
-                     if (line.startsWith('<h3') || line.startsWith('<div')) {
-                        resultHtml += line;
-                    } else if (line) {
-                         resultHtml += `<p>${line}</p>`;
-                    }
-                }
+                container.appendChild(header);
+                pre.parentNode.insertBefore(container, pre);
+                container.appendChild(pre);
             });
-            if (inList) resultHtml += `</${listTag}>`;
 
-            // Re-insert the formatted code blocks
-            codeBlocks.forEach((block, index) => {
-                const codeHtml = `<div class="code-block-container">
-                    <div class="code-block-header">
-                        <span>${block.lang}</span>
-                        <button class="copy-code-button">Copy</button>
-                    </div>
-                    <pre><code class="language-${block.lang}">${block.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
-                </div>`;
-                resultHtml = resultHtml.replace(`__CODEBLOCK_${index}__`, codeHtml);
-            });
-            
-            return resultHtml.replace(/<p><h3>/g, '<h3>').replace(/<\/h3><\/p>/g, '</h3>')
-                           .replace(/<p><div class="code-block-container">/g, '<div class="code-block-container">')
-                           .replace(/<\/div><\/p>/g, '</div>')
-                           .replace(/<p><div class="image-generation-container">/g, '<div class="image-generation-container">');
+            return tempDiv.innerHTML;
         }
 
         async function generateAndInjectImages(container) {
@@ -1133,8 +1084,8 @@ Return only the complete markdown guide.`;
             `;
             container.appendChild(buttonBar);
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
-                 const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
-                 if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
+                const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
+                if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
             });
         }
 
@@ -1271,71 +1222,83 @@ Return only the complete markdown guide.`;
             document.body.removeChild(textarea);
         }
 
-        function createAccordionFromMarkdown(markdownText, containerElement) {
+        /**
+         * Renders markdown into an accordion structure inside a container.
+         * It uses marked.js to convert markdown to HTML first, then builds the accordion.
+         */
+        function renderAccordionFromMarkdown(markdownText, containerElement) {
             containerElement.innerHTML = ''; 
             if (!markdownText || !markdownText.trim()) {
-                containerElement.innerHTML = robustMarkdownToHtml(null);
+                containerElement.innerHTML = convertMarkdownToHtml(null);
                 return;
             }
 
-            // More robust splitting using a regex that looks for ###, or lines starting with a number/bold text.
-            const sections = markdownText.split(/(?=^###|^\d+\.\s|^\*\*.*?\*\*)/m);
+            // Convert the entire markdown to HTML first.
+            const fullHtml = convertMarkdownToHtml(markdownText);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = fullHtml;
 
-            // Handle any introductory text before the first heading
-            if (sections.length > 0 && !sections[0].match(/^###|^\d+\.\s|^\*\*.*?\*\*/m)) {
-                const introContent = sections.shift().trim();
-                if (introContent) {
-                    const introDiv = document.createElement('div');
-                    introDiv.className = 'accordion-intro mb-4';
-                    introDiv.innerHTML = robustMarkdownToHtml(introContent);
-                    containerElement.appendChild(introDiv);
+            const nodes = Array.from(tempDiv.childNodes);
+            let currentAccordionItem = null;
+            let introContent = document.createElement('div');
+            introContent.className = 'accordion-intro mb-4';
+
+            let firstHeaderFound = false;
+
+            nodes.forEach(node => {
+                // Collect any content before the first H3 as an introduction.
+                if (!firstHeaderFound && node.tagName !== 'H3') {
+                    introContent.appendChild(node.cloneNode(true));
+                    return;
                 }
-            }
-            
-            // If there are no sections after processing, render the whole thing.
-            if (sections.every(s => !s.trim())) {
-                containerElement.innerHTML = robustMarkdownToHtml(markdownText);
-                return;
-            }
-
-
-            sections.forEach((sectionText, index) => {
-                if (!sectionText.trim()) return;
                 
-                const firstLineEnd = sectionText.indexOf('\n');
-                let title = sectionText.trim();
-                let content = '';
+                // When an H3 is found, it starts a new accordion item.
+                if (node.tagName === 'H3') {
+                    firstHeaderFound = true;
+                    if (introContent.hasChildNodes()) {
+                        containerElement.appendChild(introContent);
+                        introContent = document.createElement('div'); // Reset for next potential non-accordion content
+                    }
 
-                if (firstLineEnd !== -1) {
-                    title = sectionText.substring(0, firstLineEnd).replace(/###/g, '').replace(/\*\*/g, '').trim();
-                    content = sectionText.substring(firstLineEnd + 1).trim();
-                } else {
-                    title = title.replace(/###/g, '').replace(/\*\*/g, '').trim();
-                }
+                    currentAccordionItem = document.createElement('div');
+                    currentAccordionItem.className = 'accordion-item';
 
+                    const title = node.textContent;
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'accordion-content';
 
-                if (!title) return; // Don't create an accordion for an empty title
-
-                const accordionItem = document.createElement('div');
-                accordionItem.className = 'accordion-item';
-                
-                const contentHtml = robustMarkdownToHtml(content);
-
-                accordionItem.innerHTML = `
-                    <button type="button" class="accordion-header">
-                        <span class="text-left">${title}</span>
-                        <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content">${contentHtml}</div>
-                `;
-                containerElement.appendChild(accordionItem);
-
-                // Open the first valid accordion item by default.
-                if (containerElement.querySelectorAll('.accordion-item').length === 1) {
-                    accordionItem.querySelector('.accordion-header').classList.add('active');
-                    accordionItem.querySelector('.accordion-content').classList.add('open');
+                    currentAccordionItem.innerHTML = `
+                        <button type="button" class="accordion-header">
+                            <span class="text-left">${title}</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    `;
+                    currentAccordionItem.appendChild(contentDiv);
+                    containerElement.appendChild(currentAccordionItem);
+                } else if (currentAccordionItem) {
+                    // Add any subsequent nodes to the content of the current accordion item.
+                    const contentDiv = currentAccordionItem.querySelector('.accordion-content');
+                    contentDiv.appendChild(node.cloneNode(true));
                 }
             });
+            
+            // If no H3s were found, render the whole content directly.
+            if (!firstHeaderFound) {
+                 containerElement.innerHTML = fullHtml;
+                 return;
+            }
+
+            // Append any remaining intro content if it exists.
+            if (introContent.hasChildNodes()) {
+                containerElement.appendChild(introContent);
+            }
+
+            // Open the first accordion item by default.
+            const firstItem = containerElement.querySelector('.accordion-item');
+            if (firstItem) {
+                firstItem.querySelector('.accordion-header').classList.add('active');
+                firstItem.querySelector('.accordion-content').classList.add('open');
+            }
         }
         
         async function handleAIHelpRequest() {
@@ -1363,7 +1326,7 @@ Return only the complete markdown guide.`;
             
             try {
                 const resultText = await callGeminiAPI(prompt);
-                createAccordionFromMarkdown(resultText, contentEl);
+                renderAccordionFromMarkdown(resultText, contentEl);
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
@@ -1395,7 +1358,7 @@ Return only the complete markdown guide.`;
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                createAccordionFromMarkdown(resultText, contentEl);
+                renderAccordionFromMarkdown(resultText, contentEl);
                 generateAndInjectImages(contentEl);
 
                 footerEl.innerHTML = `
@@ -1460,7 +1423,7 @@ Return only the complete markdown guide.`;
                 
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
-                    createAccordionFromMarkdown(newText, contentEl);
+                    renderAccordionFromMarkdown(newText, contentEl);
                     generateAndInjectImages(contentEl);
 
                     footerEl.innerHTML = `
@@ -1470,7 +1433,7 @@ Return only the complete markdown guide.`;
                     footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
                     if (refineContainer) refineContainer.remove();
                 } else {
-                    createAccordionFromMarkdown(newText, contentArea);
+                    renderAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                     generateAndInjectImages(contentArea);
                 }
