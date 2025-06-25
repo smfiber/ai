@@ -353,7 +353,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.8</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1791,8 +1791,15 @@ Return only the complete markdown guide.`;
             const prompt = getEnhancedPrompt(item.title);
 
             try {
-                const resultText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(themeId + '-full', resultText); 
+                let resultText = await callGeminiAPI(prompt);
+                originalGeneratedText.set(themeId + '-full', resultText);
+                
+                // Clean the response by removing potential markdown code block wrappers
+                if (resultText && resultText.startsWith('```markdown\n') && resultText.endsWith('\n```')) {
+                    resultText = resultText.substring('```markdown\n'.length, resultText.length - '\n```'.length).trim();
+                } else if (resultText && resultText.startsWith('```') && resultText.endsWith('```')) {
+                     resultText = resultText.substring(3, resultText.length - 3).trim();
+                }
                 
                 contentEl.innerHTML = ''; // Clear loader
 
@@ -1811,15 +1818,14 @@ Return only the complete markdown guide.`;
                 const htmlContentPanel = document.createElement('div');
                 htmlContentPanel.className = 'accordion-content open prose max-w-none'; // 'open' makes the content visible
                 
-                // Use convertMarkdownToHtml to get raw HTML without the accordion structure.
-                // Pass 'true' to ensure image placeholders are created.
+                // Use convertMarkdownToHtml to get raw HTML.
                 htmlContentPanel.innerHTML = convertMarkdownToHtml(resultText, true); 
                 
                 htmlAccordion.appendChild(htmlHeader);
                 htmlAccordion.appendChild(htmlContentPanel);
                 contentEl.appendChild(htmlAccordion);
                 
-                // IMPORTANT: Trigger image generation for the content we just added
+                // Trigger image generation for the content we just added
                 await generateAndInjectImages(htmlContentPanel);
 
                 // --- Accordion 2: Markdown Code (closed by default) ---
@@ -1897,10 +1903,17 @@ Return only the complete markdown guide.`;
             const prompt = getEnhancedPrompt(refinementRequest, '', originalText);
             
             try {
-                const newText = await callGeminiAPI(prompt);
+                let newText = await callGeminiAPI(prompt);
                 if (!newText || newText.trim() === '') {
                     handleApiError({ message: "The AI returned an empty response. Please try refining with a different request." }, contentArea, 'refinement');
                     return;
+                }
+                
+                // Clean the response by removing potential markdown code block wrappers
+                if (newText.startsWith('```markdown\n') && newText.endsWith('\n```')) {
+                    newText = newText.substring('```markdown\n'.length, newText.length - '\n```'.length).trim();
+                } else if (newText.startsWith('```') && newText.endsWith('```')) {
+                     newText = newText.substring(3, newText.length - 3).trim();
                 }
 
                 originalGeneratedText.set(textKey, newText);
