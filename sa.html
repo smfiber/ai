@@ -565,7 +565,11 @@
 
                 const accordionHeader = e.target.closest('.accordion-header');
                 if (accordionHeader) { 
-                    accordionHeader.classList.toggle('active'); 
+                    accordionHeader.classList.toggle('active');
+                    const icon = accordionHeader.querySelector('.icon');
+                    if(icon) {
+                       icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
                     accordionHeader.nextElementSibling.classList.toggle('open'); 
                     return;
                 }
@@ -1707,7 +1711,7 @@ Return only the complete markdown guide.`;
                  accordionItem.innerHTML = `
                     <button type="button" class="accordion-header active">
                         <span class="text-left">Guide Details</span>
-                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                  `;
                  accordionItem.appendChild(contentDiv);
@@ -1723,7 +1727,9 @@ Return only the complete markdown guide.`;
             // Open the first accordion item by default.
             const firstItem = containerElement.querySelector('.accordion-item');
             if (firstItem) {
-                firstItem.querySelector('.accordion-header').classList.add('active');
+                const header = firstItem.querySelector('.accordion-header');
+                header.classList.add('active');
+                header.querySelector('.icon').style.transform = 'rotate(180deg)';
                 firstItem.querySelector('.accordion-content').classList.add('open');
             }
         }
@@ -1790,47 +1796,60 @@ Return only the complete markdown guide.`;
                 
                 contentEl.innerHTML = ''; // Clear loader
 
-                 // 1. Create Rendered HTML Accordion (Open by default)
+                // --- Accordion 1: HTML Preview (open by default) ---
                 const htmlAccordion = document.createElement('div');
                 htmlAccordion.className = 'accordion-item';
-                const renderTarget = document.createElement('div');
-                renderTarget.className = 'accordion-content open'; // Content is open
                 
-                htmlAccordion.innerHTML = `
-                    <button type="button" class="accordion-header active">
-                        <span>Rendered Preview</span>
-                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
+                const htmlHeader = document.createElement('button');
+                htmlHeader.type = 'button';
+                htmlHeader.className = 'accordion-header active'; // 'active' makes the header look open
+                htmlHeader.innerHTML = `
+                    <span>HTML Preview</span>
+                    <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 `;
-                htmlAccordion.appendChild(renderTarget);
+
+                const htmlContentPanel = document.createElement('div');
+                htmlContentPanel.className = 'accordion-content open prose max-w-none'; // 'open' makes the content visible
+                
+                // Use convertMarkdownToHtml to get raw HTML without the accordion structure.
+                // Pass 'true' to ensure image placeholders are created.
+                htmlContentPanel.innerHTML = convertMarkdownToHtml(resultText, true); 
+                
+                htmlAccordion.appendChild(htmlHeader);
+                htmlAccordion.appendChild(htmlContentPanel);
                 contentEl.appendChild(htmlAccordion);
                 
-                // Populate the rendered content
-                renderAccordionFromMarkdown(resultText, renderTarget, false);
+                // IMPORTANT: Trigger image generation for the content we just added
+                await generateAndInjectImages(htmlContentPanel);
 
-                // 2. Create Markdown Accordion (Closed by default)
+                // --- Accordion 2: Markdown Code (closed by default) ---
                 const mdAccordion = document.createElement('div');
                 mdAccordion.className = 'accordion-item';
-                mdAccordion.innerHTML = `
-                    <button type="button" class="accordion-header">
-                        <span>Raw Markdown</span>
-                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content">
-                         <div class="code-block-container !m-0">
-                             <div class="code-block-header">
-                                 <span>markdown</span>
-                                 <button class="copy-code-button">Copy</button>
-                             </div>
-                             <pre><code class="language-markdown"></code></pre>
-                        </div>
+                
+                const mdHeader = document.createElement('button');
+                mdHeader.type = 'button';
+                mdHeader.className = 'accordion-header'; // Not 'active'
+                mdHeader.innerHTML = `
+                    <span>Raw Markdown</span>
+                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                `;
+
+                const mdContentPanel = document.createElement('div');
+                mdContentPanel.className = 'accordion-content'; // Not 'open'
+                mdContentPanel.innerHTML = `
+                     <div class="code-block-container !m-0">
+                         <div class="code-block-header">
+                             <span>markdown</span>
+                             <button class="copy-code-button">Copy</button>
+                         </div>
+                         <pre class="!p-4"><code class="language-markdown"></code></pre>
                     </div>
                 `;
-                mdAccordion.querySelector('code').textContent = resultText;
-                contentEl.appendChild(mdAccordion);
+                mdContentPanel.querySelector('code').textContent = resultText;
                 
-                // Ensure the icons are in the correct state
-                 htmlAccordion.querySelector('.icon').style.transform = 'rotate(180deg)';
+                mdAccordion.appendChild(mdHeader);
+                mdAccordion.appendChild(mdContentPanel);
+                contentEl.appendChild(mdAccordion);
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -1887,13 +1906,35 @@ Return only the complete markdown guide.`;
                 originalGeneratedText.set(textKey, newText);
                 
                 if (isModal) {
+                    // Re-run the logic from handleExploreInDepth to rebuild the two accordions
                     const contentEl = document.getElementById('inDepthModalContent');
-                    renderAccordionFromMarkdown(newText, contentEl, false); // No images in modal
-                    if (refineContainer) refineContainer.remove();
+                    contentEl.innerHTML = '';
+                    
+                    const htmlAccordion = document.createElement('div');
+                    htmlAccordion.className = 'accordion-item';
+                    htmlAccordion.innerHTML = `<button type="button" class="accordion-header active"><span>HTML Preview</span><svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>`;
+                    const htmlContentPanel = document.createElement('div');
+                    htmlContentPanel.className = 'accordion-content open prose max-w-none';
+                    htmlContentPanel.innerHTML = convertMarkdownToHtml(newText, true);
+                    htmlAccordion.appendChild(htmlContentPanel);
+                    contentEl.appendChild(htmlAccordion);
+                    await generateAndInjectImages(htmlContentPanel);
+
+                    const mdAccordion = document.createElement('div');
+                    mdAccordion.className = 'accordion-item';
+                    mdAccordion.innerHTML = `<button type="button" class="accordion-header"><span>Raw Markdown</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>`;
+                    const mdContentPanel = document.createElement('div');
+                    mdContentPanel.className = 'accordion-content';
+                    mdContentPanel.innerHTML = `<div class="code-block-container !m-0"><div class="code-block-header"><span>markdown</span><button class="copy-code-button">Copy</button></div><pre class="!p-4"><code class="language-markdown"></code></pre></div>`;
+                    mdContentPanel.querySelector('code').textContent = newText;
+                    mdAccordion.appendChild(mdContentPanel);
+                    contentEl.appendChild(mdAccordion);
+
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                     generateAndInjectImages(contentArea);
+
                 }
 
             } catch(error) {
