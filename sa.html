@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.22</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.23</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -583,7 +583,10 @@
 
             // Cloud Storage Actions
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
-            document.getElementById('load-from-drive-btn').addEventListener('click', () => createPicker('open'));
+            document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
+                const folderId = await getDriveFolderId();
+                createPicker('open', folderId);
+            });
             document.getElementById('msal-auth-button').addEventListener('click', handleMsalAuthClick);
 
             // Floating Action Buttons & Panels
@@ -957,7 +960,7 @@
         }
 
 
-        function createPicker(mode) { 
+        function createPicker(mode, startInFolderId = null) { 
             if (!gisInited) {
                  console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
@@ -971,11 +974,13 @@
              }
              const builder = new google.picker.PickerBuilder()
                 .setOAuthToken(token);
-                //.setDeveloperKey(geminiApiKey); // DEV-NOTE: This is now optional and uses the OAuth token. Removing it to fix the "invalid developer key" error.
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
-                view.setMimeTypes("text/markdown,text/plain");
+                view.setMimeTypes("text/markdown,text/plain,.md");
+                if (startInFolderId) {
+                    view.setParent(startInFolderId);
+                }
                 builder.addView(view).setCallback(pickerCallbackOpen);
              } 
 
@@ -1524,16 +1529,27 @@
                 return;
             }
             
-            const prompt = `Generate a very brief, condensed summary for an IT administration guide on the topic: "${item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
+            const card = target.closest('.card');
+            const cardTitle = card.querySelector('h2').textContent;
+            const cardDescription = card.querySelector('p').textContent;
+
+            const prompt = `
+                You are creating a summary for an IT administration guide.
+                The overall category is: "${cardTitle}"
+                The category description is: "${cardDescription}"
+                The specific topic is: "${item.title}"
+
+                Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
+                For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence.
+                Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
+            `;
             
             const resultContainer = document.getElementById(`${themeType}-details`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
                 let resultText = await callGeminiAPI(prompt);
-                if (resultText) {
-                    resultText = resultText.replace(/```(markdown)?\n?/g, '').replace(/```/g, '').trim();
-                }
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 originalGeneratedText.set(themeId, resultText); 
                 
                 const resultHtml = marked.parse(resultText || '');
@@ -1562,15 +1578,12 @@
 
             try {
                 let resultText = await callGeminiAPI(prompt);
-                 if (resultText) {
-                    resultText = resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim();
-                }
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
                 originalGeneratedText.set('custom-plan', resultText);
                 renderAccordionFromMarkdown(resultText, resultContainer);
                 addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
                 generateAndInjectImages(resultContainer);
-
 
             } catch(error) {
                 handleApiError(error, resultContainer, 'custom IT guide');
@@ -2161,7 +2174,8 @@ Return only the complete markdown guide.`;
                 Format the output as a clean markdown document using '###' for each section title.`;
             
             try {
-                const resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt);
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 contentEl.innerHTML = `<div class="prose max-w-none">${marked.parse(resultText || '')}</div>`;
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
@@ -2200,14 +2214,9 @@ Return only the complete markdown guide.`;
 
             try {
                 let resultText = await callGeminiAPI(prompt);
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
                 originalGeneratedText.set(fullTitle, resultText);
-                
-                if (resultText && resultText.startsWith('```markdown\n') && resultText.endsWith('\n```')) {
-                    resultText = resultText.substring('```markdown\n'.length, resultText.length - '\n```'.length).trim();
-                } else if (resultText && resultText.startsWith('```') && resultText.endsWith('```')) {
-                     resultText = resultText.substring(3, resultText.length - 3).trim();
-                }
                 
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(resultText, contentEl, false);
@@ -2291,17 +2300,8 @@ Return only the complete markdown guide.`;
             
             try {
                 let newText = await callGeminiAPI(prompt);
-                if (!newText || newText.trim() === '') {
-                    handleApiError({ message: "The AI returned an empty response. Please try refining with a different request." }, contentArea, 'refinement');
-                    return;
-                }
+                newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                if (newText.startsWith('```markdown\n') && newText.endsWith('\n```')) {
-                    newText = newText.substring('```markdown\n'.length, newText.length - '\n```'.length).trim();
-                } else if (newText.startsWith('```') && newText.endsWith('```')) {
-                     newText = newText.substring(3, newText.length - 3).trim();
-                }
-
                 originalGeneratedText.set(textKey, newText);
                 
                 if (isModal) {
@@ -2334,3 +2334,5 @@ Return only the complete markdown guide.`;
     </script>
 </body>
 </html>
+"
+The full prompt you selected doesn't seem to be a prompt. Could you please clarify your reque
