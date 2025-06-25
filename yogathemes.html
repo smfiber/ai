@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.34</title>
-    <!-- Tailwind CSS -->
+    <title>AI Yoga Class & Theme Generator v17.36</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
@@ -175,10 +173,8 @@
         /* --- [UPDATED] Dynamic Tutorial & Tooltip Styles --- */
         .tour-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            /* UPDATE: Made the background darker for clarity */
             background-color: rgba(0, 0, 0, 0.75); 
             z-index: 9998;
-            /* UPDATE: Increased the blur for a more modern "glass" effect */
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             opacity: 0; transition: opacity 0.3s ease;
@@ -191,7 +187,6 @@
 
         .tour-highlight {
             position: relative; z-index: 9999;
-            /* UPDATE: Made the highlight ring thicker and shadow more pronounced */
             box-shadow: 0 0 0 6px var(--color-primary), 0 0 30px 15px rgba(147, 51, 234, 0.4);
             border-radius: 12px;
             transition: box-shadow 0.3s ease;
@@ -200,13 +195,11 @@
         .tour-popover {
             position: absolute;
             z-index: 10000;
-            /* UPDATE: Switched to a soft off-white background and added accent border */
             background-color: #fcfaff; 
             border-top: 4px solid var(--color-primary);
             border-radius: 16px;
             padding: 1.5rem;
             width: 340px; max-width: 90vw;
-            /* UPDATE: Adjusted shadow for a "lifting" effect */
             box-shadow: 0 15px 40px rgba(0,0,0,0.25);
             opacity: 0; transform: translateY(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
@@ -214,7 +207,6 @@
         }
         .tour-popover.visible { opacity: 1; transform: translateY(0); visibility: visible; }
         .tour-popover h3 {
-            /* UPDATE: Used a more stylish font and increased size */
             font-family: 'Poppins', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
@@ -222,8 +214,22 @@
             margin-bottom: 0.75rem;
         }
         .tour-popover p { font-size: 0.95rem; color: var(--color-text-muted); margin-bottom: 1.5rem; }
-        .tour-popover-nav { display: flex; justify-content: space-between; align-items: center; }
-        .tour-popover-dots { display: flex; gap: 6px; }
+        
+        /* UPDATE: New layout for popover navigation */
+        .tour-popover-nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .tour-popover-dots { 
+            display: flex; 
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
         .tour-popover-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-card-border); transition: background-color 0.3s; }
         .tour-popover-dot.active { background-color: var(--color-primary); }
         #tour-skip-btn {
@@ -273,14 +279,13 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Dynamic Tutorial HTML -->
     <div id="tour-overlay" class="tour-overlay"></div>
     <div id="tour-popover" class="tour-popover">
         <h3 id="tour-title"></h3>
         <p id="tour-content"></p>
+        <div id="tour-dots" class="tour-popover-dots"></div>
         <div class="tour-popover-nav">
             <button id="tour-skip-btn">Skip Tour</button>
-            <div id="tour-dots" class="tour-popover-dots"></div>
             <div class="flex gap-2">
                 <button id="tour-back-btn" class="btn-secondary text-sm">Back</button>
                 <button id="tour-next-btn" class="btn-primary text-sm">Next</button>
@@ -289,8 +294,7 @@
         </div>
     </div>
     
-    <!-- All Modals -->
-     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <div class="flex justify-between items-start">
                 <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
@@ -355,7 +359,6 @@
         </div>
     </div>
     
-    <!-- Main Content -->
     <div class="container mx-auto">
         <header id="app-header" class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
@@ -368,7 +371,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.34</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.36</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -401,8 +404,7 @@
             </div>
 
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- All cards below will be generated by AI -->
-            </div>
+                </div>
             
             <div id="discover-more-container" class="text-center py-8">
                  <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random yoga category">
@@ -416,7 +418,6 @@
         </main>
     </div>
 
-    <!-- Floating Action Buttons -->
     <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
     </button>
@@ -464,7 +465,8 @@
             document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
 
             // Floating Action Buttons & Panels
-            document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
+            // UPDATE: Changed to call resetAppView() instead of reloading the page
+            document.getElementById('new-plan-button').addEventListener('click', resetAppView);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
@@ -596,7 +598,6 @@
              try {
                  await generateAndApplyDefaultTheme();
                  await loadAppContent(loadingMessageEl);
-                 // UPDATE: Only start the tour if it hasn't been completed before
                  if (localStorage.getItem('yogaTourCompleted') !== 'true') {
                     startTour();
                  }
@@ -614,7 +615,6 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
-                // UPDATE: Added more predefined categories for better initial variety
                 const categoriesToGenerate = [
                     { key: 'hipReplacement', title: 'Gentle Yoga After Hip Replacement', description: "A week-by-week guide to support recovery and mobility.", initialPrompt: `Generate a 12-week yoga recovery plan for hip replacement. Structure as a JSON array where each object is a phase (e.g., "Weeks 1-2"). Each object must have a unique "id", a "title" (like "Weeks 1-2: Foundational Stability"), and a "description" of the focus for that phase. Provide 6-8 phases total. Return ONLY a valid JSON array.`, fullPrompt: `Generate a detailed 12-week yoga recovery plan for hip replacement. Structure as a JSON array where each object is a phase (e.g., "Weeks 1-2"). Each object must have a unique "id", a "title" (like "Weeks 1-2: Foundational Stability"), and a "description" of the focus for that phase. Provide all 12 weeks, grouped into logical phases. Return ONLY a valid JSON array.` },
                     { key: 'styles', title: 'Yoga Styles', description: "Base your class around a specific yoga style.", initialPrompt: `Generate 10 major yoga styles. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` },
@@ -917,12 +917,20 @@
         
         async function loadAITailoringOptions() {
             const container = document.getElementById('tailoring-buttons-container');
-            container.innerHTML = getLoaderHTML('Loading options...');
+            container.innerHTML = getLoaderHTML('Loading enhancement options...');
             try {
-                const hardcodedOptions = ["Mindfulness", "Balance", "Flexibility", "Strength", "Relaxation", "Meditation", "Breathing", "Alignment", "Gentle Flow", "Deep Stretch", "Core Work", "Hip Opening", "Back Care", "Stress Relief", "Prenatal", "Postnatal", "Yin Yoga", "Vinyasa Flow", "Hatha Yoga", "Restorative Yoga"];
-                populateTailoringButtons(hardcodedOptions);
+                const prompt = `Generate a JSON array of 40-50 diverse yoga class enhancements and focus areas. These should be specific techniques or themes, not broad yoga styles. Include items like: Trataka, Yoga Nidra, specific Pranayama (e.g., Nadi Shodhana, Kapalabhati), Chanting (Mantra), Balance Focus, Core Strength, Deep Relaxation, Gratitude Meditation, Flexibility, Hip Opening, Shoulder Mobility, Restorative Poses. Return ONLY a valid JSON array of strings.`;
+                const jsonText = await callGeminiAPI(prompt, true);
+                const options = parseJsonWithCorrections(jsonText);
+                if (!options || !Array.isArray(options)) {
+                    throw new Error("AI did not return a valid array of options.");
+                }
+                populateTailoringButtons(options);
             } catch (error) {
+                console.error("Failed to load AI tailoring options, using fallback list.", error);
                 handleApiError(error, container, 'tailoring options');
+                const fallbackOptions = ["Mindfulness", "Balance", "Flexibility", "Strength", "Relaxation", "Meditation", "Breathing", "Alignment", "Gentle Flow", "Deep Stretch", "Core Work", "Hip Opening", "Back Care", "Stress Relief", "Yin Style", "Restorative"];
+                populateTailoringButtons(fallbackOptions);
             }
         }
 
@@ -971,7 +979,6 @@
             loader.classList.toggle('flex', isLoading);
         }
 
-        // UPDATE: Improved markdown cleaning and error handling
         function robustMarkdownToHtml(text, isCondensed = false) {
             const errorMessage = '<p class="themed-text-muted">No content was generated. Please try a different prompt or refine your request.</p>';
             
@@ -1021,10 +1028,16 @@
             buttonBar = document.createElement('div');
             buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
             buttonBar.style.borderColor = 'var(--color-card-border)';
+
+            let exploreButtonHTML = '';
+            if (themeType !== 'custom') { 
+                exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
+            }
+
             buttonBar.innerHTML = `
                 <button class="btn-secondary text-sm refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                <button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>
+                ${exploreButtonHTML}
             `;
             container.appendChild(buttonBar);
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
@@ -1174,7 +1187,6 @@
             document.body.removeChild(textarea);
         }
 
-        // UPDATE: Made function more robust to handle AI responses without headers.
         function createAccordionFromMarkdown(markdownText, containerElement) {
             containerElement.innerHTML = ''; 
             const cleanMarkdown = (markdownText || "").replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
@@ -1209,7 +1221,6 @@
                     }
                 });
             } else {
-                 // If no headers are found, just render the content directly
                  containerElement.innerHTML = htmlContent;
             }
         }
@@ -1337,14 +1348,13 @@
             }
         }
         
-        // UPDATE: Replaced static icon with dynamic AI-generated SVG icons
         async function getIconForTheme(themeType, title) {
             const fallbackIcon = `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v11.494m-5.747-5.747H17.747"></path></svg>`;
             try {
                 const prompt = `Generate a single, simple, modern, two-tone SVG icon representing "${title}" for a yoga app. The SVG should be a single path element inside an <svg> tag. Use 'currentColor' for the stroke. It must have viewBox="0 0 24 24", fill="none", stroke-width="1.5", stroke-linecap="round", stroke-linejoin="round". Return ONLY the <svg> element as a string.`;
                 const svgText = await callGeminiAPI(prompt);
                 if (svgText && svgText.includes('<svg')) {
-                    const cleanSvg = svgText.replace(/class=".*?"/g, ''); // Remove any classes
+                    const cleanSvg = svgText.replace(/class=".*?"/g, ''); 
                     return cleanSvg;
                 }
                 return fallbackIcon;
@@ -1379,25 +1389,21 @@
             }, 3000);
         }
 
-        // --- [UPDATED] Dynamic Tutorial Logic ---
+        // --- [UPDATED] Tutorial Logic ---
         let tourSteps = [];
         let currentTourStep = 0;
 
         function setupTour() {
+            // UPDATE: Tutorial steps rewritten to focus only on main-page elements.
             tourSteps = [
-                { title: 'Welcome!', content: 'This quick tour will show you the main features. You can exit at any time by clicking the backdrop or the "Skip" button.' },
-                { element: '#app-header', title: 'The Header', content: 'This is the main header of the application. The AI can generate new background images for it!' },
-                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by creating your own unique yoga plan.' },
-                { element: '#gemini-prompt', title: 'Enter Your Theme', content: 'Type any theme, idea, or feeling here. For example, "A class for releasing anxiety" or "Morning energy flow".' },
-                { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal options to fine-tune your request, like focusing on "Flexibility" or "Strength".' },
-                { element: '#generate-plan-btn', title: 'Generate Your Plan', content: 'Once you\'ve entered a prompt, click here to let the AI craft a unique yoga class plan just for you.' },
-                { element: '#main-grid', title: 'Pre-Built Categories', content: 'Scroll down to discover dozens of AI-generated categories, from yoga styles to seasonal themes.' },
-                { element: '#discover-more-button', title: 'Discover More', content: 'Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
-                { element: '#jump-to-nav-container', title: 'Quick Navigation', content: 'Once the page loads, this navigation bar appears to let you quickly jump to any category on the page.' },
-                { element: '#theme-changer-button', title: 'AI Visual Theme Generator', content: 'Feeling creative? Click this floating button, describe a mood or scene, and the AI will generate a new color palette and header image.' },
-                { element: '#settings-button', title: 'Display Settings', content: 'Customize the look and feel of the app by changing the font family, font size, and line spacing.' },
-                { element: '#scroll-to-top-button', title: 'Scroll to Top', content: 'After you scroll down, this button will appear to quickly take you back to the top of the page.' },
-                { title: 'You\'re All Set!', content: 'That\'s it for the main features. Enjoy exploring and creating your perfect yoga practice!' }
+                { title: 'Welcome!', content: 'This quick tour will show you the main features on this page. You can exit at any time.' },
+                { element: '#app-header', title: 'The Header', content: 'The header image and the app\'s color scheme are generated by AI. You can create your own version using the floating action button.' },
+                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by typing any theme, idea, or feeling into the prompt box to create a unique yoga plan.' },
+                { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal dozens of options to fine-tune your request, such as adding a focus on "Balance" or "Deep Relaxation".' },
+                { element: '#main-grid', title: 'Pre-Built Categories', content: 'If you need inspiration, scroll down to discover many AI-generated categories, from yoga styles to seasonal themes. Click any item to generate a plan.' },
+                { element: '#discover-more-button', title: 'Discover More', content: 'Not seeing a category you like? Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
+                { element: '#new-plan-button', title: 'Reset View', content: 'This button will clear your custom-generated plan and reset all category selections, giving you a fresh start without reloading the page.' },
+                { title: 'You\'re All Set!', content: 'That\'s it for the main features. The other floating buttons open modals to change the visual theme and adjust typography. Enjoy exploring!' }
             ];
 
             document.getElementById('tour-next-btn').addEventListener('click', () => showTourStep(currentTourStep + 1));
@@ -1407,6 +1413,22 @@
             document.getElementById('tour-overlay').addEventListener('click', endTour);
         }
         
+        // UPDATE: New function to reset the main view without a full page reload.
+        function resetAppView() {
+            // Clear custom plan generator
+            document.getElementById('gemini-result-container').innerHTML = '';
+            document.getElementById('gemini-prompt').value = '';
+            document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active').forEach(btn => btn.classList.remove('active'));
+
+            // Reset all pre-built category cards
+            document.querySelectorAll('.details-container').forEach(container => container.innerHTML = '');
+            document.querySelectorAll('.grid-card-selector.active').forEach(card => card.classList.remove('active'));
+            
+            // Scroll to top of custom plan card
+            document.getElementById('custom-plan-card').scrollIntoView({ behavior: 'smooth', block: 'start'});
+            showNotification('View has been reset.', false);
+        }
+
         function startTour() {
             document.getElementById('tour-overlay').classList.add('visible');
             document.getElementById('tour-popover').classList.add('visible');
@@ -1420,14 +1442,12 @@
             if (highlighted) {
                 highlighted.classList.remove('tour-highlight');
             }
-            // UPDATE: Remember that the user has finished the tour
             localStorage.setItem('yogaTourCompleted', 'true');
         }
         
         function showTourStep(stepIndex) {
             currentTourStep = stepIndex;
 
-            // Remove previous highlight
             const previousHighlight = document.querySelector('.tour-highlight');
             if (previousHighlight) previousHighlight.classList.remove('tour-highlight');
             
@@ -1449,45 +1469,46 @@
             nextBtn.classList.toggle('hidden', stepIndex === tourSteps.length - 1);
             finishBtn.classList.toggle('hidden', stepIndex !== tourSteps.length - 1);
             
-            // Update dots
             const dotsContainer = document.getElementById('tour-dots');
             dotsContainer.innerHTML = tourSteps.map((_, i) => `<div class="tour-popover-dot ${i === stepIndex ? 'active' : ''}"></div>`).join('');
 
             const targetElement = step.element ? document.querySelector(step.element) : null;
             if (targetElement) {
                 targetElement.classList.add('tour-highlight');
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Ensure the element is visible before trying to position the popover.
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
+                // Wait for the scroll to finish before positioning
                 setTimeout(() => {
-                    const rect = targetElement.getBoundingClientRect();
-                    const popoverRect = popover.getBoundingClientRect();
-                    
-                    let top = rect.bottom + 15;
-                    let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
-
-                    // Adjust if popover goes off-screen
-                    if (top + popoverRect.height > window.innerHeight) {
-                        top = rect.top - popoverRect.height - 15;
-                    }
-                    if (left < 10) left = 10;
-                    if (left + popoverRect.width > window.innerWidth) {
-                        left = window.innerWidth - popoverRect.width - 10;
-                    }
-                    if (top < 10) top = 10;
-
-
-                    popover.style.top = `${top}px`;
-                    popover.style.left = `${left}px`;
-                    popover.style.transform = 'translate(0, 0)';
-
-                }, 300); // Delay to allow scroll to finish
+                    positionPopover(targetElement, popover);
+                }, 350); 
 
             } else {
-                // Center popover for steps without an element
                 popover.style.top = '50%';
                 popover.style.left = '50%';
                 popover.style.transform = 'translate(-50%, -50%)';
             }
+        }
+
+        function positionPopover(target, popover) {
+            const rect = target.getBoundingClientRect();
+            const popoverRect = popover.getBoundingClientRect();
+            
+            let top = rect.bottom + 15;
+            let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+
+            if (top + popoverRect.height > window.innerHeight) {
+                top = rect.top - popoverRect.height - 15;
+            }
+            if (left < 10) left = 10;
+            if (left + popoverRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - popoverRect.width - 10;
+            }
+            if (top < 10) top = 10;
+
+            popover.style.top = `${top}px`;
+            popover.style.left = `${left}px`;
+            popover.style.transform = ''; // Reset transform
         }
 
     </script>
