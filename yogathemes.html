@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.33</title>
+    <title>AI Yoga Class & Theme Generator v17.34</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
@@ -368,7 +368,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.33</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.34</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -678,15 +678,15 @@
             }
         }
         
-        function populateCardGridSelector(containerId, themeType) {
+        async function populateCardGridSelector(containerId, themeType) {
             const container = document.getElementById(containerId);
             const data = allThemeData[themeType];
-            if (!container || !data || !Array.isArray(data)) {
+            if (!container || !data || !Array.isArray(data) || data.length === 0) {
                 if (container) container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
                 return;
             }
-
-            if (themeType === 'holidays' || themeType === 'easternHolidays') {
+        
+            if (themeType === 'holidays' || themeType === 'seasons') {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const currentYear = today.getFullYear();
@@ -700,20 +700,23 @@
                         }
                         item.sortDate = itemDate;
                     } else {
-                        item.sortDate = new Date(currentYear + 2, 0, 1);
+                        item.sortDate = new Date(currentYear + 2, 0, 1); 
                     }
                 });
                 data.sort((a, b) => a.sortDate - b.sortDate);
             }
-
+        
             const isWeekByWeek = themeType === 'hipReplacement';
             const gridClass = isWeekByWeek ? 'week-by-week-grid' : 'card-grid-container';
+        
+            const iconPromises = data.map(item => getIconForTheme(themeType, item.title));
+            const icons = await Promise.all(iconPromises);
 
-            const itemsHtml = data.map(item => {
+            const itemsHtml = data.map((item, index) => {
                 const extraInfo = item.date || item.dateRange || item.founder || item.tradition || '';
                 return `
                 <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.explanation || ''}">
-                    <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                    <div class="icon">${icons[index]}</div>
                     <div class="mt-2">
                         <strong class="text-sm leading-tight block">${item.title}</strong>
                         ${extraInfo ? `<small class="block text-xs themed-text-muted mt-1">${extraInfo}</small>` : ''}
@@ -1093,22 +1096,26 @@
         async function generateJumpToButtons() {
             const container = document.getElementById('jump-to-nav-container');
             const cards = Array.from(document.querySelectorAll('#custom-plan-card, #main-grid .card'));
-            if (cards.length <= 1) return;
+            if (cards.length <= 1) {
+                container.classList.add('hidden');
+                return;
+            }
 
             const cardData = cards.map(card => ({
                 id: card.id,
                 title: card.querySelector('h2')?.textContent
             })).filter(c => c.id && c.title);
             
-            if (cardData.length === 0) return;
+            if (cardData.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
         
             const prompt = `For the following yoga category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}`;
             
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
-                if (!jsonText) throw new Error("AI returned empty data for jump-to buttons.");
-                
-                const labels = parseJsonWithCorrections(jsonText);
+                const labels = jsonText ? parseJsonWithCorrections(jsonText) : {};
                 const buttonsHtml = cardData.map(card => {
                     const label = labels[card.title] || card.title.split(' ')[0];
                     return `<button class="jump-to-button" data-target-id="${card.id}">${label}</button>`;
@@ -1117,9 +1124,13 @@
                 container.innerHTML = `<div class="flex flex-wrap gap-2 justify-center">${buttonsHtml}</div>`;
                 container.classList.remove('hidden');
             } catch (error) {
-                console.error("Failed to generate jump-to buttons:", error);
-                container.innerHTML = '';
-                container.classList.add('hidden'); 
+                console.error("AI failed to generate jump-to buttons, using fallback:", error);
+                const fallbackButtonsHtml = cardData.map(card => {
+                    const label = card.title.split(' ')[0];
+                    return `<button class="jump-to-button" data-target-id="${card.id}">${label}</button>`;
+                }).join('');
+                container.innerHTML = `<div class="flex flex-wrap gap-2 justify-center">${fallbackButtonsHtml}</div>`;
+                container.classList.remove('hidden');
             }
         }
 
@@ -1163,18 +1174,23 @@
             document.body.removeChild(textarea);
         }
 
+        // UPDATE: Made function more robust to handle AI responses without headers.
         function createAccordionFromMarkdown(markdownText, containerElement) {
             containerElement.innerHTML = ''; 
-            const htmlContent = robustMarkdownToHtml(markdownText);
+            const cleanMarkdown = (markdownText || "").replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            const htmlContent = robustMarkdownToHtml(cleanMarkdown);
             
-            if (htmlContent.includes('<h3')) {
-                 const sections = markdownText.split(/\n(?=### |## )/);
+            if (cleanMarkdown.includes('### ')) {
+                 const sections = cleanMarkdown.split(/\n(?=### |## )/);
                  sections.forEach((sectionText, index) => {
                     if (!sectionText.trim()) return;
 
                     const firstLineEnd = sectionText.indexOf('\n');
-                    const title = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd).replace(/### |## /g, '').trim() : sectionText.replace(/### |## /g, '').trim();
+                    const titleLine = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd) : sectionText;
+                    const title = titleLine.replace(/### |## /g, '').trim();
                     const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
+
+                    if (!title) return; // Skip empty sections
 
                     const accordionItem = document.createElement('div');
                     accordionItem.className = 'accordion-item';
@@ -1187,12 +1203,13 @@
                     `;
                     containerElement.appendChild(accordionItem);
 
-                    if (index === 0) {
+                    if (index === 0) { // Open the first section by default
                         accordionItem.querySelector('.accordion-header').classList.add('active');
                         accordionItem.querySelector('.accordion-content').classList.add('open');
                     }
                 });
             } else {
+                 // If no headers are found, just render the content directly
                  containerElement.innerHTML = htmlContent;
             }
         }
@@ -1320,7 +1337,22 @@
             }
         }
         
-        function getIconForTheme(themeType, themeId) { return `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`; }
+        // UPDATE: Replaced static icon with dynamic AI-generated SVG icons
+        async function getIconForTheme(themeType, title) {
+            const fallbackIcon = `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v11.494m-5.747-5.747H17.747"></path></svg>`;
+            try {
+                const prompt = `Generate a single, simple, modern, two-tone SVG icon representing "${title}" for a yoga app. The SVG should be a single path element inside an <svg> tag. Use 'currentColor' for the stroke. It must have viewBox="0 0 24 24", fill="none", stroke-width="1.5", stroke-linecap="round", stroke-linejoin="round". Return ONLY the <svg> element as a string.`;
+                const svgText = await callGeminiAPI(prompt);
+                if (svgText && svgText.includes('<svg')) {
+                    const cleanSvg = svgText.replace(/class=".*?"/g, ''); // Remove any classes
+                    return cleanSvg;
+                }
+                return fallbackIcon;
+            } catch (error) {
+                console.error(`Failed to generate icon for "${title}":`, error);
+                return fallbackIcon;
+            }
+        }
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
         
