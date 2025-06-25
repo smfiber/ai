@@ -302,13 +302,8 @@
                 <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap items-center gap-2" style="border-color: var(--color-card-border);">
-                 <div id="google-drive-controls" class="flex flex-wrap gap-2">
-                    <button id="auth-button" class="btn-secondary text-sm">Connect to Google Drive</button>
-                    <button id="save-to-drive-btn" class="btn-secondary text-sm hidden">Save to Drive</button>
-                    <button id="load-from-drive-btn" class="btn-secondary text-sm hidden">Load from Drive</button>
-                 </div>
-                 <p id="drive-status" class="text-xs themed-text-muted ml-auto"></p>
+            <div id="inDepthModalFooter" class="p-4 border-t" style="border-color: var(--color-card-border);">
+                <p id="modal-status-message" class="text-xs text-center themed-text-muted"></p>
             </div>
         </div>
     </div>
@@ -353,13 +348,32 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.8</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.12</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
 
         <main id="main-content" class="space-y-8">
-            <div id="loaded-guides-container" class="space-y-8"></div>
+            <div id="imported-guides-section" class="hidden">
+                 <h2 class="text-3xl font-bold text-center mb-4 themed-text-accent">Imported Guides</h2>
+                 <div id="imported-guides-container" class="space-y-8"></div>
+            </div>
+            
+            <div id="google-drive-card" class="card p-6 hidden">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                         <h2 class="text-xl font-bold themed-text-primary flex items-center gap-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                             Google Drive Integration
+                         </h2>
+                         <p id="drive-status" class="text-sm themed-text-muted mt-1">Please enter your API keys to enable Google Drive features.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="auth-button" class="btn-secondary">Connect to Google Drive</button>
+                        <button id="load-from-drive-btn" class="btn-secondary hidden">Import Guide from Drive</button>
+                    </div>
+                </div>
+            </div>
             
             <div id="generative-ai-prompt-card" class="card">
                 <div class="p-8 card-content">
@@ -447,7 +461,7 @@
         let googleAuth;
         let GOOGLE_API_KEY = '';
         let GOOGLE_CLIENT_ID = '';
-        const SCOPES = 'https://www.googleapis.com/auth/drive';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         let driveFolderId = null;
         
         // --- App Initialization & Event Listeners ---
@@ -473,8 +487,7 @@
 
             // Google Drive Actions
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
-            document.getElementById('save-to-drive-btn').addEventListener('click', saveCurrentGuideToDrive);
-            document.getElementById('load-from-drive-btn').addEventListener('click', createPicker);
+            document.getElementById('load-from-drive-btn').addEventListener('click', () => createPicker('open'));
 
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
@@ -514,6 +527,17 @@
                 if (e.target.classList.contains('copy-code-button')) {
                     const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
                     copyElementTextToClipboard(codeBlock, e.target);
+                    return;
+                }
+                
+                if (e.target.id === 'show-save-to-drive-form-btn') {
+                    document.getElementById('save-to-drive-form').classList.remove('hidden');
+                    e.target.classList.add('hidden');
+                    return;
+                }
+
+                if (e.target.id === 'save-markdown-to-drive-btn') {
+                    createPicker('save');
                     return;
                 }
 
@@ -610,8 +634,9 @@
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
 
             document.getElementById('apiKeyModal').classList.add('hidden');
-
+            
             if(GOOGLE_API_KEY && GOOGLE_CLIENT_ID) {
+                document.getElementById('google-drive-card').classList.remove('hidden');
                 gapi.load('client:picker', initializeGapiClient);
             }
 
@@ -650,16 +675,21 @@
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
-                
-                googleAuth = gapi.auth2.init({
+
+                gapi.auth2.init({
                     client_id: GOOGLE_CLIENT_ID,
                     scope: SCOPES,
+                }).then(() => {
+                    googleAuth = gapi.auth2.getAuthInstance();
+                    googleAuth.isSignedIn.listen(updateSigninStatus);
+                    updateSigninStatus(googleAuth.isSignedIn.get());
+                }).catch((error) => {
+                    console.error("Error initializing Google Auth2", error);
+                    document.getElementById('drive-status').textContent = 'Google Auth init failed.';
                 });
 
-                googleAuth.isSignedIn.listen(updateSigninStatus);
-                updateSigninStatus(googleAuth.isSignedIn.get());
             } catch(error) {
-                console.error("Error initializing Google API Client", error);
+                console.error("Error initializing GAPI Client", error);
                 document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
             }
         }
@@ -674,21 +704,21 @@
         
         function updateSigninStatus(isSignedIn) {
             const authButton = document.getElementById('auth-button');
-            const saveBtn = document.getElementById('save-to-drive-btn');
             const loadBtn = document.getElementById('load-from-drive-btn');
             const statusEl = document.getElementById('drive-status');
+            const saveBtn = document.querySelector('.save-to-drive-wrapper');
 
             if (isSignedIn) {
                 authButton.textContent = 'Sign Out';
-                saveBtn.classList.remove('hidden');
                 loadBtn.classList.remove('hidden');
-                statusEl.textContent = 'Connected to Google Drive.';
+                if(saveBtn) saveBtn.classList.remove('hidden');
+                statusEl.textContent = 'Connected to Google Drive. You can now load/save guides.';
                 getDriveFolderId(); 
             } else {
                 authButton.textContent = 'Connect to Google Drive';
-                saveBtn.classList.add('hidden');
                 loadBtn.classList.add('hidden');
-                statusEl.textContent = 'Not connected.';
+                if(saveBtn) saveBtn.classList.add('hidden');
+                statusEl.textContent = 'Connect to load guides from Drive or save new ones.';
                 driveFolderId = null;
             }
         }
@@ -696,7 +726,7 @@
         async function getDriveFolderId() {
             if (driveFolderId) return driveFolderId;
             const driveStatusEl = document.getElementById('drive-status');
-            driveStatusEl.textContent = 'Searching for app folder...';
+            driveStatusEl.textContent = 'Searching for default app folder...';
             
             try {
                 const response = await gapi.client.drive.files.list({
@@ -707,52 +737,51 @@
                 if (response.result.files && response.result.files.length > 0) {
                     driveFolderId = response.result.files[0].id;
                 } else {
-                    driveStatusEl.textContent = 'Creating app folder...';
+                    driveStatusEl.textContent = 'Creating default app folder "IT Administration Hub"...';
                     const folderResponse = await gapi.client.drive.files.create({
                         resource: { 'name': 'IT Administration Hub', 'mimeType': 'application/vnd.google-apps.folder' },
                         fields: 'id'
                     });
                     driveFolderId = folderResponse.result.id;
                 }
-                driveStatusEl.textContent = 'Connected to Google Drive.';
+                updateSigninStatus(true); // Re-set the status message
                 return driveFolderId;
             } catch (error) {
                 console.error("Error finding/creating Drive folder:", error);
-                driveStatusEl.textContent = 'Error with Drive folder.';
+                driveStatusEl.textContent = 'Error with Drive folder access.';
                 return null;
             }
         }
-
-        async function saveCurrentGuideToDrive() {
-            const driveStatusEl = document.getElementById('drive-status');
+        
+        async function saveMarkdownToDrive(folderId, fileName) {
+            const modalStatus = document.getElementById('modal-status-message');
             if (!googleAuth.isSignedIn.get()) {
-                driveStatusEl.textContent = 'Please connect to Google Drive first.';
+                modalStatus.textContent = 'Please connect to Google Drive first.';
                 return;
             }
-
-            const folderId = await getDriveFolderId();
             if (!folderId) {
-                driveStatusEl.textContent = 'Could not find or create Drive folder.';
+                 modalStatus.textContent = 'No folder selected.';
+                return;
+            }
+             if (!fileName || !fileName.trim()) {
+                modalStatus.textContent = 'Please provide a valid file name.';
                 return;
             }
 
-            const title = document.getElementById('inDepthModalTitle').textContent.replace('In-Depth: ', '');
-            const themeId = document.getElementById('inDepthModalFooter').dataset.themeId;
-            const content = originalGeneratedText.get(themeId + '-full');
-            
+            const content = document.querySelector('#inDepthModal .language-markdown')?.textContent;
             if (!content) {
-                driveStatusEl.textContent = 'No content to save.';
+                modalStatus.textContent = 'No markdown content found to save.';
                 return;
             }
 
-            const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-            const fileMetadata = { name: fileName, parents: [folderId] };
+            const finalFileName = fileName.endsWith('.md') ? fileName : `${fileName}.md`;
+            const fileMetadata = { name: finalFileName, parents: [folderId] };
             const boundary = '-------314159265358979323846';
             const delimiter = "\r\n--" + boundary + "\r\n";
             const close_delim = "\r\n--" + boundary + "--";
             const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(fileMetadata) + delimiter + 'Content-Type: text/markdown\r\n\r\n' + content + close_delim;
             
-            driveStatusEl.textContent = 'Saving file to Drive...';
+            modalStatus.textContent = 'Saving file to Drive...';
             try {
                 await gapi.client.request({
                     'path': '/upload/drive/v3/files',
@@ -761,53 +790,77 @@
                     'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
                     'body': multipartRequestBody
                 });
-                driveStatusEl.textContent = `File '${fileName}' saved successfully!`;
-                 setTimeout(()=> driveStatusEl.textContent = 'Connected to Google Drive.', 3000);
+                modalStatus.textContent = `File '${finalFileName}' saved successfully!`;
+                 setTimeout(()=> modalStatus.textContent = '', 3000);
             } catch (error) {
                 console.error('Error saving file:', error);
-                driveStatusEl.textContent = 'Error saving file.';
+                modalStatus.textContent = 'Error saving file. Check console for details.';
             }
         }
 
-        function createPicker() {
+
+        function createPicker(mode) { // mode can be 'open' or 'save'
             if (!gapiInited) {
                  console.error("GAPI not ready for picker.");
-                 document.getElementById('drive-status').textContent = 'Google API not ready.';
+                 (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
             }
-             const view = new google.picker.View(google.picker.ViewId.DOCS);
-             view.setMimeTypes("text/markdown,text/plain");
+             
+             const token = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+             const builder = new google.picker.PickerBuilder()
+                .setOAuthToken(token)
+                .setDeveloperKey(GOOGLE_API_KEY);
 
-             const picker = new google.picker.PickerBuilder()
-                .addView(view)
-                .setOAuthToken(gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token)
-                .setDeveloperKey(GOOGLE_API_KEY)
-                .setCallback(pickerCallback)
-                .build();
+             if (mode === 'open') {
+                const view = new google.picker.View(google.picker.ViewId.DOCS);
+                view.setMimeTypes("text/markdown,text/plain");
+                builder.addView(view).setCallback(pickerCallbackOpen);
+             } else { // 'save' mode
+                const view = new google.picker.View(google.picker.ViewId.FOLDERS);
+                view.setSelectableMimeTypes('application/vnd.google-apps.folder');
+                builder.addView(view).setTitle("Select a folder to save in").setCallback(pickerCallbackSave);
+             }
+
+             const picker = builder.build();
              picker.setVisible(true);
         }
 
-        async function pickerCallback(data) {
+        async function pickerCallbackOpen(data) {
             if (data.action === google.picker.Action.PICKED) {
                 const fileId = data.docs[0].id;
+                const statusEl = document.getElementById('drive-status');
+                statusEl.textContent = 'Loading selected file...';
                 try {
                     const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
                     const fileContent = response.body;
                     const fileName = data.docs[0].name;
                     
-                    addLoadedGuideToPage(fileName, fileContent);
-                    document.getElementById('inDepthModal').classList.add('hidden');
+                    displayImportedGuide(fileName, fileContent);
+                    statusEl.textContent = 'File loaded successfully.';
+                    setTimeout(() => updateSigninStatus(true), 3000);
 
                 } catch (error) {
                     console.error("Error loading file content:", error);
-                    alert('Error loading file content from Google Drive.');
+                    statusEl.textContent = 'Error loading file from Google Drive.';
                 }
             }
         }
         
-        function addLoadedGuideToPage(fileName, markdownContent) {
-            const container = document.getElementById('loaded-guides-container');
-            const cardId = `loaded-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
+        async function pickerCallbackSave(data) {
+            if (data.action === google.picker.Action.PICKED) {
+                const folderId = data.docs[0].id;
+                const fileNameInput = document.getElementById('drive-filename-input');
+                const fileName = fileNameInput.value;
+                saveMarkdownToDrive(folderId, fileName);
+            }
+        }
+        
+        function displayImportedGuide(fileName, markdownContent) {
+            const section = document.getElementById('imported-guides-section');
+            const container = document.getElementById('imported-guides-container');
+            section.classList.remove('hidden');
+
+            const cardId = `imported-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
             
             const card = document.createElement('div');
             card.className = 'card md:col-span-2';
@@ -819,16 +872,16 @@
             cardContent.innerHTML = `
                 <h2 class="text-2xl font-bold mb-2 themed-text-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                    Loaded from Drive: ${fileName}
+                    Imported: ${fileName}
                 </h2>
                 <div class="prose max-w-none mt-4"></div>
             `;
             
             const renderTarget = cardContent.querySelector('.prose');
-            renderAccordionFromMarkdown(markdownContent, renderTarget, false); // No images for loaded files
+            renderAccordionFromMarkdown(markdownContent, renderTarget, false);
 
             card.appendChild(cardContent);
-            container.prepend(card); // Add to the top of the loaded guides section
+            container.prepend(card);
 
             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -1738,26 +1791,23 @@ Return only the complete markdown guide.`;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-
+            
             titleEl.textContent = "AI Help & Feedback";
             contentEl.innerHTML = getLoaderHTML('Generating help guide...');
             modal.classList.remove('hidden');
-            // Hide drive controls for this specific modal use
-            document.getElementById('google-drive-controls').classList.add('hidden');
-
 
             const prompt = `
                 Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
                 The features are: 
-                1. Custom Task Generator: User enters a task, AI creates a guide.
-                2. Tailoring Options: Buttons to refine the custom guide (e.g., 'Security', 'For Beginners').
-                3. Pre-Built Categories: AI-generated topics like VMware, Windows Server, etc.
-                4. Visual Theme Generator: User describes a mood, AI creates a new color theme and header image.
-                5. In-Depth Exploration: Expanding a summary to see a full, detailed guide, now with AI-generated images for screenshots.
-                6. Refining Content: Taking an existing guide and giving the AI further instructions to rewrite it.
-                Format the output as a markdown document with '###' for each section title.
-            `;
+                1.  **Google Drive Integration**: A dedicated card on the main screen allows you to connect to your Google Drive. Once connected, you can load previously saved markdown guides.
+                2.  **Saving Guides to Drive**: Inside the "In-Depth Guide" modal, the "Raw Markdown" section has a button to save the guide to your Drive. You can specify a filename and choose a folder, which defaults to "IT Administration Hub".
+                3.  **Custom Task Generator**: User enters any IT task, and the AI creates a detailed, step-by-step guide.
+                4.  **Tailoring Options**: Buttons to refine the custom guide (e.g., 'for Security', 'for Beginners').
+                5.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc., for quick access to common subjects.
+                6.  **Visual Theme Generator**: A floating button allows you to describe a mood (e.g., 'ocean sunset'), and the AI creates a new color theme and header image for the application.
+                7.  **In-Depth Exploration & Refinement**: You can expand a summary to see a full guide or ask the AI to rewrite and refine any generated content with further instructions.
+                8.  **Important Note on Images**: Image generation for screenshot placeholders has been disabled in the pop-up modal views to improve readability and focus on the text content. Images are still generated on the main page.
+                Format the output as a clean markdown document using '###' for each section title.`;
             
             try {
                 const resultText = await callGeminiAPI(prompt);
@@ -1777,14 +1827,10 @@ Return only the complete markdown guide.`;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-
-            document.getElementById('google-drive-controls').classList.remove('hidden');
             
             titleEl.textContent = `In-Depth: ${item.title}`;
             contentEl.innerHTML = getLoaderHTML(`Generating detailed guide for ${item.title}...`);
-            footerEl.dataset.themeId = themeId;
-            footerEl.dataset.themeType = themeType;
+            document.getElementById('modal-status-message').textContent = '';
 
             modal.classList.remove('hidden');
             
@@ -1794,7 +1840,6 @@ Return only the complete markdown guide.`;
                 let resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText);
                 
-                // Clean the response by removing potential markdown code block wrappers
                 if (resultText && resultText.startsWith('```markdown\n') && resultText.endsWith('\n```')) {
                     resultText = resultText.substring('```markdown\n'.length, resultText.length - '\n```'.length).trim();
                 } else if (resultText && resultText.startsWith('```') && resultText.endsWith('```')) {
@@ -1806,55 +1851,44 @@ Return only the complete markdown guide.`;
                 // --- Accordion 1: HTML Preview (open by default) ---
                 const htmlAccordion = document.createElement('div');
                 htmlAccordion.className = 'accordion-item';
-                
-                const htmlHeader = document.createElement('button');
-                htmlHeader.type = 'button';
-                htmlHeader.className = 'accordion-header active'; // 'active' makes the header look open
-                htmlHeader.innerHTML = `
-                    <span>HTML Preview</span>
-                    <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                `;
-
-                const htmlContentPanel = document.createElement('div');
-                htmlContentPanel.className = 'accordion-content open prose max-w-none'; // 'open' makes the content visible
-                
-                // Use convertMarkdownToHtml to get raw HTML.
-                htmlContentPanel.innerHTML = convertMarkdownToHtml(resultText, true); 
-                
-                htmlAccordion.appendChild(htmlHeader);
-                htmlAccordion.appendChild(htmlContentPanel);
+                htmlAccordion.innerHTML = `
+                    <button type="button" class="accordion-header active">
+                        <span>HTML Preview</span>
+                        <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="accordion-content open prose max-w-none">
+                        ${convertMarkdownToHtml(resultText, false)}
+                    </div>`;
                 contentEl.appendChild(htmlAccordion);
                 
-                // Trigger image generation for the content we just added
-                await generateAndInjectImages(htmlContentPanel);
-
                 // --- Accordion 2: Markdown Code (closed by default) ---
                 const mdAccordion = document.createElement('div');
                 mdAccordion.className = 'accordion-item';
+                const isSignedIn = googleAuth && googleAuth.isSignedIn.get();
                 
-                const mdHeader = document.createElement('button');
-                mdHeader.type = 'button';
-                mdHeader.className = 'accordion-header'; // Not 'active'
-                mdHeader.innerHTML = `
-                    <span>Raw Markdown</span>
-                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                `;
-
-                const mdContentPanel = document.createElement('div');
-                mdContentPanel.className = 'accordion-content'; // Not 'open'
-                mdContentPanel.innerHTML = `
-                     <div class="code-block-container !m-0">
-                         <div class="code-block-header">
-                             <span>markdown</span>
-                             <button class="copy-code-button">Copy</button>
+                mdAccordion.innerHTML = `
+                    <button type="button" class="accordion-header">
+                        <span>Raw Markdown & Save Options</span>
+                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="accordion-content">
+                         <div class="code-block-container !m-0">
+                             <div class="code-block-header">
+                                 <span>markdown</span>
+                                 <button class="copy-code-button">Copy</button>
+                             </div>
+                             <pre class="!p-4"><code class="language-markdown"></code></pre>
                          </div>
-                         <pre class="!p-4"><code class="language-markdown"></code></pre>
-                    </div>
-                `;
-                mdContentPanel.querySelector('code').textContent = resultText;
-                
-                mdAccordion.appendChild(mdHeader);
-                mdAccordion.appendChild(mdContentPanel);
+                         <div class="save-to-drive-wrapper mt-4 border-t pt-4 ${isSignedIn ? '' : 'hidden'}" style="border-color: var(--color-card-border);">
+                            <button id="show-save-to-drive-form-btn" class="btn-secondary w-full">Save to Google Drive</button>
+                            <div id="save-to-drive-form" class="hidden">
+                                <label for="drive-filename-input" class="block text-sm font-medium themed-text-muted">Save as:</label>
+                                <input type="text" id="drive-filename-input" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2" value="${item.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md">
+                                <button id="save-markdown-to-drive-btn" class="btn-primary w-full mt-2">Choose Folder & Save</button>
+                            </div>
+                         </div>
+                    </div>`;
+                mdAccordion.querySelector('code').textContent = resultText;
                 contentEl.appendChild(mdAccordion);
 
             } catch (error) {
@@ -1909,7 +1943,6 @@ Return only the complete markdown guide.`;
                     return;
                 }
                 
-                // Clean the response by removing potential markdown code block wrappers
                 if (newText.startsWith('```markdown\n') && newText.endsWith('\n```')) {
                     newText = newText.substring('```markdown\n'.length, newText.length - '\n```'.length).trim();
                 } else if (newText.startsWith('```') && newText.endsWith('```')) {
@@ -1919,35 +1952,12 @@ Return only the complete markdown guide.`;
                 originalGeneratedText.set(textKey, newText);
                 
                 if (isModal) {
-                    // Re-run the logic from handleExploreInDepth to rebuild the two accordions
-                    const contentEl = document.getElementById('inDepthModalContent');
-                    contentEl.innerHTML = '';
-                    
-                    const htmlAccordion = document.createElement('div');
-                    htmlAccordion.className = 'accordion-item';
-                    htmlAccordion.innerHTML = `<button type="button" class="accordion-header active"><span>HTML Preview</span><svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>`;
-                    const htmlContentPanel = document.createElement('div');
-                    htmlContentPanel.className = 'accordion-content open prose max-w-none';
-                    htmlContentPanel.innerHTML = convertMarkdownToHtml(newText, true);
-                    htmlAccordion.appendChild(htmlContentPanel);
-                    contentEl.appendChild(htmlAccordion);
-                    await generateAndInjectImages(htmlContentPanel);
-
-                    const mdAccordion = document.createElement('div');
-                    mdAccordion.className = 'accordion-item';
-                    mdAccordion.innerHTML = `<button type="button" class="accordion-header"><span>Raw Markdown</span><svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>`;
-                    const mdContentPanel = document.createElement('div');
-                    mdContentPanel.className = 'accordion-content';
-                    mdContentPanel.innerHTML = `<div class="code-block-container !m-0"><div class="code-block-header"><span>markdown</span><button class="copy-code-button">Copy</button></div><pre class="!p-4"><code class="language-markdown"></code></pre></div>`;
-                    mdContentPanel.querySelector('code').textContent = newText;
-                    mdAccordion.appendChild(mdContentPanel);
-                    contentEl.appendChild(mdAccordion);
-
+                    const item = allThemeData[themeId] || { title: document.getElementById('inDepthModalTitle').textContent };
+                    handleExploreInDepth(themeId, 'custom'); // Rerun the modal creation
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                     generateAndInjectImages(contentArea);
-
                 }
 
             } catch(error) {
