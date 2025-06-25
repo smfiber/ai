@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
+    <!-- Google API Client Library -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Marked.js for Markdown to HTML conversion -->
@@ -264,16 +266,23 @@
 
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
     
     <!-- All Modals -->
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
-            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
-            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser for this session. You can click the "AI Help" button to learn more without a key.</p>
+            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
+            <p class="mb-2 themed-text-muted">Provide your Google Cloud API Key to enable AI content generation and optional Google Drive features.</p>
             <form id="apiKeyForm">
-                <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
-                <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
+                <label for="apiKeyInput" class="block text-sm font-medium themed-text-muted">Google Cloud API Key</label>
+                <input type="password" id="apiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Google Cloud API Key" required>
+                
+                <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Google Drive Integration (Optional)</h3>
+                <p class="mb-4 themed-text-muted">To save/load guides from Google Drive, also provide your Google Cloud Client ID.</p>
+                <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted mt-4">Google Client ID</label>
+                <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Google Cloud Client ID">
+                
+                <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
             </form>
         </div>
     </div>
@@ -292,7 +301,14 @@
                 <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2" style="border-color: var(--color-card-border);"></div>
+            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap items-center gap-2" style="border-color: var(--color-card-border);">
+                 <div id="google-drive-controls" class="flex flex-wrap gap-2">
+                    <button id="auth-button" class="btn-secondary text-sm">Connect to Google Drive</button>
+                    <button id="save-to-drive-btn" class="btn-secondary text-sm hidden">Save to Drive</button>
+                    <button id="load-from-drive-btn" class="btn-secondary text-sm hidden">Load from Drive</button>
+                 </div>
+                 <p id="drive-status" class="text-xs themed-text-muted ml-auto"></p>
+            </div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -324,7 +340,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="container mx-auto">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
                 <div class="loader header-loader-spinner"></div>
@@ -336,12 +352,13 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.3</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
 
         <main id="main-content" class="space-y-8">
+            <div id="loaded-guides-container" class="space-y-8"></div>
             
             <div id="custom-plan-card" class="card">
                 <div class="p-8 card-content">
@@ -419,22 +436,27 @@
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
+
+        // --- Google Drive Integration State & Config ---
+        let gapiInited = false;
+        let pickerInited = false;
+        let googleAuth;
+        let GOOGLE_API_KEY = '';
+        let GOOGLE_CLIENT_ID = '';
+        const SCOPES = 'https://www.googleapis.com/auth/drive';
+        let driveFolderId = null;
         
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('apiKeyModal').classList.remove('hidden');
             setupEventListeners();
             populateTypographySettings();
-            // Configure Marked.js to handle code blocks and other elements correctly
             marked.setOptions({
                 renderer: new marked.Renderer(),
-                highlight: function(code, lang) {
-                    // This is a basic highlighter. For production, you might use a library like highlight.js
-                    return code;
-                },
+                highlight: (code, lang) => code,
                 langPrefix: 'language-',
                 gfm: true,
-                breaks: true, // Converts single line breaks into <br> tags
+                breaks: true,
             });
         });
 
@@ -444,6 +466,11 @@
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
             document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
+
+            // Google Drive Actions
+            document.getElementById('auth-button').addEventListener('click', handleAuthClick);
+            document.getElementById('save-to-drive-btn').addEventListener('click', saveCurrentGuideToDrive);
+            document.getElementById('load-from-drive-btn').addEventListener('click', createPicker);
 
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
@@ -456,8 +483,7 @@
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-            // Settings Panel
+             // Settings Panel
             const settingsPanel = document.getElementById('settings-panel');
             document.getElementById('settings-button').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -567,19 +593,24 @@
         
         async function handleApiKeySubmit(e) {
             e.preventDefault();
-            const input = document.getElementById('apiKeyInput');
-            if (!input.value.trim()) return;
-            apiKey = input.value.trim();
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            if (!apiKeyInput.value.trim()) return;
+            
+            apiKey = apiKeyInput.value.trim();
+            GOOGLE_API_KEY = apiKey; // Use the same key for Google APIs
+            GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
+
             document.getElementById('apiKeyModal').classList.add('hidden');
+
+            if(GOOGLE_API_KEY && GOOGLE_CLIENT_ID) {
+                gapi.load('client:picker', initializeGapiClient);
+            }
 
             const loadingModal = document.getElementById('loadingStateModal');
             const loadingMessageEl = document.getElementById('loading-message');
             loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
             loadingModal.classList.remove('hidden');
 
-            const modalMessage = document.querySelector('#apiKeyModal p');
-            modalMessage.textContent = 'To use the AI generators, please provide your API key...';
-            modalMessage.classList.remove('text-red-600', 'font-bold');
             document.getElementById('main-grid').innerHTML = '';
             document.getElementById('jump-to-nav-container').innerHTML = '';
             document.getElementById('gemini-result-container').innerHTML = '';
@@ -590,8 +621,9 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
+                const modalMessage = document.querySelector('#apiKeyModal p');
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
-                    modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
+                    modalMessage.textContent = 'An error occurred during setup. Please check your API key and connection.';
                     modalMessage.classList.add('text-red-600', 'font-bold');
                     document.getElementById('apiKeyModal').classList.remove('hidden');
                 }
@@ -600,22 +632,265 @@
             }
         }
 
+        // --- Google Drive Integration Functions ---
+        
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: GOOGLE_API_KEY,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                });
+                gapiInited = true;
+                
+                googleAuth = gapi.auth2.init({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: SCOPES,
+                });
+
+                googleAuth.isSignedIn.listen(updateSigninStatus);
+                updateSigninStatus(googleAuth.isSignedIn.get());
+            } catch(error) {
+                console.error("Error initializing Google API Client", error);
+                document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
+            }
+        }
+
+        function handleAuthClick() {
+            if (googleAuth.isSignedIn.get()) {
+                googleAuth.signOut();
+            } else {
+                googleAuth.signIn();
+            }
+        }
+        
+        function updateSigninStatus(isSignedIn) {
+            const authButton = document.getElementById('auth-button');
+            const saveBtn = document.getElementById('save-to-drive-btn');
+            const loadBtn = document.getElementById('load-from-drive-btn');
+            const statusEl = document.getElementById('drive-status');
+
+            if (isSignedIn) {
+                authButton.textContent = 'Sign Out';
+                saveBtn.classList.remove('hidden');
+                loadBtn.classList.remove('hidden');
+                statusEl.textContent = 'Connected to Google Drive.';
+                getDriveFolderId(); 
+            } else {
+                authButton.textContent = 'Connect to Google Drive';
+                saveBtn.classList.add('hidden');
+                loadBtn.classList.add('hidden');
+                statusEl.textContent = 'Not connected.';
+                driveFolderId = null;
+            }
+        }
+
+        async function getDriveFolderId() {
+            if (driveFolderId) return driveFolderId;
+            const driveStatusEl = document.getElementById('drive-status');
+            driveStatusEl.textContent = 'Searching for app folder...';
+            
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: "mimeType='application/vnd.google-apps.folder' and name='IT Administration Hub' and trashed=false",
+                    fields: 'files(id, name)',
+                });
+
+                if (response.result.files && response.result.files.length > 0) {
+                    driveFolderId = response.result.files[0].id;
+                } else {
+                    driveStatusEl.textContent = 'Creating app folder...';
+                    const folderResponse = await gapi.client.drive.files.create({
+                        resource: { 'name': 'IT Administration Hub', 'mimeType': 'application/vnd.google-apps.folder' },
+                        fields: 'id'
+                    });
+                    driveFolderId = folderResponse.result.id;
+                }
+                driveStatusEl.textContent = 'Connected to Google Drive.';
+                return driveFolderId;
+            } catch (error) {
+                console.error("Error finding/creating Drive folder:", error);
+                driveStatusEl.textContent = 'Error with Drive folder.';
+                return null;
+            }
+        }
+
+        async function saveCurrentGuideToDrive() {
+            const driveStatusEl = document.getElementById('drive-status');
+            if (!googleAuth.isSignedIn.get()) {
+                driveStatusEl.textContent = 'Please connect to Google Drive first.';
+                return;
+            }
+
+            const folderId = await getDriveFolderId();
+            if (!folderId) {
+                driveStatusEl.textContent = 'Could not find or create Drive folder.';
+                return;
+            }
+
+            const title = document.getElementById('inDepthModalTitle').textContent.replace('In-Depth: ', '');
+            const themeId = document.getElementById('inDepthModalFooter').dataset.themeId;
+            const content = originalGeneratedText.get(themeId + '-full');
+            
+            if (!content) {
+                driveStatusEl.textContent = 'No content to save.';
+                return;
+            }
+
+            const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+            const fileMetadata = { name: fileName, parents: [folderId] };
+            const boundary = '-------314159265358979323846';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
+            const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(fileMetadata) + delimiter + 'Content-Type: text/markdown\r\n\r\n' + content + close_delim;
+            
+            driveStatusEl.textContent = 'Saving file to Drive...';
+            try {
+                await gapi.client.request({
+                    'path': '/upload/drive/v3/files',
+                    'method': 'POST',
+                    'params': {'uploadType': 'multipart'},
+                    'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
+                    'body': multipartRequestBody
+                });
+                driveStatusEl.textContent = `File '${fileName}' saved successfully!`;
+                 setTimeout(()=> driveStatusEl.textContent = 'Connected to Google Drive.', 3000);
+            } catch (error) {
+                console.error('Error saving file:', error);
+                driveStatusEl.textContent = 'Error saving file.';
+            }
+        }
+
+        function createPicker() {
+            if (!gapiInited) {
+                 console.error("GAPI not ready for picker.");
+                 document.getElementById('drive-status').textContent = 'Google API not ready.';
+                 return;
+            }
+             const view = new google.picker.View(google.picker.ViewId.DOCS);
+             view.setMimeTypes("text/markdown,text/plain");
+
+             const picker = new google.picker.PickerBuilder()
+                .addView(view)
+                .setOAuthToken(gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token)
+                .setDeveloperKey(GOOGLE_API_KEY)
+                .setCallback(pickerCallback)
+                .build();
+             picker.setVisible(true);
+        }
+
+        async function pickerCallback(data) {
+            if (data.action === google.picker.Action.PICKED) {
+                const fileId = data.docs[0].id;
+                try {
+                    const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
+                    const fileContent = response.body;
+                    const fileName = data.docs[0].name;
+                    
+                    addLoadedGuideToPage(fileName, fileContent);
+                    document.getElementById('inDepthModal').classList.add('hidden');
+
+                } catch (error) {
+                    console.error("Error loading file content:", error);
+                    alert('Error loading file content from Google Drive.');
+                }
+            }
+        }
+        
+        function addLoadedGuideToPage(fileName, markdownContent) {
+            const container = document.getElementById('loaded-guides-container');
+            const cardId = `loaded-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
+            
+            const card = document.createElement('div');
+            card.className = 'card md:col-span-2';
+            card.id = cardId;
+            
+            const cardContent = document.createElement('div');
+            cardContent.className = 'p-8 card-content';
+            
+            cardContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-2 themed-text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                    Loaded from Drive: ${fileName}
+                </h2>
+                <div class="prose max-w-none mt-4"></div>
+            `;
+            
+            const renderTarget = cardContent.querySelector('.prose');
+            renderAccordionFromMarkdown(markdownContent, renderTarget, false); // No images for loaded files
+
+            card.appendChild(cardContent);
+            container.prepend(card); // Add to the top of the loaded guides section
+
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // --- Core Application Functions (Modified and existing) ---
+
         async function loadAppContent(loadingMessageEl) {
             try {
                 const categoriesToGenerate = [
                     { 
-                        key: 'vmwareEsxi', 
-                        title: 'VMware ESXi Administration', 
-                        description: "Guides and best practices for managing VMware ESXi environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        key: 'activeDirectory', 
+                        title: 'Active Directory Management', 
+                        description: "Tasks for managing users, groups, GPOs, and other AD objects.", 
+                        initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     },
                     { 
-                        key: 'windowsServer', 
-                        title: 'Windows Server Administration', 
-                        description: "Essential tasks for managing Windows Server instances.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        key: 'aiProgramming', 
+                        title: 'Artificial Intelligence (AI) Programming', 
+                        description: "Concepts and guides for getting started with AI development and programming.", 
+                        initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'citrixAdmin', 
+                        title: 'Citrix Administration', 
+                        description: "Managing Citrix Virtual Apps and Desktops environments.", 
+                        initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'dataCenterPractices', 
+                        title: 'Data Center Best Practices', 
+                        description: "Guides on data center operations, cooling, power, and security.", 
+                        initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'webDesignBestPractices', 
+                        title: 'Designing Web Pages Best Practices', 
+                        description: "Best practices for UI/UX, accessibility, and performance in web design.", 
+                        initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'webDesignGemini', 
+                        title: 'Designing Web Pages with Gemini AI', 
+                        description: "Using Gemini AI to assist in the design and development of web pages.", 
+                        initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'dosCommands', 
+                        title: 'DOS Commands for Administrators', 
+                        description: "A reference for essential DOS and Command Prompt commands for system admins.", 
+                        initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'hpeProLiant', 
+                        title: 'HPE ProLiant Server Management', 
+                        description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", 
+                        initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'javascriptForHtml', 
+                        title: 'JavaScript for HTML', 
+                        description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", 
+                        initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept. Return ONLY a valid JSON array.` 
                     },
                     { 
                         key: 'm365Admin', 
@@ -625,11 +900,74 @@
                         fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     },
                     { 
-                        key: 'citrixAdmin', 
-                        title: 'Citrix Administration', 
-                        description: "Managing Citrix Virtual Apps and Desktops environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        key: 'msGraphScripting', 
+                        title: 'MS Graph scripting', 
+                        description: "Automating M365 tasks using the Microsoft Graph API.", 
+                        initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'powershellM365', 
+                        title: 'PowerShell for M365 Administration', 
+                        description: "Using PowerShell to manage Microsoft 365 services like Exchange Online and SharePoint.", 
+                        initialPrompt: `Generate 10 common PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'powershellWindowsServer', 
+                        title: 'PowerShell for Windows Server Administration', 
+                        description: "Automating Windows Server management with PowerShell scripts and cmdlets.", 
+                        initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'powershellScripts', 
+                        title: 'PowerShell Scripts', 
+                        description: "A collection of useful PowerShell scripts for various administrative tasks.", 
+                        initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'usefulApis', 
+                        title: 'Useful APIs for Web Development', 
+                        description: "A curated list of public APIs that are useful for web development projects.", 
+                        initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate a list of 40-50 useful public APIs for web developers across different categories. For each, give a unique "id", "title" (API name), and a detailed "description" of what it offers. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'vmwareEsxi', 
+                        title: 'VMware ESXi Administration', 
+                        description: "Guides and best practices for managing VMware ESXi environments.", 
+                        initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'vmwarePowerCli', 
+                        title: 'VMware PowerCLI', 
+                        description: "Automating VMware vSphere administration using PowerCLI.", 
+                        initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title" (the command/task), and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'windowsServer2019', 
+                        title: 'Windows Server 2019 Administration', 
+                        description: "Key tasks and features for administering Windows Server 2019.", 
+                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'windowsServer2022', 
+                        title: 'Windows Server 2022 Administration', 
+                        description: "Key tasks and new features for administering Windows Server 2022.", 
+                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022, including new features. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'windowsServer', 
+                        title: 'Windows Server Administration', 
+                        description: "Essential tasks for managing Windows Server instances.", 
+                        initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     }
                 ];
 
@@ -697,7 +1035,7 @@
                 <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || ''}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2">
-                        <strong class="text-sm leading-tight block">${item.title}</strong>
+                        <div class="text-sm font-normal leading-tight block">${item.title}</div>
                     </div>
                 </div>`;
             }).join('');
@@ -1007,17 +1345,24 @@ Return only the complete markdown guide.`;
          * Converts a markdown string to sanitized HTML using marked.js,
          * and prepares special placeholders for screenshots and code blocks.
          */
-        function convertMarkdownToHtml(text) {
+        function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
-            // First, process our custom placeholders before passing to marked.js
-            let processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
-                const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
-                return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
-                            <div class="loader themed-loader"></div>
-                            <p class="mt-2 text-sm italic">${description}</p>
-                        </div>`;
-            });
+            let processedText;
+            if (generateImages) {
+                // First, process our custom placeholders before passing to marked.js
+                processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
+                    const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
+                    return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
+                                <div class="loader themed-loader"></div>
+                                <p class="mt-2 text-sm italic">${description}</p>
+                            </div>`;
+                });
+            } else {
+                // If not generating images, simply remove the screenshot tags from the markdown text.
+                processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
+            }
+
 
             // Convert markdown to HTML using the marked library
             let html = marked.parse(processedText);
@@ -1226,15 +1571,15 @@ Return only the complete markdown guide.`;
          * Renders markdown into an accordion structure inside a container.
          * It uses marked.js to convert markdown to HTML first, then builds the accordion.
          */
-        function renderAccordionFromMarkdown(markdownText, containerElement) {
+        function renderAccordionFromMarkdown(markdownText, containerElement, generateImages = true) {
             containerElement.innerHTML = ''; 
             if (!markdownText || !markdownText.trim()) {
-                containerElement.innerHTML = convertMarkdownToHtml(null);
+                containerElement.innerHTML = convertMarkdownToHtml(null, false);
                 return;
             }
 
             // Convert the entire markdown to HTML first.
-            const fullHtml = convertMarkdownToHtml(markdownText);
+            const fullHtml = convertMarkdownToHtml(markdownText, generateImages);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = fullHtml;
 
@@ -1308,9 +1653,11 @@ Return only the complete markdown guide.`;
             const footerEl = document.getElementById('inDepthModalFooter');
 
             titleEl.textContent = "AI Help & Feedback";
-            footerEl.innerHTML = '';
             contentEl.innerHTML = getLoaderHTML('Generating help guide...');
             modal.classList.remove('hidden');
+            // Hide drive controls for this specific modal use
+            document.getElementById('google-drive-controls').classList.add('hidden');
+
 
             const prompt = `
                 Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
@@ -1326,7 +1673,7 @@ Return only the complete markdown guide.`;
             
             try {
                 const resultText = await callGeminiAPI(prompt);
-                renderAccordionFromMarkdown(resultText, contentEl);
+                renderAccordionFromMarkdown(resultText, contentEl, false);
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
@@ -1343,10 +1690,12 @@ Return only the complete markdown guide.`;
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
+
+            // Show drive controls when exploring a guide
+            document.getElementById('google-drive-controls').classList.remove('hidden');
             
             titleEl.textContent = `In-Depth: ${item.title}`;
             contentEl.innerHTML = getLoaderHTML(`Generating detailed guide for ${item.title}...`);
-            footerEl.innerHTML = '';
             footerEl.dataset.themeId = themeId;
             footerEl.dataset.themeType = themeType;
 
@@ -1358,36 +1707,7 @@ Return only the complete markdown guide.`;
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                // Create containers for raw markdown and rendered HTML
-                contentEl.innerHTML = `
-                    <div id="raw-markdown-section" class="mb-8">
-                        <h3 class="text-lg font-semibold mb-2 themed-text-accent border-b pb-2">Raw Markdown</h3>
-                        <div class="code-block-container !m-0">
-                             <div class="code-block-header">
-                                 <span>markdown</span>
-                                 <button class="copy-code-button">Copy</button>
-                             </div>
-                             <pre><code class="language-markdown">${(resultText || " ").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
-                        </div>
-                    </div>
-                    <div id="rendered-html-section">
-                        <h3 class="text-lg font-semibold mb-2 themed-text-accent border-b pb-2">Rendered Preview</h3>
-                        <div id="rendered-content-container" class="prose max-w-none"></div>
-                    </div>
-                `;
-
-                // Render the HTML part
-                const renderedContainer = document.getElementById('rendered-content-container');
-                renderAccordionFromMarkdown(resultText, renderedContainer);
-                generateAndInjectImages(renderedContainer);
-
-                // Setup footer buttons
-                footerEl.innerHTML = `
-                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm modal-copy-button">Copy Rendered Text</button>
-                `;
-                // Make copy button in footer copy the rendered text
-                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(renderedContainer, e.currentTarget));
+                renderAccordionFromMarkdown(resultText, contentEl, false); // No images in modal
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -1445,14 +1765,7 @@ Return only the complete markdown guide.`;
                 
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
-                    renderAccordionFromMarkdown(newText, contentEl);
-                    generateAndInjectImages(contentEl);
-
-                    footerEl.innerHTML = `
-                        <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                        <button class="btn-secondary text-sm modal-copy-button">Copy Text</button>
-                    `;
-                    footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                    renderAccordionFromMarkdown(newText, contentEl, false); // No images in modal
                     if (refineContainer) refineContainer.remove();
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
