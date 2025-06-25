@@ -80,7 +80,7 @@
             flex-direction: column;
         }
         .screenshot-placeholder::before {
-            content: '📷';
+            content: '�';
             display: block;
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
@@ -334,8 +334,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <!-- DEV NOTE: Remember to increment the version number with each significant change. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v2.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v3.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -771,9 +770,9 @@
                 const resultText = await callGeminiAPI(prompt);
                 
                 originalGeneratedText.set('custom-plan', resultText);
-                const contentHtml = createAccordionFromMarkdown(resultText, resultContainer);
+                createAccordionFromMarkdown(resultText, resultContainer);
                 addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
-                generateAndInjectImages(contentHtml, resultContainer);
+                generateAndInjectImages(resultContainer);
 
 
             } catch(error) {
@@ -1098,7 +1097,7 @@ Return only the complete markdown guide.`;
                            .replace(/<p><div class="image-generation-container">/g, '<div class="image-generation-container">');
         }
 
-        async function generateAndInjectImages(htmlContent, container) {
+        async function generateAndInjectImages(container) {
             const placeholders = container.querySelectorAll('.image-generation-container');
             if (placeholders.length === 0) return;
 
@@ -1279,13 +1278,11 @@ Return only the complete markdown guide.`;
                 return;
             }
 
-            // Pre-process the text to normalize headings. Convert lines like "1. Some Title" into "### 1. Some Title"
-            let processedText = markdownText.replace(/^(\d+\.\s+.*)$/gm, '### $1');
+            // More robust splitting using a regex that looks for ###, or lines starting with a number/bold text.
+            const sections = markdownText.split(/(?=^###|^\d+\.\s|^\*\*.*?\*\*)/m);
 
-            const sections = processedText.split(/(?=###)/);
-            
             // Handle any introductory text before the first heading
-            if (sections.length > 0 && !sections[0].startsWith('###')) {
+            if (sections.length > 0 && !sections[0].match(/^###|^\d+\.\s|^\*\*.*?\*\*/m)) {
                 const introContent = sections.shift().trim();
                 if (introContent) {
                     const introDiv = document.createElement('div');
@@ -1294,13 +1291,13 @@ Return only the complete markdown guide.`;
                     containerElement.appendChild(introDiv);
                 }
             }
-
-            if (sections.length <= 1 && containerElement.children.length === 0) {
-                 // If there's only one section or less (after processing intro), or no intro was found
-                 // and there's only one block of text, render it directly without an accordion.
-                 containerElement.innerHTML = robustMarkdownToHtml(processedText);
-                 return;
+            
+            // If there are no sections after processing, render the whole thing.
+            if (sections.every(s => !s.trim())) {
+                containerElement.innerHTML = robustMarkdownToHtml(markdownText);
+                return;
             }
+
 
             sections.forEach((sectionText, index) => {
                 if (!sectionText.trim()) return;
@@ -1310,11 +1307,12 @@ Return only the complete markdown guide.`;
                 let content = '';
 
                 if (firstLineEnd !== -1) {
-                    title = sectionText.substring(0, firstLineEnd).replace(/### /g, '').trim();
+                    title = sectionText.substring(0, firstLineEnd).replace(/###/g, '').replace(/\*\*/g, '').trim();
                     content = sectionText.substring(firstLineEnd + 1).trim();
                 } else {
-                    title = title.replace(/### /g, '').trim();
+                    title = title.replace(/###/g, '').replace(/\*\*/g, '').trim();
                 }
+
 
                 if (!title) return; // Don't create an accordion for an empty title
 
@@ -1397,8 +1395,8 @@ Return only the complete markdown guide.`;
                 const resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                const contentHtml = createAccordionFromMarkdown(resultText, contentEl);
-                generateAndInjectImages(contentHtml, contentEl);
+                createAccordionFromMarkdown(resultText, contentEl);
+                generateAndInjectImages(contentEl);
 
                 footerEl.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -1462,8 +1460,8 @@ Return only the complete markdown guide.`;
                 
                 if (isModal) {
                     const contentEl = document.getElementById('inDepthModalContent');
-                    const newHtml = createAccordionFromMarkdown(newText, contentEl);
-                    generateAndInjectImages(newHtml, contentEl);
+                    createAccordionFromMarkdown(newText, contentEl);
+                    generateAndInjectImages(contentEl);
 
                     footerEl.innerHTML = `
                         <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -1472,9 +1470,9 @@ Return only the complete markdown guide.`;
                     footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
                     if (refineContainer) refineContainer.remove();
                 } else {
-                    const newHtml = createAccordionFromMarkdown(newText, contentArea);
+                    createAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
-                    generateAndInjectImages(newHtml, contentArea);
+                    generateAndInjectImages(contentArea);
                 }
 
             } catch(error) {
