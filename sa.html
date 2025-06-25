@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.21</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.22</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -970,8 +970,8 @@
                  return;
              }
              const builder = new google.picker.PickerBuilder()
-                .setOAuthToken(token)
-                .setDeveloperKey(geminiApiKey); // Key for Picker
+                .setOAuthToken(token);
+                //.setDeveloperKey(geminiApiKey); // DEV-NOTE: This is now optional and uses the OAuth token. Removing it to fix the "invalid developer key" error.
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
