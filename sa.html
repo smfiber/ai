@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
-    <!-- Google API Client Library -->
     <script src="https://apis.google.com/js/api.js" async defer></script>
-    <!-- Tailwind CSS -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Marked.js for Markdown to HTML conversion -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Google Fonts: Inter, Lato, Roboto Slab, Open Sans, Montserrat, Poppins, Nunito Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
@@ -126,7 +123,7 @@
         .copy-code-button:hover {
             background-color: rgba(255,255,255,0.2);
         }
-        .prose pre {
+        .code-block-container pre {
             background-color: transparent !important;
             margin: 0;
             padding: 1rem;
@@ -134,7 +131,7 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        .prose code {
+        .prose code, .code-block-container code {
             font-family: 'Menlo', 'Consolas', monospace;
             font-size: 0.9em;
         }
@@ -201,6 +198,7 @@
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #prompts-button { bottom: 20rem; right: 2rem; }
+        #saved-articles-button { bottom: 24.5rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -269,19 +267,28 @@
 </head>
 <body>
     
-    <!-- All Modals -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
-            <p class="mb-2 themed-text-muted">Provide your Google Cloud API Key to enable AI content generation and optional Google Drive features.</p>
+            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features. Gemini and Firebase keys are required.</p>
             <form id="apiKeyForm">
-                <label for="apiKeyInput" class="block text-sm font-medium themed-text-muted">Google Cloud API Key</label>
-                <input type="password" id="apiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Google Cloud API Key" required>
-                
+                <div class="mb-4">
+                    <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
+                    <input type="password" id="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
+                    <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
+                </div>
+
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Google Drive Integration (Optional)</h3>
-                <p class="mb-4 themed-text-muted">To save/load guides from Google Drive, also provide your Google Cloud Client ID.</p>
-                <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted mt-4">Google Client ID</label>
-                <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Google Cloud Client ID">
+                <p class="mb-2 themed-text-muted text-sm">To save/load guides from Google Drive, also provide your Google Cloud Client ID.</p>
+                
+                <div class="mb-4">
+                    <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted">Google Client ID</label>
+                    <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Google Cloud Client ID">
+                </div>
                 
                 <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
             </form>
@@ -301,10 +308,20 @@
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Guide</h2>
                 <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
-            <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthModalContent" class="p-6 overflow-y-auto"></div>
             <div id="inDepthModalFooter" class="p-4 border-t" style="border-color: var(--color-card-border);">
-                <p id="modal-status-message" class="text-xs text-center themed-text-muted"></p>
+                 <div id="inDepthModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
+        </div>
+    </div>
+     <div id="savedArticlesModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">My Saved Articles</h2>
+                <button id="closeSavedArticlesModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="savedArticlesContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -335,7 +352,6 @@
         </div>
     </div>
 
-    <!-- Main Content -->
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
@@ -348,7 +364,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.12</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.18</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -401,8 +417,7 @@
             </div>
 
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- All cards below will be generated by AI -->
-            </div>
+                </div>
             
             <div id="discover-more-container" class="text-center py-8">
                 <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random IT category">
@@ -416,7 +431,9 @@
         </main>
     </div>
 
-    <!-- Floating Action Buttons -->
+    <button id="saved-articles-button" class="floating-action-button" title="My Saved Articles">
+         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+    </button>
     <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
     </button>
@@ -446,10 +463,21 @@
         </div>
     </footer>
 
-
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase State ---
+        let db;
+        let auth;
+        let userId;
+        let articlesCollectionRef;
+        const savedArticleIds = new Set();
+        
         // --- Global State & Configuration ---
-        let apiKey = "";
+        let geminiApiKey = "";
+        let firebaseApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -457,16 +485,15 @@
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
-        let pickerInited = false;
-        let googleAuth;
-        let GOOGLE_API_KEY = '';
+        let gisInited = false;
+        let tokenClient;
         let GOOGLE_CLIENT_ID = '';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         let driveFolderId = null;
         
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiKeyModal').classList.remove('hidden');
+            // The API key modal is visible by default now.
             setupEventListeners();
             populateTypographySettings();
             marked.setOptions({
@@ -477,6 +504,57 @@
                 breaks: true,
             });
         });
+
+        function initializeFirebase() {
+             if (!firebaseApiKey) {
+                console.warn("Firebase API Key is missing. Firebase initialization skipped.");
+                return;
+            }
+            const firebaseConfig = {
+                apiKey: firebaseApiKey,
+                authDomain: "it-administration-hub.firebaseapp.com",
+                projectId: "it-administration-hub",
+                storageBucket: "it-administration-hub.appspot.com",
+                messagingSenderId: "776112448835",
+                appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
+                measurementId: "G-0Q6E7ZGNEJ"
+            };
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        const appId = firebaseConfig.appId;
+                        articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
+                        listenForSavedArticles(); 
+                    } else {
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                document.getElementById('saved-articles-button').style.display = 'none';
+            }
+        }
+        
+        function listenForSavedArticles() {
+            if (!articlesCollectionRef) return;
+            onSnapshot(articlesCollectionRef, (snapshot) => {
+                savedArticleIds.clear();
+                snapshot.forEach(doc => {
+                    savedArticleIds.add(doc.data().title);
+                });
+            }, (error) => {
+                console.error("Error listening to saved articles:", error);
+            });
+        }
+
 
         function setupEventListeners() {
             // Main Actions
@@ -492,9 +570,10 @@
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
+             document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!apiKey) {
-                    alert('Please enter your API key to use the theme generator.');
+                if(!geminiApiKey) {
+                    document.getElementById('apiKeyModal').classList.remove('hidden');
                     return;
                 }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
@@ -514,7 +593,9 @@
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal'].forEach(id => {
+                // Don't close apiKeyModal on outside click
+                if (id === 'apiKeyModal') return;
                 document.getElementById(id).addEventListener('click', (e) => {
                     if (e.target.id === id || e.target.closest('[id^="close"]')) {
                         document.getElementById(id).classList.add('hidden');
@@ -538,6 +619,18 @@
 
                 if (e.target.id === 'save-markdown-to-drive-btn') {
                     createPicker('save');
+                    return;
+                }
+                
+                if(e.target.id === 'save-to-db-btn') {
+                    saveArticleToDb(e.target);
+                    return;
+                }
+                
+                if(e.target.classList.contains('saved-article-link')) {
+                    e.preventDefault();
+                    const article = JSON.parse(e.target.dataset.article);
+                    displaySavedArticle(article);
                     return;
                 }
 
@@ -626,18 +719,34 @@
         
         async function handleApiKeySubmit(e) {
             e.preventDefault();
-            const apiKeyInput = document.getElementById('apiKeyInput');
-            if (!apiKeyInput.value.trim()) return;
-            
-            apiKey = apiKeyInput.value.trim();
-            GOOGLE_API_KEY = apiKey; // Use the same key for Google APIs
+            geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
+            firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
+
+            const form = document.getElementById('apiKeyForm');
+            let errorP = form.querySelector('.error-message');
+            if (!errorP) {
+                errorP = document.createElement('p');
+                errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
+                form.appendChild(errorP);
+            }
+
+            if (!geminiApiKey || !firebaseApiKey) {
+                errorP.textContent = "Gemini and Firebase API keys are required to start.";
+                return;
+            }
+            errorP.textContent = ''; // Clear previous error
 
             document.getElementById('apiKeyModal').classList.add('hidden');
             
-            if(GOOGLE_API_KEY && GOOGLE_CLIENT_ID) {
+            initializeFirebase();
+
+            if(GOOGLE_CLIENT_ID) { // Drive integration only needs Client ID and the Gemini Key
                 document.getElementById('google-drive-card').classList.remove('hidden');
-                gapi.load('client:picker', initializeGapiClient);
+                gapi.load('client:picker', () => {
+                     gisInited = true;
+                     initializeGapiClient();
+                });
             }
 
             const loadingModal = document.getElementById('loadingStateModal');
@@ -655,38 +764,23 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
-                const modalMessage = document.querySelector('#apiKeyModal p');
-                if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
-                    modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
-                    modalMessage.classList.add('text-red-600', 'font-bold');
-                    document.getElementById('apiKeyModal').classList.remove('hidden');
-                }
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
             } finally {
                 loadingModal.classList.add('hidden');
             }
         }
 
-        // --- Google Drive Integration Functions ---
+        // --- Google Drive & Firebase Functions ---
         
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    apiKey: GOOGLE_API_KEY,
+                    apiKey: geminiApiKey, // Use Gemini key for Drive services
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
-
-                gapi.auth2.init({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: SCOPES,
-                }).then(() => {
-                    googleAuth = gapi.auth2.getAuthInstance();
-                    googleAuth.isSignedIn.listen(updateSigninStatus);
-                    updateSigninStatus(googleAuth.isSignedIn.get());
-                }).catch((error) => {
-                    console.error("Error initializing Google Auth2", error);
-                    document.getElementById('drive-status').textContent = 'Google Auth init failed.';
-                });
+                initializeTokenClient();
 
             } catch(error) {
                 console.error("Error initializing GAPI Client", error);
@@ -694,11 +788,45 @@
             }
         }
 
+        function initializeTokenClient() {
+            if (!GOOGLE_CLIENT_ID) {
+                console.error("Google Client ID is missing.");
+                return;
+            }
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        gapi.client.setToken(tokenResponse);
+                        updateSigninStatus(true);
+                    } else {
+                        console.error('Provided token response was invalid.', tokenResponse);
+                        updateSigninStatus(false);
+                    }
+                },
+            });
+            tokenClient.requestAccessToken({prompt: 'none'});
+        }
+
+
         function handleAuthClick() {
-            if (googleAuth.isSignedIn.get()) {
-                googleAuth.signOut();
+             if (!gapiInited || !gisInited || !tokenClient) {
+                console.error('Google services are not initialized yet.');
+                document.getElementById('drive-status').textContent = 'Services initializing, please wait...';
+                return;
+            }
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
-                googleAuth.signIn();
+                const token = gapi.client.getToken();
+                if (token) {
+                    google.accounts.oauth2.revoke(token.access_token, () => {
+                        gapi.client.setToken(null);
+                        updateSigninStatus(false);
+                    });
+                }
             }
         }
         
@@ -706,18 +834,18 @@
             const authButton = document.getElementById('auth-button');
             const loadBtn = document.getElementById('load-from-drive-btn');
             const statusEl = document.getElementById('drive-status');
-            const saveBtn = document.querySelector('.save-to-drive-wrapper');
+            const saveToDriveWrappers = document.querySelectorAll('.save-to-drive-wrapper');
 
             if (isSignedIn) {
                 authButton.textContent = 'Sign Out';
                 loadBtn.classList.remove('hidden');
-                if(saveBtn) saveBtn.classList.remove('hidden');
+                saveToDriveWrappers.forEach(el => el.classList.remove('hidden'));
                 statusEl.textContent = 'Connected to Google Drive. You can now load/save guides.';
                 getDriveFolderId(); 
             } else {
                 authButton.textContent = 'Connect to Google Drive';
                 loadBtn.classList.add('hidden');
-                if(saveBtn) saveBtn.classList.add('hidden');
+                saveToDriveWrappers.forEach(el => el.classList.add('hidden'));
                 statusEl.textContent = 'Connect to load guides from Drive or save new ones.';
                 driveFolderId = null;
             }
@@ -744,7 +872,7 @@
                     });
                     driveFolderId = folderResponse.result.id;
                 }
-                updateSigninStatus(true); // Re-set the status message
+                updateSigninStatus(true);
                 return driveFolderId;
             } catch (error) {
                 console.error("Error finding/creating Drive folder:", error);
@@ -755,7 +883,7 @@
         
         async function saveMarkdownToDrive(folderId, fileName) {
             const modalStatus = document.getElementById('modal-status-message');
-            if (!googleAuth.isSignedIn.get()) {
+            if (gapi.client.getToken() === null) {
                 modalStatus.textContent = 'Please connect to Google Drive first.';
                 return;
             }
@@ -799,23 +927,27 @@
         }
 
 
-        function createPicker(mode) { // mode can be 'open' or 'save'
-            if (!gapiInited) {
-                 console.error("GAPI not ready for picker.");
+        function createPicker(mode) { 
+            if (!gisInited) {
+                 console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
             }
-             
-             const token = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+            
+             const token = gapi.client.getToken()?.access_token;
+             if (!token) {
+                 (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'You are not signed in.';
+                 return;
+             }
              const builder = new google.picker.PickerBuilder()
                 .setOAuthToken(token)
-                .setDeveloperKey(GOOGLE_API_KEY);
+                .setDeveloperKey(geminiApiKey); // Use Gemini key for Drive services
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
                 view.setMimeTypes("text/markdown,text/plain");
                 builder.addView(view).setCallback(pickerCallbackOpen);
-             } else { // 'save' mode
+             } else { 
                 const view = new google.picker.View(google.picker.ViewId.FOLDERS);
                 view.setSelectableMimeTypes('application/vnd.google-apps.folder');
                 builder.addView(view).setTitle("Select a folder to save in").setCallback(pickerCallbackSave);
@@ -855,6 +987,90 @@
             }
         }
         
+        async function saveArticleToDb(button) {
+            if (!articlesCollectionRef) {
+                console.error("Firestore not initialized, cannot save article.");
+                alert("Saved articles feature is not available. Check Firebase config.");
+                return;
+            }
+            
+            const title = document.getElementById('inDepthModalTitle').textContent;
+            const markdown = originalGeneratedText.get(title + '-full') || originalGeneratedText.get(title);
+
+            if (!title || !markdown) {
+                console.error("Could not find title or markdown to save.");
+                return;
+            }
+            
+            button.disabled = true;
+            button.textContent = 'Saving...';
+
+            try {
+                await addDoc(articlesCollectionRef, { title, markdown, savedAt: new Date() });
+                button.textContent = 'Saved!';
+            } catch (error) {
+                console.error("Error saving article to Firestore:", error);
+                button.disabled = false;
+                button.textContent = 'Save Failed';
+            }
+        }
+        
+         async function showSavedArticles() {
+            if (!articlesCollectionRef) {
+                alert("Saved articles feature is not available. Please ensure your API key is correct and Firebase is configured.");
+                return;
+            }
+            const modal = document.getElementById('savedArticlesModal');
+            const contentEl = document.getElementById('savedArticlesContent');
+            contentEl.innerHTML = getLoaderHTML('Loading saved articles...');
+            modal.classList.remove('hidden');
+
+            try {
+                const querySnapshot = await getDocs(articlesCollectionRef);
+                if (querySnapshot.empty) {
+                    contentEl.innerHTML = `<p class="themed-text-muted">You haven't saved any articles yet.</p>`;
+                    return;
+                }
+
+                let articlesHtml = '<ul class="space-y-2 list-disc pl-5">';
+                querySnapshot.forEach(doc => {
+                    const article = doc.data();
+                    articlesHtml += `
+                        <li>
+                            <a href="#" class="saved-article-link themed-text-primary hover:underline" data-article='${JSON.stringify(article)}'>
+                                ${article.title}
+                            </a>
+                        </li>
+                    `;
+                });
+                articlesHtml += '</ul>';
+                contentEl.innerHTML = articlesHtml;
+            } catch (error) {
+                console.error("Error fetching saved articles:", error);
+                contentEl.innerHTML = `<p class="text-red-500">Could not load saved articles.</p>`;
+            }
+        }
+
+        function displaySavedArticle(article) {
+            document.getElementById('savedArticlesModal').classList.add('hidden');
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+
+            titleEl.textContent = article.title;
+            contentEl.innerHTML = ''; 
+            renderAccordionFromMarkdown(article.markdown, contentEl, false);
+            
+            originalGeneratedText.set(article.title + '-full', article.markdown);
+            
+            const buttonContainer = document.getElementById('inDepthModalButtons');
+            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled>Saved!</button>`;
+
+            modal.classList.remove('hidden');
+        }
+
+
         function displayImportedGuide(fileName, markdownContent) {
             const section = document.getElementById('imported-guides-section');
             const container = document.getElementById('imported-guides-container');
@@ -886,7 +1102,7 @@
             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
-        // --- Core Application Functions (Modified and existing) ---
+        // --- Core Application Functions ---
 
         async function loadAppContent(loadingMessageEl) {
             try {
@@ -998,10 +1214,10 @@
                     },
                     {
                         key: 'serviceNowAdmin',
-                        title: 'Using ServiceNow',
-                        description: 'Guides and best practices for administering a ServiceNow instance.',
-                        initialPrompt: `Generate 10 common administrative tasks for ServiceNow. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`,
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for ServiceNow. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.`
+                        title: 'ServiceNow Platform Administration',
+                        description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.',
+                        initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform (servicenow.com). Focus on ITSM, user management, and workflow administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`,
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform (servicenow.com). Cover topics like ITSM, CMDB, user roles, UI policies, business rules, and integrations. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.`
                     },
                     { 
                         key: 'usefulApis', 
@@ -1046,6 +1262,8 @@
                         fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     }
                 ];
+                
+                categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
                 
@@ -1078,7 +1296,7 @@
             card.className = 'card md:col-span-2';
             card.id = `${key}-card`;
             const selectorId = `${key}-selector-visual`;
-            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container prose max-w-none mt-4"></div></div>`;
+            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
             mainGrid.appendChild(card);
             
             fullPrompts[key] = fullPrompt;
@@ -1088,6 +1306,7 @@
                 if (!jsonText) throw new Error(`API returned empty content for ${title}.`);
                 
                 const data = parseJsonWithCorrections(jsonText);
+                data.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[key] = data;
                 populateCardGridSelector(selectorId, key);
             } catch (error) {
@@ -1144,7 +1363,9 @@
             try {
                 const jsonText = await callGeminiAPI(fullPrompt, true);
                 if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
-                allThemeData[themeType] = parseJsonWithCorrections(jsonText);
+                const fullData = parseJsonWithCorrections(jsonText);
+                fullData.sort((a, b) => a.title.localeCompare(b.title));
+                allThemeData[themeType] = fullData;
                 populateCardGridSelector(containerId, themeType);
                 document.getElementById(`${themeType}-details`).innerHTML = '';
             } catch (error) {
@@ -1169,9 +1390,15 @@
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
-                const resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt);
+                if (resultText) {
+                    resultText = resultText.replace(/```(markdown)?\n?/g, '').replace(/```/g, '').trim();
+                }
                 originalGeneratedText.set(themeId, resultText); 
-                renderAccordionFromMarkdown(resultText, resultContainer);
+                
+                const resultHtml = marked.parse(resultText || '');
+                resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
+
                 addPostGenerationButtons(resultContainer, themeId, themeType);
             } catch (error) {
                 handleApiError(error, resultContainer, `guide for ${item.title}`);
@@ -1194,7 +1421,10 @@
             resultContainer.innerHTML = getLoaderHTML('Generating your custom AI guide...');
 
             try {
-                const resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt);
+                 if (resultText) {
+                    resultText = resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim();
+                }
                 
                 originalGeneratedText.set('custom-plan', resultText);
                 renderAccordionFromMarkdown(resultText, resultContainer);
@@ -1257,13 +1487,13 @@
             if (isJson) {
                 payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
             }
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
         async function callImageGenAPI(prompt) {
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiApiKey}`, payload);
             const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
             return base64 ? `data:image/png;base64,${base64}` : null;
         }
@@ -1317,7 +1547,6 @@
                 populateTailoringButtons(options);
             } catch (error) {
                 handleApiError(error, container, 'tailoring options');
-                // Fallback to a small, hardcoded list on error
                 const fallbackOptions = ["Security Hardening", "Performance Tuning", "Automation Script", "For Beginners"];
                 populateTailoringButtons(fallbackOptions);
             }
@@ -1408,6 +1637,7 @@
 
                 const pre = document.createElement('pre');
                 pre.className = 'text-sm';
+                pre.style.color = 'var(--code-text)';
                 pre.textContent = promptText;
                 codeBlockContainer.appendChild(pre);
                 
@@ -1419,12 +1649,9 @@
         }
 
 
-        // DEV NOTE: This function defines the master prompt for generating detailed guides.
-        // It's designed to be flexible for both new content and user-requested refinements.
         function getEnhancedPrompt(task, options = '', originalText = '') {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
-            // This logic block handles refinements of existing text.
             if (originalText) {
                 return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
@@ -1449,7 +1676,6 @@ ${originalText}
 Return only the new, complete, and rewritten markdown guide.`;
             }
 
-            // This is the prompt for generating new content from scratch.
             return `You are an expert senior IT administrator AI. Generate a comprehensive and practical guide for the task: "${task}". ${optionsText}
 
 Your task is to structure this guide into the most logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed and practical.
@@ -1467,16 +1693,11 @@ When generating the guide, ensure the guide as a whole meets the following requi
 Return only the complete markdown guide.`;
         }
         
-        /**
-         * Converts a markdown string to sanitized HTML using marked.js,
-         * and prepares special placeholders for screenshots and code blocks.
-         */
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
             let processedText;
             if (generateImages) {
-                // First, process our custom placeholders before passing to marked.js
                 processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
                     const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
                     return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
@@ -1485,21 +1706,19 @@ Return only the complete markdown guide.`;
                             </div>`;
                 });
             } else {
-                // If not generating images, simply remove the screenshot tags from the markdown text.
                 processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
             }
 
 
-            // Convert markdown to HTML using the marked library
             let html = marked.parse(processedText);
-
-            // Post-processing to add copy buttons to code blocks
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html;
 
-            tempDiv.querySelectorAll('pre code').forEach(codeBlock => {
-                const pre = codeBlock.parentElement;
-                const lang = Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text';
+            tempDiv.querySelectorAll('pre').forEach(preBlock => {
+                if (preBlock.parentElement.classList.contains('code-block-container')) return;
+
+                const codeBlock = preBlock.querySelector('code');
+                const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
                 
                 const container = document.createElement('div');
                 container.className = 'code-block-container';
@@ -1512,8 +1731,8 @@ Return only the complete markdown guide.`;
                 `;
 
                 container.appendChild(header);
-                pre.parentNode.insertBefore(container, pre);
-                container.appendChild(pre);
+                preBlock.parentNode.insertBefore(container, preBlock);
+                container.appendChild(preBlock);
             });
 
             return tempDiv.innerHTML;
@@ -1693,10 +1912,6 @@ Return only the complete markdown guide.`;
             document.body.removeChild(textarea);
         }
 
-        /**
-         * Renders markdown into an accordion structure inside a container.
-         * It uses marked.js to convert markdown to HTML first, then builds the accordion.
-         */
         function renderAccordionFromMarkdown(markdownText, containerElement, generateImages = true) {
             containerElement.innerHTML = ''; 
             if (!markdownText || !markdownText.trim()) {
@@ -1704,7 +1919,6 @@ Return only the complete markdown guide.`;
                 return;
             }
 
-            // Convert the entire markdown to HTML first.
             const fullHtml = convertMarkdownToHtml(markdownText, generateImages);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = fullHtml;
@@ -1712,23 +1926,22 @@ Return only the complete markdown guide.`;
             const nodes = Array.from(tempDiv.childNodes);
             let currentAccordionItem = null;
             let introContent = document.createElement('div');
-            introContent.className = 'accordion-intro mb-4';
+            introContent.className = 'accordion-intro mb-4 prose max-w-none';
 
             let firstHeaderFound = false;
 
             nodes.forEach(node => {
-                // Collect any content before the first H3 as an introduction.
                 if (!firstHeaderFound && node.tagName !== 'H3') {
                     introContent.appendChild(node.cloneNode(true));
                     return;
                 }
                 
-                // When an H3 is found, it starts a new accordion item.
                 if (node.tagName === 'H3') {
                     firstHeaderFound = true;
                     if (introContent.hasChildNodes()) {
                         containerElement.appendChild(introContent);
-                        introContent = document.createElement('div'); // Reset for next potential non-accordion content
+                        introContent = document.createElement('div'); 
+                        introContent.className = 'accordion-intro mb-4 prose max-w-none';
                     }
 
                     currentAccordionItem = document.createElement('div');
@@ -1736,7 +1949,7 @@ Return only the complete markdown guide.`;
 
                     const title = node.textContent;
                     const contentDiv = document.createElement('div');
-                    contentDiv.className = 'accordion-content';
+                    contentDiv.className = 'accordion-content prose max-w-none';
 
                     currentAccordionItem.innerHTML = `
                         <button type="button" class="accordion-header">
@@ -1747,37 +1960,23 @@ Return only the complete markdown guide.`;
                     currentAccordionItem.appendChild(contentDiv);
                     containerElement.appendChild(currentAccordionItem);
                 } else if (currentAccordionItem) {
-                    // Add any subsequent nodes to the content of the current accordion item.
                     const contentDiv = currentAccordionItem.querySelector('.accordion-content');
                     contentDiv.appendChild(node.cloneNode(true));
                 }
             });
             
-            // If no H3s were found, render the whole content directly.
             if (!firstHeaderFound) {
-                 const accordionItem = document.createElement('div');
-                 accordionItem.className = 'accordion-item';
                  const contentDiv = document.createElement('div');
-                 contentDiv.className = 'accordion-content open';
+                 contentDiv.className = 'prose max-w-none';
                  contentDiv.innerHTML = fullHtml;
-                 
-                 accordionItem.innerHTML = `
-                    <button type="button" class="accordion-header active">
-                        <span class="text-left">Guide Details</span>
-                        <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                 `;
-                 accordionItem.appendChild(contentDiv);
-                 containerElement.appendChild(accordionItem);
+                 containerElement.appendChild(contentDiv);
                  return;
             }
 
-            // Append any remaining intro content if it exists.
             if (introContent.hasChildNodes()) {
                 containerElement.appendChild(introContent);
             }
 
-            // Open the first accordion item by default.
             const firstItem = containerElement.querySelector('.accordion-item');
             if (firstItem) {
                 const header = firstItem.querySelector('.accordion-header');
@@ -1827,10 +2026,17 @@ Return only the complete markdown guide.`;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
             
             titleEl.textContent = `In-Depth: ${item.title}`;
             contentEl.innerHTML = getLoaderHTML(`Generating detailed guide for ${item.title}...`);
             document.getElementById('modal-status-message').textContent = '';
+            
+            const buttonContainer = document.getElementById('inDepthModalButtons');
+            buttonContainer.innerHTML = '';
+
+            footerEl.dataset.themeId = themeId;
+            footerEl.dataset.themeType = themeType;
 
             modal.classList.remove('hidden');
             
@@ -1838,7 +2044,8 @@ Return only the complete markdown guide.`;
 
             try {
                 let resultText = await callGeminiAPI(prompt);
-                originalGeneratedText.set(themeId + '-full', resultText);
+                const fullTitle = `In-Depth: ${item.title}`;
+                originalGeneratedText.set(fullTitle + '-full', resultText);
                 
                 if (resultText && resultText.startsWith('```markdown\n') && resultText.endsWith('\n```')) {
                     resultText = resultText.substring('```markdown\n'.length, resultText.length - '\n```'.length).trim();
@@ -1846,50 +2053,15 @@ Return only the complete markdown guide.`;
                      resultText = resultText.substring(3, resultText.length - 3).trim();
                 }
                 
-                contentEl.innerHTML = ''; // Clear loader
-
-                // --- Accordion 1: HTML Preview (open by default) ---
-                const htmlAccordion = document.createElement('div');
-                htmlAccordion.className = 'accordion-item';
-                htmlAccordion.innerHTML = `
-                    <button type="button" class="accordion-header active">
-                        <span>HTML Preview</span>
-                        <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content open prose max-w-none">
-                        ${convertMarkdownToHtml(resultText, false)}
-                    </div>`;
-                contentEl.appendChild(htmlAccordion);
+                contentEl.innerHTML = '';
+                renderAccordionFromMarkdown(resultText, contentEl, false);
                 
-                // --- Accordion 2: Markdown Code (closed by default) ---
-                const mdAccordion = document.createElement('div');
-                mdAccordion.className = 'accordion-item';
-                const isSignedIn = googleAuth && googleAuth.isSignedIn.get();
-                
-                mdAccordion.innerHTML = `
-                    <button type="button" class="accordion-header">
-                        <span>Raw Markdown & Save Options</span>
-                        <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content">
-                         <div class="code-block-container !m-0">
-                             <div class="code-block-header">
-                                 <span>markdown</span>
-                                 <button class="copy-code-button">Copy</button>
-                             </div>
-                             <pre class="!p-4"><code class="language-markdown"></code></pre>
-                         </div>
-                         <div class="save-to-drive-wrapper mt-4 border-t pt-4 ${isSignedIn ? '' : 'hidden'}" style="border-color: var(--color-card-border);">
-                            <button id="show-save-to-drive-form-btn" class="btn-secondary w-full">Save to Google Drive</button>
-                            <div id="save-to-drive-form" class="hidden">
-                                <label for="drive-filename-input" class="block text-sm font-medium themed-text-muted">Save as:</label>
-                                <input type="text" id="drive-filename-input" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2" value="${item.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md">
-                                <button id="save-markdown-to-drive-btn" class="btn-primary w-full mt-2">Choose Folder & Save</button>
-                            </div>
-                         </div>
-                    </div>`;
-                mdAccordion.querySelector('code').textContent = resultText;
-                contentEl.appendChild(mdAccordion);
+                const saveDbBtn = document.createElement('button');
+                saveDbBtn.id = 'save-to-db-btn';
+                saveDbBtn.className = 'btn-secondary';
+                saveDbBtn.disabled = savedArticleIds.has(fullTitle);
+                saveDbBtn.textContent = savedArticleIds.has(fullTitle) ? 'Saved!' : 'Save to My Articles';
+                buttonContainer.appendChild(saveDbBtn);
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -1920,11 +2092,19 @@ Return only the complete markdown guide.`;
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
             const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
-            const footerEl = document.getElementById('inDepthModalFooter');
             
-            const themeId = isModal ? footerEl.dataset.themeId : contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
-            const textKey = isModal ? themeId + '-full' : themeId;
+            let themeId, themeType;
+            if (isModal) {
+                const footerEl = document.getElementById('inDepthModalFooter');
+                themeId = footerEl.dataset.themeId;
+                themeType = footerEl.dataset.themeType;
+            } else {
+                const exploreButton = contentArea.querySelector('.explore-button');
+                themeId = exploreButton?.dataset.themeId || 'custom-plan';
+                themeType = exploreButton?.dataset.themeType || 'custom';
+            }
 
+            const textKey = isModal ? `In-Depth: ${allThemeData[themeType].find(d => String(d.id) === String(themeId)).title}-full` : themeId;
             const originalText = originalGeneratedText.get(textKey);
 
             if (!originalText) {
@@ -1952,11 +2132,10 @@ Return only the complete markdown guide.`;
                 originalGeneratedText.set(textKey, newText);
                 
                 if (isModal) {
-                    const item = allThemeData[themeId] || { title: document.getElementById('inDepthModalTitle').textContent };
-                    handleExploreInDepth(themeId, 'custom'); // Rerun the modal creation
+                    renderAccordionFromMarkdown(newText, contentArea, false);
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
-                    addPostGenerationButtons(contentArea, themeId, 'custom');
+                    addPostGenerationButtons(contentArea, themeId, themeType);
                     generateAndInjectImages(contentArea);
                 }
 
@@ -1967,10 +2146,9 @@ Return only the complete markdown guide.`;
         
         function getIconForTheme(themeType, themeId) { 
             const icons = {
-                vmwareEsxi: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>`,
+                serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
                 windowsServer: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
                 m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
-                citrixAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2.17-4.24a.5.5 0 10-.7.7l4.5 4.5a.5.5 0 00.7-.7l-4.5-4.5zm-5.66 0a.5.5 0 11-.7.7l4.5 4.5a.5.5 0 01.7-.7l-4.5-4.5zM12 3a9 9 0 100 18 9 9 0 000-18z"></path></svg>`,
                 default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
             }
             return icons[themeType] || icons.default;
