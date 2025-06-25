@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.23</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.24</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -479,7 +479,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -1133,7 +1133,11 @@
             button.textContent = 'Saving...';
 
             try {
-                await addDoc(articlesCollectionRef, { title, markdown, savedAt: new Date() });
+                await addDoc(articlesCollectionRef, { 
+                    title, 
+                    markdown, 
+                    savedAt: Timestamp.fromDate(new Date()) 
+                });
                 button.textContent = 'Saved!';
             } catch (error) {
                 console.error("Error saving article to Firestore:", error);
@@ -2334,5 +2338,3 @@ Return only the complete markdown guide.`;
     </script>
 </body>
 </html>
-"
-The full prompt you selected doesn't seem to be a prompt. Could you please clarify your reque
