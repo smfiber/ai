@@ -281,8 +281,8 @@
 
                 <div class="mb-4">
                     <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
-                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config object here. e.g. { apiKey: '...', ... }"></textarea>
-                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. Paste just the object, starting with `{` and ending with `}`.</p>
+                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here."></textarea>
+                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. You can paste the entire snippet.</p>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -771,9 +771,13 @@
                 if (!jsonMatch) {
                     throw new Error("Could not find a valid JSON object starting with '{' and ending with '}'.");
                 }
-                firebaseConfigText = jsonMatch[0];
+                let configString = jsonMatch[0];
 
-                firebaseConfig = JSON.parse(firebaseConfigText);
+                // Convert JS object keys to JSON strings (add quotes) and remove trailing commas
+                configString = configString.replace(/(\w+)\s*:/g, '"$1":').replace(/,\s*([}\]])/g, '$1');
+
+                firebaseConfig = JSON.parse(configString);
+                
                 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
                     throw new Error("Invalid Firebase config object. It must contain 'apiKey' and 'projectId'.");
                 }
@@ -2429,4 +2433,4 @@ Return only the complete markdown guide.`;
 
     </script>
 </body>
-</html>
+</ht
