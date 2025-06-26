@@ -386,7 +386,8 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.36</div>
+            <!-- v4.37 - Note for version update -->
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.37</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -442,6 +443,7 @@
 
                         <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
                     </form>
+                    <!-- This container is no longer used for custom guides, but kept for potential future use or other content -->
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
@@ -1271,7 +1273,6 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
-                // v4.36 - Note for version update: Added new categories
                 const categoriesToGenerate = [
                     { 
                         key: 'activeDirectory', 
@@ -1556,7 +1557,6 @@
                 </div>`;
             }).join('');
             
-            // v4.36 - Note for version update: Reworked button logic for clarity and to fix "Show All"
             const fullPrompt = fullPrompts[themeType];
             let actionButtonsHtml = '';
             const card = container.closest('.card');
@@ -1761,20 +1761,8 @@
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(resultText, contentEl, false);
 
-                if (gapi.client.getToken() !== null) {
-                    const saveDriveBtn = document.createElement('button');
-                    saveDriveBtn.id = 'save-to-drive-btn';
-                    saveDriveBtn.className = 'btn-secondary';
-                    saveDriveBtn.textContent = 'Save to Google Drive';
-                    buttonContainer.appendChild(saveDriveBtn);
-                }
-                if (msalAccount) {
-                     const saveOneDriveBtn = document.createElement('button');
-                     saveOneDriveBtn.id = 'save-to-onedrive-btn';
-                     saveOneDriveBtn.className = 'btn-secondary';
-                     saveOneDriveBtn.textContent = 'Save to OneDrive';
-                     buttonContainer.appendChild(saveOneDriveBtn);
-                }
+                // v4.37 - Note for version update: Call unified function to add modal buttons
+                addModalActionButtons(buttonContainer);
 
             } catch(error) {
                 handleApiError(error, contentEl, 'custom IT guide');
@@ -2057,6 +2045,36 @@ When generating the guide, ensure the guide as a whole meets the following requi
 Return only the complete markdown guide.`;
         }
         
+        // v4.37 - Note for version update: Added a unified function to add buttons to the modal footer
+        function addModalActionButtons(buttonContainer) {
+            buttonContainer.innerHTML = `
+                <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+            `;
+
+            // Add cloud save buttons if available
+            if (gapi.client.getToken() !== null) {
+                const saveDriveBtn = document.createElement('button');
+                saveDriveBtn.id = 'save-to-drive-btn';
+                saveDriveBtn.className = 'btn-secondary';
+                saveDriveBtn.textContent = 'Save to Google Drive';
+                buttonContainer.appendChild(saveDriveBtn);
+            }
+            if (msalAccount) {
+                 const saveOneDriveBtn = document.createElement('button');
+                 saveOneDriveBtn.id = 'save-to-onedrive-btn';
+                 saveOneDriveBtn.className = 'btn-secondary';
+                 saveOneDriveBtn.textContent = 'Save to OneDrive';
+                 buttonContainer.appendChild(saveOneDriveBtn);
+            }
+
+            // Add event listener for the new copy button
+            buttonContainer.querySelector('.copy-button').addEventListener('click', e => {
+                const contentToCopy = document.getElementById('inDepthModalContent');
+                copyElementTextToClipboard(contentToCopy, e.target);
+            });
+        }
+
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
@@ -2482,21 +2500,8 @@ Return only the complete markdown guide.`;
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false);
                 
-                if (gapi.client.getToken() !== null) {
-                    const saveDriveBtn = document.createElement('button');
-                    saveDriveBtn.id = 'save-to-drive-btn';
-                    saveDriveBtn.className = 'btn-secondary';
-                    saveDriveBtn.textContent = 'Save to Google Drive';
-                    buttonContainer.appendChild(saveDriveBtn);
-                }
-                if (msalAccount) {
-                     const saveOneDriveBtn = document.createElement('button');
-                     saveOneDriveBtn.id = 'save-to-onedrive-btn';
-                     saveOneDriveBtn.className = 'btn-secondary';
-                     saveOneDriveBtn.textContent = 'Save to OneDrive';
-                     buttonContainer.appendChild(saveOneDriveBtn);
-                }
-
+                // v4.37 - Note for version update: Call unified function to add modal buttons
+                addModalActionButtons(buttonContainer);
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -2600,4 +2605,4 @@ Return only the complete markdown guide.`;
 
     </script>
 </body>
-</html>
+</ht
