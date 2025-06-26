@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.31</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1626,12 +1626,13 @@
                 const compositeKey = `${cardTitle} - ${item.title}`;
                 const isViewed = viewedItemIds.has(compositeKey);
                 const viewedClass = isViewed ? 'opacity-75' : '';
+                const truncatedTitle = truncateText(item.title, 50);
 
                 return `
-                <div class="grid-card-selector ${viewedClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || ''}">
+                <div class="grid-card-selector ${viewedClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
-                    <div class="mt-2">
-                        <div class="text-sm font-normal leading-tight block">${item.title}</div>
+                    <div class="mt-2 overflow-hidden">
+                        <div class="text-sm font-normal leading-tight block">${truncatedTitle}</div>
                     </div>
                 </div>`;
             }).join('');
@@ -2565,6 +2566,13 @@ Return only the complete markdown guide.`;
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
         
+        function truncateText(text, maxLength = 50) {
+            if (typeof text !== 'string' || text.length <= maxLength) {
+                return text;
+            }
+            return text.substring(0, maxLength) + '...';
+        }
+
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
 
     </script>
