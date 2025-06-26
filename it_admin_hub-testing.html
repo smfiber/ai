@@ -264,6 +264,28 @@
         .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
         .grid-card-selector.active small { color: rgba(255, 255, 255, 0.8); }
 
+        /* Style for newly generated items */
+        .new-item-highlight {
+            animation: fadeOutGlow 3s forwards;
+        }
+        @keyframes fadeOutGlow {
+            0% {
+                border-color: var(--color-primary);
+                box-shadow: 0 0 10px var(--color-primary);
+                transform: scale(1.02);
+            }
+            80% {
+                border-color: var(--color-primary);
+                box-shadow: 0 0 10px var(--color-primary);
+                transform: scale(1.02);
+            }
+            100% {
+                border-color: var(--color-card-border);
+                box-shadow: none;
+                transform: scale(1);
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -367,7 +389,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.31</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.33</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1611,7 +1633,7 @@
             }
         }
         
-        function populateCardGridSelector(containerId, themeType) {
+        function populateCardGridSelector(containerId, themeType, newItemsIds = new Set()) {
             const container = document.getElementById(containerId);
             const data = allThemeData[themeType];
             if (!container || !data || !Array.isArray(data)) {
@@ -1625,11 +1647,13 @@
             const itemsHtml = data.map(item => {
                 const compositeKey = `${cardTitle} - ${item.title}`;
                 const isViewed = viewedItemIds.has(compositeKey);
+                const isNew = newItemsIds.has(item.id);
                 const viewedClass = isViewed ? 'opacity-75' : '';
+                const newClass = isNew ? 'new-item-highlight' : '';
                 const truncatedTitle = truncateText(item.title, 50);
 
                 return `
-                <div class="grid-card-selector ${viewedClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
+                <div class="grid-card-selector ${viewedClass} ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2 overflow-hidden">
                         <div class="text-sm font-normal leading-tight block">${truncatedTitle}</div>
@@ -1687,6 +1711,7 @@
                 if (!jsonText) throw new Error("AI did not return any new items.");
 
                 const newItems = parseJsonWithCorrections(jsonText);
+                const newItemIds = new Set(newItems.map(item => item.id));
                 
                 newItems.forEach(newItem => {
                     if (!allThemeData[themeType].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
@@ -1695,7 +1720,7 @@
                 });
                 
                 allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
-                populateCardGridSelector(containerId, themeType);
+                populateCardGridSelector(containerId, themeType, newItemIds);
                 document.getElementById(`${themeType}-details`).innerHTML = '';
 
             } catch (error) {
@@ -1828,7 +1853,15 @@
                 throw new Error("Invalid input: not a string.");
             }
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
+            
+            // Attempt to fix common JSON errors from the API
+            // 1. Remove trailing commas before closing curly braces or brackets
             cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
+            // 2. Fix improperly escaped single quotes which are invalid in JSON
+            cleanedString = cleanedString.replace(/\\'/g, "'");
+            // 3. Fix unescaped backslashes (common in file paths) that are not part of a valid escape sequence.
+            // This looks for a backslash that is NOT followed by a double quote, another backslash, or any of the other valid escape characters.
+            cleanedString = cleanedString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
 
             try {
                 return JSON.parse(cleanedString);
@@ -2388,12 +2421,12 @@ Return only the complete markdown guide.`;
             const contentEl = document.getElementById('inDepthModalContent');
             
             titleEl.textContent = "AI Help & Feedback";
-            contentEl.innerHTML = getLoaderHTML('Generating help guide...');
+            contentEl.innerHTML = getLoaderHTML('Generating help guide and AI feedback...');
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
             modal.classList.remove('hidden');
 
-            const prompt = `
+            const helpPrompt = `
                 Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
                 The features are: 
                 1.  **Cloud Storage Integration**: A dedicated card on the main screen allows you to connect to Google Drive and/or Microsoft OneDrive. Once connected, you can save guides. Google Drive also supports importing guides.
@@ -2405,11 +2438,68 @@ Return only the complete markdown guide.`;
                 7.  **In-Depth Exploration & Refinement**: You can expand a summary to see a full guide or ask the AI to rewrite and refine any generated content with further instructions.
                 8.  **Important Note on Images**: Image generation for screenshot placeholders has been disabled in the pop-up modal views to improve readability and focus on the text content. Images are still generated on the main page.
                 Format the output as a clean markdown document using '###' for each section title.`;
+
+            const feedbackPrompt = `
+                You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. 
+                Based on the feature descriptions below, provide constructive feedback. What is intuitive? What could be improved? What features might be missing for a senior IT administrator?
+
+                **Application Features:**
+                1.  **Cloud Storage Integration**: Connect to Google Drive/OneDrive to save/load guides.
+                2.  **Custom Task Generator**: Enter any IT task for a step-by-step AI-generated guide.
+                3.  **Tailoring Options**: Buttons to refine guides (e.g., 'for Security', 'for Beginners').
+                4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
+                5.  **Visual Theme Generator**: Floating button to generate a new color theme and header image from a text prompt.
+                6.  **In-Depth Exploration & Refinement**: Expand summaries to full guides or ask AI to rewrite content.
+                7.  **Saved Articles**: A feature to save generated guides within the application's database.
+
+                Format your feedback as a clean markdown document. Use '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
             
             try {
-                let resultText = await callGeminiAPI(prompt);
-                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                contentEl.innerHTML = `<div class="prose max-w-none">${marked.parse(resultText || '')}</div>`;
+                const [helpResult, feedbackResult] = await Promise.all([
+                    callGeminiAPI(helpPrompt),
+                    callGeminiAPI(feedbackPrompt)
+                ]);
+
+                const helpText = helpResult ? helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                const feedbackText = feedbackResult ? feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                
+                contentEl.innerHTML = `
+                    <div class="accordion-item">
+                        <button type="button" class="accordion-header active">
+                            <span class="text-left font-semibold">Application Help Guide</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="accordion-content open prose max-w-none">
+                            ${marked.parse(helpText || '<p class="themed-text-muted">Could not load help content.</p>')}
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <button type="button" class="accordion-header">
+                            <span class="text-left font-semibold">AI-Generated Feedback</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="accordion-content prose max-w-none">
+                            ${marked.parse(feedbackText || '<p class="themed-text-muted">Could not load feedback.</p>')}
+                        </div>
+                    </div>
+                `;
+
+                contentEl.querySelectorAll('pre:not(code-block-container pre)').forEach(preBlock => {
+                    const codeBlock = preBlock.querySelector('code');
+                    const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
+                    
+                    const container = document.createElement('div');
+                    container.className = 'code-block-container';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'code-block-header';
+                    header.innerHTML = `<span>${lang}</span><button class="copy-code-button">Copy</button>`;
+
+                    container.appendChild(header);
+                    preBlock.parentNode.insertBefore(container, preBlock);
+                    container.appendChild(preBlock);
+                });
+
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
