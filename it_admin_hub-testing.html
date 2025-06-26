@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Self-note: Updated to version 4.37 -->
-    <title>IT Administration Hub v4.37</title>
+    <title>IT Administration Hub</title>
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -200,7 +199,6 @@
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #prompts-button { bottom: 20rem; right: 2rem; }
-        #saved-articles-button { bottom: 24.5rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -252,6 +250,7 @@
             background: rgba(0,0,0,0.02);
         }
         .grid-card-selector {
+            position: relative; /* Positioning context for the checkmark */
             background-color: white; border: 1px solid var(--color-card-border);
             border-radius: 8px; padding: 1rem; text-align: center;
             cursor: pointer; transition: all 0.2s ease; font-size: 0.875rem; font-weight: 500;
@@ -265,6 +264,28 @@
         .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
         .grid-card-selector.active small { color: rgba(255, 255, 255, 0.8); }
 
+        /* NEW: Visual indicator for viewed items */
+        .viewed-indicator {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: #ef4444; /* red-500 */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .viewed-indicator svg {
+            width: 0.75rem;
+            height: 0.75rem;
+        }
+
         /* Style for newly generated items */
         .new-item-highlight {
             border: 2px solid var(--color-primary);
@@ -274,7 +295,7 @@
     </style>
 </head>
 <body>
-    <!-- Version 4.37 -->
+    
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
@@ -324,15 +345,6 @@
             </div>
         </div>
     </div>
-     <div id="savedArticlesModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
-            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 class="text-2xl font-bold themed-text-primary">My Saved Articles</h2>
-                <button id="closeSavedArticlesModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
-            </div>
-            <div id="savedArticlesContent" class="p-6 overflow-y-auto"></div>
-        </div>
-    </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -374,7 +386,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.37</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.35</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -430,6 +442,7 @@
 
                         <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
                     </form>
+                    <!-- This container is no longer used for custom guides, but kept for potential future use or other content -->
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
@@ -449,9 +462,6 @@
         </main>
     </div>
 
-    <button id="saved-articles-button" class="floating-action-button" title="My Saved Articles">
-         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-    </button>
     <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
     </button>
@@ -490,9 +500,7 @@
         let db;
         let auth;
         let userId;
-        let articlesCollectionRef;
         let viewedItemsCollectionRef;
-        const savedArticleIds = new Set();
         const viewedItemIds = new Set();
         let firebaseConfig = null;
         let appIsInitialized = false;
@@ -653,9 +661,7 @@
                     if (user) {
                         userId = user.uid;
                         const appId = firebaseConfig.appId || 'it-admin-hub-global'; 
-                        articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
-                        listenForSavedArticles(); 
                         listenForViewedItems();
                         
                         // --- LOGIN FIX ---
@@ -672,7 +678,6 @@
 
                     } else {
                         userId = null;
-                        articlesCollectionRef = null;
                         viewedItemsCollectionRef = null;
                     }
                     setupAuthUI(user);
@@ -691,18 +696,6 @@
             }
         }
         
-        function listenForSavedArticles() {
-            if (!articlesCollectionRef) return;
-            onSnapshot(articlesCollectionRef, (snapshot) => {
-                savedArticleIds.clear();
-                snapshot.forEach(doc => {
-                    savedArticleIds.add(doc.data().title);
-                });
-            }, (error) => {
-                console.error("Error listening to saved articles:", error);
-            });
-        }
-
         function listenForViewedItems() {
             if (!viewedItemsCollectionRef) return;
             onSnapshot(viewedItemsCollectionRef, (snapshot) => {
@@ -744,7 +737,6 @@
 
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-            document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!geminiApiKey) {
                     document.getElementById('apiKeyModal').classList.remove('hidden');
@@ -765,7 +757,7 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.addEventListener('click', (e) => {
@@ -776,115 +768,99 @@
                 }
             });
 
-            // BUG FIX v4.36: Refactored the main click listener to be more robust and handle different types of clickable elements correctly.
             document.addEventListener('click', (e) => {
-                const copyBtn = e.target.closest('.copy-code-button');
-                if (copyBtn) {
-                    const codeBlock = copyBtn.closest('.code-block-container').querySelector('code, pre');
-                    copyElementTextToClipboard(codeBlock, copyBtn);
-                    return;
-                }
-
-                const savedLink = e.target.closest('.saved-article-link');
-                if (savedLink) {
-                    e.preventDefault();
-                    const article = JSON.parse(savedLink.dataset.article);
-                    displaySavedArticle(article);
+                if (e.target.classList.contains('copy-code-button')) {
+                    const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
+                    copyElementTextToClipboard(codeBlock, e.target);
                     return;
                 }
                 
-                const targetButton = e.target.closest('button');
-                if (!targetButton) return;
-
-                // From here, we know we're dealing with a button click.
-                if (targetButton.id === 'save-to-drive-btn') {
-                    handleSaveToDriveClick(targetButton);
-                } else if (targetButton.id === 'save-to-onedrive-btn') {
-                    handleSaveToOneDriveClick(targetButton);
-                } else if (targetButton.id === 'save-to-db-btn') {
-                    saveArticleToDb(targetButton);
-                } else if (targetButton.id === 'generate-script-btn') {
-                    handleScriptGenerationClick(targetButton);
-                } else if (targetButton.id === 'generate-cheatsheet-btn') {
-                    handleCheatSheetGenerationClick(targetButton);
-                } else {
-                    const tailorBtn = targetButton.closest('#tailoring-buttons-container .btn-toggle');
-                    if (tailorBtn) {
-                        tailorBtn.classList.toggle('active');
-                        return;
-                    }
-
-                    const gridSelector = targetButton.closest('.grid-card-selector');
-                    if (gridSelector) {
-                        const container = gridSelector.closest('.card-grid-container').parentElement;
-                        const currentlyActive = container.querySelector('.grid-card-selector.active');
-                        if(currentlyActive) currentlyActive.classList.remove('active');
-                        gridSelector.classList.add('active');
-                        handleGridSelect(gridSelector);
-                        return;
-                    }
-
-                    const exploreBtn = targetButton.closest('.explore-button');
-                    if (exploreBtn) {
-                        const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
-                        handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
-                        return;
-                    }
-                    
-                    const refineBtn = targetButton.closest('.refine-button');
-                    if (refineBtn) {
-                        toggleRefineUI(refineBtn.parentElement);
-                        return;
-                    }
-
-                    const modalRefineBtn = targetButton.closest('.modal-refine-button');
-                    if (modalRefineBtn) {
-                        toggleRefineUI(modalRefineBtn.parentElement, true);
-                        return;
-                    }
-                    
-                    const submitRefineBtn = targetButton.closest('.submit-refinement-button');
-                    if(submitRefineBtn) {
-                        handleRefineRequest(submitRefineBtn.closest('.refine-container'));
-                        return;
-                    }
-                    
-                    const showAllBtn = targetButton.closest('.show-all-button');
-                    if (showAllBtn) {
-                        handleShowAllClick(showAllBtn);
-                        return;
-                    }
-
-                    const generateMoreBtn = targetButton.closest('.generate-more-button');
-                    if (generateMoreBtn) {
-                        handleGenerateMoreClick(generateMoreBtn);
-                        return;
-                    }
-
-                    const accordionHeader = targetButton.closest('.accordion-header');
-                    if (accordionHeader) { 
-                        accordionHeader.classList.toggle('active');
-                        const icon = accordionHeader.querySelector('.icon');
-                        if(icon) {
-                           icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
-                        }
-                        accordionHeader.nextElementSibling.classList.toggle('open'); 
-                        return;
-                    }
-                    
-                    const jumpToBtn = targetButton.closest('.jump-to-button');
-                    if (jumpToBtn) {
-                        const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
-                        if (targetCard) {
-                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
-                            targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
-                            setTimeout(() => targetCard.style.boxShadow = '', 2000);
-                        }
-                        return;
-                    }
+                if (e.target.id === 'save-to-drive-btn') {
+                     handleSaveToDriveClick(e.target);
+                     return;
                 }
 
-                if (!settingsPanel.classList.contains('hidden') && !e.target.closest('#settings-panel') && !e.target.closest('#settings-button')) {
+                if (e.target.id === 'save-to-onedrive-btn') {
+                    handleSaveToOneDriveClick(e.target);
+                    return;
+                }
+
+                const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
+                if (tailorBtn) {
+                    tailorBtn.classList.toggle('active');
+                    return;
+                }
+
+                const gridSelector = e.target.closest('.grid-card-selector');
+                if (gridSelector) {
+                    const container = gridSelector.closest('.card-grid-container').parentElement;
+                    const currentlyActive = container.querySelector('.grid-card-selector.active');
+                    if(currentlyActive) currentlyActive.classList.remove('active');
+                    gridSelector.classList.add('active');
+                    handleGridSelect(gridSelector);
+                    return;
+                }
+
+                const exploreBtn = e.target.closest('.explore-button');
+                if (exploreBtn) {
+                    const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
+                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
+                    return;
+                }
+                
+                const refineBtn = e.target.closest('.refine-button');
+                if (refineBtn) {
+                    toggleRefineUI(refineBtn.parentElement);
+                    return;
+                }
+
+                const modalRefineBtn = e.target.closest('.modal-refine-button');
+                if (modalRefineBtn) {
+                    toggleRefineUI(modalRefineBtn.parentElement, true);
+                    return;
+                }
+                
+                const submitRefineBtn = e.target.closest('.submit-refinement-button');
+                if(submitRefineBtn) {
+                    handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                    return;
+                }
+                
+                const showAllBtn = e.target.closest('.show-all-button');
+                if (showAllBtn) {
+                    handleShowAllClick(showAllBtn);
+                    return;
+                }
+
+                const generateMoreBtn = e.target.closest('.generate-more-button');
+                if (generateMoreBtn) {
+                    handleGenerateMoreClick(generateMoreBtn);
+                    return;
+                }
+
+                const accordionHeader = e.target.closest('.accordion-header');
+                if (accordionHeader) { 
+                    accordionHeader.classList.toggle('active');
+                    const icon = accordionHeader.querySelector('.icon');
+                    if(icon) {
+                       icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
+                    accordionHeader.nextElementSibling.classList.toggle('open'); 
+                    return;
+                }
+                
+                const jumpToBtn = e.target.closest('.jump-to-button');
+                if (jumpToBtn) {
+                    const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
+                        targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
+                        setTimeout(() => targetCard.style.boxShadow = '', 2000);
+                    }
+                    return;
+                }
+
+                if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
                     settingsPanel.classList.add('hidden');
                 }
             });
@@ -1074,7 +1050,7 @@
                 return;
              }
 
-             const fileName = `${cardName} - ${document.getElementById('inDepthModalTitle').textContent}.md`.replace('In-Depth: ', '');
+             const fileName = `${cardName} - ${document.getElementById('inDepthModalTitle').textContent}.md`.replace(/In-Depth: |Custom Guide: /g, '');
              const statusEl = document.getElementById('modal-status-message');
              
              await saveContentToDrive(rawMarkdown, fileName, statusEl);
@@ -1216,7 +1192,7 @@
                 return;
             }
 
-            const fileName = `${cardName} - ${document.getElementById('inDepthModalTitle').textContent}.md`.replace('In-Depth: ', '');
+            const fileName = `${cardName} - ${document.getElementById('inDepthModalTitle').textContent}.md`.replace(/In-Depth: |Custom Guide: /g, '');
             const statusEl = document.getElementById('modal-status-message');
             
             if (!msalAccount) {
@@ -1260,102 +1236,6 @@
                 }
             }
         }
-
-
-        // --- Firebase Functions ---
-        
-        async function saveArticleToDb(button) {
-            if (!articlesCollectionRef) {
-                console.error("Firestore not initialized, cannot save article.");
-                alert("Saved articles feature is not available. Check Firebase config.");
-                return;
-            }
-            
-            const title = document.getElementById('inDepthModalTitle').textContent;
-            const markdown = originalGeneratedText.get(button.closest('#inDepthModalFooter').dataset.fullTitle);
-
-            if (!title || !markdown) {
-                console.error("Could not find title or markdown to save.");
-                return;
-            }
-            
-            button.disabled = true;
-            button.textContent = 'Saving...';
-
-            try {
-                await addDoc(articlesCollectionRef, { 
-                    title, 
-                    markdown, 
-                    savedAt: Timestamp.fromDate(new Date()) 
-                });
-                button.textContent = 'Saved!';
-            } catch (error) {
-                console.error("Error saving article to Firestore:", error);
-                button.disabled = false;
-                button.textContent = 'Save Failed';
-            }
-        }
-        
-         async function showSavedArticles() {
-            if (!articlesCollectionRef) {
-                alert("Saved articles feature is not available. Please ensure your API key is correct and Firebase is configured.");
-                return;
-            }
-            const modal = document.getElementById('savedArticlesModal');
-            const contentEl = document.getElementById('savedArticlesContent');
-            contentEl.innerHTML = getLoaderHTML('Loading saved articles...');
-            modal.classList.remove('hidden');
-
-            try {
-                const querySnapshot = await getDocs(articlesCollectionRef);
-                if (querySnapshot.empty) {
-                    contentEl.innerHTML = `<p class="themed-text-muted">You haven't saved any articles yet.</p>`;
-                    return;
-                }
-
-                let articlesHtml = '<ul class="space-y-2">';
-                querySnapshot.forEach(doc => {
-                    const article = doc.data();
-                    articlesHtml += `
-                        <li class="mb-2">
-                            <a href="#" class="saved-article-link themed-text-primary hover:underline" data-article='${JSON.stringify(article)}'>
-                                ${article.title}
-                            </a>
-                        </li>
-                    `;
-                });
-                articlesHtml += '</ul>';
-                contentEl.innerHTML = articlesHtml;
-            } catch (error) {
-                console.error("Error fetching saved articles:", error);
-                contentEl.innerHTML = `<p class="text-red-500">Could not load saved articles.</p>`;
-            }
-        }
-
-        function displaySavedArticle(article) {
-            document.getElementById('savedArticlesModal').classList.add('hidden');
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-
-            titleEl.textContent = article.title;
-            contentEl.innerHTML = ''; 
-            renderAccordionFromMarkdown(article.markdown, contentEl, false);
-            
-            const fullTitle = article.title;
-            originalGeneratedText.set(fullTitle, article.markdown);
-            footerEl.dataset.fullTitle = fullTitle;
-            footerEl.dataset.cardName = "Saved Article";
-            
-            const buttonContainer = document.getElementById('inDepthModalButtons');
-            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled>Saved!</button>`;
-            
-            addUtilityButtonsToModal(buttonContainer);
-            
-            modal.classList.remove('hidden');
-        }
-
 
         function displayImportedGuide(fileName, markdownContent) {
             const section = document.getElementById('imported-guides-section');
@@ -1549,19 +1429,12 @@
                     }
                 ];
 
-                // BUG FIX v4.37: Enhanced instruction to prevent JSON parsing errors from bad escape characters.
-                const jsonInstruction = ' IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
-                const jsonObjectInstruction = ' IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
+                const jsonInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
+                const jsonObjectInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
 
                 categoriesToGenerate.forEach(cat => {
-                    if (cat.initialPrompt) {
-                        const instruction = cat.initialPrompt.includes('JSON object') ? jsonObjectInstruction : jsonInstruction;
-                        cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', instruction).replace('Return ONLY a valid JSON object.', instruction);
-                    }
-                    if (cat.fullPrompt) {
-                        const instruction = cat.fullPrompt.includes('JSON object') ? jsonObjectInstruction : jsonInstruction;
-                        cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', instruction).replace('Return ONLY a valid JSON object.', instruction);
-                    }
+                    if (cat.initialPrompt) cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                    if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
                 });
                 
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
@@ -1632,12 +1505,21 @@
                 const cleanTitle = sanitizeTitle(item.title);
                 const isViewed = viewedItemIds.has(compositeKey);
                 const isNew = newItemsIds.has(item.id);
-                const viewedClass = isViewed ? 'opacity-75' : '';
+                
+                const viewedIndicatorHtml = isViewed ? `
+                    <div class="viewed-indicator" title="Viewed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                ` : '';
+
                 const newClass = isNew ? 'new-item-highlight' : '';
                 const truncatedTitle = truncateText(cleanTitle, 50);
 
                 return `
-                <div class="grid-card-selector ${viewedClass} ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
+                <div class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
+                    ${viewedIndicatorHtml}
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2 overflow-hidden">
                         <div class="text-sm font-normal leading-tight block">${truncatedTitle}</div>
@@ -1688,7 +1570,7 @@
             Existing Task List:
             - ${existingTitles.join('\n- ')}
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
+            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure that any double quotes inside the description are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1806,47 +1688,77 @@
         async function handleGeminiSubmit(e) {
             e.preventDefault();
             const promptInput = document.getElementById('gemini-prompt');
-            let userPrompt = promptInput.value.trim();
+            const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+            const buttonContainer = document.getElementById('inDepthModalButtons');
+
+            const fullTitle = `Custom Guide: ${userPrompt}`;
+            titleEl.textContent = truncateText(fullTitle, 40);
+            contentEl.innerHTML = getLoaderHTML(`Generating your custom guide for "${userPrompt}"...`);
+            buttonContainer.innerHTML = '';
+            document.getElementById('modal-status-message').textContent = '';
+            
+            footerEl.dataset.fullTitle = fullTitle;
+            footerEl.dataset.cardName = "Custom Task"; 
+            
+            modal.classList.remove('hidden');
+            
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                         .map(btn => btn.textContent.trim())
                                         .join(', ');
 
             const prompt = getEnhancedPrompt(userPrompt, selectedOptions);
 
-            const resultContainer = document.getElementById('gemini-result-container');
-            resultContainer.innerHTML = getLoaderHTML('Generating your custom AI guide...');
-
             try {
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set('custom-plan', resultText);
-                renderAccordionFromMarkdown(resultText, resultContainer);
-                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
-                generateAndInjectImages(resultContainer);
+                originalGeneratedText.set(fullTitle, resultText);
+                
+                contentEl.innerHTML = '';
+                renderAccordionFromMarkdown(resultText, contentEl, false);
+
+                if (gapi.client.getToken() !== null) {
+                    const saveDriveBtn = document.createElement('button');
+                    saveDriveBtn.id = 'save-to-drive-btn';
+                    saveDriveBtn.className = 'btn-secondary';
+                    saveDriveBtn.textContent = 'Save to Google Drive';
+                    buttonContainer.appendChild(saveDriveBtn);
+                }
+                if (msalAccount) {
+                     const saveOneDriveBtn = document.createElement('button');
+                     saveOneDriveBtn.id = 'save-to-onedrive-btn';
+                     saveOneDriveBtn.className = 'btn-secondary';
+                     saveOneDriveBtn.textContent = 'Save to OneDrive';
+                     buttonContainer.appendChild(saveOneDriveBtn);
+                }
 
             } catch(error) {
-                handleApiError(error, resultContainer, 'custom IT guide');
+                handleApiError(error, contentEl, 'custom IT guide');
+            } finally {
+                promptInput.value = '';
             }
         }
 
-        // BUG FIX v4.37: Made parsing more resilient to AI-generated errors like unescaped backslashes.
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
                 throw new Error("Invalid input: not a string.");
             }
-            // 1. Remove markdown fences and trim whitespace
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
             
-            // 2. Fix unescaped backslashes that are not part of a valid escape sequence.
-            // This looks for a backslash that is NOT followed by another backslash, a double quote, or any of the standard JSON escape characters (b, f, n, r, t, /).
-            // This is a common issue when the AI includes Windows paths like "C:\Users...".
-            cleanedString = cleanedString.replace(/\\(?![\\"/bfnrt])/g, '\\\\');
-
-            // 3. Remove trailing commas before closing curly braces or brackets, a common AI error.
+            // Attempt to fix common JSON errors from the API
+            // 1. Remove trailing commas before closing curly braces or brackets
             cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
+            // 2. Fix improperly escaped single quotes which are invalid in JSON
+            cleanedString = cleanedString.replace(/\\'/g, "'");
+            // 3. Fix unescaped backslashes (common in file paths) that are not part of a valid escape sequence.
+            // This looks for a backslash that is NOT followed by a double quote, another backslash, or any of the other valid escape characters.
+            cleanedString = cleanedString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
 
             try {
                 return JSON.parse(cleanedString);
@@ -2309,7 +2221,6 @@ Return only the complete markdown guide.`;
         }
 
         function copyElementTextToClipboard(element, button) {
-            if (!element) return;
             const textToCopy = element.innerText;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
@@ -2416,8 +2327,8 @@ Return only the complete markdown guide.`;
                 Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
                 The features are: 
                 1.  **Cloud Storage Integration**: A dedicated card on the main screen allows you to connect to Google Drive and/or Microsoft OneDrive. Once connected, you can save guides. Google Drive also supports importing guides.
-                2.  **Saving Guides**: Inside the "In-Depth Guide" modal, buttons will appear to save the guide to your connected cloud services. The file is saved to an "IT Administration Hub" folder with a descriptive name.
-                3.  **Custom Task Generator**: User enters any IT task, and the AI creates a detailed, step-by-step guide.
+                2.  **Saving Guides**: Inside the guide modal, buttons will appear to save the guide to your connected cloud services. The file is saved to an "IT Administration Hub" folder with a descriptive name.
+                3.  **Custom Task Generator**: User enters any IT task, and the AI creates a detailed, step-by-step guide inside a pop-up modal.
                 4.  **Tailoring Options**: Buttons to refine the custom guide (e.g., 'for Security', 'for Beginners').
                 5.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc., for quick access to common subjects.
                 6.  **Visual Theme Generator**: A floating button allows you to describe a mood (e.g., 'ocean sunset'), and the AI creates a new color theme and header image for the application.
@@ -2436,7 +2347,6 @@ Return only the complete markdown guide.`;
                 4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
                 5.  **Visual Theme Generator**: Floating button to generate a new color theme and header image from a text prompt.
                 6.  **In-Depth Exploration & Refinement**: Expand summaries to full guides or ask AI to rewrite content.
-                7.  **Saved Articles**: A feature to save generated guides within the application's database.
 
                 Format your feedback as a clean markdown document. Use '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
             
@@ -2525,7 +2435,7 @@ Return only the complete markdown guide.`;
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(fullTitle, resultText); 
+                originalGeneratedText.set(fullTitle, resultText); // Save original text for refinement
                 
                 const summaryHeader = `### ${item.title} - A Comprehensive Guide`;
                 const summaryParagraph = `This guide provides a detailed walkthrough for "${item.title}". It covers prerequisites, step-by-step instructions, verification methods, troubleshooting common issues, and helpful resources to assist you in successfully completing this task within the broader context of "${cardName}".`;
@@ -2534,14 +2444,21 @@ Return only the complete markdown guide.`;
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false);
                 
-                const saveDbBtn = document.createElement('button');
-                saveDbBtn.id = 'save-to-db-btn';
-                saveDbBtn.className = 'btn-secondary';
-                saveDbBtn.disabled = savedArticleIds.has(fullTitle);
-                saveDbBtn.textContent = savedArticleIds.has(fullTitle) ? 'Saved!' : 'Save to My Articles';
-                buttonContainer.appendChild(saveDbBtn);
+                if (gapi.client.getToken() !== null) {
+                    const saveDriveBtn = document.createElement('button');
+                    saveDriveBtn.id = 'save-to-drive-btn';
+                    saveDriveBtn.className = 'btn-secondary';
+                    saveDriveBtn.textContent = 'Save to Google Drive';
+                    buttonContainer.appendChild(saveDriveBtn);
+                }
+                if (msalAccount) {
+                     const saveOneDriveBtn = document.createElement('button');
+                     saveOneDriveBtn.id = 'save-to-onedrive-btn';
+                     saveOneDriveBtn.className = 'btn-secondary';
+                     saveOneDriveBtn.textContent = 'Save to OneDrive';
+                     buttonContainer.appendChild(saveOneDriveBtn);
+                }
 
-                addUtilityButtonsToModal(buttonContainer);
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -2614,166 +2531,6 @@ Return only the complete markdown guide.`;
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
             }
-        }
-        
-        /**
-         * Appends utility buttons like script generation and cloud saving to the modal footer.
-         * @param {HTMLElement} buttonContainer The container element for the buttons.
-         */
-        function addUtilityButtonsToModal(buttonContainer) {
-            if (gapi.client.getToken() !== null) {
-                const saveDriveBtn = document.createElement('button');
-                saveDriveBtn.id = 'save-to-drive-btn';
-                saveDriveBtn.className = 'btn-secondary';
-                saveDriveBtn.textContent = 'Save to Google Drive';
-                buttonContainer.appendChild(saveDriveBtn);
-            }
-            if (msalAccount) {
-                 const saveOneDriveBtn = document.createElement('button');
-                 saveOneDriveBtn.id = 'save-to-onedrive-btn';
-                 saveOneDriveBtn.className = 'btn-secondary';
-                 saveOneDriveBtn.textContent = 'Save to OneDrive';
-                 buttonContainer.appendChild(saveOneDriveBtn);
-            }
-
-            const scriptBtn = document.createElement('button');
-            scriptBtn.id = 'generate-script-btn';
-            scriptBtn.className = 'btn-secondary';
-            scriptBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2z"/><path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h12z"/></svg><span>Generate Script</span>`;
-            buttonContainer.appendChild(scriptBtn);
-
-            const cheatSheetBtn = document.createElement('button');
-            cheatSheetBtn.id = 'generate-cheatsheet-btn';
-            cheatSheetBtn.className = 'btn-secondary';
-            cheatSheetBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/><path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2.5a.5.5 0 0 0 .5.5H12v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg><span>Cheat Sheet</span>`;
-            buttonContainer.appendChild(cheatSheetBtn);
-        }
-
-        /**
-         * Handles the click event for the "Generate PowerShell Script" button in the modal.
-         * @param {HTMLElement} button The button that was clicked.
-         */
-        async function handleScriptGenerationClick(button) {
-            const modalFooter = button.closest('#inDepthModalFooter');
-            const fullTitle = modalFooter.dataset.fullTitle;
-            const rawMarkdown = originalGeneratedText.get(fullTitle);
-
-            if (!rawMarkdown) {
-                console.error("Could not find markdown to generate script for:", fullTitle);
-                return;
-            }
-
-            const statusEl = document.getElementById('modal-status-message');
-            statusEl.textContent = 'Generating PowerShell script...';
-            button.disabled = true;
-
-            const prompt = `Based on the following IT administration guide, generate a comprehensive and functional PowerShell script to automate the core task described. The script should be well-commented, include error handling, and define variables at the top for easy configuration.
-
-        **IT Guide Content:**
-        ---
-        ${rawMarkdown}
-        ---
-
-        Return ONLY the PowerShell code block.`;
-
-            try {
-                let scriptText = await callGeminiAPI(prompt);
-                scriptText = scriptText ? scriptText.replace(/^```(powershell)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                
-                const scriptMarkdown = "### Generated PowerShell Script\n\nHere is a script to help automate the task:\n\n```powershell\n" + scriptText + "\n```";
-                
-                const contentEl = document.getElementById('inDepthModalContent');
-                appendAccordionItem(contentEl, "Generated PowerShell Script", scriptMarkdown);
-                
-                statusEl.textContent = 'PowerShell script generated successfully.';
-
-            } catch (error) {
-                console.error("Error generating PowerShell script:", error);
-                statusEl.textContent = `Error generating script: ${error.message}`;
-            } finally {
-                button.disabled = false;
-                setTimeout(() => statusEl.textContent = '', 5000);
-            }
-        }
-
-        /**
-         * Handles the click event for the "Generate Cheat Sheet" button in the modal.
-         * @param {HTMLElement} button The button that was clicked.
-         */
-        async function handleCheatSheetGenerationClick(button) {
-            const modalFooter = button.closest('#inDepthModalFooter');
-            const fullTitle = modalFooter.dataset.fullTitle;
-            const rawMarkdown = originalGeneratedText.get(fullTitle);
-
-            if (!rawMarkdown) {
-                console.error("Could not find markdown to generate cheat sheet for:", fullTitle);
-                return;
-            }
-
-            const statusEl = document.getElementById('modal-status-message');
-            statusEl.textContent = 'Generating cheat sheet...';
-            button.disabled = true;
-
-            const prompt = `Based on the following IT administration guide, generate a concise command-line cheat sheet. Focus on the most important commands, syntax, and flags mentioned or implied in the guide. Use markdown for formatting, including code blocks for commands.
-
-        **IT Guide Content:**
-        ---
-        ${rawMarkdown}
-        ---
-
-        Return ONLY the markdown for the cheat sheet.`;
-
-            try {
-                let cheatSheetText = await callGeminiAPI(prompt);
-                cheatSheetText = cheatSheetText ? cheatSheetText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-
-                const cheatSheetMarkdown = "### Command-Line Cheat Sheet\n\n" + cheatSheetText;
-
-                const contentEl = document.getElementById('inDepthModalContent');
-                appendAccordionItem(contentEl, "Command-Line Cheat Sheet", cheatSheetMarkdown);
-
-                statusEl.textContent = 'Cheat sheet generated successfully.';
-
-            } catch (error) {
-                console.error("Error generating cheat sheet:", error);
-                statusEl.textContent = `Error generating cheat sheet: ${error.message}`;
-            } finally {
-                button.disabled = false;
-                setTimeout(() => statusEl.textContent = '', 5000);
-            }
-        }
-
-        /**
-         * Appends a new accordion item to a container, typically the modal content area.
-         * @param {HTMLElement} container The element to append the new accordion item to.
-         * @param {string} title The title for the new accordion header.
-         * @param {string} markdownContent The markdown content to render inside the accordion body.
-         */
-        function appendAccordionItem(container, title, markdownContent) {
-            const newItem = document.createElement('div');
-            newItem.className = 'accordion-item';
-            
-            const contentHtml = convertMarkdownToHtml(markdownContent, false);
-
-            newItem.innerHTML = `
-                <button type="button" class="accordion-header active">
-                    <span class="text-left font-semibold">${title}</span>
-                    <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div class="accordion-content open prose max-w-none">
-                    ${contentHtml}
-                </div>
-            `;
-            
-            // Deactivate all other accordion items to focus on the new one
-            container.querySelectorAll('.accordion-header.active').forEach(header => {
-                header.classList.remove('active');
-                header.nextElementSibling.classList.remove('open');
-                header.querySelector('.icon').style.transform = 'rotate(0deg)';
-            });
-
-            container.appendChild(newItem);
-            newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
         function getIconForTheme(themeType, themeId) { 
