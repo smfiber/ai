@@ -386,7 +386,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.39</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.40</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -561,7 +561,7 @@
             return false;
         }
         
-        // --- MODIFICATION START: New Login/Logout UI and Handlers ---
+        // --- Login/Logout UI and Handlers ---
         function setupAuthUI(user) {
             const authStatusEl = document.getElementById('auth-status');
             const appContainer = document.getElementById('app-container');
@@ -622,12 +622,19 @@
                 });
             }
             // Then, sign out from Firebase
-            signOut(auth).catch(error => {
+            signOut(auth).then(() => {
+                // Clear the stored keys to force re-entry on next load
+                localStorage.removeItem('geminiApiKey');
+                localStorage.removeItem('firebaseConfig');
+                localStorage.removeItem('googleClientId');
+                console.log('User signed out and local storage cleared.');
+                // Reload the page to reset the application state
+                location.reload();
+            }).catch(error => {
                 console.error("Sign out failed:", error);
                 alert(`Sign-out failed: ${error.message}`);
             });
         }
-        // --- MODIFICATION END ---
         
         async function initializeAppContent() {
             appIsInitialized = true;
