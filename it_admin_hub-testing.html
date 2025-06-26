@@ -266,24 +266,8 @@
 
         /* Style for newly generated items */
         .new-item-highlight {
-            animation: fadeOutGlow 3s forwards;
-        }
-        @keyframes fadeOutGlow {
-            0% {
-                border-color: var(--color-primary);
-                box-shadow: 0 0 10px var(--color-primary);
-                transform: scale(1.02);
-            }
-            80% {
-                border-color: var(--color-primary);
-                box-shadow: 0 0 10px var(--color-primary);
-                transform: scale(1.02);
-            }
-            100% {
-                border-color: var(--color-card-border);
-                box-shadow: none;
-                transform: scale(1);
-            }
+            border: 2px solid var(--color-primary);
+            box-shadow: 0 0 10px var(--color-primary);
         }
 
     </style>
