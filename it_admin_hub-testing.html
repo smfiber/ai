@@ -281,8 +281,8 @@
 
                 <div class="mb-4">
                     <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
-                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config object here."></textarea>
-                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings under "SDK setup and configuration".</p>
+                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config object here. e.g. { apiKey: '...', ... }"></textarea>
+                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. Paste just the object, starting with `{` and ending with `}`.</p>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -368,7 +368,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.27</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.28</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -748,7 +748,7 @@
         async function handleApiKeySubmit(e) {
             e.preventDefault();
             geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
-            const firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
+            let firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
 
             const form = document.getElementById('apiKeyForm');
@@ -766,6 +766,13 @@
             }
 
             try {
+                // Clean the input to extract just the JSON object
+                const jsonMatch = firebaseConfigText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error("Could not find a valid JSON object starting with '{' and ending with '}'.");
+                }
+                firebaseConfigText = jsonMatch[0];
+
                 firebaseConfig = JSON.parse(firebaseConfigText);
                 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
                     throw new Error("Invalid Firebase config object. It must contain 'apiKey' and 'projectId'.");
