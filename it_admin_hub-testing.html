@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Self-note: Updated to version 4.36 -->
-    <title>IT Administration Hub v4.36</title>
+    <!-- Self-note: Updated to version 4.37 -->
+    <title>IT Administration Hub v4.37</title>
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -274,7 +274,7 @@
     </style>
 </head>
 <body>
-    <!-- Version 4.36 -->
+    <!-- Version 4.37 -->
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
@@ -374,7 +374,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.36</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.37</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1549,12 +1549,19 @@
                     }
                 ];
 
-                const jsonInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
-                const jsonObjectInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
+                // BUG FIX v4.37: Enhanced instruction to prevent JSON parsing errors from bad escape characters.
+                const jsonInstruction = ' IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
+                const jsonObjectInstruction = ' IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
 
                 categoriesToGenerate.forEach(cat => {
-                    if (cat.initialPrompt) cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
-                    if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                    if (cat.initialPrompt) {
+                        const instruction = cat.initialPrompt.includes('JSON object') ? jsonObjectInstruction : jsonInstruction;
+                        cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', instruction).replace('Return ONLY a valid JSON object.', instruction);
+                    }
+                    if (cat.fullPrompt) {
+                        const instruction = cat.fullPrompt.includes('JSON object') ? jsonObjectInstruction : jsonInstruction;
+                        cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', instruction).replace('Return ONLY a valid JSON object.', instruction);
+                    }
                 });
                 
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
@@ -1681,7 +1688,7 @@
             Existing Task List:
             - ${existingTitles.join('\n- ')}
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure that any double quotes inside the description are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
+            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: In any "description" fields, ensure that all backslashes (\\) are correctly escaped for JSON (use a double backslash: \\\\). Also ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1825,20 +1832,21 @@
             }
         }
 
+        // BUG FIX v4.37: Made parsing more resilient to AI-generated errors like unescaped backslashes.
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
                 throw new Error("Invalid input: not a string.");
             }
+            // 1. Remove markdown fences and trim whitespace
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
             
-            // Attempt to fix common JSON errors from the API
-            // 1. Remove trailing commas before closing curly braces or brackets
+            // 2. Fix unescaped backslashes that are not part of a valid escape sequence.
+            // This looks for a backslash that is NOT followed by another backslash, a double quote, or any of the standard JSON escape characters (b, f, n, r, t, /).
+            // This is a common issue when the AI includes Windows paths like "C:\Users...".
+            cleanedString = cleanedString.replace(/\\(?![\\"/bfnrt])/g, '\\\\');
+
+            // 3. Remove trailing commas before closing curly braces or brackets, a common AI error.
             cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
-            // 2. Fix improperly escaped single quotes which are invalid in JSON
-            cleanedString = cleanedString.replace(/\\'/g, "'");
-            // 3. Fix unescaped backslashes (common in file paths) that are not part of a valid escape sequence.
-            // This looks for a backslash that is NOT followed by a double quote, another backslash, or any of the other valid escape characters.
-            cleanedString = cleanedString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
 
             try {
                 return JSON.parse(cleanedString);
