@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
-    <!-- SELF-NOTE: Always update the version number below when editing the code. -->
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -367,8 +366,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.28</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.29</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -385,7 +383,6 @@
                      Cloud Storage
                  </h2>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                     <!-- Google Drive Section -->
                      <div id="google-drive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Google Drive</h3>
                           <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides.</p>
@@ -394,7 +391,6 @@
                              <button id="load-from-drive-btn" class="btn-secondary hidden">Import from Drive</button>
                          </div>
                      </div>
-                     <!-- OneDrive Section -->
                      <div id="onedrive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Microsoft OneDrive</h3>
                           <p id="onedrive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to save guides.</p>
@@ -766,23 +762,20 @@
             }
 
             try {
-                // Clean the input to extract just the JSON object
-                const jsonMatch = firebaseConfigText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) {
-                    throw new Error("Could not find a valid JSON object starting with '{' and ending with '}'.");
+                const match = firebaseConfigText.match(/\{[\s\S]*\}/);
+                if (!match) {
+                    throw new Error("Could not find a config object starting with '{' and ending with '}'.");
                 }
-                let configString = jsonMatch[0];
-
-                // Convert JS object keys to JSON strings (add quotes) and remove trailing commas
-                configString = configString.replace(/(\w+)\s*:/g, '"$1":').replace(/,\s*([}\]])/g, '$1');
-
-                firebaseConfig = JSON.parse(configString);
+                const configString = match[0];
                 
-                if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-                    throw new Error("Invalid Firebase config object. It must contain 'apiKey' and 'projectId'.");
+                const configFactory = new Function(`return ${configString}`);
+                firebaseConfig = configFactory();
+
+                if (!firebaseConfig || typeof firebaseConfig !== 'object' || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                    throw new Error("The parsed Firebase config is missing a required 'apiKey' or 'projectId'.");
                 }
             } catch (err) {
-                errorP.textContent = `Invalid Firebase Config: ${err.message}`;
+                errorP.textContent = `Invalid Firebase Config: ${err.message}. Please check the snippet you pasted.`;
                 return;
             }
 
