@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
-    <!-- SELF-NOTE: Always update the version number below when editing the code. -->
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -272,7 +271,7 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
-            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features. Gemini and Firebase keys are required.</p>
+            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features.</p>
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
@@ -280,8 +279,9 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
-                    <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
+                    <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
+                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here."></textarea>
+                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. You can paste the entire snippet.</p>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -366,8 +366,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.24</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.29</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -384,7 +383,6 @@
                      Cloud Storage
                  </h2>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                     <!-- Google Drive Section -->
                      <div id="google-drive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Google Drive</h3>
                           <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides.</p>
@@ -393,7 +391,6 @@
                              <button id="load-from-drive-btn" class="btn-secondary hidden">Import from Drive</button>
                          </div>
                      </div>
-                     <!-- OneDrive Section -->
                      <div id="onedrive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Microsoft OneDrive</h3>
                           <p id="onedrive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to save guides.</p>
@@ -487,10 +484,10 @@
         let userId;
         let articlesCollectionRef;
         const savedArticleIds = new Set();
+        let firebaseConfig = null;
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
-        let firebaseApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -524,20 +521,11 @@
         });
 
         function initializeFirebase() {
-             if (!firebaseApiKey) {
-                console.warn("Firebase API Key is missing. Firebase initialization skipped.");
+             if (!firebaseConfig) {
+                console.warn("Firebase config is missing. Firebase initialization skipped.");
                 return;
             }
-            const firebaseConfig = {
-                apiKey: firebaseApiKey,
-                authDomain: "it-administration-hub.firebaseapp.com",
-                projectId: "it-administration-hub",
-                storageBucket: "it-administration-hub.appspot.com",
-                messagingSenderId: "776112448835",
-                appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
-                measurementId: "G-0Q6E7ZGNEJ"
-            };
-
+            
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -546,7 +534,7 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        const appId = firebaseConfig.appId;
+                        const appId = firebaseConfig.appId || 'it-admin-hub-global'; 
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
@@ -557,7 +545,16 @@
                 });
             } catch (error) {
                 console.error("Firebase initialization error:", error);
-                document.getElementById('saved-articles-button').style.display = 'none';
+                const form = document.getElementById('apiKeyForm');
+                let errorP = form.querySelector('.error-message');
+                 if (!errorP) {
+                    errorP = document.createElement('p');
+                    errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
+                    form.appendChild(errorP);
+                }
+                errorP.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                document.getElementById('loadingStateModal').classList.add('hidden');
             }
         }
         
@@ -701,6 +698,12 @@
                     return;
                 }
 
+                const generateMoreBtn = e.target.closest('.generate-more-button');
+                if (generateMoreBtn) {
+                    handleGenerateMoreClick(generateMoreBtn);
+                    return;
+                }
+
                 const accordionHeader = e.target.closest('.accordion-header');
                 if (accordionHeader) { 
                     accordionHeader.classList.toggle('active');
@@ -741,9 +744,8 @@
         async function handleApiKeySubmit(e) {
             e.preventDefault();
             geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
-            firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
+            let firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
-            MSAL_CLIENT_ID = ''; // Removed from modal, needs to be set elsewhere if used
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -752,31 +754,41 @@
                 errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
                 form.appendChild(errorP);
             }
+            errorP.textContent = ''; 
 
-            if (!geminiApiKey || !firebaseApiKey) {
-                errorP.textContent = "Gemini and Firebase API keys are required to start.";
+            if (!geminiApiKey || !firebaseConfigText) {
+                errorP.textContent = "Gemini API Key and Firebase Config are required.";
                 return;
             }
-            errorP.textContent = ''; 
+
+            try {
+                const match = firebaseConfigText.match(/\{[\s\S]*\}/);
+                if (!match) {
+                    throw new Error("Could not find a config object starting with '{' and ending with '}'.");
+                }
+                const configString = match[0];
+                
+                const configFactory = new Function(`return ${configString}`);
+                firebaseConfig = configFactory();
+
+                if (!firebaseConfig || typeof firebaseConfig !== 'object' || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                    throw new Error("The parsed Firebase config is missing a required 'apiKey' or 'projectId'.");
+                }
+            } catch (err) {
+                errorP.textContent = `Invalid Firebase Config: ${err.message}. Please check the snippet you pasted.`;
+                return;
+            }
 
             document.getElementById('apiKeyModal').classList.add('hidden');
             
             initializeFirebase();
             
-            if (GOOGLE_CLIENT_ID || MSAL_CLIENT_ID) {
-                document.getElementById('cloud-storage-card').classList.remove('hidden');
-            }
-
-            if(GOOGLE_CLIENT_ID) { 
+            if (GOOGLE_CLIENT_ID) {
                 document.getElementById('google-drive-section').classList.remove('hidden');
                 gapi.load('client:picker', () => {
                      gisInited = true;
                      initializeGapiClient();
                 });
-            }
-            if (MSAL_CLIENT_ID) {
-                document.getElementById('onedrive-section').classList.remove('hidden');
-                initializeMsal();
             }
 
             const loadingModal = document.getElementById('loadingStateModal');
@@ -1411,6 +1423,14 @@
                         fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     }
                 ];
+
+                const jsonInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
+                const jsonObjectInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
+
+                categoriesToGenerate.forEach(cat => {
+                    if (cat.initialPrompt) cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                    if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                });
                 
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -1485,18 +1505,81 @@
             }).join('');
             
             const fullPrompt = fullPrompts[themeType];
-            let showAllButtonHtml = '';
-            
+            let actionButtonsHtml = '';
+
+            // Check if we are showing the initial list (less than 35)
             if (fullPrompt && data.length < 35 && data.length > 0) {
-                showAllButtonHtml = `
+                actionButtonsHtml = `
                     <div class="col-span-full text-center mt-4">
                         <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
                             Show All (${data.length} of ~50 shown)
                         </button>
                     </div>`;
+            } 
+            // Check if we are showing the "full" list (35 or more)
+            else if (fullPrompt && data.length >= 35) {
+                actionButtonsHtml = `
+                    <div class="col-span-full text-center mt-4">
+                        <button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category">
+                            <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Generate 10 More
+                            </span>
+                        </button>
+                    </div>`;
             }
 
-            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${showAllButtonHtml}`;
+            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${actionButtonsHtml}`;
+        }
+
+        async function handleGenerateMoreClick(button) {
+            const { containerId, themeType } = button.dataset;
+            const container = document.getElementById(containerId);
+            if (!container || !themeType || !allThemeData[themeType]) return;
+
+            button.disabled = true;
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
+
+            const card = container.closest('.card');
+            const categoryTitle = card.querySelector('h2').textContent;
+            const existingTitles = allThemeData[themeType].map(item => item.title);
+            
+            const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
+            
+            Existing Task List:
+            - ${existingTitles.join('\n- ')}
+
+            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure that any double quotes inside the description are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
+
+            try {
+                const jsonText = await callGeminiAPI(prompt, true);
+                if (!jsonText) throw new Error("AI did not return any new items.");
+
+                const newItems = parseJsonWithCorrections(jsonText);
+                
+                // Add new items to the existing data, avoiding duplicates
+                newItems.forEach(newItem => {
+                    if (!allThemeData[themeType].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
+                        allThemeData[themeType].push(newItem);
+                    }
+                });
+                
+                // Re-sort and re-populate
+                allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
+                populateCardGridSelector(containerId, themeType);
+                document.getElementById(`${themeType}-details`).innerHTML = ''; // Clear details view
+
+            } catch (error) {
+                console.error(`Error generating more items for ${themeType}:`, error);
+                const originalButtonContent = `<span class="flex items-center justify-center gap-2">...</span>`;
+                button.disabled = false;
+                button.innerHTML = originalButtonContent.replace('...', 'Error. Try Again.');
+                button.classList.add('bg-red-100', 'text-red-700');
+                 setTimeout(() => {
+                    button.classList.remove('bg-red-100', 'text-red-700');
+                    button.innerHTML = originalButtonContent.replace('...', `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Generate 10 More`);
+                }, 3000);
+            } 
         }
         
         async function handleShowAllClick(button) {
@@ -1656,7 +1739,7 @@
         }
         
         async function callColorGenAPI(prompt) {
-            const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
+            const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON object.`;
             const jsonText = await callGeminiAPI(fullPrompt, true);
             if (jsonText) return parseJsonWithCorrections(jsonText);
             throw new Error("Could not parse a valid color theme from API response.");
@@ -1695,7 +1778,7 @@
             const container = document.getElementById('tailoring-buttons-container');
             container.innerHTML = getLoaderHTML('Loading AI options...');
             try {
-                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings.`;
+                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
                 const jsonText = await callGeminiAPI(prompt, true);
                 if (!jsonText) {
                     throw new Error("AI did not return any tailoring options.");
@@ -1719,7 +1802,7 @@
         
         async function loadDynamicPlaceholders() {
             const promptInput = document.getElementById('gemini-prompt');
-            const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings.`;
+            const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings, ensuring any double quotes inside the strings are properly escaped (e.g., \\"like this\\").`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 if(!jsonText) return;
@@ -1953,7 +2036,7 @@ Return only the complete markdown guide.`;
             button.disabled = true;
 
             const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent);
-            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`;
+            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -2018,7 +2101,7 @@ Return only the complete markdown guide.`;
             
             if (cardData.length === 0) return;
         
-            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}`;
+            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}. IMPORTANT: Ensure any double quotes in string values are properly escaped.`;
             
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -2220,10 +2303,16 @@ Return only the complete markdown guide.`;
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(fullTitle, resultText);
+                originalGeneratedText.set(fullTitle, resultText); // Save original text for refinement
                 
+                // NEW: Create the introductory section
+                const summaryHeader = `### ${item.title} - A Comprehensive Guide`;
+                const summaryParagraph = `This guide provides a detailed walkthrough for "${item.title}". It covers prerequisites, step-by-step instructions, verification methods, troubleshooting common issues, and helpful resources to assist you in successfully completing this task within the broader context of "${cardName}".`;
+                const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
+
                 contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(resultText, contentEl, false);
+                // Render the modified markdown with the prepended summary
+                renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false);
                 
                 const saveDbBtn = document.createElement('button');
                 saveDbBtn.id = 'save-to-db-btn';
