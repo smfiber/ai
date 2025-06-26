@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.31</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.32</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -475,17 +475,20 @@
     </footer>
 
     <script type="module">
+        // *** MODIFIED: Imported doc and setDoc for specific document handling ***
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // *** MODIFIED: Imported signInWithRedirect and getRedirectResult, removed signInWithPopup ***
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
         let auth;
         let userId;
         let articlesCollectionRef;
+        // *** ADDED: New state for viewed items ***
+        let viewedItemsCollectionRef;
         const savedArticleIds = new Set();
+        const viewedItemIds = new Set(); // To hold composite keys of viewed items
         let firebaseConfig = null;
         let appIsInitialized = false;
         
@@ -598,16 +601,12 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // *** ADDED: Check for authentication result after a redirect ***
                 getRedirectResult(auth)
                     .then((result) => {
                         if (result) {
-                            // This confirms the user signed in via redirect.
-                            // The onAuthStateChanged listener will handle the rest of the UI updates.
                             console.log("Successfully handled sign-in redirect.", result.user);
                         }
                     }).catch((error) => {
-                        // Handle Errors here.
                         console.error("Error processing sign-in redirect:", error);
                         alert(`Sign-in failed: ${error.message}`);
                     });
@@ -618,10 +617,14 @@
                         userId = user.uid;
                         const appId = firebaseConfig.appId || 'it-admin-hub-global'; 
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
+                        // *** ADDED: Initialize viewedItems collection reference ***
+                        viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                         listenForSavedArticles(); 
+                        listenForViewedItems(); // *** ADDED: Start listening for viewed items ***
                     } else {
                         userId = null;
                         articlesCollectionRef = null;
+                        viewedItemsCollectionRef = null;
                     }
                     setupAuthUI(user);
                 });
@@ -646,9 +649,30 @@
                 snapshot.forEach(doc => {
                     savedArticleIds.add(doc.data().title);
                 });
+                // Potentially re-render UI elements that depend on saved status
             }, (error) => {
                 console.error("Error listening to saved articles:", error);
-                // Non-blocking error, so no alert
+            });
+        }
+
+        // *** ADDED: New function to listen for changes in viewed items ***
+        function listenForViewedItems() {
+            if (!viewedItemsCollectionRef) return;
+            onSnapshot(viewedItemsCollectionRef, (snapshot) => {
+                viewedItemIds.clear();
+                snapshot.forEach(doc => {
+                    viewedItemIds.add(doc.id); // The doc ID is our composite key
+                });
+                // After getting the latest viewed items, re-render all grid selectors to apply opacity
+                document.querySelectorAll('.card-grid-container').forEach(container => {
+                    const containerId = container.parentElement.id;
+                    const themeType = container.parentElement.dataset.themeType;
+                    if(containerId && themeType) {
+                       populateCardGridSelector(containerId, themeType);
+                    }
+                });
+            }, (error) => {
+                console.error("Error listening to viewed items:", error);
             });
         }
 
@@ -860,16 +884,11 @@
                 errorP.textContent = `Invalid Firebase Config: ${err.message}. Please check the snippet you pasted.`;
                 return;
             }
-
-            // Don't hide modal immediately, wait for redirect
-            // document.getElementById('apiKeyModal').classList.add('hidden');
             
             initializeFirebase();
             
-            // Trigger Google Sign-In via redirect
             try {
                 const provider = new GoogleAuthProvider();
-                // *** MODIFIED: Changed signInWithPopup to signInWithRedirect ***
                 await signInWithRedirect(auth, provider);
             } catch (error) {
                 console.error("Google Sign-In Redirect failed:", error);
@@ -890,7 +909,7 @@
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    apiKey: geminiApiKey, // Key for discovery
+                    apiKey: geminiApiKey,
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
@@ -932,8 +951,6 @@
             }
 
             if (gapi.client.getToken() === null) {
-                // This will still use a popup for token acquisition, which might be blocked.
-                // This part of the flow is for *re-authorizing* Drive, not initial login.
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
                 const token = gapi.client.getToken();
@@ -1118,10 +1135,8 @@
         function handleMsalAuthClick() {
             if (!msalInstance) return;
             if (msalAccount) {
-                // *** MODIFIED: Use logoutRedirect instead of logoutPopup ***
                 msalInstance.logoutRedirect({ account: msalAccount });
             } else {
-                // *** MODIFIED: Use loginRedirect instead of loginPopup ***
                 msalInstance.loginRedirect(MSAL_SCOPES);
             }
         }
@@ -1535,7 +1550,8 @@
             card.className = 'card md:col-span-2';
             card.id = `${key}-card`;
             const selectorId = `${key}-selector-visual`;
-            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
+            // *** ADDED: data-theme-type to the container div for populateCardGridSelector to use ***
+            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-theme-type="${key}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
             mainGrid.appendChild(card);
             
             fullPrompts[key] = fullPrompt;
@@ -1563,10 +1579,16 @@
             }
 
             const gridClass = 'card-grid-container';
+            const cardTitle = container.closest('.card').querySelector('h2').textContent;
 
             const itemsHtml = data.map(item => {
+                // *** ADDED: Check if the item has been viewed and apply opacity class ***
+                const compositeKey = `${cardTitle} - ${item.title}`;
+                const isViewed = viewedItemIds.has(compositeKey);
+                const viewedClass = isViewed ? 'opacity-75' : '';
+
                 return `
-                <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || ''}">
+                <div class="grid-card-selector ${viewedClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || ''}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2">
                         <div class="text-sm font-normal leading-tight block">${item.title}</div>
@@ -1577,7 +1599,6 @@
             const fullPrompt = fullPrompts[themeType];
             let actionButtonsHtml = '';
 
-            // Check if we are showing the initial list (less than 35)
             if (fullPrompt && data.length < 35 && data.length > 0) {
                 actionButtonsHtml = `
                     <div class="col-span-full text-center mt-4">
@@ -1586,7 +1607,6 @@
                         </button>
                     </div>`;
             } 
-            // Check if we are showing the "full" list (35 or more)
             else if (fullPrompt && data.length >= 35) {
                 actionButtonsHtml = `
                     <div class="col-span-full text-center mt-4">
@@ -1627,17 +1647,15 @@
 
                 const newItems = parseJsonWithCorrections(jsonText);
                 
-                // Add new items to the existing data, avoiding duplicates
                 newItems.forEach(newItem => {
                     if (!allThemeData[themeType].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
                         allThemeData[themeType].push(newItem);
                     }
                 });
                 
-                // Re-sort and re-populate
                 allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
                 populateCardGridSelector(containerId, themeType);
-                document.getElementById(`${themeType}-details`).innerHTML = ''; // Clear details view
+                document.getElementById(`${themeType}-details`).innerHTML = '';
 
             } catch (error) {
                 console.error(`Error generating more items for ${themeType}:`, error);
@@ -1690,6 +1708,9 @@
             const cardTitle = card.querySelector('h2').textContent;
             const cardDescription = card.querySelector('p').textContent;
 
+            // *** ADDED: Mark item as viewed in Firestore ***
+            await markItemAsViewed(cardTitle, item.title);
+
             const prompt = `
                 You are creating a summary for an IT administration guide.
                 The overall category is: "${cardTitle}"
@@ -1715,6 +1736,23 @@
                 addPostGenerationButtons(resultContainer, themeId, themeType);
             } catch (error) {
                 handleApiError(error, resultContainer, `guide for ${item.title}`);
+            }
+        }
+        
+        // *** ADDED: New function to save a viewed item to Firestore ***
+        async function markItemAsViewed(cardTitle, buttonTitle) {
+            if (!viewedItemsCollectionRef) return;
+
+            const compositeKey = `${cardTitle} - ${buttonTitle}`;
+            
+            // Use setDoc with a specific doc ID to avoid duplicates and allow easy checking
+            try {
+                const docRef = doc(viewedItemsCollectionRef, compositeKey);
+                await setDoc(docRef, { 
+                    viewedAt: Timestamp.fromDate(new Date()) 
+                });
+            } catch (error) {
+                console.error("Error marking item as viewed:", error);
             }
         }
 
@@ -2375,13 +2413,11 @@ Return only the complete markdown guide.`;
                 
                 originalGeneratedText.set(fullTitle, resultText); // Save original text for refinement
                 
-                // NEW: Create the introductory section
                 const summaryHeader = `### ${item.title} - A Comprehensive Guide`;
                 const summaryParagraph = `This guide provides a detailed walkthrough for "${item.title}". It covers prerequisites, step-by-step instructions, verification methods, troubleshooting common issues, and helpful resources to assist you in successfully completing this task within the broader context of "${cardName}".`;
                 const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
 
                 contentEl.innerHTML = '';
-                // Render the modified markdown with the prepended summary
                 renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false);
                 
                 const saveDbBtn = document.createElement('button');
@@ -2496,4 +2532,4 @@ Return only the complete markdown guide.`;
 
     </script>
 </body>
-</html>
+</ht
