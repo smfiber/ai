@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Self-note: Updated to version 4.35 -->
-    <title>IT Administration Hub v4.35</title>
+    <!-- Self-note: Updated to version 4.36 -->
+    <title>IT Administration Hub v4.36</title>
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -274,7 +274,7 @@
     </style>
 </head>
 <body>
-    <!-- Version 4.35 -->
+    <!-- Version 4.36 -->
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
@@ -374,7 +374,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.35</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.36</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -776,124 +776,115 @@
                 }
             });
 
+            // BUG FIX v4.36: Refactored the main click listener to be more robust and handle different types of clickable elements correctly.
             document.addEventListener('click', (e) => {
-                if (e.target.closest('.copy-code-button')) {
-                    const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
-                    copyElementTextToClipboard(codeBlock, e.target.closest('.copy-code-button'));
+                const copyBtn = e.target.closest('.copy-code-button');
+                if (copyBtn) {
+                    const codeBlock = copyBtn.closest('.code-block-container').querySelector('code, pre');
+                    copyElementTextToClipboard(codeBlock, copyBtn);
+                    return;
+                }
+
+                const savedLink = e.target.closest('.saved-article-link');
+                if (savedLink) {
+                    e.preventDefault();
+                    const article = JSON.parse(savedLink.dataset.article);
+                    displaySavedArticle(article);
                     return;
                 }
                 
                 const targetButton = e.target.closest('button');
                 if (!targetButton) return;
 
+                // From here, we know we're dealing with a button click.
                 if (targetButton.id === 'save-to-drive-btn') {
-                     handleSaveToDriveClick(targetButton);
-                     return;
-                }
-
-                if (targetButton.id === 'save-to-onedrive-btn') {
+                    handleSaveToDriveClick(targetButton);
+                } else if (targetButton.id === 'save-to-onedrive-btn') {
                     handleSaveToOneDriveClick(targetButton);
-                    return;
-                }
-                
-                if(targetButton.id === 'save-to-db-btn') {
+                } else if (targetButton.id === 'save-to-db-btn') {
                     saveArticleToDb(targetButton);
-                    return;
-                }
-
-                if(targetButton.id === 'generate-script-btn') {
+                } else if (targetButton.id === 'generate-script-btn') {
                     handleScriptGenerationClick(targetButton);
-                    return;
-                }
-
-                if(targetButton.id === 'generate-cheatsheet-btn') {
+                } else if (targetButton.id === 'generate-cheatsheet-btn') {
                     handleCheatSheetGenerationClick(targetButton);
-                    return;
-                }
-                
-                if(targetButton.closest('.saved-article-link')) {
-                    e.preventDefault();
-                    const article = JSON.parse(targetButton.closest('.saved-article-link').dataset.article);
-                    displaySavedArticle(article);
-                    return;
-                }
-
-                const tailorBtn = targetButton.closest('#tailoring-buttons-container .btn-toggle');
-                if (tailorBtn) {
-                    tailorBtn.classList.toggle('active');
-                    return;
-                }
-
-                const gridSelector = targetButton.closest('.grid-card-selector');
-                if (gridSelector) {
-                    const container = gridSelector.closest('.card-grid-container').parentElement;
-                    const currentlyActive = container.querySelector('.grid-card-selector.active');
-                    if(currentlyActive) currentlyActive.classList.remove('active');
-                    gridSelector.classList.add('active');
-                    handleGridSelect(gridSelector);
-                    return;
-                }
-
-                const exploreBtn = targetButton.closest('.explore-button');
-                if (exploreBtn) {
-                    const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
-                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
-                    return;
-                }
-                
-                const refineBtn = targetButton.closest('.refine-button');
-                if (refineBtn) {
-                    toggleRefineUI(refineBtn.parentElement);
-                    return;
-                }
-
-                const modalRefineBtn = targetButton.closest('.modal-refine-button');
-                if (modalRefineBtn) {
-                    toggleRefineUI(modalRefineBtn.parentElement, true);
-                    return;
-                }
-                
-                const submitRefineBtn = targetButton.closest('.submit-refinement-button');
-                if(submitRefineBtn) {
-                    handleRefineRequest(submitRefineBtn.closest('.refine-container'));
-                    return;
-                }
-                
-                const showAllBtn = targetButton.closest('.show-all-button');
-                if (showAllBtn) {
-                    handleShowAllClick(showAllBtn);
-                    return;
-                }
-
-                const generateMoreBtn = targetButton.closest('.generate-more-button');
-                if (generateMoreBtn) {
-                    handleGenerateMoreClick(generateMoreBtn);
-                    return;
-                }
-
-                const accordionHeader = targetButton.closest('.accordion-header');
-                if (accordionHeader) { 
-                    accordionHeader.classList.toggle('active');
-                    const icon = accordionHeader.querySelector('.icon');
-                    if(icon) {
-                       icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+                } else {
+                    const tailorBtn = targetButton.closest('#tailoring-buttons-container .btn-toggle');
+                    if (tailorBtn) {
+                        tailorBtn.classList.toggle('active');
+                        return;
                     }
-                    accordionHeader.nextElementSibling.classList.toggle('open'); 
-                    return;
-                }
-                
-                const jumpToBtn = targetButton.closest('.jump-to-button');
-                if (jumpToBtn) {
-                    const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
-                    if (targetCard) {
-                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
-                        targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
-                        setTimeout(() => targetCard.style.boxShadow = '', 2000);
+
+                    const gridSelector = targetButton.closest('.grid-card-selector');
+                    if (gridSelector) {
+                        const container = gridSelector.closest('.card-grid-container').parentElement;
+                        const currentlyActive = container.querySelector('.grid-card-selector.active');
+                        if(currentlyActive) currentlyActive.classList.remove('active');
+                        gridSelector.classList.add('active');
+                        handleGridSelect(gridSelector);
+                        return;
                     }
-                    return;
+
+                    const exploreBtn = targetButton.closest('.explore-button');
+                    if (exploreBtn) {
+                        const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
+                        handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
+                        return;
+                    }
+                    
+                    const refineBtn = targetButton.closest('.refine-button');
+                    if (refineBtn) {
+                        toggleRefineUI(refineBtn.parentElement);
+                        return;
+                    }
+
+                    const modalRefineBtn = targetButton.closest('.modal-refine-button');
+                    if (modalRefineBtn) {
+                        toggleRefineUI(modalRefineBtn.parentElement, true);
+                        return;
+                    }
+                    
+                    const submitRefineBtn = targetButton.closest('.submit-refinement-button');
+                    if(submitRefineBtn) {
+                        handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                        return;
+                    }
+                    
+                    const showAllBtn = targetButton.closest('.show-all-button');
+                    if (showAllBtn) {
+                        handleShowAllClick(showAllBtn);
+                        return;
+                    }
+
+                    const generateMoreBtn = targetButton.closest('.generate-more-button');
+                    if (generateMoreBtn) {
+                        handleGenerateMoreClick(generateMoreBtn);
+                        return;
+                    }
+
+                    const accordionHeader = targetButton.closest('.accordion-header');
+                    if (accordionHeader) { 
+                        accordionHeader.classList.toggle('active');
+                        const icon = accordionHeader.querySelector('.icon');
+                        if(icon) {
+                           icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+                        }
+                        accordionHeader.nextElementSibling.classList.toggle('open'); 
+                        return;
+                    }
+                    
+                    const jumpToBtn = targetButton.closest('.jump-to-button');
+                    if (jumpToBtn) {
+                        const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
+                        if (targetCard) {
+                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
+                            targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
+                            setTimeout(() => targetCard.style.boxShadow = '', 2000);
+                        }
+                        return;
+                    }
                 }
 
-                if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
+                if (!settingsPanel.classList.contains('hidden') && !e.target.closest('#settings-panel') && !e.target.closest('#settings-button')) {
                     settingsPanel.classList.add('hidden');
                 }
             });
@@ -1322,11 +1313,11 @@
                     return;
                 }
 
-                let articlesHtml = '<ul class="space-y-2 list-disc pl-5">';
+                let articlesHtml = '<ul class="space-y-2">';
                 querySnapshot.forEach(doc => {
                     const article = doc.data();
                     articlesHtml += `
-                        <li>
+                        <li class="mb-2">
                             <a href="#" class="saved-article-link themed-text-primary hover:underline" data-article='${JSON.stringify(article)}'>
                                 ${article.title}
                             </a>
@@ -2310,6 +2301,7 @@ Return only the complete markdown guide.`;
         }
 
         function copyElementTextToClipboard(element, button) {
+            if (!element) return;
             const textToCopy = element.innerText;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
