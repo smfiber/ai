@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.34</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -523,15 +523,10 @@
                 breaks: true,
             });
 
+            // Load credentials. If successful, initialize Firebase.
+            // GAPI/MSAL initialization is now deferred until after successful Firebase auth.
             if (loadConfigFromStorage()) {
                 initializeFirebase();
-                if (GOOGLE_CLIENT_ID) {
-                    document.getElementById('google-drive-section').classList.remove('hidden');
-                    gapi.load('client:picker', () => {
-                         gisInited = true;
-                         initializeGapiClient();
-                    });
-                }
             } else {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
             }
@@ -655,6 +650,19 @@
                         viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                         listenForSavedArticles(); 
                         listenForViewedItems();
+                        
+                        // --- LOGIN FIX ---
+                        // Defer GAPI/MSAL initialization until after Firebase auth state is confirmed.
+                        // This prevents race conditions between Firebase's redirect handling and GAPI's initialization.
+                        if (GOOGLE_CLIENT_ID && !gapiInited && !gisInited) {
+                            document.getElementById('google-drive-section').classList.remove('hidden');
+                            gapi.load('client:picker', () => {
+                                gisInited = true;
+                                initializeGapiClient();
+                            });
+                        }
+                        // You can add a similar check for MSAL if needed.
+
                     } else {
                         userId = null;
                         articlesCollectionRef = null;
@@ -2562,6 +2570,3 @@ Return only the complete markdown guide.`;
     </script>
 </body>
 </html>
-```
-
-I have updated the logic in the Canvas to correctly parse the Firebase configuration you provide. The login process should now work as expect
