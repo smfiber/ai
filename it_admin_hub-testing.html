@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.33</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.34</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -512,7 +512,6 @@
         let msalAccount = null;
         
         // --- App Initialization & Event Listeners ---
-        // *** MODIFIED: Logic moved from DOMContentLoaded to a dedicated function for clarity ***
         function initializeApplication() {
             setupEventListeners();
             populateTypographySettings();
@@ -534,14 +533,12 @@
                     });
                 }
             } else {
-                // Show the modal if no keys are found in storage
                 document.getElementById('apiKeyModal').classList.remove('hidden');
             }
         }
         
         document.addEventListener('DOMContentLoaded', initializeApplication);
 
-        // *** ADDED: New function to load configuration from localStorage ***
         function loadConfigFromStorage() {
             geminiApiKey = localStorage.getItem('geminiApiKey');
             const firebaseConfigString = localStorage.getItem('firebaseConfig');
@@ -552,21 +549,20 @@
                     firebaseConfig = JSON.parse(firebaseConfigString);
                 } catch (e) {
                     console.error("Failed to parse Firebase config from localStorage", e);
-                    localStorage.clear(); // Clear potentially corrupt data
+                    localStorage.clear();
                     return false;
                 }
             }
 
             if (geminiApiKey && firebaseConfig) {
-                // Pre-fill the form fields so the user can see their saved keys if they open the modal
                 document.getElementById('geminiApiKeyInput').value = geminiApiKey;
                 document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
                 if (GOOGLE_CLIENT_ID) {
                     document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
                 }
-                return true; // Indicate success
+                return true;
             }
-            return false; // Indicate failure
+            return false;
         }
         
         function setupAuthUI(user) {
@@ -575,7 +571,6 @@
             const apiKeyModal = document.getElementById('apiKeyModal');
 
             if (user) {
-                // User is signed in
                 appContainer.classList.remove('hidden');
                 apiKeyModal.classList.add('hidden');
                 
@@ -595,9 +590,7 @@
                 }
 
             } else {
-                // User is not signed in
                 appContainer.classList.add('hidden');
-                // The API key modal will be shown by the initialization logic if keys are missing
             }
         }
         
@@ -618,7 +611,7 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
-                localStorage.clear(); // Clear keys on critical failure to allow user to re-enter
+                localStorage.clear();
                 document.getElementById('apiKeyModal').classList.remove('hidden');
                 const form = document.getElementById('apiKeyForm');
                 let errorP = form.querySelector('.error-message');
@@ -703,7 +696,6 @@
                     newViewedIds.add(doc.id);
                 });
                 
-                // Only update if there's a change to avoid unnecessary re-renders
                 if (newViewedIds.size !== viewedItemIds.size) {
                     viewedItemIds.clear();
                     newViewedIds.forEach(id => viewedItemIds.add(id));
@@ -908,23 +900,32 @@
                 errorP.textContent = "Gemini API Key and Firebase Config are required.";
                 return;
             }
-
+            
+            // *** MODIFIED: Use a more robust parsing method for the Firebase config ***
             try {
                 const match = tempFirebaseConfigText.match(/\{[\s\S]*\}/);
-                if (!match) throw new Error("Could not find a valid JSON object in the Firebase config.");
-                tempFirebaseConfig = JSON.parse(match[0]);
-                if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) throw new Error("Firebase config is missing 'apiKey' or 'projectId'.");
+                if (!match) {
+                    throw new Error("Could not find a config object starting with '{' and ending with '}'.");
+                }
+                const configString = match[0];
+                
+                // Use new Function() to safely parse the config as a JavaScript object,
+                // which is more robust than JSON.parse for user-pasted snippets from Firebase.
+                const configFactory = new Function(`return ${configString}`);
+                tempFirebaseConfig = configFactory();
+
+                if (!tempFirebaseConfig || typeof tempFirebaseConfig !== 'object' || !tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
+                    throw new Error("The parsed Firebase config is invalid or missing required properties like 'apiKey' or 'projectId'.");
+                }
             } catch (err) {
-                errorP.textContent = `Invalid Firebase Config: ${err.message}.`;
+                errorP.textContent = `Invalid Firebase Config: ${err.message}. Please ensure you've pasted the complete snippet from your Firebase project settings.`;
                 return;
             }
             
-            // *** MODIFIED: Save to localStorage before redirecting ***
             localStorage.setItem('geminiApiKey', tempGeminiKey);
             localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
             localStorage.setItem('googleClientId', tempGoogleClientId);
             
-            // Now load them into the main variables and initialize
             loadConfigFromStorage();
             initializeFirebase();
             
@@ -2561,3 +2562,6 @@ Return only the complete markdown guide.`;
     </script>
 </body>
 </html>
+```
+
+I have updated the logic in the Canvas to correctly parse the Firebase configuration you provide. The login process should now work as expect
