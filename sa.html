@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.26</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.24</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -514,15 +514,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             populateTypographySettings();
-            
-            const renderer = new marked.Renderer();
-            renderer.link = (href, title, text) => {
-                // Ensure links open in a new tab
-                return `<a href="${href}" title="${title || ''}" target="_blank" rel="noopener noreferrer">${text}</a>`;
-            };
-
             marked.setOptions({
-                renderer: renderer,
+                renderer: new marked.Renderer(),
                 highlight: (code, lang) => code,
                 langPrefix: 'language-',
                 gfm: true,
@@ -814,10 +807,7 @@
             try {
                 await gapi.client.init({
                     apiKey: geminiApiKey, // Key for discovery
-                    discoveryDocs: [
-                        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                        'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
-                    ],
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
                 initializeTokenClient();
@@ -975,7 +965,7 @@
                  console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
-             }
+            }
             
              const token = gapi.client.getToken()?.access_token;
              if (!token) {
@@ -1125,15 +1115,6 @@
         // --- Firebase Functions ---
         
         async function saveArticleToDb(button) {
-            // This feature is temporarily disabled per user request.
-            console.warn("Save to DB feature is disabled.");
-            if(button) {
-                button.disabled = true;
-                button.textContent = 'Saving Unavailable';
-            }
-            return;
-
-            /*
             if (!articlesCollectionRef) {
                 console.error("Firestore not initialized, cannot save article.");
                 alert("Saved articles feature is not available. Check Firebase config.");
@@ -1163,7 +1144,6 @@
                 button.disabled = false;
                 button.textContent = 'Save Failed';
             }
-            */
         }
         
          async function showSavedArticles() {
@@ -1219,8 +1199,7 @@
             footerEl.dataset.cardName = "Saved Article";
             
             const buttonContainer = document.getElementById('inDepthModalButtons');
-            // Disable save button as requested
-            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled title="This feature is temporarily disabled.">Saving Unavailable</button>`;
+            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled>Saved!</button>`;
             
             if (gapi.client.getToken() !== null) {
                 const saveDriveBtn = document.createElement('button');
@@ -1848,9 +1827,9 @@ ${originalText}
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
     * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
+    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-    * **YouTube Videos:** Include a dedicated "Relevant YouTube Videos" section with a bulleted list of links to high-quality, relevant tutorials or overviews on the topic.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -1876,7 +1855,7 @@ When generating the guide, ensure the guide as a whole meets the following requi
 4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
 5.  **Troubleshooting:** Include a section covering common problems that administrators face.
 6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
-7.  **YouTube Videos:** Include a dedicated "Relevant YouTube Videos" section with a bulleted list of links to high-quality, relevant tutorials or overviews on the topic.
+7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
 
 Return only the complete markdown guide.`;
         }
@@ -2246,13 +2225,11 @@ Return only the complete markdown guide.`;
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(resultText, contentEl, false);
                 
-                // Disable save to DB button as requested
                 const saveDbBtn = document.createElement('button');
                 saveDbBtn.id = 'save-to-db-btn';
                 saveDbBtn.className = 'btn-secondary';
-                saveDbBtn.disabled = true;
-                saveDbBtn.textContent = 'Saving Unavailable';
-                saveDbBtn.title = 'This feature is temporarily disabled.';
+                saveDbBtn.disabled = savedArticleIds.has(fullTitle);
+                saveDbBtn.textContent = savedArticleIds.has(fullTitle) ? 'Saved!' : 'Save to My Articles';
                 buttonContainer.appendChild(saveDbBtn);
 
                 if (gapi.client.getToken() !== null) {
