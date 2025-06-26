@@ -283,6 +283,11 @@
                     <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
                     <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
                 </div>
+                
+                <div class="mb-4">
+                    <label for="firebaseProjectIdInput" class="block text-sm font-medium themed-text-muted">Firebase Project ID (Required)</label>
+                    <input type="text" id="firebaseProjectIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase Project ID" required>
+                </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
                 <p class="mb-2 themed-text-muted text-sm">To save/load guides from Google Drive, also provide your Client ID.</p>
@@ -367,7 +372,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.25</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.26</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -491,6 +496,7 @@
         // --- Global State & Configuration ---
         let geminiApiKey = "";
         let firebaseApiKey = "";
+        let firebaseProjectId = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -524,15 +530,16 @@
         });
 
         function initializeFirebase() {
-             if (!firebaseApiKey) {
-                console.warn("Firebase API Key is missing. Firebase initialization skipped.");
+             if (!firebaseApiKey || !firebaseProjectId) {
+                console.warn("Firebase API Key or Project ID is missing. Firebase initialization skipped.");
                 return;
             }
             const firebaseConfig = {
                 apiKey: firebaseApiKey,
-                authDomain: "it-administration-hub.firebaseapp.com",
-                projectId: "it-administration-hub",
-                storageBucket: "it-administration-hub.appspot.com",
+                authDomain: `${firebaseProjectId}.firebaseapp.com`,
+                projectId: firebaseProjectId,
+                storageBucket: `${firebaseProjectId}.appspot.com`,
+                // These values are often the same across projects, but if you have specific ones, get them from your Firebase console
                 messagingSenderId: "776112448835",
                 appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
                 measurementId: "G-0Q6E7ZGNEJ"
@@ -546,7 +553,8 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        const appId = firebaseConfig.appId;
+                        // Use a consistent app identifier for the collection path
+                        const appId = 'it-admin-hub-global'; 
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
@@ -748,6 +756,7 @@
             e.preventDefault();
             geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
             firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
+            firebaseProjectId = document.getElementById('firebaseProjectIdInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
             MSAL_CLIENT_ID = ''; // Removed from modal, needs to be set elsewhere if used
 
@@ -759,8 +768,8 @@
                 form.appendChild(errorP);
             }
 
-            if (!geminiApiKey || !firebaseApiKey) {
-                errorP.textContent = "Gemini and Firebase API keys are required to start.";
+            if (!geminiApiKey || !firebaseApiKey || !firebaseProjectId) {
+                errorP.textContent = "Gemini API Key, Firebase API Key, and Firebase Project ID are required.";
                 return;
             }
             errorP.textContent = ''; 
