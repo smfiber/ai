@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.27</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.28</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1848,12 +1848,13 @@ ${originalText}
 **Instructions for rewriting:**
 1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
 2.  **Integrate:** Seamlessly integrate the user's request into the guide.
-3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources using markdown format \`[Link Text](URL)\`.
-    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links using markdown format \`[Link Text](URL)\`.
-    * **YouTube Videos:** Include a dedicated "Relevant YouTube Videos" section with a bulleted list of links to high-quality, relevant tutorials or overviews on the topic, using markdown format \`[Video Title](YouTube URL)\`.
+3.  **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
+4.  **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
+5.  **Links, Resources, and Videos:** Your response MUST include hyperlinks.
+    * **In-text Links:** Throughout the guide, embed links to official documentation or authoritative sources.
+    * **Helpful Resources Section:** This section MUST contain a bulleted list of links to high-quality tutorials, tools, or official documentation.
+    * **Relevant YouTube Videos Section:** This section MUST contain a bulleted list of links to relevant video tutorials.
+    * **CRITICAL FORMATTING:** ALL links in the entire guide MUST follow the exact markdown format: \`[Visible Link Text](https://www.example.com/actual-url)\`. The URL MUST be a valid, functional URL. Do NOT use placeholder URLs or the word "undefined". If a URL cannot be found, do not create a link for that item.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -1873,13 +1874,15 @@ Your task is to structure this guide into the most logical and helpful sections.
 
 When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
 
-1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources using markdown format \`[Link Text](URL)\`.
-2.  **Code Blocks:** When providing code examples (like PowerShell), wrap them in markdown code fences with the language specified, like \`\`\`powershell... \`\`\`.
-3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
-5.  **Troubleshooting:** Include a section covering common problems that administrators face.
-6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools, using markdown format \`[Link Text](URL)\`.
-7.  **YouTube Videos:** Include a dedicated "Relevant YouTube Videos" section with a bulleted list of links to high-quality, relevant tutorials or overviews on the topic, using markdown format \`[Video Title](YouTube URL)\`.
+1.  **Code Blocks:** When providing code examples (like PowerShell), wrap them in markdown code fences with the language specified, like \`\`\`powershell... \`\`\`.
+2.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
+3.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
+4.  **Troubleshooting:** Include a section covering common problems that administrators face.
+5.  **Links, Resources, and Videos:** Your response MUST include hyperlinks.
+    * **In-text Links:** Throughout the guide, embed links to official documentation or authoritative sources.
+    * **Helpful Resources Section:** This section MUST contain a bulleted list of links to high-quality tutorials, tools, or official documentation.
+    * **Relevant YouTube Videos Section:** This section MUST contain a bulleted list of links to relevant video tutorials.
+    * **CRITICAL FORMATTING:** ALL links in the entire guide MUST follow the exact markdown format: \`[Visible Link Text](https://www.example.com/actual-url)\`. The URL MUST be a valid, functional URL. Do NOT use placeholder URLs or the word "undefined". If a URL cannot be found, do not create a link for that item.
 
 Return only the complete markdown guide.`;
         }
