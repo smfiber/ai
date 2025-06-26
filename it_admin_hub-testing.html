@@ -143,7 +143,7 @@
             backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
             border-radius: 16px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.5s ease, border-color 0.5s ease;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.5s ease, border-color 0.5s ease, opacity 0.3s ease;
             border: 1px solid var(--color-card-border);
             display: flex; flex-direction: column;
         }
@@ -268,7 +268,7 @@
 </head>
 <body>
     
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
             <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features.</p>
@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.32</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.33</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -475,7 +475,6 @@
     </footer>
 
     <script type="module">
-        // *** MODIFIED: Imported doc and setDoc for specific document handling ***
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -485,10 +484,9 @@
         let auth;
         let userId;
         let articlesCollectionRef;
-        // *** ADDED: New state for viewed items ***
         let viewedItemsCollectionRef;
         const savedArticleIds = new Set();
-        const viewedItemIds = new Set(); // To hold composite keys of viewed items
+        const viewedItemIds = new Set();
         let firebaseConfig = null;
         let appIsInitialized = false;
         
@@ -509,12 +507,13 @@
 
         // --- Microsoft OneDrive Integration State & Config ---
         let msalInstance = null;
-        let MSAL_CLIENT_ID = ''; // This will be set from a hardcoded value or config later
+        let MSAL_CLIENT_ID = ''; 
         const MSAL_SCOPES = { scopes: ["User.Read", "Files.ReadWrite.AppFolder"] };
         let msalAccount = null;
         
         // --- App Initialization & Event Listeners ---
-        document.addEventListener('DOMContentLoaded', () => {
+        // *** MODIFIED: Logic moved from DOMContentLoaded to a dedicated function for clarity ***
+        function initializeApplication() {
             setupEventListeners();
             populateTypographySettings();
             marked.setOptions({
@@ -524,7 +523,51 @@
                 gfm: true,
                 breaks: true,
             });
-        });
+
+            if (loadConfigFromStorage()) {
+                initializeFirebase();
+                if (GOOGLE_CLIENT_ID) {
+                    document.getElementById('google-drive-section').classList.remove('hidden');
+                    gapi.load('client:picker', () => {
+                         gisInited = true;
+                         initializeGapiClient();
+                    });
+                }
+            } else {
+                // Show the modal if no keys are found in storage
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', initializeApplication);
+
+        // *** ADDED: New function to load configuration from localStorage ***
+        function loadConfigFromStorage() {
+            geminiApiKey = localStorage.getItem('geminiApiKey');
+            const firebaseConfigString = localStorage.getItem('firebaseConfig');
+            GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
+
+            if (firebaseConfigString) {
+                try {
+                    firebaseConfig = JSON.parse(firebaseConfigString);
+                } catch (e) {
+                    console.error("Failed to parse Firebase config from localStorage", e);
+                    localStorage.clear(); // Clear potentially corrupt data
+                    return false;
+                }
+            }
+
+            if (geminiApiKey && firebaseConfig) {
+                // Pre-fill the form fields so the user can see their saved keys if they open the modal
+                document.getElementById('geminiApiKeyInput').value = geminiApiKey;
+                document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
+                if (GOOGLE_CLIENT_ID) {
+                    document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
+                }
+                return true; // Indicate success
+            }
+            return false; // Indicate failure
+        }
         
         function setupAuthUI(user) {
             const authStatusEl = document.getElementById('auth-status');
@@ -554,8 +597,7 @@
             } else {
                 // User is not signed in
                 appContainer.classList.add('hidden');
-                const saveKeysBtn = document.querySelector('#apiKeyForm button');
-                saveKeysBtn.textContent = 'Save Keys & Sign In';
+                // The API key modal will be shown by the initialization logic if keys are missing
             }
         }
         
@@ -576,6 +618,8 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
+                localStorage.clear(); // Clear keys on critical failure to allow user to re-enter
+                document.getElementById('apiKeyModal').classList.remove('hidden');
                 const form = document.getElementById('apiKeyForm');
                 let errorP = form.querySelector('.error-message');
                 if (!errorP) {
@@ -583,8 +627,7 @@
                     errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
                     form.appendChild(errorP);
                 }
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
+                errorP.textContent = `Setup failed: ${error.message}. Your keys have been cleared. Please check and re-enter them.`;
             } finally {
                 loadingModal.classList.add('hidden');
             }
@@ -611,16 +654,14 @@
                         alert(`Sign-in failed: ${error.message}`);
                     });
 
-
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
                         const appId = firebaseConfig.appId || 'it-admin-hub-global'; 
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
-                        // *** ADDED: Initialize viewedItems collection reference ***
                         viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                         listenForSavedArticles(); 
-                        listenForViewedItems(); // *** ADDED: Start listening for viewed items ***
+                        listenForViewedItems();
                     } else {
                         userId = null;
                         articlesCollectionRef = null;
@@ -649,28 +690,32 @@
                 snapshot.forEach(doc => {
                     savedArticleIds.add(doc.data().title);
                 });
-                // Potentially re-render UI elements that depend on saved status
             }, (error) => {
                 console.error("Error listening to saved articles:", error);
             });
         }
 
-        // *** ADDED: New function to listen for changes in viewed items ***
         function listenForViewedItems() {
             if (!viewedItemsCollectionRef) return;
             onSnapshot(viewedItemsCollectionRef, (snapshot) => {
-                viewedItemIds.clear();
+                const newViewedIds = new Set();
                 snapshot.forEach(doc => {
-                    viewedItemIds.add(doc.id); // The doc ID is our composite key
+                    newViewedIds.add(doc.id);
                 });
-                // After getting the latest viewed items, re-render all grid selectors to apply opacity
-                document.querySelectorAll('.card-grid-container').forEach(container => {
-                    const containerId = container.parentElement.id;
-                    const themeType = container.parentElement.dataset.themeType;
-                    if(containerId && themeType) {
-                       populateCardGridSelector(containerId, themeType);
-                    }
-                });
+                
+                // Only update if there's a change to avoid unnecessary re-renders
+                if (newViewedIds.size !== viewedItemIds.size) {
+                    viewedItemIds.clear();
+                    newViewedIds.forEach(id => viewedItemIds.add(id));
+                    
+                    document.querySelectorAll('.card-grid-container').forEach(container => {
+                        const containerId = container.parentElement.id;
+                        const themeType = container.parentElement.dataset.themeType;
+                        if(containerId && themeType && allThemeData[themeType]) {
+                           populateCardGridSelector(containerId, themeType);
+                        }
+                    });
+                }
             }, (error) => {
                 console.error("Error listening to viewed items:", error);
             });
@@ -678,13 +723,11 @@
 
 
         function setupEventListeners() {
-            // Main Actions
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
             document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
 
-            // Cloud Storage Actions
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
                 const folderId = await getDriveFolderId();
@@ -692,10 +735,9 @@
             });
             document.getElementById('msal-auth-button').addEventListener('click', handleMsalAuthClick);
 
-            // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-             document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
+            document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!geminiApiKey) {
                     document.getElementById('apiKeyModal').classList.remove('hidden');
@@ -705,29 +747,28 @@
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-             // Settings Panel
+            
             const settingsPanel = document.getElementById('settings-panel');
             document.getElementById('settings-button').addEventListener('click', (e) => {
                 e.stopPropagation();
                 settingsPanel.classList.toggle('hidden');
             });
 
-            // Typography Selects
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // Modal Closing Listeners
             ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal'].forEach(id => {
-                if (id === 'apiKeyModal') return;
-                document.getElementById(id).addEventListener('click', (e) => {
-                    if (e.target.id === id || e.target.closest('[id^="close"]')) {
-                        document.getElementById(id).classList.add('hidden');
-                    }
-                });
+                const modal = document.getElementById(id);
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                            modal.classList.add('hidden');
+                        }
+                    });
+                }
             });
 
-            // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
                 if (e.target.classList.contains('copy-code-button')) {
                     const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
@@ -849,9 +890,10 @@
         
         async function handleApiKeySubmit(e) {
             e.preventDefault();
-            geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
-            let firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
-            GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
+            const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
+            const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
+            const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
+            let tempFirebaseConfig;
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -862,29 +904,28 @@
             }
             errorP.textContent = ''; 
 
-            if (!geminiApiKey || !firebaseConfigText) {
+            if (!tempGeminiKey || !tempFirebaseConfigText) {
                 errorP.textContent = "Gemini API Key and Firebase Config are required.";
                 return;
             }
 
             try {
-                const match = firebaseConfigText.match(/\{[\s\S]*\}/);
-                if (!match) {
-                    throw new Error("Could not find a config object starting with '{' and ending with '}'.");
-                }
-                const configString = match[0];
-                
-                const configFactory = new Function(`return ${configString}`);
-                firebaseConfig = configFactory();
-
-                if (!firebaseConfig || typeof firebaseConfig !== 'object' || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
-                    throw new Error("The parsed Firebase config is missing a required 'apiKey' or 'projectId'.");
-                }
+                const match = tempFirebaseConfigText.match(/\{[\s\S]*\}/);
+                if (!match) throw new Error("Could not find a valid JSON object in the Firebase config.");
+                tempFirebaseConfig = JSON.parse(match[0]);
+                if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) throw new Error("Firebase config is missing 'apiKey' or 'projectId'.");
             } catch (err) {
-                errorP.textContent = `Invalid Firebase Config: ${err.message}. Please check the snippet you pasted.`;
+                errorP.textContent = `Invalid Firebase Config: ${err.message}.`;
                 return;
             }
             
+            // *** MODIFIED: Save to localStorage before redirecting ***
+            localStorage.setItem('geminiApiKey', tempGeminiKey);
+            localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
+            localStorage.setItem('googleClientId', tempGoogleClientId);
+            
+            // Now load them into the main variables and initialize
+            loadConfigFromStorage();
             initializeFirebase();
             
             try {
@@ -892,15 +933,7 @@
                 await signInWithRedirect(auth, provider);
             } catch (error) {
                 console.error("Google Sign-In Redirect failed:", error);
-                alert(`Google Sign-In Failed: ${error.message}`);
-            }
-            
-            if (GOOGLE_CLIENT_ID) {
-                document.getElementById('google-drive-section').classList.remove('hidden');
-                gapi.load('client:picker', () => {
-                     gisInited = true;
-                     initializeGapiClient();
-                });
+                errorP.textContent = `Google Sign-In Failed: ${error.message}`;
             }
         }
 
@@ -1550,7 +1583,6 @@
             card.className = 'card md:col-span-2';
             card.id = `${key}-card`;
             const selectorId = `${key}-selector-visual`;
-            // *** ADDED: data-theme-type to the container div for populateCardGridSelector to use ***
             card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-theme-type="${key}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
             mainGrid.appendChild(card);
             
@@ -1582,7 +1614,6 @@
             const cardTitle = container.closest('.card').querySelector('h2').textContent;
 
             const itemsHtml = data.map(item => {
-                // *** ADDED: Check if the item has been viewed and apply opacity class ***
                 const compositeKey = `${cardTitle} - ${item.title}`;
                 const isViewed = viewedItemIds.has(compositeKey);
                 const viewedClass = isViewed ? 'opacity-75' : '';
@@ -1708,7 +1739,6 @@
             const cardTitle = card.querySelector('h2').textContent;
             const cardDescription = card.querySelector('p').textContent;
 
-            // *** ADDED: Mark item as viewed in Firestore ***
             await markItemAsViewed(cardTitle, item.title);
 
             const prompt = `
@@ -1739,13 +1769,11 @@
             }
         }
         
-        // *** ADDED: New function to save a viewed item to Firestore ***
         async function markItemAsViewed(cardTitle, buttonTitle) {
             if (!viewedItemsCollectionRef) return;
 
             const compositeKey = `${cardTitle} - ${buttonTitle}`;
             
-            // Use setDoc with a specific doc ID to avoid duplicates and allow easy checking
             try {
                 const docRef = doc(viewedItemsCollectionRef, compositeKey);
                 await setDoc(docRef, { 
@@ -2532,4 +2560,4 @@ Return only the complete markdown guide.`;
 
     </script>
 </body>
-</ht
+</html>
