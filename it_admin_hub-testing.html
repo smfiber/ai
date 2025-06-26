@@ -386,7 +386,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.35</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.36</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -442,7 +442,6 @@
 
                         <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
                     </form>
-                    <!-- This container is no longer used for custom guides, but kept for potential future use or other content -->
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
@@ -1272,6 +1271,7 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
+                // v4.36 - Note for version update: Added new categories
                 const categoriesToGenerate = [
                     { 
                         key: 'activeDirectory', 
@@ -1282,7 +1282,7 @@
                     },
                     { 
                         key: 'aiProgramming', 
-                        title: 'Artificial Intelligence (AI) Programming', 
+                        title: 'Artificial Intelligence Programming', 
                         description: "Concepts and guides for getting started with AI development and programming.", 
                         initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
                         fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Return ONLY a valid JSON array.` 
@@ -1293,6 +1293,20 @@
                         description: "Managing Citrix Virtual Apps and Desktops environments.", 
                         initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
                         fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'geminiInfographics', 
+                        title: 'Create Infographics in Gemini', 
+                        description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", 
+                        initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics, from data summarization to visual layout suggestions. For each, give a unique "id", "title", and a detailed "description". Return ONLY a valid JSON array.` 
+                    },
+                    { 
+                        key: 'geminiLinkedIn', 
+                        title: 'Create LinkedIn Posts using Gemini', 
+                        description: "Use Gemini to draft engaging and professional posts for LinkedIn.", 
+                        initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini, including thought leadership, project updates, and industry analysis. For each, give a unique "id", "title", and a detailed "description". Return ONLY a valid JSON array.` 
                     },
                     { 
                         key: 'dataCenterPractices', 
@@ -1344,6 +1358,13 @@
                         fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept. Return ONLY a valid JSON array.` 
                     },
                     { 
+                        key: 'linuxCliAdmin', 
+                        title: 'Linux CLI for Administration', 
+                        description: "A reference for essential Linux commands for system administrators.", 
+                        initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Return ONLY a valid JSON array.`, 
+                        fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration, covering file management, user permissions, networking, and process monitoring. For each, give a unique "id", "title" (the command), and a detailed "description". Return ONLY a valid JSON array.` 
+                    },
+                    { 
                         key: 'm365Admin', 
                         title: 'Microsoft 365 Administration', 
                         description: "Administering users, services, and security in Microsoft 365.", 
@@ -1377,6 +1398,13 @@
                         description: "A collection of useful PowerShell scripts for various administrative tasks.", 
                         initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
                         fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose. Return ONLY a valid JSON array.` 
+                    },
+                    {
+                        key: 'scomAdmin',
+                        title: 'SCOM Administration',
+                        description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).',
+                        initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`,
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM, including management pack tuning, creating overrides, agent deployment, and reporting. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.`
                     },
                     {
                         key: 'serviceNowAdmin',
@@ -1437,6 +1465,7 @@
                     if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
                 });
                 
+                // v4.36 - Note for version update: Ensure cards are sorted alphabetically
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
@@ -1527,29 +1556,32 @@
                 </div>`;
             }).join('');
             
+            // v4.36 - Note for version update: Reworked button logic for clarity and to fix "Show All"
             const fullPrompt = fullPrompts[themeType];
             let actionButtonsHtml = '';
+            const card = container.closest('.card');
+            const isFullyLoaded = card.dataset.isFullyLoaded === 'true';
 
-            if (fullPrompt && data.length < 35 && data.length > 0) {
-                actionButtonsHtml = `
-                    <div class="col-span-full text-center mt-4">
-                        <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
-                            Show All (${data.length} of ~50 shown)
-                        </button>
-                    </div>`;
-            } 
-            else if (fullPrompt && data.length >= 35) {
-                actionButtonsHtml = `
-                    <div class="col-span-full text-center mt-4">
-                        <button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category">
-                            <span class="flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                Generate 10 More
-                            </span>
-                        </button>
-                    </div>`;
+            if (fullPrompt && data.length > 0) {
+                if (isFullyLoaded) {
+                    actionButtonsHtml = `
+                        <div class="col-span-full text-center mt-4">
+                            <button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category">
+                                <span class="flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Generate 10 More
+                                </span>
+                            </button>
+                        </div>`;
+                } else {
+                     actionButtonsHtml = `
+                        <div class="col-span-full text-center mt-4">
+                            <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
+                                Show All (${data.length} of ~50 shown)
+                            </button>
+                        </div>`;
+                }
             }
-
             container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${actionButtonsHtml}`;
         }
 
@@ -1603,6 +1635,7 @@
         }
         
         async function handleShowAllClick(button) {
+            // v4.36 - Note for version update: Logic updated to fix button behavior
             const { containerId, themeType } = button.dataset;
             const container = document.getElementById(containerId);
             const fullPrompt = fullPrompts[themeType];
@@ -1615,9 +1648,14 @@
             try {
                 const jsonText = await callGeminiAPI(fullPrompt, true);
                 if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
+                
                 const fullData = parseJsonWithCorrections(jsonText);
                 fullData.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[themeType] = fullData;
+
+                const card = container.closest('.card');
+                card.dataset.isFullyLoaded = 'true';
+
                 populateCardGridSelector(containerId, themeType);
                 document.getElementById(`${themeType}-details`).innerHTML = '';
             } catch (error) {
