@@ -170,16 +170,7 @@
         }
         .btn-secondary:hover:not(:disabled) { background-color: #e5e7eb; color: var(--color-accent); }
         .btn-secondary:disabled { opacity: 0.7; cursor: not-allowed;}
-
-        .btn-danger {
-            background-color: #fee2e2; color: #b91c1c;
-            font-weight: 600; padding: 10px 20px; border-radius: 8px;
-            border: 1px solid #fecaca; cursor: pointer;
-            transition: all 0.2s ease; display: inline-flex;
-            align-items: center; justify-content: center; gap: 8px;
-        }
-        .btn-danger:hover:not(:disabled) { background-color: #fca5a5; color: #7f1d1d; }
-
+        
         .btn-toggle {
             background-color: var(--color-input-bg); color: var(--color-text-muted);
             border: 1px solid var(--color-input-border); transition: all 0.2s ease;
@@ -281,11 +272,16 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
-            <p class="mb-4 themed-text-muted">Please provide your Gemini API key to use the generative AI features. This key will be stored in your browser's local storage for convenience.</p>
+            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features. Gemini and Firebase keys are required.</p>
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
+                    <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -322,24 +318,12 @@
         </div>
     </div>
      <div id="savedArticlesModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
+        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">My Saved Articles</h2>
                 <button id="closeSavedArticlesModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="savedArticlesContent" class="p-6 overflow-y-auto"></div>
-        </div>
-    </div>
-    <div id="viewArticleModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
-            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 id="viewArticleModalTitle" class="text-2xl font-bold themed-text-primary">Article</h2>
-                <button id="closeViewArticleModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
-            </div>
-            <div id="viewArticleModalContent" class="p-6 overflow-y-auto"></div>
-            <div id="viewArticleModalFooter" class="p-4 border-t flex justify-end" style="border-color: var(--color-card-border);">
-                <button id="delete-article-btn" class="btn-danger">Delete Article</button>
-            </div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -382,7 +366,8 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
+            <!-- SELF-NOTE: Remember to update the version number when making edits. -->
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.24</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -399,6 +384,7 @@
                      Cloud Storage
                  </h2>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                     <!-- Google Drive Section -->
                      <div id="google-drive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Google Drive</h3>
                           <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides.</p>
@@ -407,6 +393,7 @@
                              <button id="load-from-drive-btn" class="btn-secondary hidden">Import from Drive</button>
                          </div>
                      </div>
+                     <!-- OneDrive Section -->
                      <div id="onedrive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Microsoft OneDrive</h3>
                           <p id="onedrive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to save guides.</p>
@@ -478,7 +465,7 @@
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
-    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div id="api-key-management" class="pt-4 border-t" style="border-color: var(--color-card-border);"></div></div></div>
+    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
 
     <footer class="mt-16 py-8 text-center border-t" style="border-color: var(--color-card-border);">
         <div class="max-w-4xl mx-auto px-4">
@@ -491,8 +478,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -500,16 +487,14 @@
         let userId;
         let articlesCollectionRef;
         const savedArticleIds = new Set();
-        // App ID from environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
+        let firebaseApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
-        let appIsReady = false;
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -527,8 +512,6 @@
         
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            initializeFirebase();
-            checkStoredApiKey();
             setupEventListeners();
             populateTypographySettings();
             marked.setOptions({
@@ -540,27 +523,22 @@
             });
         });
 
-        async function initializeFirebase() {
-            try {
-                let firebaseConfig;
-                const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                
-                if (firebaseConfigString) {
-                    firebaseConfig = JSON.parse(firebaseConfigString);
-                } else {
-                    // Fallback to a static config if the environment variable isn't available
-                    firebaseConfig = {
-                        apiKey: "", // This should be provided by the environment for security
-                        authDomain: "it-administration-hub.firebaseapp.com",
-                        projectId: "it-administration-hub",
-                        storageBucket: "it-administration-hub.appspot.com",
-                        messagingSenderId: "776112448835",
-                        appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
-                        measurementId: "G-0Q6E7ZGNEJ"
-                    };
-                    console.warn("Using fallback Firebase configuration.");
-                }
+        function initializeFirebase() {
+             if (!firebaseApiKey) {
+                console.warn("Firebase API Key is missing. Firebase initialization skipped.");
+                return;
+            }
+            const firebaseConfig = {
+                apiKey: firebaseApiKey,
+                authDomain: "it-administration-hub.firebaseapp.com",
+                projectId: "it-administration-hub",
+                storageBucket: "it-administration-hub.appspot.com",
+                messagingSenderId: "776112448835",
+                appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
+                measurementId: "G-0Q6E7ZGNEJ"
+            };
 
+            try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -568,47 +546,21 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
+                        const appId = firebaseConfig.appId;
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
-                        userId = null;
-                        articlesCollectionRef = null;
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                        });
                     }
                 });
-
-                const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                if (authToken) {
-                    await signInWithCustomToken(auth, authToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
             } catch (error) {
                 console.error("Firebase initialization error:", error);
                 document.getElementById('saved-articles-button').style.display = 'none';
             }
         }
         
-        function checkStoredApiKey() {
-            const storedKey = localStorage.getItem('geminiApiKey');
-            const apiKeyManagementDiv = document.getElementById('api-key-management');
-            
-            if (storedKey) {
-                geminiApiKey = storedKey;
-                document.getElementById('apiKeyModal').classList.add('hidden');
-                apiKeyManagementDiv.innerHTML = `<button id="clear-api-key-btn" class="btn-secondary w-full text-sm">Clear Stored API Key</button>`;
-                document.getElementById('clear-api-key-btn').addEventListener('click', () => {
-                    localStorage.removeItem('geminiApiKey');
-                    location.reload();
-                });
-                if (!appIsReady) {
-                    startApp();
-                }
-            } else {
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                apiKeyManagementDiv.innerHTML = `<p class="text-sm themed-text-muted">No API key stored.</p>`;
-            }
-        }
-
         function listenForSavedArticles() {
             if (!articlesCollectionRef) return;
             onSnapshot(articlesCollectionRef, (snapshot) => {
@@ -623,11 +575,13 @@
 
 
         function setupEventListeners() {
+            // Main Actions
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
             document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
 
+            // Cloud Storage Actions
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
                 const folderId = await getDriveFolderId();
@@ -635,80 +589,43 @@
             });
             document.getElementById('msal-auth-button').addEventListener('click', handleMsalAuthClick);
 
+            // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-            document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
-            document.getElementById('theme-changer-button').addEventListener('click', () => document.getElementById('themeGeneratorModal').classList.remove('hidden'));
+             document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
+            document.getElementById('theme-changer-button').addEventListener('click', () => {
+                if(!geminiApiKey) {
+                    document.getElementById('apiKeyModal').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('themeGeneratorModal').classList.remove('hidden');
+            });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-            
+             // Settings Panel
             const settingsPanel = document.getElementById('settings-panel');
             document.getElementById('settings-button').addEventListener('click', (e) => {
                 e.stopPropagation();
                 settingsPanel.classList.toggle('hidden');
             });
 
+            // Typography Selects
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal', 'viewArticleModal'].forEach(id => {
+            // Modal Closing Listeners
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal'].forEach(id => {
                 if (id === 'apiKeyModal') return;
-                const modal = document.getElementById(id);
-                if(modal) {
-                    modal.addEventListener('click', (e) => {
-                        if (e.target.id === id || e.target.closest('[id^="close"]')) {
-                            modal.classList.add('hidden');
-                        }
-                    });
-                }
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                        document.getElementById(id).classList.add('hidden');
+                    }
+                });
             });
 
+            // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
-                const savedArticleItem = e.target.closest('.saved-article-item');
-                if (savedArticleItem) {
-                    e.preventDefault();
-                    document.getElementById('savedArticlesModal').classList.add('hidden');
-                    const article = JSON.parse(savedArticleItem.dataset.article);
-                    const docId = savedArticleItem.dataset.docId;
-                    displaySavedArticleInModal(article, docId);
-                    return;
-                }
-
-                const deleteBtn = e.target.closest('#delete-article-btn');
-                if (deleteBtn) {
-                    const docId = deleteBtn.dataset.docId;
-                    if (confirm('Are you sure you want to permanently delete this article?')) {
-                        deleteArticleFromDb(docId);
-                    }
-                    return;
-                }
-                
-                const rawBtn = e.target.closest('.view-raw-btn');
-                if (rawBtn) {
-                    const card = rawBtn.closest('.card');
-                    if (!card || !card.dataset.markdownContent) return;
-                    const markdown = card.dataset.markdownContent;
-                    const target = card.querySelector('.imported-content-target');
-                    const sanitizedMarkdown = markdown.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    target.innerHTML = `<div class="code-block-container"><div class="code-block-header"><span>markdown</span><button class="copy-code-button">Copy</button></div><pre><code>${sanitizedMarkdown}</code></pre></div>`;
-                    card.querySelector('.view-rendered-btn').classList.remove('active');
-                    rawBtn.classList.add('active');
-                    return;
-                }
-
-                const renderedBtn = e.target.closest('.view-rendered-btn');
-                if (renderedBtn) {
-                    const card = renderedBtn.closest('.card');
-                    if (!card || !card.dataset.markdownContent) return;
-                    const markdown = card.dataset.markdownContent;
-                    const target = card.querySelector('.imported-content-target');
-                    renderAccordionFromMarkdown(markdown, target, false);
-                    card.querySelector('.view-raw-btn').classList.remove('active');
-                    renderedBtn.classList.add('active');
-                    return;
-                }
-                
                 if (e.target.classList.contains('copy-code-button')) {
                     const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
                     copyElementTextToClipboard(codeBlock, e.target);
@@ -730,6 +647,13 @@
                     return;
                 }
                 
+                if(e.target.classList.contains('saved-article-link')) {
+                    e.preventDefault();
+                    const article = JSON.parse(e.target.dataset.article);
+                    displaySavedArticle(article);
+                    return;
+                }
+
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -816,8 +740,10 @@
         
         async function handleApiKeySubmit(e) {
             e.preventDefault();
-            const key = document.getElementById('geminiApiKeyInput').value.trim();
-            const clientId = document.getElementById('googleClientIdInput').value.trim();
+            geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
+            firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
+            GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
+            MSAL_CLIENT_ID = ''; // Removed from modal, needs to be set elsewhere if used
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -827,30 +753,16 @@
                 form.appendChild(errorP);
             }
 
-            if (!key) {
-                errorP.textContent = "Gemini API key is required to start.";
+            if (!geminiApiKey || !firebaseApiKey) {
+                errorP.textContent = "Gemini and Firebase API keys are required to start.";
                 return;
             }
             errorP.textContent = ''; 
 
-            localStorage.setItem('geminiApiKey', key);
-            geminiApiKey = key;
-            if(clientId) {
-                localStorage.setItem('googleClientId', clientId);
-                GOOGLE_CLIENT_ID = clientId;
-            }
-
             document.getElementById('apiKeyModal').classList.add('hidden');
             
-            checkStoredApiKey();
-        }
-        
-        async function startApp() {
-            if(appIsReady) return;
-            appIsReady = true;
-
-            GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId') || '';
-
+            initializeFirebase();
+            
             if (GOOGLE_CLIENT_ID || MSAL_CLIENT_ID) {
                 document.getElementById('cloud-storage-card').classList.remove('hidden');
             }
@@ -882,10 +794,8 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
-                const errorP = document.getElementById('apiKeyModal').querySelector('.error-message') || document.createElement('p');
-                errorP.textContent = `Setup failed: ${error.message}. Please check your key and reload.`;
-                if(!document.getElementById('apiKeyModal').contains(errorP)) document.getElementById('apiKeyForm').appendChild(errorP);
                 document.getElementById('apiKeyModal').classList.remove('hidden');
+                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
             } finally {
                 loadingModal.classList.add('hidden');
             }
@@ -896,7 +806,7 @@
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    apiKey: geminiApiKey, 
+                    apiKey: geminiApiKey, // Key for discovery
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
@@ -913,24 +823,20 @@
                 console.error("Google Client ID is missing.");
                 return;
             }
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: G_SCOPES,
-                    callback: (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            gapi.client.setToken(tokenResponse);
-                            updateSigninStatus(true);
-                        } else {
-                            console.error('Provided token response was invalid.', tokenResponse);
-                            updateSigninStatus(false);
-                        }
-                    },
-                });
-                tokenClient.requestAccessToken({prompt: 'none'});
-            } catch(error) {
-                console.error("Error initializing Google Token Client:", error)
-            }
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: G_SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        gapi.client.setToken(tokenResponse);
+                        updateSigninStatus(true);
+                    } else {
+                        console.error('Provided token response was invalid.', tokenResponse);
+                        updateSigninStatus(false);
+                    }
+                },
+            });
+            tokenClient.requestAccessToken({prompt: 'none'});
         }
 
 
@@ -1019,7 +925,7 @@
         }
 
         async function saveContentToDrive(content, fileName, statusElement) {
-            if (!gapi.client.getToken()) {
+            if (gapi.client.getToken() === null) {
                 statusElement.textContent = 'Please connect to Google Drive first.';
                 return;
             }
@@ -1055,11 +961,11 @@
 
 
         function createPicker(mode, startInFolderId = null) { 
-            if (!gisInited || !gapiInited) {
+            if (!gisInited) {
                  console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
-             }
+            }
             
              const token = gapi.client.getToken()?.access_token;
              if (!token) {
@@ -1067,8 +973,7 @@
                  return;
              }
              const builder = new google.picker.PickerBuilder()
-                .setOAuthToken(token)
-                .setDeveloperKey(geminiApiKey);
+                .setOAuthToken(token);
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
@@ -1211,15 +1116,13 @@
         
         async function saveArticleToDb(button) {
             if (!articlesCollectionRef) {
-                alert("Saved articles feature is not available. Please sign in and configure the app correctly.");
+                console.error("Firestore not initialized, cannot save article.");
+                alert("Saved articles feature is not available. Check Firebase config.");
                 return;
             }
             
-            const modalFooter = button.closest('#inDepthModalFooter');
-            if (!modalFooter) return;
-            
             const title = document.getElementById('inDepthModalTitle').textContent;
-            const markdown = originalGeneratedText.get(modalFooter.dataset.fullTitle);
+            const markdown = originalGeneratedText.get(button.closest('#inDepthModalFooter').dataset.fullTitle);
 
             if (!title || !markdown) {
                 console.error("Could not find title or markdown to save.");
@@ -1231,24 +1134,21 @@
 
             try {
                 await addDoc(articlesCollectionRef, { 
-                    title: title, 
-                    markdown: markdown, 
+                    title, 
+                    markdown, 
                     savedAt: Timestamp.fromDate(new Date()) 
                 });
                 button.textContent = 'Saved!';
-                savedArticleIds.add(title);
             } catch (error) {
                 console.error("Error saving article to Firestore:", error);
                 button.disabled = false;
                 button.textContent = 'Save Failed';
-                const statusEl = document.getElementById('modal-status-message');
-                if(statusEl) statusEl.textContent = 'Error saving article. Check console for details.';
             }
         }
         
-        async function showSavedArticles() {
+         async function showSavedArticles() {
             if (!articlesCollectionRef) {
-                alert("Saved articles feature is not available. Please ensure you are signed in and the app is configured.");
+                alert("Saved articles feature is not available. Please ensure your API key is correct and Firebase is configured.");
                 return;
             }
             const modal = document.getElementById('savedArticlesModal');
@@ -1263,21 +1163,18 @@
                     return;
                 }
 
-                let articlesHtml = '<div class="space-y-3">';
+                let articlesHtml = '<ul class="space-y-2 list-disc pl-5">';
                 querySnapshot.forEach(doc => {
                     const article = doc.data();
-                    const docId = doc.id;
-                    const savedDate = article.savedAt?.toDate().toLocaleDateString() || 'N/A';
                     articlesHtml += `
-                        <a href="#" class="saved-article-item block p-4 rounded-lg transition hover:bg-gray-100 border" style="border-color: var(--color-card-border);"
-                           data-doc-id="${docId}"
-                           data-article='${JSON.stringify(article)}'>
-                            <p class="font-semibold themed-text-primary">${article.title}</p>
-                            <p class="text-xs themed-text-muted mt-1">Saved on: ${savedDate}</p>
-                        </a>
+                        <li>
+                            <a href="#" class="saved-article-link themed-text-primary hover:underline" data-article='${JSON.stringify(article)}'>
+                                ${article.title}
+                            </a>
+                        </li>
                     `;
                 });
-                articlesHtml += '</div>';
+                articlesHtml += '</ul>';
                 contentEl.innerHTML = articlesHtml;
             } catch (error) {
                 console.error("Error fetching saved articles:", error);
@@ -1285,38 +1182,41 @@
             }
         }
 
-        function displaySavedArticleInModal(article, docId) {
-            const modal = document.getElementById('viewArticleModal');
-            document.getElementById('viewArticleModalTitle').textContent = article.title;
-            const contentEl = document.getElementById('viewArticleModalContent');
-            
+        function displaySavedArticle(article) {
+            document.getElementById('savedArticlesModal').classList.add('hidden');
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+
+            titleEl.textContent = article.title;
+            contentEl.innerHTML = ''; 
             renderAccordionFromMarkdown(article.markdown, contentEl, false);
             
-            document.getElementById('delete-article-btn').dataset.docId = docId;
-            modal.classList.remove('hidden');
-        }
-        
-        async function deleteArticleFromDb(docId) {
-            if (!articlesCollectionRef) {
-                alert("Cannot delete. Firestore connection is not available.");
-                return;
+            const fullTitle = article.title;
+            originalGeneratedText.set(fullTitle, article.markdown);
+            footerEl.dataset.fullTitle = fullTitle;
+            footerEl.dataset.cardName = "Saved Article";
+            
+            const buttonContainer = document.getElementById('inDepthModalButtons');
+            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled>Saved!</button>`;
+            
+            if (gapi.client.getToken() !== null) {
+                const saveDriveBtn = document.createElement('button');
+                saveDriveBtn.id = 'save-to-drive-btn';
+                saveDriveBtn.className = 'btn-secondary';
+                saveDriveBtn.textContent = 'Save to Google Drive';
+                buttonContainer.appendChild(saveDriveBtn);
             }
-            const docRef = doc(articlesCollectionRef, docId);
-            const deleteBtn = document.getElementById('delete-article-btn');
-            deleteBtn.disabled = true;
-            deleteBtn.textContent = 'Deleting...';
+            if (msalAccount) {
+                 const saveOneDriveBtn = document.createElement('button');
+                 saveOneDriveBtn.id = 'save-to-onedrive-btn';
+                 saveOneDriveBtn.className = 'btn-secondary';
+                 saveOneDriveBtn.textContent = 'Save to OneDrive';
+                 buttonContainer.appendChild(saveOneDriveBtn);
+            }
 
-            try {
-                await deleteDoc(docRef);
-                document.getElementById('viewArticleModal').classList.add('hidden');
-                showSavedArticles(); // Refresh the list of saved articles
-            } catch (error) {
-                console.error("Error deleting article:", error);
-                alert("Failed to delete the article. Please try again.");
-            } finally {
-                deleteBtn.disabled = false;
-                deleteBtn.textContent = 'Delete Article';
-            }
+            modal.classList.remove('hidden');
         }
 
 
@@ -1330,26 +1230,19 @@
             const card = document.createElement('div');
             card.className = 'card md:col-span-2';
             card.id = cardId;
-            card.dataset.markdownContent = markdownContent;
             
             const cardContent = document.createElement('div');
             cardContent.className = 'p-8 card-content';
             
             cardContent.innerHTML = `
-                <h2 class="text-2xl font-bold mb-2 themed-text-primary flex justify-between items-center flex-wrap gap-y-2">
-                    <span class="flex-grow pr-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                        Imported: ${fileName}
-                    </span>
-                    <div class="view-toggle-buttons flex gap-2">
-                        <button class="btn-toggle text-sm px-3 py-1 rounded-full active view-rendered-btn" title="View as formatted HTML">Rendered</button>
-                        <button class="btn-toggle text-sm px-3 py-1 rounded-full view-raw-btn" title="View raw Markdown source">Markdown</button>
-                    </div>
+                <h2 class="text-2xl font-bold mb-2 themed-text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                    Imported: ${fileName}
                 </h2>
-                <div class="prose max-w-none mt-4 imported-content-target"></div>
+                <div class="prose max-w-none mt-4"></div>
             `;
             
-            const renderTarget = cardContent.querySelector('.imported-content-target');
+            const renderTarget = cardContent.querySelector('.prose');
             renderAccordionFromMarkdown(markdownContent, renderTarget, false);
 
             card.appendChild(cardContent);
@@ -1663,7 +1556,7 @@
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 originalGeneratedText.set(themeId, resultText); 
                 
-                const resultHtml = convertMarkdownToHtml(resultText);
+                const resultHtml = marked.parse(resultText || '');
                 resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
 
                 addPostGenerationButtons(resultContainer, themeId, themeType);
@@ -1868,8 +1761,10 @@
                 "Refine Existing Guide": getEnhancedPrompt("{refinement_request}", "", "{original_text}"),
                 "Generate In-Depth Guide": getEnhancedPrompt("{item_title}"),
                 "Generate Summary": `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`,
+                "Generate UI Screenshot": `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`,
                 "Generate Color Theme": `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`,
                 "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`,
+                "Gemini CLI Guide": `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`
             };
         }
         
@@ -1932,9 +1827,9 @@ ${originalText}
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
     * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
+    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final "Helpful Resources" section with a bulleted list of high-quality, relevant links.
-    * **YouTube Videos:** Include a dedicated "YouTube Resources" section with a bulleted list of high-quality, relevant links to YouTube tutorials or overviews for the topic.
+    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -1959,8 +1854,8 @@ When generating the guide, ensure the guide as a whole meets the following requi
 3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
 4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
 5.  **Troubleshooting:** Include a section covering common problems that administrators face.
-6.  **Helpful Resources:** Include a "Helpful Resources" section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
-7.  **YouTube Videos:** Include a dedicated "YouTube Resources" section with a bulleted list of high-quality, relevant links to YouTube tutorials or overviews for the topic.
+6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
+7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
 
 Return only the complete markdown guide.`;
         }
@@ -1968,16 +1863,23 @@ Return only the complete markdown guide.`;
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
-            let processedText = text;
+            let processedText;
+            if (generateImages) {
+                processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
+                    const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
+                    return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
+                                <div class="loader themed-loader"></div>
+                                <p class="mt-2 text-sm italic">${description}</p>
+                            </div>`;
+                });
+            } else {
+                processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
+            }
+
 
             let html = marked.parse(processedText);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html;
-
-            tempDiv.querySelectorAll('a').forEach(link => {
-                link.setAttribute('target', '_blank');
-                link.setAttribute('rel', 'noopener noreferrer');
-            });
 
             tempDiv.querySelectorAll('pre').forEach(preBlock => {
                 if (preBlock.parentElement.classList.contains('code-block-container')) return;
@@ -2278,7 +2180,7 @@ Return only the complete markdown guide.`;
             try {
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                contentEl.innerHTML = convertMarkdownToHtml(resultText);
+                contentEl.innerHTML = `<div class="prose max-w-none">${marked.parse(resultText || '')}</div>`;
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
@@ -2330,7 +2232,7 @@ Return only the complete markdown guide.`;
                 saveDbBtn.textContent = savedArticleIds.has(fullTitle) ? 'Saved!' : 'Save to My Articles';
                 buttonContainer.appendChild(saveDbBtn);
 
-                if (gapiInited && gapi.client.getToken()) {
+                if (gapi.client.getToken() !== null) {
                     const saveDriveBtn = document.createElement('button');
                     saveDriveBtn.id = 'save-to-drive-btn';
                     saveDriveBtn.className = 'btn-secondary';
@@ -2411,6 +2313,7 @@ Return only the complete markdown guide.`;
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, themeType);
+                    generateAndInjectImages(contentArea);
                 }
 
             } catch(error) {
