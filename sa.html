@@ -382,8 +382,7 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.27</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -400,7 +399,6 @@
                      Cloud Storage
                  </h2>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                     <!-- Google Drive Section -->
                      <div id="google-drive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Google Drive</h3>
                           <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides.</p>
@@ -409,7 +407,6 @@
                              <button id="load-from-drive-btn" class="btn-secondary hidden">Import from Drive</button>
                          </div>
                      </div>
-                     <!-- OneDrive Section -->
                      <div id="onedrive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Microsoft OneDrive</h3>
                           <p id="onedrive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to save guides.</p>
@@ -512,6 +509,7 @@
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
+        let appIsReady = false;
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -544,14 +542,25 @@
 
         async function initializeFirebase() {
             try {
+                let firebaseConfig;
                 const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                if (!firebaseConfigString) {
-                    console.error("Firebase config is not available.");
-                    document.getElementById('saved-articles-button').style.display = 'none';
-                    return;
-                }
                 
-                const firebaseConfig = JSON.parse(firebaseConfigString);
+                if (firebaseConfigString) {
+                    firebaseConfig = JSON.parse(firebaseConfigString);
+                } else {
+                    // Fallback to a static config if the environment variable isn't available
+                    firebaseConfig = {
+                        apiKey: "", // This should be provided by the environment for security
+                        authDomain: "it-administration-hub.firebaseapp.com",
+                        projectId: "it-administration-hub",
+                        storageBucket: "it-administration-hub.appspot.com",
+                        messagingSenderId: "776112448835",
+                        appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
+                        measurementId: "G-0Q6E7ZGNEJ"
+                    };
+                    console.warn("Using fallback Firebase configuration.");
+                }
+
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -591,7 +600,9 @@
                     localStorage.removeItem('geminiApiKey');
                     location.reload();
                 });
-                startApp();
+                if (!appIsReady) {
+                    startApp();
+                }
             } else {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
                 apiKeyManagementDiv.innerHTML = `<p class="text-sm themed-text-muted">No API key stored.</p>`;
@@ -806,7 +817,7 @@
         async function handleApiKeySubmit(e) {
             e.preventDefault();
             const key = document.getElementById('geminiApiKeyInput').value.trim();
-            GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
+            const clientId = document.getElementById('googleClientIdInput').value.trim();
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -824,12 +835,22 @@
 
             localStorage.setItem('geminiApiKey', key);
             geminiApiKey = key;
+            if(clientId) {
+                localStorage.setItem('googleClientId', clientId);
+                GOOGLE_CLIENT_ID = clientId;
+            }
+
             document.getElementById('apiKeyModal').classList.add('hidden');
             
-            checkStoredApiKey(); // Re-run to update UI
+            checkStoredApiKey();
         }
         
         async function startApp() {
+            if(appIsReady) return;
+            appIsReady = true;
+
+            GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId') || '';
+
             if (GOOGLE_CLIENT_ID || MSAL_CLIENT_ID) {
                 document.getElementById('cloud-storage-card').classList.remove('hidden');
             }
@@ -892,20 +913,24 @@
                 console.error("Google Client ID is missing.");
                 return;
             }
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: G_SCOPES,
-                callback: (tokenResponse) => {
-                    if (tokenResponse && tokenResponse.access_token) {
-                        gapi.client.setToken(tokenResponse);
-                        updateSigninStatus(true);
-                    } else {
-                        console.error('Provided token response was invalid.', tokenResponse);
-                        updateSigninStatus(false);
-                    }
-                },
-            });
-            tokenClient.requestAccessToken({prompt: 'none'});
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: G_SCOPES,
+                    callback: (tokenResponse) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            gapi.client.setToken(tokenResponse);
+                            updateSigninStatus(true);
+                        } else {
+                            console.error('Provided token response was invalid.', tokenResponse);
+                            updateSigninStatus(false);
+                        }
+                    },
+                });
+                tokenClient.requestAccessToken({prompt: 'none'});
+            } catch(error) {
+                console.error("Error initializing Google Token Client:", error)
+            }
         }
 
 
@@ -994,7 +1019,7 @@
         }
 
         async function saveContentToDrive(content, fileName, statusElement) {
-            if (gapi.client.getToken() === null) {
+            if (!gapi.client.getToken()) {
                 statusElement.textContent = 'Please connect to Google Drive first.';
                 return;
             }
@@ -1030,11 +1055,11 @@
 
 
         function createPicker(mode, startInFolderId = null) { 
-            if (!gisInited) {
+            if (!gisInited || !gapiInited) {
                  console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
-            }
+             }
             
              const token = gapi.client.getToken()?.access_token;
              if (!token) {
@@ -1042,7 +1067,8 @@
                  return;
              }
              const builder = new google.picker.PickerBuilder()
-                .setOAuthToken(token);
+                .setOAuthToken(token)
+                .setDeveloperKey(geminiApiKey);
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
@@ -1637,7 +1663,7 @@
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 originalGeneratedText.set(themeId, resultText); 
                 
-                const resultHtml = marked.parse(resultText || '');
+                const resultHtml = convertMarkdownToHtml(resultText);
                 resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
 
                 addPostGenerationButtons(resultContainer, themeId, themeType);
@@ -1842,10 +1868,8 @@
                 "Refine Existing Guide": getEnhancedPrompt("{refinement_request}", "", "{original_text}"),
                 "Generate In-Depth Guide": getEnhancedPrompt("{item_title}"),
                 "Generate Summary": `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`,
-                "Generate UI Screenshot": `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`,
                 "Generate Color Theme": `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`,
                 "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`,
-                "Gemini CLI Guide": `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`
             };
         }
         
@@ -1908,9 +1932,9 @@ ${originalText}
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
     * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
+    * **Helpful Resources:** Ensure there is a final "Helpful Resources" section with a bulleted list of high-quality, relevant links.
+    * **YouTube Videos:** Include a dedicated "YouTube Resources" section with a bulleted list of high-quality, relevant links to YouTube tutorials or overviews for the topic.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -1935,8 +1959,8 @@ When generating the guide, ensure the guide as a whole meets the following requi
 3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
 4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
 5.  **Troubleshooting:** Include a section covering common problems that administrators face.
-6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
-7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
+6.  **Helpful Resources:** Include a "Helpful Resources" section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
+7.  **YouTube Videos:** Include a dedicated "YouTube Resources" section with a bulleted list of high-quality, relevant links to YouTube tutorials or overviews for the topic.
 
 Return only the complete markdown guide.`;
         }
@@ -1944,23 +1968,16 @@ Return only the complete markdown guide.`;
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
-            let processedText;
-            if (generateImages) {
-                processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
-                    const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
-                    return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
-                                <div class="loader themed-loader"></div>
-                                <p class="mt-2 text-sm italic">${description}</p>
-                            </div>`;
-                });
-            } else {
-                processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
-            }
-
+            let processedText = text;
 
             let html = marked.parse(processedText);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html;
+
+            tempDiv.querySelectorAll('a').forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
 
             tempDiv.querySelectorAll('pre').forEach(preBlock => {
                 if (preBlock.parentElement.classList.contains('code-block-container')) return;
@@ -2261,7 +2278,7 @@ Return only the complete markdown guide.`;
             try {
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                contentEl.innerHTML = `<div class="prose max-w-none">${marked.parse(resultText || '')}</div>`;
+                contentEl.innerHTML = convertMarkdownToHtml(resultText);
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
@@ -2313,7 +2330,7 @@ Return only the complete markdown guide.`;
                 saveDbBtn.textContent = savedArticleIds.has(fullTitle) ? 'Saved!' : 'Save to My Articles';
                 buttonContainer.appendChild(saveDbBtn);
 
-                if (gapi.client.getToken() !== null) {
+                if (gapiInited && gapi.client.getToken()) {
                     const saveDriveBtn = document.createElement('button');
                     saveDriveBtn.id = 'save-to-drive-btn';
                     saveDriveBtn.className = 'btn-secondary';
@@ -2394,7 +2411,6 @@ Return only the complete markdown guide.`;
                 } else {
                     renderAccordionFromMarkdown(newText, contentArea);
                     addPostGenerationButtons(contentArea, themeId, themeType);
-                    generateAndInjectImages(contentArea);
                 }
 
             } catch(error) {
