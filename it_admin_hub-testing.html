@@ -272,7 +272,7 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
-            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features. Gemini and Firebase keys are required.</p>
+            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features.</p>
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
@@ -280,13 +280,9 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
-                    <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
-                </div>
-                
-                <div class="mb-4">
-                    <label for="firebaseProjectIdInput" class="block text-sm font-medium themed-text-muted">Firebase Project ID (Required)</label>
-                    <input type="text" id="firebaseProjectIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase Project ID" required>
+                    <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
+                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config object here."></textarea>
+                     <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings under "SDK setup and configuration".</p>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -372,7 +368,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.26</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.27</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -492,11 +488,10 @@
         let userId;
         let articlesCollectionRef;
         const savedArticleIds = new Set();
+        let firebaseConfig = null;
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
-        let firebaseApiKey = "";
-        let firebaseProjectId = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -530,21 +525,11 @@
         });
 
         function initializeFirebase() {
-             if (!firebaseApiKey || !firebaseProjectId) {
-                console.warn("Firebase API Key or Project ID is missing. Firebase initialization skipped.");
+             if (!firebaseConfig) {
+                console.warn("Firebase config is missing. Firebase initialization skipped.");
                 return;
             }
-            const firebaseConfig = {
-                apiKey: firebaseApiKey,
-                authDomain: `${firebaseProjectId}.firebaseapp.com`,
-                projectId: firebaseProjectId,
-                storageBucket: `${firebaseProjectId}.appspot.com`,
-                // These values are often the same across projects, but if you have specific ones, get them from your Firebase console
-                messagingSenderId: "776112448835",
-                appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
-                measurementId: "G-0Q6E7ZGNEJ"
-            };
-
+            
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -553,8 +538,7 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        // Use a consistent app identifier for the collection path
-                        const appId = 'it-admin-hub-global'; 
+                        const appId = firebaseConfig.appId || 'it-admin-hub-global'; 
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
@@ -565,7 +549,16 @@
                 });
             } catch (error) {
                 console.error("Firebase initialization error:", error);
-                document.getElementById('saved-articles-button').style.display = 'none';
+                const form = document.getElementById('apiKeyForm');
+                let errorP = form.querySelector('.error-message');
+                 if (!errorP) {
+                    errorP = document.createElement('p');
+                    errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
+                    form.appendChild(errorP);
+                }
+                errorP.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                document.getElementById('loadingStateModal').classList.add('hidden');
             }
         }
         
@@ -755,10 +748,8 @@
         async function handleApiKeySubmit(e) {
             e.preventDefault();
             geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
-            firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
-            firebaseProjectId = document.getElementById('firebaseProjectIdInput').value.trim();
+            const firebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
-            MSAL_CLIENT_ID = ''; // Removed from modal, needs to be set elsewhere if used
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -767,31 +758,33 @@
                 errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
                 form.appendChild(errorP);
             }
+            errorP.textContent = ''; 
 
-            if (!geminiApiKey || !firebaseApiKey || !firebaseProjectId) {
-                errorP.textContent = "Gemini API Key, Firebase API Key, and Firebase Project ID are required.";
+            if (!geminiApiKey || !firebaseConfigText) {
+                errorP.textContent = "Gemini API Key and Firebase Config are required.";
                 return;
             }
-            errorP.textContent = ''; 
+
+            try {
+                firebaseConfig = JSON.parse(firebaseConfigText);
+                if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                    throw new Error("Invalid Firebase config object. It must contain 'apiKey' and 'projectId'.");
+                }
+            } catch (err) {
+                errorP.textContent = `Invalid Firebase Config: ${err.message}`;
+                return;
+            }
 
             document.getElementById('apiKeyModal').classList.add('hidden');
             
             initializeFirebase();
             
-            if (GOOGLE_CLIENT_ID || MSAL_CLIENT_ID) {
-                document.getElementById('cloud-storage-card').classList.remove('hidden');
-            }
-
-            if(GOOGLE_CLIENT_ID) { 
+            if (GOOGLE_CLIENT_ID) {
                 document.getElementById('google-drive-section').classList.remove('hidden');
                 gapi.load('client:picker', () => {
                      gisInited = true;
                      initializeGapiClient();
                 });
-            }
-            if (MSAL_CLIENT_ID) {
-                document.getElementById('onedrive-section').classList.remove('hidden');
-                initializeMsal();
             }
 
             const loadingModal = document.getElementById('loadingStateModal');
