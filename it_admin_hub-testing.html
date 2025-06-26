@@ -354,7 +354,7 @@
         </div>
     </div>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div id="app-container" class="container mx-auto px-4 sm:px-6 lg:px-8 hidden">
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
             <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
                 <div class="loader header-loader-spinner"></div>
@@ -366,7 +366,8 @@
                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">IT Administration Hub</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.29</div>
+            <div id="auth-status" class="absolute top-4 right-4"></div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -475,7 +476,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
@@ -485,6 +486,7 @@
         let articlesCollectionRef;
         const savedArticleIds = new Set();
         let firebaseConfig = null;
+        let appIsInitialized = false;
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
@@ -519,6 +521,70 @@
                 breaks: true,
             });
         });
+        
+        function setupAuthUI(user) {
+            const authStatusEl = document.getElementById('auth-status');
+            const appContainer = document.getElementById('app-container');
+            const apiKeyModal = document.getElementById('apiKeyModal');
+
+            if (user) {
+                // User is signed in
+                appContainer.classList.remove('hidden');
+                apiKeyModal.classList.add('hidden');
+                
+                authStatusEl.innerHTML = `
+                    <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
+                        <img src="${user.photoURL}" alt="User photo" class="w-8 h-8 rounded-full">
+                        <span class="font-medium pr-2">${user.displayName}</span>
+                        <button id="sign-out-button" class="bg-white/20 hover:bg-white/40 text-white font-bold h-8 w-8 rounded-full flex items-center justify-center" title="Sign Out">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('sign-out-button').addEventListener('click', () => signOut(auth));
+                
+                if (!appIsInitialized) {
+                    initializeAppContent();
+                }
+
+            } else {
+                // User is not signed in
+                appContainer.classList.add('hidden');
+                const saveKeysBtn = document.querySelector('#apiKeyForm button');
+                saveKeysBtn.textContent = 'Save Keys & Sign In';
+            }
+        }
+        
+        async function initializeAppContent() {
+            appIsInitialized = true;
+            const loadingModal = document.getElementById('loadingStateModal');
+            const loadingMessageEl = document.getElementById('loading-message');
+            loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
+            loadingModal.classList.remove('hidden');
+
+            document.getElementById('main-grid').innerHTML = '';
+            document.getElementById('jump-to-nav-container').innerHTML = '';
+            document.getElementById('gemini-result-container').innerHTML = '';
+            document.getElementById('discover-more-error').innerHTML = '';
+
+            try {
+                await generateAndApplyDefaultTheme();
+                await loadAppContent(loadingMessageEl);
+            } catch (error) {
+                console.error("A critical error occurred during app initialization:", error.message);
+                const form = document.getElementById('apiKeyForm');
+                let errorP = form.querySelector('.error-message');
+                if (!errorP) {
+                    errorP = document.createElement('p');
+                    errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
+                    form.appendChild(errorP);
+                }
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
+            } finally {
+                loadingModal.classList.add('hidden');
+            }
+        }
 
         function initializeFirebase() {
              if (!firebaseConfig) {
@@ -538,10 +604,10 @@
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
-                        signInAnonymously(auth).catch(error => {
-                            console.error("Anonymous sign-in failed:", error);
-                        });
+                        userId = null;
+                        articlesCollectionRef = null;
                     }
+                    setupAuthUI(user);
                 });
             } catch (error) {
                 console.error("Firebase initialization error:", error);
@@ -554,7 +620,6 @@
                 }
                 errorP.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
                 document.getElementById('apiKeyModal').classList.remove('hidden');
-                document.getElementById('loadingStateModal').classList.add('hidden');
             }
         }
         
@@ -567,6 +632,7 @@
                 });
             }, (error) => {
                 console.error("Error listening to saved articles:", error);
+                alert("Could not connect to the database to get saved articles. Please check your Firebase setup and permissions.");
             });
         }
 
@@ -783,33 +849,23 @@
             
             initializeFirebase();
             
+            // Trigger Google Sign-In
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Google Sign-In failed:", error);
+                alert(`Google Sign-In Failed: ${error.message}`);
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                return;
+            }
+            
             if (GOOGLE_CLIENT_ID) {
                 document.getElementById('google-drive-section').classList.remove('hidden');
                 gapi.load('client:picker', () => {
                      gisInited = true;
                      initializeGapiClient();
                 });
-            }
-
-            const loadingModal = document.getElementById('loadingStateModal');
-            const loadingMessageEl = document.getElementById('loading-message');
-            loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
-            loadingModal.classList.remove('hidden');
-
-            document.getElementById('main-grid').innerHTML = '';
-            document.getElementById('jump-to-nav-container').innerHTML = '';
-            document.getElementById('gemini-result-container').innerHTML = '';
-            document.getElementById('discover-more-error').innerHTML = '';
-
-            try {
-                await generateAndApplyDefaultTheme();
-                await loadAppContent(loadingMessageEl);
-            } catch (error) {
-                console.error("A critical error occurred during app initialization:", error.message);
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
-            } finally {
-                loadingModal.classList.add('hidden');
             }
         }
 
@@ -977,7 +1033,7 @@
                  console.error("Google services not ready for picker.");
                  (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
                  return;
-            }
+             }
             
              const token = gapi.client.getToken()?.access_token;
              if (!token) {
