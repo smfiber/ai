@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
+    <!-- Note: MSAL script is included but not used in this version -->
     <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -321,6 +322,7 @@
                 </div>
                 
                 <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
+                <p id="api-key-error" class="text-red-500 text-sm mt-4 text-center"></p>
             </form>
         </div>
     </div>
@@ -386,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.40</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.41</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -485,8 +487,9 @@
     </footer>
 
     <script type="module">
+        // --- AUTH FIX: Import signInWithPopup and remove redirect-related methods ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
@@ -599,18 +602,27 @@
                 document.getElementById('login-button').addEventListener('click', handleLogin);
                 
                 appContainer.classList.add('hidden');
+                // Only show API key modal if the user is logged out AND there are no keys saved
                 if (!localStorage.getItem('geminiApiKey')) {
                      apiKeyModal.classList.remove('hidden');
                 }
             }
         }
 
-        function handleLogin() {
+        // --- AUTH FIX: Changed to use signInWithPopup ---
+        async function handleLogin() {
             const provider = new GoogleAuthProvider();
-            signInWithRedirect(auth, provider).catch(error => {
-                console.error("Google Sign-In Redirect failed:", error);
-                alert(`Sign-in failed: ${error.message}`);
-            });
+            try {
+                const result = await signInWithPopup(auth, provider);
+                // onAuthStateChanged will handle the UI update.
+                console.log("Popup sign-in successful for:", result.user.displayName);
+            } catch (error) {
+                console.error("Google Sign-In Popup failed:", error);
+                const errorEl = document.getElementById('api-key-error');
+                if (errorEl) {
+                   errorEl.textContent = `Login failed: ${error.code}. Please try again.`;
+                }
+            }
         }
 
         function handleLogout() {
@@ -628,11 +640,12 @@
                 localStorage.removeItem('firebaseConfig');
                 localStorage.removeItem('googleClientId');
                 console.log('User signed out and local storage cleared.');
-                // Reload the page to reset the application state
+                // Reload the page to reset the application state completely
                 location.reload();
             }).catch(error => {
                 console.error("Sign out failed:", error);
-                alert(`Sign-out failed: ${error.message}`);
+                const authStatusEl = document.getElementById('auth-status');
+                if(authStatusEl) authStatusEl.innerHTML = `<p class="text-red-300">Sign out failed.</p>`;
             });
         }
         
@@ -654,15 +667,12 @@
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
                 localStorage.clear();
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                const form = document.getElementById('apiKeyForm');
-                let errorP = form.querySelector('.error-message');
-                if (!errorP) {
-                    errorP = document.createElement('p');
-                    errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
-                    form.appendChild(errorP);
+                const apiKeyModal = document.getElementById('apiKeyModal');
+                apiKeyModal.classList.remove('hidden');
+                const errorEl = document.getElementById('api-key-error');
+                if(errorEl) {
+                    errorEl.textContent = `Setup failed: ${error.message}. Your keys have been cleared. Please check and re-enter them.`;
                 }
-                errorP.textContent = `Setup failed: ${error.message}. Your keys have been cleared. Please check and re-enter them.`;
             } finally {
                 loadingModal.classList.add('hidden');
             }
@@ -679,15 +689,7 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                getRedirectResult(auth)
-                    .then((result) => {
-                        if (result) {
-                            console.log("Successfully handled sign-in redirect.", result.user);
-                        }
-                    }).catch((error) => {
-                        console.error("Error processing sign-in redirect:", error);
-                        alert(`Sign-in failed: ${error.message}`);
-                    });
+                // --- AUTH FIX: Removed getRedirectResult() call as it's no longer needed ---
 
                 onAuthStateChanged(auth, user => {
                     if (user) {
@@ -707,20 +709,17 @@
                         userId = null;
                         viewedItemsCollectionRef = null;
                     }
-                    // This function will now handle showing the correct UI (login/logout)
+                    // This function handles all UI updates based on auth state
                     setupAuthUI(user);
                 });
             } catch (error) {
                 console.error("Firebase initialization error:", error);
-                const form = document.getElementById('apiKeyForm');
-                let errorP = form.querySelector('.error-message');
-                 if (!errorP) {
-                    errorP = document.createElement('p');
-                    errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
-                    form.appendChild(errorP);
+                const apiKeyModal = document.getElementById('apiKeyModal');
+                apiKeyModal.classList.remove('hidden');
+                const errorEl = document.getElementById('api-key-error');
+                if(errorEl) {
+                    errorEl.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
                 }
-                errorP.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
-                document.getElementById('apiKeyModal').classList.remove('hidden');
             }
         }
         
@@ -904,17 +903,11 @@
             const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
             let tempFirebaseConfig;
 
-            const form = document.getElementById('apiKeyForm');
-            let errorP = form.querySelector('.error-message');
-            if (!errorP) {
-                errorP = document.createElement('p');
-                errorP.className = 'error-message text-red-500 text-sm mt-4 text-center';
-                form.appendChild(errorP);
-            }
-            errorP.textContent = ''; 
+            const errorEl = document.getElementById('api-key-error');
+            errorEl.textContent = ''; 
 
             if (!tempGeminiKey || !tempFirebaseConfigText) {
-                errorP.textContent = "Gemini API Key and Firebase Config are required.";
+                errorEl.textContent = "Gemini API Key and Firebase Config are required.";
                 return;
             }
             
@@ -932,7 +925,7 @@
                     throw new Error("The parsed Firebase config is invalid or missing required properties like 'apiKey' or 'projectId'.");
                 }
             } catch (err) {
-                errorP.textContent = `Invalid Firebase Config: ${err.message}. Please ensure you've pasted the complete snippet from your Firebase project settings.`;
+                errorEl.textContent = `Invalid Firebase Config: ${err.message}. Please ensure you've pasted the complete snippet from your Firebase project settings.`;
                 return;
             }
             
@@ -940,11 +933,10 @@
             localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
             localStorage.setItem('googleClientId', tempGoogleClientId);
             
+            // Re-initialize and then trigger login
             loadConfigFromStorage();
-            initializeFirebase();
-            
-            // This now acts as the primary login trigger on first setup
-            handleLogin();
+            initializeFirebase(); 
+            handleLogin(); // Trigger popup login
         }
 
         // --- Google Drive & Firebase Functions ---
@@ -1187,10 +1179,10 @@
         }
         
         // --- Core Application Functions ---
+        // (The following functions remain largely unchanged but are included for completeness)
 
         async function loadAppContent(loadingMessageEl) {
             try {
-                // v4.36 - Note for version update: Added new categories
                 const categoriesToGenerate = [
                     { 
                         key: 'activeDirectory', 
