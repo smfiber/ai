@@ -1630,14 +1630,15 @@
 
             const itemsHtml = data.map(item => {
                 const compositeKey = `${cardTitle} - ${item.title}`;
+                const cleanTitle = sanitizeTitle(item.title);
                 const isViewed = viewedItemIds.has(compositeKey);
                 const isNew = newItemsIds.has(item.id);
                 const viewedClass = isViewed ? 'opacity-75' : '';
                 const newClass = isNew ? 'new-item-highlight' : '';
-                const truncatedTitle = truncateText(item.title, 50);
+                const truncatedTitle = truncateText(cleanTitle, 50);
 
                 return `
-                <div class="grid-card-selector ${viewedClass} ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
+                <div class="grid-card-selector ${viewedClass} ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2 overflow-hidden">
                         <div class="text-sm font-normal leading-tight block">${truncatedTitle}</div>
@@ -2639,6 +2640,12 @@ Return only the complete markdown guide.`;
         }
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
+
+        function sanitizeTitle(title) {
+            if (typeof title !== 'string') return '';
+            // Removes leading/trailing quotes, asterisks, hyphens, and whitespace.
+            return title.replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
+        }
         
         function truncateText(text, maxLength = 50) {
             if (typeof text !== 'string' || text.length <= maxLength) {
