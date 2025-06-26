@@ -1417,6 +1417,14 @@
                         fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
                     }
                 ];
+
+                const jsonInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
+                const jsonObjectInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
+
+                categoriesToGenerate.forEach(cat => {
+                    if (cat.initialPrompt) cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                    if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
+                });
                 
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -1535,7 +1543,7 @@
             Existing Task List:
             - ${existingTitles.join('\n- ')}
 
-            For each new task, provide a unique "id", a "title", and a short "description". Return ONLY a valid JSON array of the 10 new items.`;
+            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure that any double quotes inside the description are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1725,7 +1733,7 @@
         }
         
         async function callColorGenAPI(prompt) {
-            const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
+            const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON object.`;
             const jsonText = await callGeminiAPI(fullPrompt, true);
             if (jsonText) return parseJsonWithCorrections(jsonText);
             throw new Error("Could not parse a valid color theme from API response.");
@@ -1764,7 +1772,7 @@
             const container = document.getElementById('tailoring-buttons-container');
             container.innerHTML = getLoaderHTML('Loading AI options...');
             try {
-                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings.`;
+                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
                 const jsonText = await callGeminiAPI(prompt, true);
                 if (!jsonText) {
                     throw new Error("AI did not return any tailoring options.");
@@ -1788,7 +1796,7 @@
         
         async function loadDynamicPlaceholders() {
             const promptInput = document.getElementById('gemini-prompt');
-            const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings.`;
+            const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings, ensuring any double quotes inside the strings are properly escaped (e.g., \\"like this\\").`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 if(!jsonText) return;
@@ -2022,7 +2030,7 @@ Return only the complete markdown guide.`;
             button.disabled = true;
 
             const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent);
-            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`;
+            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -2087,7 +2095,7 @@ Return only the complete markdown guide.`;
             
             if (cardData.length === 0) return;
         
-            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}`;
+            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}. IMPORTANT: Ensure any double quotes in string values are properly escaped.`;
             
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
