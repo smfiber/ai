@@ -170,7 +170,16 @@
         }
         .btn-secondary:hover:not(:disabled) { background-color: #e5e7eb; color: var(--color-accent); }
         .btn-secondary:disabled { opacity: 0.7; cursor: not-allowed;}
-        
+
+        .btn-danger {
+            background-color: #fee2e2; color: #b91c1c;
+            font-weight: 600; padding: 10px 20px; border-radius: 8px;
+            border: 1px solid #fecaca; cursor: pointer;
+            transition: all 0.2s ease; display: inline-flex;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-danger:hover:not(:disabled) { background-color: #fca5a5; color: #7f1d1d; }
+
         .btn-toggle {
             background-color: var(--color-input-bg); color: var(--color-text-muted);
             border: 1px solid var(--color-input-border); transition: all 0.2s ease;
@@ -272,16 +281,11 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
-            <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features. Gemini and Firebase keys are required.</p>
+            <p class="mb-4 themed-text-muted">Please provide your Gemini API key to use the generative AI features. This key will be stored in your browser's local storage for convenience.</p>
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
-                </div>
-
-                <div class="mb-4">
-                    <label for="firebaseApiKeyInput" class="block text-sm font-medium themed-text-muted">Firebase API Key (Required)</label>
-                    <input type="password" id="firebaseApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Firebase API Key" required>
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
@@ -318,12 +322,24 @@
         </div>
     </div>
      <div id="savedArticlesModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">My Saved Articles</h2>
                 <button id="closeSavedArticlesModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="savedArticlesContent" class="p-6 overflow-y-auto"></div>
+        </div>
+    </div>
+    <div id="viewArticleModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="viewArticleModalTitle" class="text-2xl font-bold themed-text-primary">Article</h2>
+                <button id="closeViewArticleModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="viewArticleModalContent" class="p-6 overflow-y-auto"></div>
+            <div id="viewArticleModalFooter" class="p-4 border-t flex justify-end" style="border-color: var(--color-card-border);">
+                <button id="delete-article-btn" class="btn-danger">Delete Article</button>
+            </div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -367,7 +383,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <!-- SELF-NOTE: Remember to update the version number when making edits. -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.25</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.27</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -465,7 +481,7 @@
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
-    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
+    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div id="api-key-management" class="pt-4 border-t" style="border-color: var(--color-card-border);"></div></div></div>
 
     <footer class="mt-16 py-8 text-center border-t" style="border-color: var(--color-card-border);">
         <div class="max-w-4xl mx-auto px-4">
@@ -478,8 +494,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -487,10 +503,11 @@
         let userId;
         let articlesCollectionRef;
         const savedArticleIds = new Set();
+        // App ID from environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
-        let firebaseApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -512,6 +529,8 @@
         
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+            checkStoredApiKey();
             setupEventListeners();
             populateTypographySettings();
             marked.setOptions({
@@ -523,22 +542,16 @@
             });
         });
 
-        function initializeFirebase() {
-             if (!firebaseApiKey) {
-                console.warn("Firebase API Key is missing. Firebase initialization skipped.");
-                return;
-            }
-            const firebaseConfig = {
-                apiKey: firebaseApiKey,
-                authDomain: "it-administration-hub.firebaseapp.com",
-                projectId: "it-administration-hub",
-                storageBucket: "it-administration-hub.appspot.com",
-                messagingSenderId: "776112448835",
-                appId: "1:776112448835:web:a1eb34aab1de8f9b01fbf6",
-                measurementId: "G-0Q6E7ZGNEJ"
-            };
-
+        async function initializeFirebase() {
             try {
+                const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                if (!firebaseConfigString) {
+                    console.error("Firebase config is not available.");
+                    document.getElementById('saved-articles-button').style.display = 'none';
+                    return;
+                }
+                
+                const firebaseConfig = JSON.parse(firebaseConfigString);
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -546,21 +559,45 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        const appId = firebaseConfig.appId;
                         articlesCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/articles`);
                         listenForSavedArticles(); 
                     } else {
-                        signInAnonymously(auth).catch(error => {
-                            console.error("Anonymous sign-in failed:", error);
-                        });
+                        userId = null;
+                        articlesCollectionRef = null;
                     }
                 });
+
+                const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (authToken) {
+                    await signInWithCustomToken(auth, authToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
             } catch (error) {
                 console.error("Firebase initialization error:", error);
                 document.getElementById('saved-articles-button').style.display = 'none';
             }
         }
         
+        function checkStoredApiKey() {
+            const storedKey = localStorage.getItem('geminiApiKey');
+            const apiKeyManagementDiv = document.getElementById('api-key-management');
+            
+            if (storedKey) {
+                geminiApiKey = storedKey;
+                document.getElementById('apiKeyModal').classList.add('hidden');
+                apiKeyManagementDiv.innerHTML = `<button id="clear-api-key-btn" class="btn-secondary w-full text-sm">Clear Stored API Key</button>`;
+                document.getElementById('clear-api-key-btn').addEventListener('click', () => {
+                    localStorage.removeItem('geminiApiKey');
+                    location.reload();
+                });
+                startApp();
+            } else {
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                apiKeyManagementDiv.innerHTML = `<p class="text-sm themed-text-muted">No API key stored.</p>`;
+            }
+        }
+
         function listenForSavedArticles() {
             if (!articlesCollectionRef) return;
             onSnapshot(articlesCollectionRef, (snapshot) => {
@@ -575,13 +612,11 @@
 
 
         function setupEventListeners() {
-            // Main Actions
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
             document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
 
-            // Cloud Storage Actions
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
                 const folderId = await getDriveFolderId();
@@ -589,64 +624,63 @@
             });
             document.getElementById('msal-auth-button').addEventListener('click', handleMsalAuthClick);
 
-            // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-             document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
-            document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!geminiApiKey) {
-                    document.getElementById('apiKeyModal').classList.remove('hidden');
-                    return;
-                }
-                document.getElementById('themeGeneratorModal').classList.remove('hidden');
-            });
+            document.getElementById('saved-articles-button').addEventListener('click', showSavedArticles);
+            document.getElementById('theme-changer-button').addEventListener('click', () => document.getElementById('themeGeneratorModal').classList.remove('hidden'));
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-             // Settings Panel
+            
             const settingsPanel = document.getElementById('settings-panel');
             document.getElementById('settings-button').addEventListener('click', (e) => {
                 e.stopPropagation();
                 settingsPanel.classList.toggle('hidden');
             });
 
-            // Typography Selects
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'savedArticlesModal', 'viewArticleModal'].forEach(id => {
                 if (id === 'apiKeyModal') return;
-                document.getElementById(id).addEventListener('click', (e) => {
-                    if (e.target.id === id || e.target.closest('[id^="close"]')) {
-                        document.getElementById(id).classList.add('hidden');
-                    }
-                });
+                const modal = document.getElementById(id);
+                if(modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                            modal.classList.add('hidden');
+                        }
+                    });
+                }
             });
 
-            // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
-                // Handle imported guide view toggling
+                const savedArticleItem = e.target.closest('.saved-article-item');
+                if (savedArticleItem) {
+                    e.preventDefault();
+                    document.getElementById('savedArticlesModal').classList.add('hidden');
+                    const article = JSON.parse(savedArticleItem.dataset.article);
+                    const docId = savedArticleItem.dataset.docId;
+                    displaySavedArticleInModal(article, docId);
+                    return;
+                }
+
+                const deleteBtn = e.target.closest('#delete-article-btn');
+                if (deleteBtn) {
+                    const docId = deleteBtn.dataset.docId;
+                    if (confirm('Are you sure you want to permanently delete this article?')) {
+                        deleteArticleFromDb(docId);
+                    }
+                    return;
+                }
+                
                 const rawBtn = e.target.closest('.view-raw-btn');
                 if (rawBtn) {
                     const card = rawBtn.closest('.card');
                     if (!card || !card.dataset.markdownContent) return;
-
                     const markdown = card.dataset.markdownContent;
                     const target = card.querySelector('.imported-content-target');
-                    
                     const sanitizedMarkdown = markdown.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-                    target.innerHTML = `
-                        <div class="code-block-container">
-                            <div class="code-block-header">
-                                <span>markdown</span>
-                                <button class="copy-code-button">Copy</button>
-                            </div>
-                            <pre><code>${sanitizedMarkdown}</code></pre>
-                        </div>
-                    `;
-
+                    target.innerHTML = `<div class="code-block-container"><div class="code-block-header"><span>markdown</span><button class="copy-code-button">Copy</button></div><pre><code>${sanitizedMarkdown}</code></pre></div>`;
                     card.querySelector('.view-rendered-btn').classList.remove('active');
                     rawBtn.classList.add('active');
                     return;
@@ -656,12 +690,9 @@
                 if (renderedBtn) {
                     const card = renderedBtn.closest('.card');
                     if (!card || !card.dataset.markdownContent) return;
-                    
                     const markdown = card.dataset.markdownContent;
                     const target = card.querySelector('.imported-content-target');
-
                     renderAccordionFromMarkdown(markdown, target, false);
-
                     card.querySelector('.view-raw-btn').classList.remove('active');
                     renderedBtn.classList.add('active');
                     return;
@@ -688,13 +719,6 @@
                     return;
                 }
                 
-                if(e.target.classList.contains('saved-article-link')) {
-                    e.preventDefault();
-                    const article = JSON.parse(e.target.dataset.article);
-                    displaySavedArticle(article);
-                    return;
-                }
-
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -781,10 +805,8 @@
         
         async function handleApiKeySubmit(e) {
             e.preventDefault();
-            geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
-            firebaseApiKey = document.getElementById('firebaseApiKeyInput').value.trim();
+            const key = document.getElementById('geminiApiKeyInput').value.trim();
             GOOGLE_CLIENT_ID = document.getElementById('googleClientIdInput').value.trim();
-            MSAL_CLIENT_ID = ''; // Removed from modal, needs to be set elsewhere if used
 
             const form = document.getElementById('apiKeyForm');
             let errorP = form.querySelector('.error-message');
@@ -794,16 +816,20 @@
                 form.appendChild(errorP);
             }
 
-            if (!geminiApiKey || !firebaseApiKey) {
-                errorP.textContent = "Gemini and Firebase API keys are required to start.";
+            if (!key) {
+                errorP.textContent = "Gemini API key is required to start.";
                 return;
             }
             errorP.textContent = ''; 
 
+            localStorage.setItem('geminiApiKey', key);
+            geminiApiKey = key;
             document.getElementById('apiKeyModal').classList.add('hidden');
             
-            initializeFirebase();
-            
+            checkStoredApiKey(); // Re-run to update UI
+        }
+        
+        async function startApp() {
             if (GOOGLE_CLIENT_ID || MSAL_CLIENT_ID) {
                 document.getElementById('cloud-storage-card').classList.remove('hidden');
             }
@@ -835,8 +861,10 @@
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
                 console.error("A critical error occurred during app initialization:", error.message);
+                const errorP = document.getElementById('apiKeyModal').querySelector('.error-message') || document.createElement('p');
+                errorP.textContent = `Setup failed: ${error.message}. Please check your key and reload.`;
+                if(!document.getElementById('apiKeyModal').contains(errorP)) document.getElementById('apiKeyForm').appendChild(errorP);
                 document.getElementById('apiKeyModal').classList.remove('hidden');
-                errorP.textContent = `Setup failed: ${error.message}. Please check your keys and reload.`;
             } finally {
                 loadingModal.classList.add('hidden');
             }
@@ -847,7 +875,7 @@
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    apiKey: geminiApiKey, // Key for discovery
+                    apiKey: geminiApiKey, 
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
@@ -1157,13 +1185,15 @@
         
         async function saveArticleToDb(button) {
             if (!articlesCollectionRef) {
-                console.error("Firestore not initialized, cannot save article.");
-                alert("Saved articles feature is not available. Check Firebase config.");
+                alert("Saved articles feature is not available. Please sign in and configure the app correctly.");
                 return;
             }
             
+            const modalFooter = button.closest('#inDepthModalFooter');
+            if (!modalFooter) return;
+            
             const title = document.getElementById('inDepthModalTitle').textContent;
-            const markdown = originalGeneratedText.get(button.closest('#inDepthModalFooter').dataset.fullTitle);
+            const markdown = originalGeneratedText.get(modalFooter.dataset.fullTitle);
 
             if (!title || !markdown) {
                 console.error("Could not find title or markdown to save.");
@@ -1175,21 +1205,24 @@
 
             try {
                 await addDoc(articlesCollectionRef, { 
-                    title, 
-                    markdown, 
+                    title: title, 
+                    markdown: markdown, 
                     savedAt: Timestamp.fromDate(new Date()) 
                 });
                 button.textContent = 'Saved!';
+                savedArticleIds.add(title);
             } catch (error) {
                 console.error("Error saving article to Firestore:", error);
                 button.disabled = false;
                 button.textContent = 'Save Failed';
+                const statusEl = document.getElementById('modal-status-message');
+                if(statusEl) statusEl.textContent = 'Error saving article. Check console for details.';
             }
         }
         
-         async function showSavedArticles() {
+        async function showSavedArticles() {
             if (!articlesCollectionRef) {
-                alert("Saved articles feature is not available. Please ensure your API key is correct and Firebase is configured.");
+                alert("Saved articles feature is not available. Please ensure you are signed in and the app is configured.");
                 return;
             }
             const modal = document.getElementById('savedArticlesModal');
@@ -1204,18 +1237,21 @@
                     return;
                 }
 
-                let articlesHtml = '<ul class="space-y-2 list-disc pl-5">';
+                let articlesHtml = '<div class="space-y-3">';
                 querySnapshot.forEach(doc => {
                     const article = doc.data();
+                    const docId = doc.id;
+                    const savedDate = article.savedAt?.toDate().toLocaleDateString() || 'N/A';
                     articlesHtml += `
-                        <li>
-                            <a href="#" class="saved-article-link themed-text-primary hover:underline" data-article='${JSON.stringify(article)}'>
-                                ${article.title}
-                            </a>
-                        </li>
+                        <a href="#" class="saved-article-item block p-4 rounded-lg transition hover:bg-gray-100 border" style="border-color: var(--color-card-border);"
+                           data-doc-id="${docId}"
+                           data-article='${JSON.stringify(article)}'>
+                            <p class="font-semibold themed-text-primary">${article.title}</p>
+                            <p class="text-xs themed-text-muted mt-1">Saved on: ${savedDate}</p>
+                        </a>
                     `;
                 });
-                articlesHtml += '</ul>';
+                articlesHtml += '</div>';
                 contentEl.innerHTML = articlesHtml;
             } catch (error) {
                 console.error("Error fetching saved articles:", error);
@@ -1223,41 +1259,38 @@
             }
         }
 
-        function displaySavedArticle(article) {
-            document.getElementById('savedArticlesModal').classList.add('hidden');
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-
-            titleEl.textContent = article.title;
-            contentEl.innerHTML = ''; 
+        function displaySavedArticleInModal(article, docId) {
+            const modal = document.getElementById('viewArticleModal');
+            document.getElementById('viewArticleModalTitle').textContent = article.title;
+            const contentEl = document.getElementById('viewArticleModalContent');
+            
             renderAccordionFromMarkdown(article.markdown, contentEl, false);
             
-            const fullTitle = article.title;
-            originalGeneratedText.set(fullTitle, article.markdown);
-            footerEl.dataset.fullTitle = fullTitle;
-            footerEl.dataset.cardName = "Saved Article";
-            
-            const buttonContainer = document.getElementById('inDepthModalButtons');
-            buttonContainer.innerHTML = `<button id="save-to-db-btn" class="btn-secondary" disabled>Saved!</button>`;
-            
-            if (gapi.client.getToken() !== null) {
-                const saveDriveBtn = document.createElement('button');
-                saveDriveBtn.id = 'save-to-drive-btn';
-                saveDriveBtn.className = 'btn-secondary';
-                saveDriveBtn.textContent = 'Save to Google Drive';
-                buttonContainer.appendChild(saveDriveBtn);
-            }
-            if (msalAccount) {
-                 const saveOneDriveBtn = document.createElement('button');
-                 saveOneDriveBtn.id = 'save-to-onedrive-btn';
-                 saveOneDriveBtn.className = 'btn-secondary';
-                 saveOneDriveBtn.textContent = 'Save to OneDrive';
-                 buttonContainer.appendChild(saveOneDriveBtn);
-            }
-
+            document.getElementById('delete-article-btn').dataset.docId = docId;
             modal.classList.remove('hidden');
+        }
+        
+        async function deleteArticleFromDb(docId) {
+            if (!articlesCollectionRef) {
+                alert("Cannot delete. Firestore connection is not available.");
+                return;
+            }
+            const docRef = doc(articlesCollectionRef, docId);
+            const deleteBtn = document.getElementById('delete-article-btn');
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+
+            try {
+                await deleteDoc(docRef);
+                document.getElementById('viewArticleModal').classList.add('hidden');
+                showSavedArticles(); // Refresh the list of saved articles
+            } catch (error) {
+                console.error("Error deleting article:", error);
+                alert("Failed to delete the article. Please try again.");
+            } finally {
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = 'Delete Article';
+            }
         }
 
 
