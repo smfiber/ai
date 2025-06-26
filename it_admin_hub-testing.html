@@ -367,7 +367,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.30</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.31</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -476,7 +476,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // *** MODIFIED: Imported signInWithRedirect and getRedirectResult, removed signInWithPopup ***
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
@@ -597,6 +598,21 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
+                // *** ADDED: Check for authentication result after a redirect ***
+                getRedirectResult(auth)
+                    .then((result) => {
+                        if (result) {
+                            // This confirms the user signed in via redirect.
+                            // The onAuthStateChanged listener will handle the rest of the UI updates.
+                            console.log("Successfully handled sign-in redirect.", result.user);
+                        }
+                    }).catch((error) => {
+                        // Handle Errors here.
+                        console.error("Error processing sign-in redirect:", error);
+                        alert(`Sign-in failed: ${error.message}`);
+                    });
+
+
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
@@ -632,7 +648,7 @@
                 });
             }, (error) => {
                 console.error("Error listening to saved articles:", error);
-                alert("Could not connect to the database to get saved articles. Please check your Firebase setup and permissions.");
+                // Non-blocking error, so no alert
             });
         }
 
@@ -845,19 +861,19 @@
                 return;
             }
 
-            document.getElementById('apiKeyModal').classList.add('hidden');
+            // Don't hide modal immediately, wait for redirect
+            // document.getElementById('apiKeyModal').classList.add('hidden');
             
             initializeFirebase();
             
-            // Trigger Google Sign-In
+            // Trigger Google Sign-In via redirect
             try {
                 const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
+                // *** MODIFIED: Changed signInWithPopup to signInWithRedirect ***
+                await signInWithRedirect(auth, provider);
             } catch (error) {
-                console.error("Google Sign-In failed:", error);
+                console.error("Google Sign-In Redirect failed:", error);
                 alert(`Google Sign-In Failed: ${error.message}`);
-                document.getElementById('apiKeyModal').classList.remove('hidden');
-                return;
             }
             
             if (GOOGLE_CLIENT_ID) {
@@ -916,6 +932,8 @@
             }
 
             if (gapi.client.getToken() === null) {
+                // This will still use a popup for token acquisition, which might be blocked.
+                // This part of the flow is for *re-authorizing* Drive, not initial login.
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
                 const token = gapi.client.getToken();
@@ -1100,15 +1118,11 @@
         function handleMsalAuthClick() {
             if (!msalInstance) return;
             if (msalAccount) {
-                msalInstance.logoutPopup({ account: msalAccount }).then(() => {
-                    msalAccount = null;
-                    updateMsalSigninStatus(false);
-                });
+                // *** MODIFIED: Use logoutRedirect instead of logoutPopup ***
+                msalInstance.logoutRedirect({ account: msalAccount });
             } else {
-                msalInstance.loginPopup(MSAL_SCOPES).then(response => {
-                    msalAccount = response.account;
-                    updateMsalSigninStatus(true);
-                }).catch(err => console.error(err));
+                // *** MODIFIED: Use loginRedirect instead of loginPopup ***
+                msalInstance.loginRedirect(MSAL_SCOPES);
             }
         }
         
