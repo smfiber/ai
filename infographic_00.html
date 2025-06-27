@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Infographic Creator</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel to transpile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- html2canvas for PNG export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="bg-gray-200">
+    <!-- The React app will be rendered here -->
+    <div id="root"></div>
+
+    <!-- The React code, written in JSX, to be transpiled by Babel -->
+    <script type="text/babel">
+        // --- SVG Icons (replaces lucide-react library) ---
+        const BrainCircuitIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 0 0 8 21a3 3 0 0 0 5.952-.39" /><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 0 1 16 21a3 3 0 0 1-5.952-.39" /><path d="M9 12a3 3 0 0 0 6 0 3 3 0 0 0-6 0" /><path d="M12 12h.01" />
+            </svg>
+        );
+
+        const BracesIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" /><path d="M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
+            </svg>
+        );
+        
+        const MessageSquareQuoteIcon = ({ className }) => (
+           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M15 9.5a2.5 2.5 0 0 0-5 0"></path><path d="M10 9.5A2.5 2.5 0 0 1 5 7"></path>
+            </svg>
+        );
+
+        const LanguagesIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
+            </svg>
+        );
+        
+        const FileDownIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+        );
+
+        // --- Icon mapping for tasks ---
+        const ICONS = {
+            "Answer Questions": <BrainCircuitIcon className="w-10 h-10 text-white" />,
+            "Generate Code": <BracesIcon className="w-10 h-10 text-white" />,
+            "Creative Writing": <MessageSquareQuoteIcon className="w-10 h-10 text-white" />,
+            "Translate Languages": <LanguagesIcon className="w-10 h-10 text-white" />,
+            "Default": <BrainCircuitIcon className="w-10 h-10 text-white" />
+        };
+
+        // --- Initial Data ---
+        const initialTasks = [
+          { id: 1, icon: "Answer Questions", title: "Answering Complex Questions", description: "Tackles complex user queries, from historical analysis of the Roman Empire to explaining quantum physics in simple terms.", color: "bg-blue-500", },
+          { id: 2, icon: "Generate Code", title: "Generating Code", description: "Assists developers by writing efficient code snippets in Python, JavaScript, and other languages for various applications.", color: "bg-green-500", },
+          { id: 3, icon: "Creative Writing", title: "Creative Content Generation", description: "Composes poems, drafts scripts for short films, and writes personalized email templates in a creative mode.", color: "bg-purple-500", },
+          { id: 4, icon: "Translate Languages", title: "Translating Languages", description: "Breaks down language barriers by translating documents, conversations, and web content with high accuracy.", color: "bg-red-500", },
+          { id: 5, icon: "Answer Questions", title: "Summarizing & Explaining", description: "Helps users digest information by summarizing long articles, academic papers, and creating easy-to-understand explanations.", color: "bg-yellow-500", },
+          { id: 6, icon: "Default", title: "Continuous Learning", description: "Constantly learns from a massive dataset of text and code to improve its accuracy, relevance, and capabilities.", color: "bg-indigo-500", },
+        ];
+
+        // --- Main App Component ---
+        function App() {
+            const { useState, useRef } = React;
+            const [tasks, setTasks] = useState(initialTasks);
+            const [theme, setTheme] = useState({ backgroundColor: '#F3F4F6', textColor: '#1F2937', font: 'font-sans' });
+            const [title, setTitle] = useState("A Day in the Life of Gemini");
+            const [isDownloading, setIsDownloading] = useState(false);
+            const infographicRef = useRef(null);
+
+            const performDownload = () => {
+                const infographicElement = infographicRef.current;
+                if (!infographicElement || !window.html2canvas) return;
+                setIsDownloading(true);
+                window.html2canvas(infographicElement, {
+                    backgroundColor: theme.backgroundColor,
+                    useCORS: true,
+                    scale: 3
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'gemini-infographic-high-quality.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    setIsDownloading(false);
+                }).catch(error => {
+                    console.error("Error generating canvas:", error);
+                    setIsDownloading(false);
+                });
+            }
+
+            const handleDownload = () => {
+                if (isDownloading) return;
+                performDownload();
+            };
+            
+            // This logic is simplified because html2canvas is already loaded via script tag
+            // but the function call remains the same.
+
+            return (
+                <div className={`min-h-screen ${theme.font} bg-gray-200 flex flex-col lg:flex-row items-start justify-center p-4 sm:p-6 lg:p-8`}>
+                    {/* Controls Panel */}
+                    <div className="w-full lg:w-80 lg:mr-8 bg-white p-6 rounded-2xl shadow-lg mb-8 lg:mb-0 sticky top-8">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Customize Infographic</h2>
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Infographic Title</label>
+                                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-gray-700 mt-4">Theme</h3>
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="backgroundColor" className="text-sm font-medium text-gray-600">Background</label>
+                                    <input id="backgroundColor" type="color" value={theme.backgroundColor} onChange={e => setTheme({...theme, backgroundColor: e.target.value})} className="w-10 h-10 rounded-md border-none cursor-pointer" />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="textColor" className="text-sm font-medium text-gray-600">Text Color</label>
+                                    <input id="textColor" type="color" value={theme.textColor} onChange={e => setTheme({...theme, textColor: e.target.value})} className="w-10 h-10 rounded-md border-none cursor-pointer" />
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="font" className="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                                <select id="font" value={theme.font} onChange={(e) => setTheme({...theme, font: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="font-sans">Sans Serif (Default)</option>
+                                    <option value="font-serif">Serif</option>
+                                    <option value="font-mono">Monospace</option>
+                                </select>
+                            </div>
+                            <button onClick={handleDownload} disabled={isDownloading} className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-md disabled:bg-blue-400 disabled:cursor-not-allowed">
+                                <FileDownIcon className="mr-2 w-5 h-5" />
+                                {isDownloading ? 'Downloading...' : 'Save as PNG'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Infographic Display */}
+                    <div className="w-full lg:flex-1">
+                        <div ref={infographicRef} style={{ backgroundColor: theme.backgroundColor, color: theme.textColor }} className="p-6 sm:p-8 md:p-12 rounded-2xl shadow-lg">
+                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-10 md:mb-16" style={{ color: theme.textColor }}>
+                                {title}
+                            </h1>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {tasks.map((task) => (
+                                    <div key={task.id} className="bg-white/60 backdrop-blur-sm p-6 rounded-xl shadow-md border border-gray-200/50 flex flex-col items-center text-center transition-transform hover:scale-105">
+                                        <div className={`flex-shrink-0 flex items-center justify-center w-20 h-20 rounded-full ${task.color} mb-5 shadow-lg`}>
+                                            {ICONS[task.icon] || ICONS.Default}
+                                        </div>
+                                        <h3 className="text-xl font-bold mb-2" style={{ color: theme.textColor }}>{task.title}</h3>
+                                        <p className="text-base" style={{ color: theme.textColor }}>{task.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Render the App to the DOM ---
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
