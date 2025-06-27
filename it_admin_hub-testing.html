@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.46</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.47</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -705,6 +705,8 @@
                         listenForViewedItems();
                         
                         if (GOOGLE_CLIENT_ID && !gapiInited && !gisInited) {
+                            // *** FIX: Make the cloud storage card visible for logged-in users with a Client ID ***
+                            document.getElementById('cloud-storage-card').classList.remove('hidden');
                             document.getElementById('google-drive-section').classList.remove('hidden');
                             gapi.load('client:picker', () => {
                                 gapiInited = true;
@@ -737,23 +739,14 @@
         function listenForViewedItems() {
             if (!viewedItemsCollectionRef) return;
             onSnapshot(viewedItemsCollectionRef, (snapshot) => {
-                const newViewedIds = new Set();
-                snapshot.forEach(doc => {
-                    newViewedIds.add(doc.id);
+                // *** FIX: This listener now only updates the underlying data set. ***
+                // It no longer triggers a full component re-render, which preserves 
+                // the `new-item-highlight` class on sibling elements.
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        viewedItemIds.add(change.doc.id);
+                    }
                 });
-                
-                if (newViewedIds.size !== viewedItemIds.size) {
-                    viewedItemIds.clear();
-                    newViewedIds.forEach(id => viewedItemIds.add(id));
-                    
-                    document.querySelectorAll('.card-grid-container').forEach(container => {
-                        const containerId = container.parentElement.id;
-                        const themeType = container.parentElement.dataset.themeType;
-                        if(containerId && themeType && allThemeData[themeType]) {
-                           populateCardGridSelector(containerId, themeType);
-                        }
-                    });
-                }
             }, (error) => {
                 console.error("Error listening to viewed items:", error);
             });
@@ -1595,6 +1588,16 @@
             const cardDescription = card.querySelector('p').textContent;
 
             await markItemAsViewed(cardTitle, item.title);
+            
+            // After an item is viewed, we add the visual indicator manually if it's not already there.
+            if (!target.querySelector('.viewed-indicator')) {
+                const indicator = document.createElement('div');
+                indicator.className = 'viewed-indicator';
+                indicator.title = 'Viewed';
+                indicator.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+                target.prepend(indicator);
+            }
+
 
             const prompt = `
                 You are creating a summary for an IT administration guide.
@@ -1926,12 +1929,15 @@
             modal.classList.remove('hidden');
         }
 
-
+        // *** NEW FEATURE: Added a strict mandate for link quality to the core prompt function. ***
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
+            const linkIntegrityMandate = `
+* **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. Prioritize official vendor documentation, stable product pages, or primary source articles. All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available.`;
+
             const powershellStandard = `
-4.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
+* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
     * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
     * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
     * **Clarity:** Use clear variable names and formatting.`;
@@ -1952,10 +1958,10 @@ ${originalText}
 1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
 2.  **Integrate:** Seamlessly integrate the user's request into the guide.
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
+${linkIntegrityMandate}
 ${powershellStandard}
 
 Return only the new, complete, and rewritten markdown guide.`;
@@ -1976,14 +1982,13 @@ Your task is to structure this guide into the most logical and helpful sections.
 
 When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
 
-1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
-2.  **Code Blocks:** When providing code examples (like PowerShell), wrap them in markdown code fences with the language specified, like \`\`\`powershell... \`\`\`.
-3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-4.  **Verification:** Include a section on how to verify the task was successful.
-5.  **Troubleshooting:** Include a section covering common problems.
-6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
-7.  **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
-${powershellStandard.replace('4. ', '8. ')}
+* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
+* **Verification:** Include a section on how to verify the task was successful.
+* **Troubleshooting:** Include a section covering common problems.
+* **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
+* **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
+${linkIntegrityMandate}
+${powershellStandard}
 
 Return only the complete markdown guide.`;
         }
@@ -1994,6 +1999,7 @@ Return only the complete markdown guide.`;
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
             `;
 
+            // Only show save button if user is connected to Google Drive
             if (gapi.client.getToken() !== null) {
                 const saveDriveBtn = document.createElement('button');
                 saveDriveBtn.id = 'save-to-drive-btn';
@@ -2159,7 +2165,7 @@ Return only the complete markdown guide.`;
                     applyHeaderImage(imageResult.value);
                 } else if (imageResult) {
                     // Show error only if image generation was attempted and failed
-                    throw imageResult.reason || new Error("Failed to generate header image.");
+                    throw imageResult.reason || new Error("Failed to header image.");
                 }
                 
                 document.getElementById('themeGeneratorModal').classList.add('hidden');
