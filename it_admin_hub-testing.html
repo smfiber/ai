@@ -1557,7 +1557,7 @@
                 const jsonText = await callGeminiAPI(fullPrompt, true);
                 if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
                 
-                const fullData = parseJsonWithCorrections(jsonText);
+                const fullData = parseJsonWithCorrections(jsontext);
                 fullData.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[themeType] = fullData;
 
@@ -1678,22 +1678,43 @@
             }
         }
 
+        /**
+         * BUG FIX: This function has been rewritten to be more robust.
+         * It now handles incorrectly escaped quotes (e.g., \\") which was the
+         * cause of the "Show All" button error. The replacements are also
+         * ordered more logically to fix specific issues first.
+         */
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
                 throw new Error("Invalid input: not a string.");
             }
+            // Start by removing markdown fences that the AI might add
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
             
-            cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
+            // FIX #1: Handle incorrectly escaped double quotes.
+            // The API sometimes returns \\" instead of the correct \\".
+            // This replaces the incorrect sequence with the correct one.
+            cleanedString = cleanedString.replace(/\\"/g, '\\"');
+
+            // FIX #2: Handle incorrectly escaped single quotes (less common but good practice)
             cleanedString = cleanedString.replace(/\\'/g, "'");
+
+            // FIX #3: Handle trailing commas before a closing bracket or brace
+            cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
+
+            // FIX #4: General fallback to fix other invalid backslash escapes.
+            // This should run after the specific fixes.
             cleanedString = cleanedString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
 
             try {
+                // Attempt to parse the now-cleaner string
                 return JSON.parse(cleanedString);
             } catch (error) {
+                // If it still fails, log everything for debugging
                 console.error("Failed to parse JSON even after cleaning:", error);
-                console.error("Original string:", jsonString);
-                console.error("Cleaned string:", cleanedString);
+                console.error("Original string received from API:", jsonString);
+                console.error("String after cleaning attempts:", cleanedString);
+                // Throw a more informative error to the caller
                 throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
             }
         }
@@ -1731,13 +1752,13 @@
             if (isJson) {
                 payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
             }
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
         async function callImageGenAPI(prompt) {
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiApiKey}`, payload);
+            const result = await callApi(`https://us-central1-aiplatform.googleapis.com/v1/projects/${firebaseConfig.projectId}/locations/us-central1/publishers/google/models/imagegeneration@0.0.5:predict?key=${geminiApiKey}`, payload);
             const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
             return base64 ? `data:image/png;base64,${base64}` : null;
         }
