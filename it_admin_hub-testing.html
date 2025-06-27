@@ -398,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.52</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.53</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1767,7 +1767,7 @@
                 originalGeneratedText.set(fullTitle, resultText);
                 
                 contentEl.innerHTML = '';
-                // BUG FIX: Disable image generation in modal
+                // Render content as an accordion, without generating images.
                 renderAccordionFromMarkdown(resultText, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
@@ -2038,7 +2038,6 @@
     * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
     * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
             
-            // --- MODIFICATION START: Added PowerCLI-specific standards ---
             const powerCLIStandard = `
 * **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
     * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
@@ -2046,8 +2045,6 @@
     * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
     * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
-            // --- MODIFICATION END ---
-
 
             if (originalText) {
                 // This is the prompt for refining existing text
@@ -2084,22 +2081,29 @@ Return only the new, complete, and rewritten markdown guide.`;
 - **Specific Task:** "${task}"`;
             }
 
+            // *** MODIFICATION START: Replaced prompt with the new, more detailed version ***
             return `You are an expert senior IT administrator AI. Generate a comprehensive and practical guide ${contextText}. ${optionsText}
 
-Your task is to structure this guide into the most logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed and practical.
+Your task is to structure this guide into the most logical and helpful sections to create a complete learning resource. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed, practical, and accurate.
 
-When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
+When generating the guide, you MUST include the following sections:
 
-* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-* **Verification:** Include a section on how to verify the task was successful.
-* **Troubleshooting:** Include a section covering common problems.
+* **Introduction:** Briefly explain the technology or task and its importance in an IT environment.
+* **Key Concepts:** Detail the fundamental principles and core concepts that a user must understand before proceeding. Explain any relevant terminology.
+* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing or software requirements.
+* **Step-by-Step Instructions:** Provide a clear, actionable, and ordered guide to performing the task.
+* **Best Practices:** Offer expert advice on the most effective and efficient ways to use the technology or perform the task.
+* **Verification:** Include a section on how to confirm that the task was completed successfully.
+* **Automation Opportunities:** If applicable, describe how the task can be automated, providing examples using relevant scripting languages like PowerShell or PowerCLI.
+* **Security Considerations:** Discuss potential security risks and how to mitigate them.
+* **Troubleshooting:** Include a section covering common problems, error messages, and their solutions.
 * **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
-* **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
 
 Return only the complete markdown guide.`;
+            // *** MODIFICATION END ***
         }
         
         function addModalActionButtons(buttonContainer) {
@@ -2568,7 +2572,7 @@ Return only the complete markdown guide.`;
                 const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
 
                 contentEl.innerHTML = '';
-                // BUG FIX: Disable image generation in modal
+                // Render the modal content without generating images, using the accordion layout
                 renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
@@ -2635,7 +2639,6 @@ Return only the complete markdown guide.`;
                 
                 contentArea.innerHTML = '';
                 if (isModal) {
-                    // BUG FIX: Disable image generation in modal
                     renderAccordionFromMarkdown(newText, contentEl, false);
                 } else {
                     const proseDiv = document.createElement('div');
