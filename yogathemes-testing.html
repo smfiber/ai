@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Yoga Class & Theme Generator v17.39</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ADDED: Marked.js library for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* * ==============================================
+         * CSS Custom Properties for Theming & Typography
+         * ==============================================
+        */
+        :root {
+            --color-bg: #f3e8ff;
+            --color-text: #374151;
+            --color-text-muted: #6b7280;
+            --color-primary: #9333ea;
+            --color-primary-dark: #7e22ce;
+            --color-accent: #581c87;
+            --color-card-bg: rgba(255, 255, 255, 0.9);
+            --color-card-border: #e9d5ff;
+            --color-input-bg: #f9fafb;
+            --color-input-border: #d1d5db;
+            --color-button-text: #ffffff;
+        }
+
+        /* Applying the theme variables */
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-family, 'Inter', sans-serif);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-size: var(--font-size-base, '16px');
+            line-height: var(--line-height-base, 1.5);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        .prose { font-size: inherit; line-height: inherit; }
+        .prose p { margin-bottom: 1em; }
+        .prose ul { margin-left: 1.5em; list-style-type: disc; padding-left: 1em; }
+        .prose li { margin-bottom: 0.5em; }
+        .prose strong:only-child { display: block; margin-top: 1.25em; margin-bottom: 0.75em; }
+
+        .card {
+            background-color: var(--color-card-bg);
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.5s ease, border-color 0.5s ease;
+            border: 1px solid var(--color-card-border);
+            display: flex; flex-direction: column;
+        }
+        .card:hover { box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .card-content { flex-grow: 1; display: flex; flex-direction: column; }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text);
+            font-weight: 600; padding: 12px 24px; border-radius: 8px;
+            transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none; cursor: pointer;
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 10px rgba(0, 0, 0, 0.15); filter: brightness(1.1); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-secondary {
+            background-color: var(--color-input-bg); color: var(--color-text-muted);
+            font-weight: 600; padding: 10px 20px; border-radius: 8px;
+            border: 1px solid var(--color-input-border); cursor: pointer;
+            transition: all 0.2s ease; display: inline-flex;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-secondary:hover:not(:disabled) { background-color: #e5e7eb; color: var(--color-accent); }
+        .btn-secondary:disabled { opacity: 0.7; cursor: not-allowed;}
+        
+        .btn-toggle {
+            background-color: var(--color-input-bg); color: var(--color-text-muted);
+            border: 1px solid var(--color-input-border); transition: all 0.2s ease;
+        }
+        .btn-toggle.active {
+            background-color: var(--color-accent); color: var(--color-button-text);
+            border-color: var(--color-primary-dark); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .jump-to-button {
+            background-color: var(--color-card-bg); color: var(--color-text-muted);
+            border: 1px solid var(--color-card-border); transition: all 0.2s ease;
+            padding: 8px 16px; border-radius: 9999px; font-size: 0.875rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .jump-to-button:hover { background-color: var(--color-primary); color: var(--color-button-text); border-color: var(--color-primary-dark); transform: translateY(-1px); }
+
+        .floating-action-button {
+            position: fixed; background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text); width: 56px; height: 56px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
+            cursor: pointer; transition: all 0.3s ease; z-index: 40;
+        }
+        .floating-action-button:hover { transform: translateY(-3px) scale(1.05); }
+        #new-plan-button { bottom: 2rem; right: 2rem; }
+        #settings-button { bottom: 6.5rem; right: 2rem; }
+        #theme-changer-button { bottom: 11rem; right: 2rem; }
+        #scroll-to-top-button { bottom: 2rem; left: 2rem; }
+        
+        #settings-panel {
+            position: fixed; bottom: 11rem; right: 2rem;
+            background-color: var(--color-card-bg); border: 1px solid var(--color-card-border);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 1rem; width: 280px; z-index: 40;
+            transition: opacity 0.3s ease, transform 0.3s ease; transform-origin: bottom right;
+        }
+
+        .themed-text-primary { color: var(--color-primary); }
+        .themed-text-accent { color: var(--color-accent); }
+        .themed-text-muted { color: var(--color-text-muted); }
+        .themed-input {
+            background-color: var(--color-input-bg); border-color: var(--color-input-border);
+            color: var(--color-text); transition: background-color 0.5s ease, border-color 0.5s ease;
+        }
+        .themed-input::placeholder { color: var(--color-text-muted); opacity: 0.7; }
+        .themed-input:focus { --tw-ring-color: var(--color-primary); }
+
+        .loader { border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .themed-loader { border: 4px solid var(--color-card-border); border-top: 4px solid var(--color-primary); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .header-bg-image { 
+            background-image: url('https://i.ibb.co/gFXPP4Gt/Image-fx-88.png'); 
+            background-size: cover; background-position: center; opacity: 1;
+            transition: opacity 1.5s ease-in-out;
+        }
+        .header-loader-spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; }
+
+        .accordion-item { border-bottom: 1px solid var(--color-card-border); }
+        .accordion-item:last-child { border-bottom: none; }
+        .accordion-header {
+            width: 100%; text-align: left; padding: 1rem; display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+            color: var(--color-text); background-color: transparent; border: none; cursor: pointer; transition: background-color 0.2s;
+        }
+        .accordion-header:hover { background-color: rgba(0,0,0,0.03); }
+        .accordion-content { padding: 1rem; display: none; }
+        .accordion-content.open { display: block; }
+        .accordion-header .icon { transition: transform 0.3s ease; }
+        .accordion-header.active .icon { transform: rotate(180deg); }
+
+        .refine-container { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-card-border); }
+        
+        .card-grid-container {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem; margin-top: 1rem; padding: 0.5rem; border-radius: 8px;
+            background: rgba(0,0,0,0.02);
+        }
+        .grid-card-selector {
+            background-color: white; border: 1px solid var(--color-card-border);
+            border-radius: 8px; padding: 1rem; text-align: center;
+            cursor: pointer; transition: all 0.2s ease; font-size: 0.875rem; font-weight: 500;
+            display: flex; flex-direction: column; justify-content: space-between; height: 100%;
+        }
+        .grid-card-selector:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .grid-card-selector.active {
+            background-color: var(--color-accent); color: var(--color-button-text); border-color: var(--color-primary-dark);
+        }
+        .grid-card-selector .icon { margin-bottom: 0.5rem; }
+        .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
+        .grid-card-selector.active small { color: rgba(255, 255, 255, 0.8); }
+
+        .week-by-week-grid { display: block; }
+        .week-by-week-grid .grid-card-selector { text-align: left; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; }
+        .week-by-week-grid .icon { margin-bottom: 0; }
+
+        .tour-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.75); 
+            z-index: 9998;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .tour-overlay.visible { 
+            opacity: 1; 
+            pointer-events: auto;
+        }
+
+        .tour-highlight {
+            position: relative; z-index: 9999;
+            box-shadow: 0 0 0 6px var(--color-primary), 0 0 30px 15px rgba(147, 51, 234, 0.4);
+            border-radius: 12px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .tour-popover {
+            position: absolute;
+            z-index: 10000;
+            background-color: #fcfaff; 
+            border-top: 4px solid var(--color-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            width: 340px; max-width: 90vw;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            opacity: 0; transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            visibility: hidden;
+        }
+        .tour-popover.visible { opacity: 1; transform: translateY(0); visibility: visible; }
+        .tour-popover h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: 0.75rem;
+        }
+        .tour-popover p { font-size: 0.95rem; color: var(--color-text-muted); margin-bottom: 1.5rem; }
+        
+        .tour-popover-nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .tour-popover-dots { 
+            display: flex; 
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .tour-popover-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-card-border); transition: background-color 0.3s; }
+        .tour-popover-dot.active { background-color: var(--color-primary); }
+        #tour-skip-btn {
+            background-color: transparent;
+            color: var(--color-text-muted);
+            border: none;
+            padding: 0;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+        #tour-skip-btn:hover { text-decoration: underline; }
+
+        .tooltip-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-icon {
+            color: var(--color-text-muted);
+            cursor: pointer;
+        }
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background-color: var(--color-accent);
+            color: var(--color-button-text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            width: max-content;
+            max-width: 250px;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 60;
+        }
+        .tooltip-container:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="tour-overlay" class="tour-overlay"></div>
+    <div id="tour-popover" class="tour-popover">
+        <h3 id="tour-title"></h3>
+        <p id="tour-content"></p>
+        <div id="tour-dots" class="tour-popover-dots"></div>
+        <div class="tour-popover-nav">
+            <button id="tour-skip-btn">Skip Tour</button>
+            <div class="flex gap-2">
+                <button id="tour-back-btn" class="btn-secondary text-sm">Back</button>
+                <button id="tour-next-btn" class="btn-primary text-sm">Next</button>
+                <button id="tour-finish-btn" class="btn-primary text-sm hidden">Finish</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card p-8 w-full max-w-md m-4">
+            <div class="flex justify-between items-start">
+                <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Key</h2>
+                <div class="tooltip-container ml-2">
+                    <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div class="tooltip">An API key is required to use the AI generation features of this application. Your key is stored securely in your browser and not shared.</div>
+                </div>
+            </div>
+            <p class="mb-6 themed-text-muted">To use the AI generators, please provide your API key. This key is stored only in your browser.</p>
+            <form id="apiKeyForm">
+                <input type="password" id="apiKeyInput" class="w-full px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your API Key" required>
+                <button type="submit" class="w-full btn-primary mt-6">Save Key and Start</button>
+            </form>
+        </div>
+    </div>
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+        <div class="card p-8 w-full max-w-md m-4 text-center">
+            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Waking up the AI...</h2>
+            <div class="flex justify-center my-4"><div class="loader themed-loader"></div></div>
+            <p id="loading-message" class="mb-6 themed-text-muted">The AI is generating the initial content and themes. This may take a few moments.</p>
+            <button id="closeLoadingStateModal" class="btn-secondary">Close</button>
+        </div>
+    </div>
+    <div id="inDepthModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Exploration</h2>
+                <div class="flex items-center gap-4">
+                    <div class="tooltip-container">
+                         <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
+                    </div>
+                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                </div>
+            </div>
+            <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2 justify-center" style="border-color: var(--color-card-border);"></div>
+        </div>
+    </div>
+    <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-lg m-4 flex flex-col">
+             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">AI Visual Theme Generator</h2>
+                <div class="flex items-center gap-4">
+                     <div class="tooltip-container">
+                         <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
+                    </div>
+                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
+                <textarea id="theme-prompt" rows="3" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'A quiet, misty forest at dawn'"></textarea>
+                <button id="generate-theme-btn" class="btn-primary w-full mt-4" title="Generate new app visuals based on your text">Generate Visuals</button>
+                <div id="theme-loader-container" class="hidden mt-4 flex items-center space-x-3">
+                    <div class="loader themed-loader" style="width:25px; height:25px;"></div>
+                    <span class="themed-text-muted">AI is generating colors & image...</span>
+                </div>
+                <div id="theme-error-container" class="hidden mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container mx-auto">
+        <header id="app-header" class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
+            <div id="header-loader" class="hidden absolute inset-0 bg-black bg-opacity-50 flex-col items-center justify-center z-20 transition-opacity duration-500">
+                <div class="loader header-loader-spinner"></div>
+                <p class="text-white mt-4 text-lg">Generating new header image...</p>
+            </div>
+            <div id="header-bg-image" class="absolute inset-0 header-bg-image"></div>
+            <div class="absolute inset-0 bg-black opacity-40"></div>
+            <div class="relative z-10 py-24 px-12 text-white">
+                 <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
+                <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
+            </div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.39</div>
+        </header>
+
+        <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
+
+        <main id="main-content" class="space-y-8">
+            
+            <div id="custom-plan-card" class="card">
+                <div class="p-8 card-content">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Custom Yoga Plan Generator</h2>
+                    <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
+                    <form id="gemini-form">
+                        <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
+                        
+                        <div id="tailor-accordion" class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
+                            <div class="accordion-item">
+                                <button type="button" class="accordion-header" title="Click to see more options">
+                                    <span>Tailor Your Plan:</span>
+                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div class="accordion-content">
+                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="generate-plan-btn" type="submit" class="btn-primary w-full mt-4" title="Generate a custom yoga plan based on your text">Generate AI Yoga Plan</button>
+                    </form>
+                    <div id="gemini-result-container" class="mt-6"></div>
+                </div>
+            </div>
+
+            <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            </div>
+            
+            <div id="discover-more-container" class="text-center py-8">
+                 <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random yoga category">
+                    <span class="flex items-center justify-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
+                        Discover More Yoga Topics
+                    </span>
+                </button>
+                <p id="discover-more-error" class="text-red-500 mt-2"></p>
+            </div>
+        </main>
+    </div>
+
+    <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
+    </button>
+    <button id="settings-button" class="floating-action-button" title="Typography Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+    </button>
+    <button id="new-plan-button" class="floating-action-button" title="Reset View">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+    <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
+
+    <footer class="mt-16 py-8 text-center border-t" style="border-color: var(--color-card-border);">
+        <div class="max-w-4xl mx-auto px-4">
+            <p class="themed-text-muted font-semibold">Disclaimer</p>
+            <p class="themed-text-muted text-sm mt-2">
+                This application and its content are for informational and inspirational purposes only. The yoga plans and suggestions generated by AI are not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Never disregard professional medical advice or delay in seeking it because of something you have read on this application. The creators of this application are not responsible for any injuries or damages that may result from the use of these activities.
+            </p>
+        </div>
+    </footer>
+
+
+    <script type="module">
+        // --- Global State & Configuration ---
+        let apiKey = "";
+        const root = document.documentElement;
+        const allThemeData = {};
+        const fullPrompts = {}; 
+        let originalGeneratedText = new Map();
+        
+        // --- App Initialization & Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            populateTypographySettings();
+            setupTour();
+        });
+
+        function setupEventListeners() {
+            // Main Actions
+            document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
+            document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
+            document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
+            document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
+
+            // Floating Action Buttons & Panels
+            document.getElementById('new-plan-button').addEventListener('click', resetAppView);
+            document.getElementById('theme-changer-button').addEventListener('click', () => {
+                if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
+                document.getElementById('themeGeneratorModal').classList.remove('hidden');
+            });
+            document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+            // Settings Panel
+            const settingsPanel = document.getElementById('settings-panel');
+            document.getElementById('settings-button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                settingsPanel.classList.toggle('hidden');
+            });
+
+            // Typography Selects
+            document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
+            document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
+            document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+            
+            // Modal Closing Listeners
+            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
+                 document.getElementById(id).addEventListener('click', (e) => {
+                     if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                         document.getElementById(id).classList.add('hidden');
+                     }
+                 });
+            });
+
+            // Global Clicks for dynamic content and closing panels
+            document.addEventListener('click', (e) => {
+                const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
+                if (tailorBtn) {
+                    tailorBtn.classList.toggle('active');
+                    return;
+                }
+
+                const gridSelector = e.target.closest('.grid-card-selector');
+                if (gridSelector) {
+                    const container = gridSelector.closest('.card-grid-container, .week-by-week-grid').parentElement;
+                    const currentlyActive = container.querySelector('.grid-card-selector.active');
+                    if(currentlyActive) currentlyActive.classList.remove('active');
+                    gridSelector.classList.add('active');
+                    handleGridSelect(gridSelector);
+                    return;
+                }
+
+                const exploreBtn = e.target.closest('.explore-button');
+                if (exploreBtn) {
+                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType);
+                    return;
+                }
+                
+                const refineBtn = e.target.closest('.refine-button');
+                if (refineBtn) {
+                    toggleRefineUI(refineBtn.parentElement);
+                    return;
+                }
+
+                const modalRefineBtn = e.target.closest('.modal-refine-button');
+                 if (modalRefineBtn) {
+                    toggleRefineUI(modalRefineBtn.parentElement, true);
+                    return;
+                }
+                
+                const submitRefineBtn = e.target.closest('.submit-refinement-button');
+                if(submitRefineBtn) {
+                    handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                    return;
+                }
+                
+                const showAllBtn = e.target.closest('.show-all-button');
+                if (showAllBtn) {
+                    handleShowAllClick(showAllBtn);
+                    return;
+                }
+
+                const accordionHeader = e.target.closest('.accordion-header');
+                if (accordionHeader) { 
+                    accordionHeader.classList.toggle('active'); 
+                    accordionHeader.nextElementSibling.classList.toggle('open'); 
+                    return;
+                }
+                
+                const jumpToBtn = e.target.closest('.jump-to-button');
+                if (jumpToBtn) {
+                    const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
+                        targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
+                        setTimeout(() => targetCard.style.boxShadow = '', 2000);
+                    }
+                    return;
+                }
+
+                if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
+                    settingsPanel.classList.add('hidden');
+                }
+            });
+            
+            window.addEventListener('scroll', () => {
+                const scrollTopButton = document.getElementById('scroll-to-top-button');
+                if (window.scrollY > 300) {
+                    scrollTopButton.classList.remove('hidden');
+                } else {
+                    scrollTopButton.classList.add('hidden');
+                }
+            });
+        }
+        
+        async function handleApiKeySubmit(e) {
+             e.preventDefault();
+             const input = document.getElementById('apiKeyInput');
+             if (!input.value.trim()) return;
+             apiKey = input.value.trim();
+             document.getElementById('apiKeyModal').classList.add('hidden');
+
+             const loadingModal = document.getElementById('loadingStateModal');
+             const loadingMessageEl = document.getElementById('loading-message');
+             loadingMessageEl.textContent = "The AI is generating the initial content and themes. This may take a few moments.";
+             loadingModal.classList.remove('hidden');
+
+             const modalMessage = document.querySelector('#apiKeyModal p');
+             modalMessage.textContent = 'To use the AI generators, please provide your API key...';
+             modalMessage.classList.remove('text-red-600', 'font-bold');
+             document.getElementById('main-grid').innerHTML = '';
+             document.getElementById('jump-to-nav-container').innerHTML = '';
+             document.getElementById('gemini-result-container').innerHTML = '';
+             document.getElementById('discover-more-error').innerHTML = '';
+
+             try {
+                 await generateAndApplyDefaultTheme();
+                 await loadAppContent(loadingMessageEl);
+                 if (localStorage.getItem('yogaTourCompleted') !== 'true') {
+                    startTour();
+                 }
+             } catch (error) {
+                 console.error("A critical error occurred during app initialization:", error.message);
+                if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
+                    modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
+                    modalMessage.classList.add('text-red-600', 'font-bold');
+                    document.getElementById('apiKeyModal').classList.remove('hidden');
+                }
+             } finally {
+                 loadingModal.classList.add('hidden');
+             }
+        }
+
+        async function loadAppContent(loadingMessageEl) {
+            try {
+                const categoriesToGenerate = [
+                    { key: 'hipReplacement', title: 'Gentle Yoga After Hip Replacement', description: "A week-by-week guide to support recovery and mobility.", initialPrompt: `Generate a 12-week yoga recovery plan for hip replacement. Structure as a JSON array where each object is a phase (e.g., "Weeks 1-2"). Each object must have a unique "id", a "title" (like "Weeks 1-2: Foundational Stability"), and a "description" of the focus for that phase. Provide 6-8 phases total. Return ONLY a valid JSON array.`, fullPrompt: `Generate a detailed 12-week yoga recovery plan for hip replacement. Structure as a JSON array where each object is a phase (e.g., "Weeks 1-2"). Each object must have a unique "id", a "title" (like "Weeks 1-2: Foundational Stability"), and a "description" of the focus for that phase. Provide all 12 weeks, grouped into logical phases. Return ONLY a valid JSON array.` },
+                    { key: 'styles', title: 'Yoga Styles', description: "Base your class around a specific yoga style.", initialPrompt: `Generate 10 major yoga styles. For each, give a unique "id", "title", and "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 major and niche yoga styles. For each, give a unique "id", "title", "founder", and "description". Return ONLY a valid JSON array.` },
+                    { key: 'chakras', title: 'The Seven Chakras', description: "Align your practice with the body's primary energy centers.", initialPrompt: `Generate data for the 7 primary chakras. For each, give "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 7 primary chakras with detailed explanations. For each, give "id", "title", and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'seasons', title: 'The Four Seasons', description: "Align your practice with the natural cycles of the earth.", initialPrompt: `Generate data for the 4 seasons. For each, give a unique "id", "title", "date" (MM/DD), and "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 4 seasons with detailed explanations. For each, give "id", "title", "date" (MM/DD), and "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'moonPhases', title: 'Moon Phases', description: "Align with the energy of the lunar cycle.", initialPrompt: `Generate data for the 8 moon phases. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate data for the 8 moon phases with detailed explanations. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'meridians', title: 'The Twelve Meridians', description: "Explore the major meridians of Traditional Chinese Medicine.", initialPrompt: `Generate the 6 primary Meridian pairs from TCM. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.`, fullPrompt: `Generate the 6 primary Meridian pairs from TCM with detailed explanations. For each, give a unique "id", "title", and "explanation". Return ONLY a valid JSON array.` },
+                    { key: 'danceYoga', title: 'Dance & Movement Yoga', description: "Incorporate fluid dance-like movements into your flow.", initialPrompt: `Generate 10 yoga themes that incorporate dance and expressive movement. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes that incorporate dance, expressive movement, and rhythm. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
+                    { key: 'yogaForAthletes', title: 'Yoga for Athletes', description: "Target specific muscle groups and improve recovery for athletic performance.", initialPrompt: `Generate 10 yoga themes for athletes (e.g., 'For Runners', 'For Cyclists'). For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for different types of athletes, focusing on recovery, flexibility, and injury prevention. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
+                    { key: 'archetypes', title: 'Mythical & Archetypal Yoga', description: "Embody the qualities of gods, goddesses, and archetypes.", initialPrompt: `Generate 10 yoga themes based on archetypes or mythical figures (e.g., 'The Warrior', 'The Sage'). For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes based on global mythologies, archetypes, and legendary figures. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
+                    { key: 'holidays', title: 'Holidays & Celebrations', description: "Align your practice with festive and seasonal holidays.", initialPrompt: `Generate data for 10 major Western holidays. For each, give "id", "title", "date" (MM/DD), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for 40-50 major global holidays and celebrations. For each, give "id", "title", "date" (MM/DD), and a detailed "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices for sensory regulation and grounding.", initialPrompt: `Generate 10 yoga themes for neurodiverse individuals. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` }
+                ];
+
+                await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
+                
+                const generationPromises = categoriesToGenerate.map(cat => {
+                    if (loadingMessageEl) loadingMessageEl.textContent = `Generating themes for: ${cat.title}...`;
+                    return generateAndPopulateAICategory(cat).catch(e => {
+                        console.error(`Failed to load category: ${cat.title}`, e);
+                        return { key: cat.key, error: e };
+                    });
+                });
+
+                const results = await Promise.all(generationPromises);
+                const firstFailure = results.find(r => r && r.error);
+                if(firstFailure){
+                   throw new Error(`One or more AI content categories failed to load, starting with ${firstFailure.key}. The process has been stopped.`);
+                }
+                
+                if (loadingMessageEl) loadingMessageEl.textContent = `Building navigation...`;
+                await generateJumpToButtons();
+
+            } catch (error) {
+                console.error("An error occurred while loading app content:", error.message);
+                throw error;
+            }
+        }
+        
+        async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
+            const mainGrid = document.getElementById('main-grid');
+            const card = document.createElement('div');
+            card.className = 'card md:col-span-2';
+            card.id = `${key}-card`;
+            const selectorId = `${key}-selector-visual`;
+            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" class="w-full">${getLoaderHTML(`AI is generating ${title}...`)}</div><div id="${key}-details" class="details-container prose max-w-none mt-4"></div></div>`;
+            mainGrid.appendChild(card);
+            
+            fullPrompts[key] = fullPrompt;
+
+            try {
+                const jsonText = await callGeminiAPI(initialPrompt, true);
+                if (!jsonText) throw new Error(`API returned empty content for ${title}.`);
+                
+                const data = parseJsonWithCorrections(jsonText);
+                allThemeData[key] = data;
+                populateCardGridSelector(selectorId, key);
+            } catch (error) {
+                handleApiError(error, document.getElementById(selectorId), title, card);
+                throw error;
+            }
+        }
+        
+        async function populateCardGridSelector(containerId, themeType) {
+            const container = document.getElementById(containerId);
+            const data = allThemeData[themeType];
+            if (!container || !data || !Array.isArray(data) || data.length === 0) {
+                if (container) container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
+                return;
+            }
+        
+            if (themeType === 'holidays' || themeType === 'seasons') {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const currentYear = today.getFullYear();
+
+                data.forEach(item => {
+                    if (item.date && /^\d{1,2}\/\d{1,2}$/.test(item.date)) {
+                        const [month, day] = item.date.split('/').map(Number);
+                        let itemDate = new Date(currentYear, month - 1, day);
+                        if (itemDate < today) {
+                            itemDate.setFullYear(currentYear + 1);
+                        }
+                        item.sortDate = itemDate;
+                    } else {
+                        item.sortDate = new Date(currentYear + 2, 0, 1); 
+                    }
+                });
+                data.sort((a, b) => a.sortDate - b.sortDate);
+            }
+        
+            const isWeekByWeek = themeType === 'hipReplacement';
+            const gridClass = isWeekByWeek ? 'week-by-week-grid' : 'card-grid-container';
+        
+            const iconPromises = data.map(item => getIconForTheme(item.title));
+            const icons = await Promise.all(iconPromises);
+
+            const itemsHtml = data.map((item, index) => {
+                const extraInfo = item.date || item.dateRange || item.founder || item.tradition || '';
+                return `
+                <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.explanation || ''}">
+                    <div class="icon">${icons[index]}</div>
+                    <div class="mt-2">
+                        <strong class="text-sm leading-tight block">${item.title}</strong>
+                        ${extraInfo ? `<small class="block text-xs themed-text-muted mt-1">${extraInfo}</small>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+            
+            const fullPrompt = fullPrompts[themeType];
+            let showAllButtonHtml = '';
+            
+            if (fullPrompt && !isWeekByWeek && data.length < 35 && data.length > 0) {
+                 showAllButtonHtml = `
+                    <div class="col-span-full text-center mt-4">
+                        <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
+                            Show All (${data.length} of ~50 shown)
+                        </button>
+                    </div>`;
+            }
+
+            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${showAllButtonHtml}`;
+        }
+        
+        async function handleShowAllClick(button) {
+            const { containerId, themeType } = button.dataset;
+            const container = document.getElementById(containerId);
+            const fullPrompt = fullPrompts[themeType];
+
+            if (!container || !fullPrompt) return;
+
+            button.disabled = true;
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Loading all...</span>`;
+
+            try {
+                const jsonText = await callGeminiAPI(fullPrompt, true);
+                if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
+                allThemeData[themeType] = parseJsonWithCorrections(jsonText);
+                populateCardGridSelector(containerId, themeType);
+                document.getElementById(`${themeType}-details`).innerHTML = '';
+            } catch (error) {
+                button.disabled = false;
+                button.classList.add('bg-red-100', 'text-red-700');
+                button.textContent = "Error. Try again.";
+                console.error(`Error loading full list for ${themeType}:`, error);
+            }
+        }
+
+        async function handleGridSelect(target) {
+            const { themeId, themeType } = target.dataset;
+            const item = allThemeData[themeType]?.find(d => String(d.id) == String(themeId));
+            if (!item) {
+                console.error("Could not find theme item for:", {themeId, themeType});
+                return;
+            }
+
+            const prompt = `Generate a very brief, condensed summary for a yoga class plan based on the theme: "${item.title}". For each section (Theme Introduction, Breathwork, Warm-up, Main Sequence, Cool-down, Savasana), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
+            
+            const resultContainer = document.getElementById(`${themeType}-details`);
+            resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
+
+            try {
+                const resultText = await callGeminiAPI(prompt);
+                originalGeneratedText.set(themeId, resultText); 
+                resultContainer.innerHTML = robustMarkdownToHtml(resultText);
+                addPostGenerationButtons(resultContainer, themeId, themeType);
+            } catch (error) {
+                handleApiError(error, resultContainer, `plan for ${item.title}`);
+            }
+        }
+
+        async function handleGeminiSubmit(e) {
+            e.preventDefault();
+            const promptInput = document.getElementById('gemini-prompt');
+            let userPrompt = promptInput.value.trim();
+            if (!userPrompt) return;
+
+            const resultContainer = document.getElementById('gemini-result-container');
+            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
+                                         .map(btn => btn.textContent.trim())
+                                         .join(', ');
+
+            let fullPrompt;
+            if (selectedOptions) {
+                fullPrompt = `Generate a creative and inspiring yoga class plan for the theme "${userPrompt}", with a special focus on these elements: ${selectedOptions}. Structure the plan with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Integrate the requested elements naturally within these sections. Return as a single markdown string.`;
+            } else {
+                fullPrompt = `Generate a creative and inspiring yoga class plan based on the user's theme: "${userPrompt}". The class plan should be structured with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Make each section detailed and evocative. Return as a single markdown string.`;
+            }
+
+            resultContainer.innerHTML = getLoaderHTML('Generating your custom AI yoga plan...');
+
+            try {
+                const resultText = await callGeminiAPI(fullPrompt);
+                
+                originalGeneratedText.set('custom-plan', resultText);
+                createAccordionFromMarkdown(resultText, resultContainer);
+                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
+
+            } catch(error) {
+                handleApiError(error, resultContainer, 'custom yoga plan');
+            }
+        }
+
+        function parseJsonWithCorrections(jsonString) {
+            if (!jsonString || typeof jsonString !== 'string') {
+                throw new Error("Invalid input: not a string.");
+            }
+            let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
+            cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
+
+            try {
+                return JSON.parse(cleanedString);
+            } catch (error) {
+                console.error("Failed to parse JSON even after cleaning:", error);
+                console.error("Original string:", jsonString);
+                console.error("Cleaned string:", cleanedString);
+                throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
+            }
+        }
+
+        async function callApi(apiUrl, payload) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    let errorBody;
+                    try { errorBody = await response.json(); } catch { errorBody = await response.text(); }
+                    console.error("API Error Response:", errorBody);
+                    const errorMsg = errorBody?.error?.message || response.statusText;
+                    throw new Error(`API request failed with status ${response.status}. Message: ${errorMsg}`);
+                }
+                return await response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') throw new Error('The AI service request timed out. Please try again.');
+                throw error;
+            }
+        }
+
+        async function callGeminiAPI(prompt, isJson = false) {
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            if (isJson) {
+                payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
+            }
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, payload);
+            return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        }
+
+        async function callImageGenAPI(prompt) {
+             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, payload);
+             const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
+             return base64 ? `data:image/png;base64,${base64}` : null;
+        }
+        
+        async function callColorGenAPI(prompt) {
+             const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`;
+             const jsonText = await callGeminiAPI(fullPrompt, true);
+             if (jsonText) return parseJsonWithCorrections(jsonText);
+             throw new Error("Could not parse a valid color theme from API response.");
+        }
+
+        function handleApiError(error, container, contentType = 'content') {
+            console.error(`Error generating ${contentType}:`, error);
+            const errorMessage = generateErrorMessage(error, contentType);
+            if (container) {
+                container.innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">${errorMessage}</div>`;
+            }
+        }
+        
+        async function generateAndApplyDefaultTheme() {
+            showThemeLoading(true);
+            const themePrompt = "Big Sunset on the beach";
+            const imagePrompt = `Artistic, abstract background image inspired by "${themePrompt}". Suitable for a yoga website. Serene, calming. Wide aspect ratio, photographic, cinematic lighting.`;
+            try {
+                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(themePrompt), callImageGenAPI(imagePrompt)]);
+                
+                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
+                else throw colorResult.reason || new Error("Failed to generate color theme.");
+
+                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
+                else throw imageResult.reason || new Error("Failed to generate header image.");
+
+            } catch (error) {
+                 handleApiError(null, null, 'default theme');
+                 throw error;
+            } finally {
+                showThemeLoading(false);
+            }
+        }
+        
+        async function loadAITailoringOptions() {
+            const container = document.getElementById('tailoring-buttons-container');
+            container.innerHTML = getLoaderHTML('Loading enhancement options...');
+            try {
+                const prompt = `Generate a JSON array of 40-50 diverse yoga class enhancements and focus areas. These should be specific techniques or themes, not broad yoga styles. Include items like: Trataka, Yoga Nidra, specific Pranayama (e.g., Nadi Shodhana, Kapalabhati), Chanting (Mantra), Balance Focus, Core Strength, Deep Relaxation, Gratitude Meditation, Flexibility, Hip Opening, Shoulder Mobility, Restorative Poses. Return ONLY a valid JSON array of strings.`;
+                const jsonText = await callGeminiAPI(prompt, true);
+                const options = parseJsonWithCorrections(jsonText);
+                if (!options || !Array.isArray(options)) {
+                    throw new Error("AI did not return a valid array of options.");
+                }
+                populateTailoringButtons(options);
+            } catch (error) {
+                console.error("Failed to load AI tailoring options, using fallback list.", error);
+                handleApiError(error, container, 'tailoring options');
+                const fallbackOptions = ["Mindfulness", "Balance", "Flexibility", "Strength", "Relaxation", "Meditation", "Breathing", "Alignment", "Gentle Flow", "Deep Stretch", "Core Work", "Hip Opening", "Back Care", "Stress Relief", "Yin Style", "Restorative"];
+                populateTailoringButtons(fallbackOptions);
+            }
+        }
+
+        function populateTailoringButtons(options) {
+            const container = document.getElementById('tailoring-buttons-container');
+            container.innerHTML = options.map(option =>
+                `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full">${option}</button>`
+            ).join('');
+        }
+        
+        async function loadDynamicPlaceholders() {
+            const promptInput = document.getElementById('gemini-prompt');
+            const prompt = `Generate a JSON array of 3 creative yoga class theme ideas for input placeholders. Examples: "Ocean Breath & Fluid Movement", "Finding Stillness in Chaos". Return ONLY the valid JSON array of strings.`;
+            try {
+                const jsonText = await callGeminiAPI(prompt, true);
+                if(!jsonText) return;
+                const placeholders = parseJsonWithCorrections(jsonText);
+                if (placeholders && placeholders.length > 0) {
+                    let i = 0;
+                    promptInput.placeholder = `e.g., '${placeholders[i]}'`;
+                    setInterval(() => {
+                        i = (i + 1) % placeholders.length;
+                        promptInput.placeholder = `e.g., '${placeholders[i]}'`;
+                    }, 3000);
+                }
+            } catch(error) {
+                console.error("Could not load dynamic placeholders", error);
+            }
+        }
+
+        function applyTheme(colors) {
+            Object.entries(colors).forEach(([key, value]) => {
+                const cssVar = `--color-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                root.style.setProperty(cssVar, value);
+            });
+        }
+        
+        function applyHeaderImage(imageUrl) {
+            const bgImageDiv = document.getElementById('header-bg-image');
+            bgImageDiv.style.backgroundImage = `url('${imageUrl}')`;
+        }
+
+        function showThemeLoading(isLoading) {
+            const loader = document.getElementById('header-loader');
+            loader.classList.toggle('hidden', !isLoading);
+            loader.classList.toggle('flex', isLoading);
+        }
+        
+        // UPDATED: Made function more robust to handle non-string inputs.
+        function robustMarkdownToHtml(text) {
+            const errorMessage = '<p class="themed-text-muted">No content was generated. Please try a different prompt or refine your request.</p>';
+            
+            // --- START FIX ---
+            // If we receive an object, try to find a markdown string within it.
+            if (text !== null && typeof text === 'object') {
+                console.error("robustMarkdownToHtml received an object:", text);
+                // A common pattern might be an object with a single key holding the text.
+                if (Object.keys(text).length === 1) {
+                    text = text[Object.keys(text)[0]];
+                } else {
+                    // If it's more complex, log it and show an error.
+                    return '<p class="text-red-500 font-bold">Error: Received complex data structure instead of Markdown text. Check the console for details.</p>';
+                }
+            }
+
+            // Ensure we have a string before proceeding.
+            if (typeof text !== 'string') {
+                console.error("robustMarkdownToHtml could not resolve to a string:", text);
+                return errorMessage; 
+            }
+            // --- END FIX ---
+
+            if (!text || text.trim() === '' || text.includes('No content received from AI')) {
+                return errorMessage;
+            }
+
+            let cleanText = text.replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            if (!cleanText) {
+                return errorMessage;
+            }
+
+            // Custom renderer to apply theme styles
+            const renderer = new marked.Renderer();
+            renderer.heading = (text, level) => {
+                if (level === 2) {
+                    return `<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-3">${text}</h2>`;
+                }
+                if (level === 3) {
+                    return `<h3 class="text-xl font-semibold themed-text-accent mt-6 mb-2">${text}</h3>`;
+                }
+                return `<h${level}>${text}</h${level}>`;
+            };
+
+            renderer.list = (body, ordered) => {
+                const tag = ordered ? 'ol' : 'ul';
+                return `<${tag} class="list-disc pl-5 space-y-2 mb-4">${body}</${tag}>`;
+            };
+
+            renderer.paragraph = (text) => {
+                return `<p class="mb-4">${text}</p>`;
+            };
+
+            return marked.parse(cleanText, { renderer });
+        }
+
+
+        function addPostGenerationButtons(container, themeId, themeType) {
+            let buttonBar = container.querySelector('.button-bar');
+            if (buttonBar) buttonBar.remove();
+
+            buttonBar = document.createElement('div');
+            buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
+            buttonBar.style.borderColor = 'var(--color-card-border)';
+
+            let exploreButtonHTML = '';
+            if (themeType !== 'custom') { 
+                exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
+            }
+
+            buttonBar.innerHTML = `
+                <button class="btn-secondary text-sm refine-button">Refine with AI</button>
+                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                ${exploreButtonHTML}
+            `;
+            container.appendChild(buttonBar);
+            buttonBar.querySelector('.copy-button').addEventListener('click', e => {
+                 const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
+                 if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
+            });
+        }
+
+        async function handleDiscoverMoreClick() {
+            const button = document.getElementById('discover-more-button');
+            const errorP = document.getElementById('discover-more-error');
+            errorP.textContent = '';
+            button.disabled = true;
+
+            const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent);
+            const prompt = `Generate 1 new, creative yoga category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`;
+
+            try {
+                const jsonText = await callGeminiAPI(prompt, true);
+                if (!jsonText) throw new Error("AI did not return a new category.");
+                const newCategory = parseJsonWithCorrections(jsonText);
+                await generateAndPopulateAICategory(newCategory);
+                await generateJumpToButtons();
+            } catch (error) {
+                console.error("Failed to discover more topics:", error);
+                errorP.textContent = "Sorry, couldn't generate a new topic right now.";
+            } finally {
+                button.disabled = false;
+            }
+        }
+        
+        async function handleCustomVisualThemeGeneration() {
+            const prompt = document.getElementById('theme-prompt').value;
+            if(!prompt) return;
+
+            const loader = document.getElementById('theme-loader-container');
+            const errorContainer = document.getElementById('theme-error-container');
+            const generateBtn = document.getElementById('generate-theme-btn');
+            
+            loader.classList.remove('hidden');
+            errorContainer.classList.add('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for a yoga website. Serene, calming. Wide aspect ratio, photographic, cinematic lighting.`;
+                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(prompt), callImageGenAPI(imagePrompt)]);
+                
+                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
+                else throw colorResult.reason || new Error("Failed to generate color theme.");
+
+                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
+                else throw imageResult.reason || new Error("Failed to generate header image.");
+                
+                document.getElementById('themeGeneratorModal').classList.add('hidden');
+            } catch (error) {
+                showThemeError(error.message);
+            } finally {
+                loader.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+        
+        function showThemeError(message) {
+            const errorContainer = document.getElementById('theme-error-container');
+            errorContainer.textContent = message;
+            errorContainer.classList.remove('hidden');
+        }
+
+        async function generateJumpToButtons() {
+            const container = document.getElementById('jump-to-nav-container');
+            const cards = Array.from(document.querySelectorAll('#custom-plan-card, #main-grid .card'));
+            if (cards.length <= 1) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const cardData = cards.map(card => ({
+                id: card.id,
+                title: card.querySelector('h2')?.textContent
+            })).filter(c => c.id && c.title);
+            
+            if (cardData.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+        
+            const prompt = `For the following yoga category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}`;
+            
+            try {
+                const jsonText = await callGeminiAPI(prompt, true);
+                const labels = jsonText ? parseJsonWithCorrections(jsonText) : {};
+                const buttonsHtml = cardData.map(card => {
+                    const label = labels[card.title] || card.title.split(' ')[0];
+                    return `<button class="jump-to-button" data-target-id="${card.id}">${label}</button>`;
+                }).join('');
+
+                container.innerHTML = `<div class="flex flex-wrap gap-2 justify-center">${buttonsHtml}</div>`;
+                container.classList.remove('hidden');
+            } catch (error) {
+                console.error("AI failed to generate jump-to buttons, using fallback:", error);
+                const fallbackButtonsHtml = cardData.map(card => {
+                    const label = card.title.split(' ')[0];
+                    return `<button class="jump-to-button" data-target-id="${card.id}">${label}</button>`;
+                }).join('');
+                container.innerHTML = `<div class="flex flex-wrap gap-2 justify-center">${fallbackButtonsHtml}</div>`;
+                container.classList.remove('hidden');
+            }
+        }
+
+        function populateTypographySettings() {
+            const fontSelect = document.getElementById('font-family-select');
+            const sizeSelect = document.getElementById('font-size-select');
+            const lineHeightSelect = document.getElementById('line-height-select');
+            
+            const fonts = { 'Default (Inter)': "'Inter', sans-serif", 'Lato': "'Lato', sans-serif", 'Montserrat': "'Montserrat', sans-serif", 'Nunito Sans': "'Nunito Sans', sans-serif", 'Open Sans': "'Open Sans', sans-serif", 'Poppins': "'Poppins', sans-serif", 'Roboto Slab': "'Roboto Slab', serif" };
+            const sizes = { '14': '14px', '15': '15px', '16 (Default)': '16px', '17': '17px', '18': '18px' };
+            const lineHeights = { '1.4': '1.4', '1.5 (Default)': '1.5', '1.6': '1.6', '1.7': '1.7', '1.8': '1.8' };
+
+            Object.entries(fonts).forEach(([name, value]) => fontSelect.add(new Option(name, value)));
+            Object.entries(sizes).forEach(([name, value]) => sizeSelect.add(new Option(name, value)));
+            Object.entries(lineHeights).forEach(([name, value]) => lineHeightSelect.add(new Option(name, value)));
+
+            fontSelect.value = fonts['Default (Inter)'];
+            sizeSelect.value = '16px';
+            lineHeightSelect.value = '1.5';
+            
+            root.style.setProperty('--font-family', fontSelect.value);
+            root.style.setProperty('--font-size-base', sizeSelect.value);
+            root.style.setProperty('--line-height-base', lineHeightSelect.value);
+        }
+
+        function copyElementTextToClipboard(element, button) {
+            const textToCopy = element.innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed'; 
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const originalText = button.innerHTML;
+                button.textContent = 'Copied!';
+                setTimeout(() => { button.innerHTML = originalText; }, 2000);
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function createAccordionFromMarkdown(markdownText, containerElement) {
+            containerElement.innerHTML = ''; 
+            const cleanMarkdown = (markdownText || "").replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            
+            if (cleanMarkdown.includes('### ')) {
+                 const sections = cleanMarkdown.split(/\n(?=### |## )/);
+                 sections.forEach((sectionText, index) => {
+                    if (!sectionText.trim()) return;
+
+                    const firstLineEnd = sectionText.indexOf('\n');
+                    const titleLine = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd) : sectionText;
+                    const title = titleLine.replace(/### |## /g, '').trim();
+                    const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
+
+                    if (!title) return; // Skip empty sections
+
+                    const accordionItem = document.createElement('div');
+                    accordionItem.className = 'accordion-item';
+                    accordionItem.innerHTML = `
+                        <button type="button" class="accordion-header">
+                            <span class="text-left">${title}</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="accordion-content">${robustMarkdownToHtml(content)}</div>
+                    `;
+                    containerElement.appendChild(accordionItem);
+
+                    if (index === 0) { // Open the first section by default
+                        accordionItem.querySelector('.accordion-header').classList.add('active');
+                        accordionItem.querySelector('.accordion-content').classList.add('open');
+                    }
+                });
+            } else {
+                 containerElement.innerHTML = robustMarkdownToHtml(cleanMarkdown);
+            }
+        }
+        
+        async function handleExploreInDepth(themeId, themeType) {
+            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+            if (!item) {
+                console.error("Could not find item for in-depth view", {themeId, themeType});
+                return;
+            }
+
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+            
+            titleEl.textContent = `In-Depth: ${item.title}`;
+            contentEl.innerHTML = getLoaderHTML(`Generating detailed plan for ${item.title}...`);
+            footerEl.innerHTML = '';
+            footerEl.dataset.themeId = themeId;
+            footerEl.dataset.themeType = themeType;
+
+            modal.classList.remove('hidden');
+            
+            const isWeeklyPlan = themeType === 'hipReplacement';
+            const prompt = isWeeklyPlan
+              ? `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork", "Evening Restorative") as a JSON array. Each object in the array should have a "title" for the routine and "content" with detailed, safety-focused instructions in markdown format.`
+              : `Generate a creative and inspiring yoga class plan based on the theme: "${item.title}". Structure the plan with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Make each section very detailed and evocative. Return as a single markdown string.`;
+
+            try {
+                const resultText = await callGeminiAPI(prompt, isWeeklyPlan);
+                originalGeneratedText.set(themeId + '-full', resultText); 
+                
+                if(isWeeklyPlan) {
+                    const routines = parseJsonWithCorrections(resultText);
+                    contentEl.innerHTML = '';
+                    routines.forEach((routine, index) => {
+                        const accordionItem = document.createElement('div');
+                        accordionItem.className = 'accordion-item';
+                        accordionItem.innerHTML = `<button type="button" class="accordion-header"><span class="text-left">${routine.title}</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>`;
+                        contentEl.appendChild(accordionItem);
+                        if (index === 0) {
+                            accordionItem.querySelector('.accordion-header').classList.add('active');
+                            accordionItem.querySelector('.accordion-content').classList.add('open');
+                        }
+                    });
+                } else {
+                     createAccordionFromMarkdown(resultText, contentEl);
+                }
+
+                footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
+                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+
+            } catch (error) {
+                handleApiError(error, contentEl, 'in-depth content');
+            }
+        }
+        
+        function toggleRefineUI(buttonContainer, isModal = false) {
+            let refineContainer = buttonContainer.nextElementSibling;
+            if (refineContainer && refineContainer.classList.contains('refine-container')) {
+                refineContainer.remove();
+                return;
+            }
+
+            refineContainer = document.createElement('div');
+            refineContainer.className = 'refine-container w-full';
+            refineContainer.innerHTML = `<textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it more gentle' or 'Add more hip openers'"></textarea><button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>`;
+            buttonContainer.insertAdjacentElement('afterend', refineContainer);
+        }
+
+        async function handleRefineRequest(refineContainer) {
+            const promptText = refineContainer.querySelector('textarea').value;
+            if (!promptText) return;
+
+            const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
+            
+            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
+            const footerEl = document.getElementById('inDepthModalFooter');
+            
+            const themeId = isModal ? footerEl.dataset.themeId : contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
+            const textKey = isModal ? themeId + '-full' : themeId;
+
+            const originalText = originalGeneratedText.get(textKey);
+
+            if (!originalText) {
+                handleApiError({message: "Could not find the original text to refine. Please generate the content again first."}, contentArea, "refinement");
+                return;
+            }
+            
+            contentArea.innerHTML = getLoaderHTML(`Refining plan based on your request...`);
+            
+            const prompt = `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to change it. Your task is to rewrite the entire yoga plan to incorporate the user's request. **ORIGINAL YOGA PLAN:**\n---\n${originalText}\n---\n\n**USER'S REFINEMENT REQUEST:**\n"${promptText}"\n\nRewrite the full yoga plan based on the user's request. Maintain the original structure (e.g., JSON format for weekly plans, or '###' markdown headers for regular plans) and level of detail. Return only the new, complete, and rewritten plan in the original format.`;
+            
+            const isWeeklyPlan = isModal && footerEl.dataset.themeType === 'hipReplacement';
+
+            try {
+                const newText = await callGeminiAPI(prompt, isWeeklyPlan);
+                if (!newText || newText.trim() === '') {
+                    handleApiError({ message: "The AI returned an empty response. Please try refining with a different request." }, contentArea, 'refinement');
+                    return;
+                }
+
+                originalGeneratedText.set(textKey, newText);
+                
+                if (isModal) {
+                    const contentEl = document.getElementById('inDepthModalContent');
+                    if (isWeeklyPlan) {
+                         const routines = parseJsonWithCorrections(newText);
+                         createAccordionFromMarkdown(routines.map(r => `### ${r.title}\n${r.content}`).join('\n'), contentEl);
+                    } else {
+                        createAccordionFromMarkdown(newText, contentEl);
+                    }
+                    footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
+                    footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                    if (refineContainer) refineContainer.remove();
+                } else {
+                    createAccordionFromMarkdown(newText, contentArea);
+                    addPostGenerationButtons(contentArea, themeId, 'custom');
+                }
+
+            } catch(error) {
+                handleApiError(error, contentArea, 'refinement');
+            }
+        }
+        
+        async function getIconForTheme(title) {
+            const fallbackIcon = `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zm-11.64 0a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zM12 12a2.143 2.143 0 1 1 0-4.286 2.143 2.143 0 0 1 0 4.286z"></path></svg>`;
+            try {
+                const prompt = `Generate a single, simple, modern, two-tone SVG icon representing "${title}" for a yoga app. The SVG should be a single path element inside an <svg> tag. Use 'currentColor' for the stroke. It must have viewBox="0 0 24 24", fill="none", stroke-width="1.5", stroke-linecap="round", stroke-linejoin="round". Return ONLY the <svg> element as a string.`;
+                const svgText = await callGeminiAPI(prompt);
+                
+                if (svgText && svgText.trim().startsWith('<svg') && svgText.trim().endsWith('</svg>')) {
+                    const cleanSvg = svgText.replace(/class=".*?"/g, ''); 
+                    return cleanSvg;
+                }
+                console.warn(`Received invalid SVG for "${title}", using fallback.`);
+                return fallbackIcon;
+            } catch (error) {
+                console.error(`Failed to generate icon for "${title}":`, error);
+                return fallbackIcon;
+            }
+        }
+        
+        function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
+        
+        function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
+
+        function showNotification(message, isError = false) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-50 transition-all duration-300 opacity-0 transform -translate-y-5';
+            if(isError) {
+                notification.classList.add('bg-red-500');
+            } else {
+                notification.style.background = `linear-gradient(to right, var(--color-primary), var(--color-primary-dark))`;
+            }
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            requestAnimationFrame(() => {
+                notification.classList.remove('opacity-0', '-translate-y-5');
+            });
+
+            setTimeout(() => {
+                notification.classList.add('opacity-0');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        let tourSteps = [];
+        let currentTourStep = 0;
+
+        function setupTour() {
+            tourSteps = [
+                { title: 'Welcome!', content: 'This quick tour will show you the main features on this page. You can exit at any time.' },
+                { element: '#app-header', title: 'The Header', content: 'The header image and the app\'s color scheme are generated by AI. You can create your own version using the floating action button.' },
+                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by typing any theme, idea, or feeling into the prompt box to create a unique yoga plan.' },
+                { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal dozens of options to fine-tune your request, such as adding a focus on "Balance" or "Deep Relaxation".' },
+                { element: '#main-grid', title: 'Pre-Built Categories', content: 'If you need inspiration, scroll down to discover many AI-generated categories, from yoga styles to seasonal themes. Click any item to generate a plan.' },
+                { element: '#discover-more-button', title: 'Discover More', content: 'Not seeing a category you like? Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
+                { element: '#new-plan-button', title: 'Reset View', content: 'This button will clear your custom-generated plan and reset all category selections, giving you a fresh start without reloading the page.' },
+                { title: 'You\'re All Set!', content: 'That\'s it for the main features. The other floating buttons open modals to change the visual theme and adjust typography. Enjoy exploring!' }
+            ];
+
+            document.getElementById('tour-next-btn').addEventListener('click', () => showTourStep(currentTourStep + 1));
+            document.getElementById('tour-back-btn').addEventListener('click', () => showTourStep(currentTourStep - 1));
+            document.getElementById('tour-finish-btn').addEventListener('click', endTour);
+            document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+            document.getElementById('tour-overlay').addEventListener('click', endTour);
+        }
+        
+        function resetAppView() {
+            document.getElementById('gemini-result-container').innerHTML = '';
+            document.getElementById('gemini-prompt').value = '';
+            document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active').forEach(btn => btn.classList.remove('active'));
+
+            document.querySelectorAll('.details-container').forEach(container => container.innerHTML = '');
+            document.querySelectorAll('.grid-card-selector.active').forEach(card => card.classList.remove('active'));
+            
+            document.getElementById('custom-plan-card').scrollIntoView({ behavior: 'smooth', block: 'start'});
+            showNotification('View has been reset.', false);
+        }
+
+        function startTour() {
+            document.getElementById('tour-overlay').classList.add('visible');
+            document.getElementById('tour-popover').classList.add('visible');
+            showTourStep(0);
+        }
+
+        function endTour() {
+            document.getElementById('tour-overlay').classList.remove('visible');
+            document.getElementById('tour-popover').classList.remove('visible');
+            const highlighted = document.querySelector('.tour-highlight');
+            if (highlighted) {
+                highlighted.classList.remove('tour-highlight');
+            }
+            localStorage.setItem('yogaTourCompleted', 'true');
+        }
+        
+        function showTourStep(stepIndex) {
+            currentTourStep = stepIndex;
+
+            const previousHighlight = document.querySelector('.tour-highlight');
+            if (previousHighlight) previousHighlight.classList.remove('tour-highlight');
+            
+            const step = tourSteps[stepIndex];
+            if (!step) {
+                endTour();
+                return;
+            }
+
+            const popover = document.getElementById('tour-popover');
+            document.getElementById('tour-title').textContent = step.title;
+            document.getElementById('tour-content').textContent = step.content;
+
+            const nextBtn = document.getElementById('tour-next-btn');
+            const backBtn = document.getElementById('tour-back-btn');
+            const finishBtn = document.getElementById('tour-finish-btn');
+            
+            backBtn.classList.toggle('hidden', stepIndex === 0);
+            nextBtn.classList.toggle('hidden', stepIndex === tourSteps.length - 1);
+            finishBtn.classList.toggle('hidden', stepIndex !== tourSteps.length - 1);
+            
+            const dotsContainer = document.getElementById('tour-dots');
+            dotsContainer.innerHTML = tourSteps.map((_, i) => `<div class="tour-popover-dot ${i === stepIndex ? 'active' : ''}"></div>`).join('');
+
+            const targetElement = step.element ? document.querySelector(step.element) : null;
+            if (targetElement) {
+                targetElement.classList.add('tour-highlight');
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
+                setTimeout(() => {
+                    positionPopover(targetElement, popover);
+                }, 350); 
+
+            } else {
+                popover.style.top = '50%';
+                popover.style.left = '50%';
+                popover.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function positionPopover(target, popover) {
+            const rect = target.getBoundingClientRect();
+            const popoverRect = popover.getBoundingClientRect();
+            
+            let top = rect.bottom + 15;
+            let left = rect.left + (rect.width / 2) - (popoverRect.width / 2);
+
+            if (top + popoverRect.height > window.innerHeight) {
+                top = rect.top - popoverRect.height - 15;
+            }
+            if (left < 10) left = 10;
+            if (left + popoverRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - popoverRect.width - 10;
+            }
+            if (top < 10) top = 10;
+
+            popover.style.top = `${top}px`;
+            popover.style.left = `${left}px`;
+            popover.style.transform = ''; 
+        }
+
+    </script>
+</body>
+</html>
