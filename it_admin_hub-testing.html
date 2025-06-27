@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.48</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.49</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1953,11 +1953,21 @@
             const linkIntegrityMandate = `
 * **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. Prioritize official vendor documentation, stable product pages, or primary source articles. All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available.`;
 
+            // ==================================================================
+            // === POWERSHELL INSTRUCTION ENHANCEMENT ===========================
+            // ==================================================================
             const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
-    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
-    * **Clarity:** Use clear variable names and formatting.`;
+* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality and robustness:
+    * **Validation & Correctness:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script that performs the intended task correctly.
+    * **Best Practices & Modern Cmdlets:** Use modern cmdlets (e.g., \`Get-CimInstance\` over \`Get-WmiObject\`).
+    * **Efficient Filtering:** This is critical. For cmdlets like \`Get-WinEvent\`, \`Get-ADUser\`, etc., you MUST use the \`-FilterHashtable\` or \`-Filter\` parameter for efficient, server-side filtering. DO NOT pipe the entire output of a cmdlet to \`Where-Object\` for initial filtering. For example, instead of \`Get-WinEvent -LogName Application | Where-Object {$_.Id -eq 1000}\`, you MUST use \`Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000}\`. This is non-negotiable for performance and correctness.
+    * **Robust Error Handling:** Always wrap script logic in a \`try { ... } catch { ... }\` block. In the \`try\` block, cmdlets that might fail must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered reliably.
+    * **Correct Property Names:** In loops or output, use the correct, official property names from the objects returned by cmdlets (e.g., use \`$_.Id\` for the event ID from \`Get-WinEvent\`, not \`$_.EventId\`).
+    * **Clarity:** Use clear variable names, comments for complex logic, and consistent formatting.`;
+            // ==================================================================
+            // === END OF ENHANCEMENT ===========================================
+            // ==================================================================
+
 
             if (originalText) {
                 // This is the prompt for refining existing text
