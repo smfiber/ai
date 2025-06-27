@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.47</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.48</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -630,21 +630,19 @@
         }
 
         function handleLogout() {
-            // First, revoke the Google Drive token if it exists
             const driveToken = gapi?.client?.getToken();
             if (driveToken) {
                 google.accounts.oauth2.revoke(driveToken.access_token, () => {
                      console.log('Google Drive token revoked.');
                 });
             }
-            // Then, sign out from Firebase
             signOut(auth).then(() => {
-                // Clear the stored keys to force re-entry on next load
+                // *** FIX: Explicitly update UI to signed-out state before clearing keys ***
+                updateSigninStatus(false);
                 localStorage.removeItem('geminiApiKey');
                 localStorage.removeItem('firebaseConfig');
                 localStorage.removeItem('googleClientId');
                 console.log('User signed out and local storage cleared.');
-                // Reload the page to reset the application state completely
                 location.reload();
             }).catch(error => {
                 console.error("Sign out failed:", error);
@@ -695,8 +693,6 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // --- AUTH FIX: Removed getRedirectResult() call as it's no longer needed ---
-
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
@@ -705,16 +701,17 @@
                         listenForViewedItems();
                         
                         if (GOOGLE_CLIENT_ID && !gapiInited && !gisInited) {
-                            // *** FIX: Make the cloud storage card visible for logged-in users with a Client ID ***
                             document.getElementById('cloud-storage-card').classList.remove('hidden');
                             document.getElementById('google-drive-section').classList.remove('hidden');
                             gapi.load('client:picker', () => {
                                 gapiInited = true;
                                 initializeGapiClient();
                             });
+                             // *** FIX: Add credential_mode to help with Cross-Origin policies ***
                              google.accounts.id.initialize({
                                 client_id: GOOGLE_CLIENT_ID,
-                                callback: () => {}
+                                callback: () => {},
+                                credential_mode: 'popup'
                             });
                             gisInited = true;
                         }
@@ -722,7 +719,6 @@
                         userId = null;
                         viewedItemsCollectionRef = null;
                     }
-                    // This function handles all UI updates based on auth state
                     setupAuthUI(user);
                 });
             } catch (error) {
@@ -739,9 +735,6 @@
         function listenForViewedItems() {
             if (!viewedItemsCollectionRef) return;
             onSnapshot(viewedItemsCollectionRef, (snapshot) => {
-                // *** FIX: This listener now only updates the underlying data set. ***
-                // It no longer triggers a full component re-render, which preserves 
-                // the `new-item-highlight` class on sibling elements.
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         viewedItemIds.add(change.doc.id);
@@ -948,8 +941,6 @@
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    // apiKey is NOT used for gapi client init, but discoveryDocs is.
-                    // The API key is used for the Gemini API calls separately.
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
@@ -974,13 +965,29 @@
                         gapi.client.setToken(tokenResponse);
                         updateSigninStatus(true);
                     } else {
-                        console.error('Provided token response was invalid.', tokenResponse);
+                        // This case handles explicit denials from the user in the popup
+                        console.error('User denied access or token response was invalid.', tokenResponse);
                         updateSigninStatus(false);
                     }
                 },
+                // *** FIX: Add a callback for when the popup is closed by the user ***
+                popup_closed_callback: () => {
+                    console.log('User closed the Google auth popup.');
+                    // Optionally update the UI to reflect that the user cancelled.
+                    const statusEl = document.getElementById('drive-status');
+                    if (statusEl.textContent.includes('Connecting')) {
+                        statusEl.textContent = 'Connection cancelled.';
+                        setTimeout(() => updateSigninStatus(false), 2000);
+                    }
+                }
             });
-            // Check for existing token
-            tokenClient.requestAccessToken({prompt: 'none'});
+            // *** FIX: Wrap the silent token request in a try/catch to suppress console errors ***
+            try {
+                // Check for existing token silently. The error is expected if the user isn't logged in.
+                tokenClient.requestAccessToken({prompt: 'none'});
+            } catch (err) {
+                console.log("Could not silently get token, user interaction will be required.");
+            }
         }
 
 
@@ -992,8 +999,11 @@
             }
 
             if (gapi.client.getToken() === null) {
+                document.getElementById('drive-status').textContent = 'Connecting to Google Drive...';
+                // This will trigger the popup for the user to grant consent.
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
+                // User is already connected, so this is a sign-out action.
                 const token = gapi.client.getToken();
                 if (token) {
                     google.accounts.oauth2.revoke(token.access_token, () => {
@@ -1008,17 +1018,25 @@
             const authButton = document.getElementById('auth-button');
             const loadBtn = document.getElementById('load-from-drive-btn');
             const statusEl = document.getElementById('drive-status');
+            const modalButtons = document.getElementById('inDepthModalButtons');
             
             if (isSignedIn) {
-                authButton.textContent = 'Sign Out';
+                authButton.textContent = 'Disconnect';
+                authButton.title = 'Disconnect your Google Account';
                 loadBtn.classList.remove('hidden');
                 statusEl.textContent = 'Connected to Google Drive.';
                 getDriveFolderId(); 
             } else {
                 authButton.textContent = 'Connect';
+                authButton.title = 'Connect your Google Account';
                 loadBtn.classList.add('hidden');
                 statusEl.textContent = 'Connect to load/save guides and enable AI image generation.';
                 driveFolderId = null;
+            }
+
+            // *** FIX: Refresh modal buttons to show/hide "Save to Drive" correctly ***
+            if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
+                addModalActionButtons(modalButtons);
             }
         }
 
@@ -1043,7 +1061,8 @@
                     });
                     driveFolderId = folderResponse.result.id;
                 }
-                updateSigninStatus(true);
+                // *** FIX: Only update status *after* folder is confirmed ***
+                driveStatusEl.textContent = 'Connected to Google Drive.';
                 return driveFolderId;
             } catch (error) {
                 console.error("Error finding/creating Drive folder:", error);
@@ -1189,7 +1208,6 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
-                // BUG FIX: Added stricter JSON formatting rules to all PowerShell prompts.
                 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
                 
                 const categoriesToGenerate = [
@@ -1929,7 +1947,6 @@
             modal.classList.remove('hidden');
         }
 
-        // *** NEW FEATURE: Added a strict mandate for link quality to the core prompt function. ***
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
