@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.44</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.45</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1190,202 +1190,196 @@
         }
         
         // --- Core Application Functions ---
-        // (The following functions remain largely unchanged but are included for completeness)
 
         async function loadAppContent(loadingMessageEl) {
             try {
+                // BUG FIX: Added stricter JSON formatting rules to all PowerShell prompts.
+                const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
+                
                 const categoriesToGenerate = [
                     { 
                         key: 'activeDirectory', 
                         title: 'Active Directory Management', 
                         description: "Tasks for managing users, groups, GPOs, and other AD objects.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'aiProgramming', 
                         title: 'Artificial Intelligence Programming', 
                         description: "Concepts and guides for getting started with AI development and programming.", 
-                        initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic.${jsonInstruction}` 
                     },
                     { 
                         key: 'citrixAdmin', 
                         title: 'Citrix Administration', 
                         description: "Managing Citrix Virtual Apps and Desktops environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'geminiInfographics', 
                         title: 'Create Infographics in Gemini', 
                         description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", 
-                        initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics, from data summarization to visual layout suggestions. For each, give a unique "id", "title", and a detailed "description". Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'geminiLinkedIn', 
                         title: 'Create LinkedIn Posts using Gemini', 
                         description: "Use Gemini to draft engaging and professional posts for LinkedIn.", 
-                        initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini, including thought leadership, project updates, and industry analysis. For each, give a unique "id", "title", and a detailed "description". Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'dataCenterPractices', 
                         title: 'Data Center Best Practices', 
                         description: "Guides on data center operations, cooling, power, and security.", 
-                        initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice.${jsonInstruction}` 
                     },
                     { 
                         key: 'webDesignBestPractices', 
                         title: 'Designing Web Pages Best Practices', 
                         description: "Best practices for UI/UX, accessibility, and performance in web design.", 
-                        initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice.${jsonInstruction}` 
                     },
                     { 
                         key: 'webDesignGemini', 
                         title: 'Designing Web Pages with Gemini AI', 
                         description: "Using Gemini AI to assist in the design and development of web pages.", 
-                        initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method.${jsonInstruction}` 
                     },
                     { 
                         key: 'dosCommands', 
                         title: 'DOS Commands for Administrators', 
                         description: "A reference for essential DOS and Command Prompt commands for system admins.", 
-                        initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters.${jsonInstruction}` 
                     },
                      { 
                         key: 'geminiCliGuide', 
                         title: 'A Guide to Using the Gemini CLI', 
                         description: "Learn how to use the Gemini Command Line Interface for various tasks.", 
-                        initialPrompt: `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced use cases and commands for the Gemini CLI. For each, give a unique "id", "title", and a detailed "description" of the use case. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced use cases and commands for the Gemini CLI. For each, give a unique "id", "title", and a detailed "description" of the use case.${jsonInstruction}` 
                     },
                     { 
                         key: 'hpeProLiant', 
                         title: 'HPE ProLiant Server Management', 
                         description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", 
-                        initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'javascriptForHtml', 
                         title: 'JavaScript for HTML', 
                         description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", 
-                        initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept.${jsonInstruction}` 
                     },
                     { 
                         key: 'linuxCliAdmin', 
                         title: 'Linux CLI for Administration', 
                         description: "A reference for essential Linux commands for system administrators.", 
-                        initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration, covering file management, user permissions, networking, and process monitoring. For each, give a unique "id", "title" (the command), and a detailed "description". Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration. For each, give a unique "id", "title" (the command), and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'm365Admin', 
                         title: 'Microsoft 365 Administration', 
                         description: "Administering users, services, and security in Microsoft 365.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'msGraphScripting', 
                         title: 'MS Graph scripting', 
                         description: "Automating M365 tasks using the Microsoft Graph API.", 
-                        initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'powershellM365', 
                         title: 'PowerShell for M365 Administration', 
                         description: "Using PowerShell to manage Microsoft 365 services like Exchange Online and SharePoint.", 
-                        initialPrompt: `Generate 10 common PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'powershellWindowsServer', 
                         title: 'PowerShell for Windows Server Administration', 
                         description: "Automating Windows Server management with PowerShell scripts and cmdlets.", 
-                        initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
                     },
                     { 
                         key: 'powershellScripts', 
                         title: 'PowerShell Scripts', 
                         description: "A collection of useful PowerShell scripts for various administrative tasks.", 
-                        initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose.${jsonInstruction}` 
                     },
                     {
                         key: 'scomAdmin',
                         title: 'SCOM Administration',
                         description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).',
-                        initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`,
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM, including management pack tuning, creating overrides, agent deployment, and reporting. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.`
+                        initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`,
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}`
                     },
                     {
                         key: 'serviceNowAdmin',
                         title: 'ServiceNow Platform Administration',
                         description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.',
-                        initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform (servicenow.com). Focus on ITSM, user management, and workflow administration. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`,
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform (servicenow.com). Cover topics like ITSM, CMDB, user roles, UI policies, business rules, and integrations. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.`
+                        initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`,
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}`
                     },
                     { 
                         key: 'usefulApis', 
                         title: 'Useful APIs for Web Development', 
                         description: "A curated list of public APIs that are useful for web development projects.", 
-                        initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate a list of 40-50 useful public APIs for web developers across different categories. For each, give a unique "id", "title" (API name), and a detailed "description" of what it offers. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate a list of 40-50 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'vmwareEsxi', 
                         title: 'VMware ESXi Administration', 
                         description: "Guides and best practices for managing VMware ESXi environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'vmwarePowerCli', 
                         title: 'VMware PowerCLI', 
                         description: "Automating VMware vSphere administration using PowerCLI.", 
-                        initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title" (the command/task), and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'windowsServer2019', 
                         title: 'Windows Server 2019 Administration', 
                         description: "Key tasks and features for administering Windows Server 2019.", 
-                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'windowsServer2022', 
                         title: 'Windows Server 2022 Administration', 
                         description: "Key tasks and new features for administering Windows Server 2022.", 
-                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022, including new features. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     },
                     { 
                         key: 'windowsServer', 
                         title: 'Windows Server Administration', 
                         description: "Essential tasks for managing Windows Server instances.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Return ONLY a valid JSON array.` 
+                        initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
+                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
                     }
                 ];
-
-                const jsonInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array.';
-                const jsonObjectInstruction = ' IMPORTANT: Ensure that any double quotes inside JSON string values are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON object.';
-
-                categoriesToGenerate.forEach(cat => {
-                    if (cat.initialPrompt) cat.initialPrompt = cat.initialPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
-                    if (cat.fullPrompt) cat.fullPrompt = cat.fullPrompt.replace('Return ONLY a valid JSON array.', jsonInstruction);
-                });
                 
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -1522,7 +1516,7 @@
             Existing Task List:
             - ${existingTitles.join('\n- ')}
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure that any double quotes inside the description are properly escaped (e.g., \\"example\\"). Return ONLY a valid JSON array of the 10 new items.`;
+            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1690,12 +1684,7 @@
             }
         }
 
-        /**
-         * BUG FIX: This function has been rewritten to be more robust.
-         * It now handles incorrectly escaped quotes (e.g., \\") which was the
-         * cause of the "Show All" button error. The replacements are also
-         * ordered more logically to fix specific issues first.
-         */
+        
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
                 throw new Error("Invalid input: not a string.");
@@ -1703,21 +1692,6 @@
             // Start by removing markdown fences that the AI might add
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
             
-            // FIX #1: Handle incorrectly escaped double quotes.
-            // The API sometimes returns \\" instead of the correct \\".
-            // This replaces the incorrect sequence with the correct one.
-            cleanedString = cleanedString.replace(/\\"/g, '\\"');
-
-            // FIX #2: Handle incorrectly escaped single quotes (less common but good practice)
-            cleanedString = cleanedString.replace(/\\'/g, "'");
-
-            // FIX #3: Handle trailing commas before a closing bracket or brace
-            cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
-
-            // FIX #4: General fallback to fix other invalid backslash escapes.
-            // This should run after the specific fixes.
-            cleanedString = cleanedString.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
-
             try {
                 // Attempt to parse the now-cleaner string
                 return JSON.parse(cleanedString);
@@ -1732,14 +1706,19 @@
         }
         
         // --- API CALL FUNCTIONS ---
-        async function callApi(apiUrl, payload) {
+        async function callApi(apiUrl, payload, authorization = null) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout for all calls
+
+            const headers = { 'Content-Type': 'application/json' };
+            if (authorization) {
+                headers['Authorization'] = authorization;
+            }
 
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify(payload),
                     signal: controller.signal
                 });
@@ -1748,7 +1727,7 @@
                 if (!response.ok) {
                     let errorBody;
                     try { errorBody = await response.json(); } catch { errorBody = await response.text(); }
-                    console.error("API Error Response:", errorBody);
+                    console.error("API Error Response:", { status: response.status, body: errorBody });
                     const errorMsg = errorBody?.error?.message || response.statusText;
                     throw new Error(`API request failed with status ${response.status}. Message: ${errorMsg}`);
                 }
@@ -1761,11 +1740,12 @@
         }
 
         async function callGeminiAPI(prompt, isJson = false) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             if (isJson) {
                 payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
             }
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, payload);
+            const result = await callApi(apiUrl, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
@@ -1780,37 +1760,11 @@
 
             const apiUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${firebaseConfig.projectId}/locations/us-central1/publishers/google/models/imagegeneration@0.0.5:predict`;
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+            const authHeader = `Bearer ${token.access_token}`;
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for images
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token.access_token}`
-                    },
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    let errorBody;
-                    try { errorBody = await response.json(); } catch { errorBody = await response.text(); }
-                    console.error("Image API Error Response:", errorBody);
-                    const errorMsg = errorBody?.error?.message || response.statusText;
-                    throw new Error(`Image generation failed (${response.status}): ${errorMsg}`);
-                }
-                const result = await response.json();
-                const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
-                return base64 ? `data:image/png;base64,${base64}` : null;
-            } catch (error) {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') throw new Error('The image generation service request timed out.');
-                throw error;
-            }
+            const result = await callApi(apiUrl, payload, authHeader);
+            const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
+            return base64 ? `data:image/png;base64,${base64}` : null;
         }
         
         async function callColorGenAPI(prompt) {
@@ -1927,7 +1881,7 @@
                 "Generate Summary": `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`,
                 "Generate UI Screenshot": `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`,
                 "Generate Color Theme": `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`,
-                "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. Return ONLY a valid JSON object.`,
+                "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`,
                 "Gemini CLI Guide": `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`
             };
         }
@@ -1973,8 +1927,14 @@
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
-            // This is the prompt for refining existing text
+            const powershellStandard = `
+4.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
+    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
+    * **Clarity:** Use clear variable names and formatting.`;
+
             if (originalText) {
+                // This is the prompt for refining existing text
                 return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
 **ORIGINAL IT GUIDE:**
@@ -1991,13 +1951,9 @@ ${originalText}
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
     * **Authoritative Links:** Embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-4.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
-    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
-    * **Clarity:** Use clear variable names and formatting.
+${powershellStandard}
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -2020,14 +1976,11 @@ When generating the guide, ensure the guide as a whole meets the following requi
 1.  **Authoritative Links:** Throughout the guide, embed hyperlinks to official vendor documentation, relevant articles, or other authoritative sources.
 2.  **Code Blocks:** When providing code examples (like PowerShell), wrap them in markdown code fences with the language specified, like \`\`\`powershell... \`\`\`.
 3.  **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-4.  **Verification:** Include a section on how to verify the task was successful, mentioning practical, real-world details (e.g., specific logs to check).
-5.  **Troubleshooting:** Include a section covering common problems that administrators face.
-6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
-7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
-8.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
-    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
-    * **Clarity:** Use clear variable names and formatting.
+4.  **Verification:** Include a section on how to verify the task was successful.
+5.  **Troubleshooting:** Include a section covering common problems.
+6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
+7.  **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
+${powershellStandard.replace('4. ', '8. ')}
 
 Return only the complete markdown guide.`;
         }
