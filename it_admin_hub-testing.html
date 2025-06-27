@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.45</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.46</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -514,7 +514,8 @@
         let gisInited = false;
         let tokenClient;
         let GOOGLE_CLIENT_ID = '';
-        const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        // BUG FIX: Added cloud-platform scope for Vertex AI image generation
+        const G_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/cloud-platform';
         let driveFolderId = null;
 
         
@@ -613,6 +614,8 @@
         // --- AUTH FIX: Changed to use signInWithPopup ---
         async function handleLogin() {
             const provider = new GoogleAuthProvider();
+            // BUG FIX: Add the new scope to the provider for the login request.
+            provider.addScope('https://www.googleapis.com/auth/cloud-platform');
             try {
                 const result = await signInWithPopup(auth, provider);
                 // onAuthStateChanged will handle the UI update.
@@ -1672,8 +1675,8 @@
                 originalGeneratedText.set(fullTitle, resultText);
                 
                 contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(resultText, contentEl, true);
-                generateAndInjectImages(contentEl);
+                // BUG FIX: Disable image generation in modal
+                renderAccordionFromMarkdown(resultText, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
 
@@ -2450,8 +2453,8 @@ Return only the complete markdown guide.`;
                 const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
 
                 contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, true);
-                generateAndInjectImages(contentEl);
+                // BUG FIX: Disable image generation in modal
+                renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
 
@@ -2517,8 +2520,8 @@ Return only the complete markdown guide.`;
                 
                 contentArea.innerHTML = '';
                 if (isModal) {
-                    renderAccordionFromMarkdown(newText, contentArea, true);
-                    generateAndInjectImages(contentArea);
+                    // BUG FIX: Disable image generation in modal
+                    renderAccordionFromMarkdown(newText, contentArea, false);
                 } else {
                     const proseDiv = document.createElement('div');
                     proseDiv.className = 'prose max-w-none';
