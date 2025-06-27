@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.42</title>
+    <title>AI Yoga Class & Theme Generator v17.43</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -260,12 +260,13 @@
             color: var(--color-text-muted);
             cursor: pointer;
         }
+        /* UPDATED: Tooltip position changed to be below the icon */
         .tooltip {
             position: absolute;
-            bottom: 100%;
+            top: 100%; /* Changed from bottom */
             left: 50%;
             transform: translateX(-50%);
-            margin-bottom: 8px;
+            margin-top: 8px; /* Changed from margin-bottom */
             background-color: var(--color-accent);
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -380,7 +381,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.42</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.43</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1015,7 +1016,6 @@
             loader.classList.toggle('flex', isLoading);
         }
         
-        // NEW: Standardized markdown conversion from IT Hub
         function convertMarkdownToHtml(text) {
             if (!text || typeof text !== 'string') {
                 return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
@@ -1027,7 +1027,6 @@
             return marked.parse(cleanText);
         }
         
-        // NEW: Robust accordion renderer from IT Hub
         function renderAccordionFromMarkdown(markdownText, containerElement) {
             containerElement.innerHTML = ''; 
             if (!markdownText || !markdownText.trim()) {
@@ -1127,15 +1126,18 @@
             });
         }
         
+        // UPDATED: Added Print button
         function addModalActionButtons(container, themeId, themeType) {
              container.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                <button class="btn-secondary text-sm print-button">Print Plan</button>
             `;
              container.querySelector('.copy-button').addEventListener('click', e => {
                  const contentToCopy = document.getElementById('inDepthModalContent');
                  copyElementTextToClipboard(contentToCopy, e.target);
             });
+            container.querySelector('.print-button').addEventListener('click', handlePrint);
         }
 
         async function handleDiscoverMoreClick() {
@@ -1279,7 +1281,6 @@
             document.body.removeChild(textarea);
         }
         
-        // NEW: Centralized prompt generation
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
              const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
              
@@ -1349,7 +1350,15 @@ Return only the complete markdown plan.`;
               : getEnhancedPrompt(item.title, '', '', { cardTitle: item.title, cardDescription: item.description });
 
             try {
-                let resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt, isWeeklyPlan && prompt.includes('JSON'));
+                
+                if (isWeeklyPlan && !prompt.includes('JSON')) {
+                     // The prompt asks for markdown, so we can render directly
+                } else if(isWeeklyPlan) {
+                    // If we accidentally asked for JSON, we need to convert it to markdown
+                    const routines = parseJsonWithCorrections(resultText);
+                    resultText = routines.map(r => `### ${r.title}\n\n${r.content}`).join('\n\n');
+                }
                 
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
@@ -1460,6 +1469,79 @@ Return only the complete markdown plan.`;
                 notification.classList.add('opacity-0');
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
+        }
+
+        // NEW: Print function
+        function handlePrint() {
+            const printContent = document.getElementById('inDepthModalContent').cloneNode(true);
+            const printFrame = document.createElement('iframe');
+            printFrame.style.position = 'absolute';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            document.body.appendChild(printFrame);
+
+            const doc = printFrame.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <html>
+                <head>
+                    <title>Print Plan</title>
+                    <style>
+                        :root {
+                            --color-bg: #ffffff;
+                            --color-text: #000000;
+                            --color-text-muted: #333333;
+                            --color-primary: #581c87;
+                            --color-primary-dark: #581c87;
+                            --color-accent: #9333ea;
+                        }
+                        body { 
+                            font-family: 'Inter', sans-serif;
+                            color: var(--color-text);
+                        }
+                        .prose { font-size: 12pt; line-height: 1.4; }
+                        .prose p { margin-bottom: 0.75rem; }
+                        .prose ul, .prose ol { margin-bottom: 0.75rem; padding-left: 1.5rem; }
+                        .prose h1, .prose h2, .prose h3 {
+                             color: var(--color-accent);
+                             margin-top: 1.25em;
+                             margin-bottom: 0.5em;
+                             page-break-after: avoid;
+                        }
+                        .accordion-header {
+                            font-weight: bold;
+                            font-size: 1.25rem;
+                            padding: 1rem 0;
+                            border-bottom: 1px solid #ccc;
+                        }
+                        .accordion-header .icon { display: none; }
+                        .accordion-content { display: block !important; padding-top: 0.5rem; }
+                        button { display: none; }
+                        @media print {
+                           .accordion-item { page-break-inside: avoid; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1 style="font-size: 1.5rem; color: var(--color-primary);">${document.getElementById('inDepthModalTitle').textContent}</h1>
+                    ${printContent.innerHTML}
+                </body>
+                </html>
+            `);
+            doc.close();
+
+            // Make all accordion content visible for printing
+            const contentSections = doc.querySelectorAll('.accordion-content');
+            contentSections.forEach(section => {
+                section.classList.add('open');
+            });
+
+            setTimeout(() => {
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                document.body.removeChild(printFrame);
+            }, 250);
         }
 
         let tourSteps = [];
