@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Infographic Creator v8.1</title>
+    <title>AI Infographic Creator v9.0</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -34,6 +34,9 @@
         .interactive-element { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
         .interactive-element:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .is-exporting .export-hidden { display: none !important; }
+        .template-card { transition: all 0.2s ease-in-out; }
+        .template-card:hover { transform: scale(1.05); border-color: #3b82f6; }
+
     </style>
     
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -48,9 +51,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // Gemini AI Infographic Creator - Version 8.1
-        // - Re-implemented the Export feature (PNG/PDF).
-        // - Added a class to hide interactive inputs during screenshot.
+        // Gemini AI Infographic Creator - Version 9.0
+        // Phase 4: Templating System
+        // - Added a template library with pre-designed, editable infographics.
+        // - Application now starts with a template selection screen.
+        // - Selecting a template populates the entire canvas with content, layout, and theme.
 
         // --- ICONS ---
         const SparklesIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>);
@@ -60,9 +65,10 @@
         const RefreshCwIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M3 21a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 16" /><path d="M3 16v5h5" /></svg>);
         const ChartBarIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>);
         const LinkIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>);
+        const FilePlusIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>);
         const Spinner = ({ size = 'h-8 w-8' }) => <div className={`animate-spin rounded-full ${size} border-b-2 border-white`}></div>;
 
-        // --- Predefined Layouts ---
+        // --- Data ---
         const PREDEFINED_LAYOUTS = [
             { name: 'Vertical List', layout: { containerStyle: { display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }, cardStyle: { width: '80%', maxWidth: '600px' }}},
             { name: '2-Column Grid', layout: { containerStyle: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem' }, cardStyle: {}}},
@@ -71,6 +77,41 @@
             { name: 'Alternating Timeline', layout: { containerStyle: { }, cardStyle: { }}},
             { name: 'Hub and Spoke', layout: { containerStyle: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }, cardStyle: {}}},
         ];
+        
+        const TEMPLATES = [
+            {
+                name: "Quarterly Business Review",
+                description: "A professional template to showcase key metrics and achievements.",
+                mainTitle: "Quarterly Business Review: Q2",
+                layout: PREDEFINED_LAYOUTS[1], // 2-Column Grid
+                theme: { backgroundColor: '#f3f4f6', cardColor: '#ffffff', textColor: '#111827', accentColor: '#3b82f6', fontFamily: 'font-sans', borderColor: '#e5e7eb', shadowStyle: 'shadow-md' },
+                tasks: [
+                    { title: "Revenue Growth", description: "Achieved a 15% increase in quarterly revenue compared to Q1." },
+                    { title: "Customer Acquisition", description: "Onboarded 250 new enterprise clients." },
+                    { title: "Productivity", description: "Team productivity up by 10% with new workflow automation." },
+                    { title: "Market Expansion", description: "Successfully launched in the European market." },
+                ],
+                elements: [
+                    { id: 'chart-qbr', type: 'chart', chartType: 'bar', link: '', data: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], datasets: [{ label: 'Revenue (in M)', data: [1.2, 1.5, 1.8, 2.1], backgroundColor: ['#3b82f6', '#10b981', '#f97316', '#ef4444']}] }, options: { responsive: true, plugins: { legend: { display: true }, title: { display: true, text: 'Quarterly Revenue Growth', color: '#111827'}}}}
+                ]
+            },
+            {
+                name: "Social Media Milestones",
+                description: "A vibrant, engaging template to celebrate your social media success.",
+                mainTitle: "We've Reached 100k Followers!",
+                layout: PREDEFINED_LAYOUTS[2], // 3-Column Grid
+                theme: { backgroundColor: '#18181b', cardColor: '#27272a', textColor: '#e4e4e7', accentColor: '#a855f7', fontFamily: 'font-sans', borderColor: '#3f3f46', shadowStyle: 'shadow-lg shadow-purple-500/10' },
+                tasks: [
+                    { title: "Follower Growth", description: "From 10k to 100k in just 6 months!" },
+                    { title: "Top Post", description: "Our 'Behind the Scenes' video reached 1M views." },
+                    { title: "Engagement Rate", description: "Increased average engagement by 25%." },
+                    { title: "Community Love", description: "Over 50,000 positive comments and messages." },
+                    { title: "New Platforms", description: "Successfully launched on TikTok and Threads." },
+                    { title: "Thank You!", description: "We couldn't have done it without our amazing community." },
+                ],
+                elements: []
+            }
+        ];
 
         // --- Main Application ---
         function App() {
@@ -78,6 +119,7 @@
 
             const [apiKey, setApiKey] = useState("");
             const [tempApiKey, setTempApiKey] = useState("");
+            const [isProjectStarted, setIsProjectStarted] = useState(false);
             const [isContentGenerated, setIsContentGenerated] = useState(false);
             const [tasks, setTasks] = useState([]);
             const [mainTitle, setMainTitle] = useState("AI Infographic Creator");
@@ -205,28 +247,18 @@
             // --- Export Handler ---
             const handlePreview = async () => {
                 setIsLoading(p => ({ ...p, export: true }));
-                // Add a class to hide interactive elements during screenshot
                 infographicRef.current.classList.add('is-exporting');
-
-                await new Promise(resolve => setTimeout(resolve, 100)); // Wait for DOM update
+                await new Promise(resolve => setTimeout(resolve, 100)); 
 
                 try {
-                    const canvas = await html2canvas(infographicRef.current, {
-                        backgroundColor: designTheme.backgroundColor,
-                        useCORS: true,
-                        scale: 2
-                    });
+                    const canvas = await html2canvas(infographicRef.current, { backgroundColor: designTheme.backgroundColor, useCORS: true, scale: 2 });
                     
                     if (exportFormat === 'PDF') {
                         const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jspdf.jsPDF({
-                            orientation: canvas.width > canvas.height ? 'l' : 'p',
-                            unit: 'px',
-                            format: [canvas.width, canvas.height]
-                        });
+                        const pdf = new jspdf.jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
                         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
                         pdf.save(`${mainTitle.replace(/ /g, '_')}.pdf`);
-                    } else { // PNG
+                    } else { 
                          const imgData = canvas.toDataURL('image/png');
                          setPreviewData({ type: 'PNG', image: imgData });
                          setShowPreviewModal(true);
@@ -239,7 +271,21 @@
                 }
             };
 
+            // --- Template Handler ---
+            const applyTemplate = (template) => {
+                setMainTitle(template.mainTitle);
+                setSelectedLayout(template.layout);
+                setDesignTheme(template.theme);
+                const loadedTasks = template.tasks.map((t, i) => ({ ...t, id: Date.now() + i, iconUrl: null, isIconLoading: true, link: '' }));
+                setTasks(loadedTasks);
+                setElements(template.elements || []);
+                setIsContentGenerated(true);
+                setIsProjectStarted(true);
+                loadedTasks.forEach(task => regenerateIcon(task.id, task.title, false));
+            };
+
             if (!apiKey) return <ApiKeyModal value={tempApiKey} onChange={setTempApiKey} onSubmit={handleApiKeySubmit} />;
+            if (!isProjectStarted) return <TemplateSelectionScreen onSelectTemplate={applyTemplate} onStartBlank={() => setIsProjectStarted(true)} />;
             
             const mainContainerStyle = { backgroundColor: designTheme.backgroundColor, color: designTheme.textColor, backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', '--timeline-accent-color': designTheme.accentColor };
 
@@ -252,7 +298,6 @@
                         selectedLayout={selectedLayout} setSelectedLayout={setSelectedLayout}
                         designTheme={designTheme} setDesignTheme={setDesignTheme}
                         brandingKit={brandingKit} addBrandColor={addBrandColor} removeBrandColor={removeBrandColor} logoFileInputRef={logoFileInputRef} handleLogoUpload={handleLogoUpload}
-                        fileInputRef={fileInputRef} handleImageUpload={handleImageUpload}
                         addChart={addChart}
                         exportFormat={exportFormat} setExportFormat={setExportFormat} handlePreview={handlePreview}
                         error={error}
@@ -277,9 +322,9 @@
         }
 
         // --- UI Components ---
-        const CollapsibleSection = ({ title, children }) => {
+        const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
             const { useState } = React;
-            const [isOpen, setIsOpen] = useState(true);
+            const [isOpen, setIsOpen] = useState(defaultOpen);
             return (
                 <div className="control-panel-section border-gray-700 py-4">
                     <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center text-lg font-bold">
@@ -295,8 +340,7 @@
             const { mainTitle, onTitleChange, isContentGenerated, handleGenerateContent, isLoading,
                     selectedLayout, setSelectedLayout, designTheme, setDesignTheme,
                     brandingKit, addBrandColor, removeBrandColor, logoFileInputRef, handleLogoUpload,
-                    fileInputRef, handleImageUpload, addChart,
-                    exportFormat, setExportFormat, handlePreview,
+                    addChart, exportFormat, setExportFormat, handlePreview,
                     error } = props;
             
             const handleThemeChange = (prop, value) => setDesignTheme(prev => ({ ...prev, [prop]: value }));
@@ -315,18 +359,18 @@
                 <div className="w-96 h-full bg-gray-900/70 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="flex justify-between items-center pb-4 mb-4 border-b border-gray-700">
                          <h1 className="text-xl font-bold">Creator Studio</h1>
-                         <span className="text-xs font-mono opacity-50">v8.1</span>
+                         <span className="text-xs font-mono opacity-50">v9.0</span>
                     </div>
 
-                    <CollapsibleSection title="1. Content">
+                    <CollapsibleSection title="Content" defaultOpen={true}>
                         <textarea value={mainTitle} onChange={(e) => onTitleChange(e.target.value)} className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg" rows="2" placeholder="Enter a topic..."></textarea>
                         <button onClick={handleGenerateContent} disabled={isLoading.content} className="w-full mt-2 flex items-center justify-center bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50">
                             <SparklesIcon className="mr-2 w-5 h-5" />
-                            {isLoading.content ? 'Creating...' : 'Create Infographic'}
+                            {isLoading.content ? 'Creating...' : 'Generate Points'}
                         </button>
                     </CollapsibleSection>
                     
-                    <CollapsibleSection title="2. Elements">
+                    <CollapsibleSection title="Elements" defaultOpen={true}>
                          <fieldset disabled={!isContentGenerated}>
                             <button onClick={addChart} className="w-full flex items-center justify-center bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700">
                                 <ChartBarIcon className="mr-2 w-5 h-5" /> Add Chart
@@ -334,7 +378,7 @@
                          </fieldset>
                      </CollapsibleSection>
 
-                     <CollapsibleSection title="3. Layout">
+                     <CollapsibleSection title="Layout" defaultOpen={false}>
                          <fieldset disabled={!isContentGenerated}>
                              <label className="text-sm font-medium">Layout Style</label>
                              <select value={selectedLayout.name} onChange={e => setSelectedLayout(PREDEFINED_LAYOUTS.find(opt => opt.name === e.target.value))} className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg">
@@ -343,7 +387,7 @@
                          </fieldset>
                      </CollapsibleSection>
 
-                    <CollapsibleSection title="4. Branding">
+                    <CollapsibleSection title="Branding" defaultOpen={false}>
                          <fieldset disabled={!isContentGenerated} className="space-y-4">
                             <button onClick={() => logoFileInputRef.current.click()} className="w-full flex items-center justify-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">
                                 <ImageIcon className="mr-2 w-5 h-5" /> Upload Logo
@@ -359,7 +403,7 @@
                          </fieldset>
                     </CollapsibleSection>
 
-                    <CollapsibleSection title="5. Theme & Style">
+                    <CollapsibleSection title="Theme & Style" defaultOpen={false}>
                         <fieldset disabled={!isContentGenerated} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <ColorPicker label="Background" value={designTheme.backgroundColor} onChange={v => handleThemeChange('backgroundColor', v)} brandColors={brandingKit.colors} onSwatchSelect={c => handleThemeChange('backgroundColor', c)} />
@@ -370,7 +414,7 @@
                         </fieldset>
                     </CollapsibleSection>
                     
-                     <CollapsibleSection title="6. Export">
+                     <CollapsibleSection title="Export" defaultOpen={true}>
                          <fieldset disabled={!isContentGenerated} className="space-y-2">
                              <label className="text-sm font-medium">Format</label>
                              <select value={exportFormat} onChange={e => setExportFormat(e.target.value)} className="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg">
@@ -472,6 +516,33 @@
         };
 
         // --- Modal Components ---
+        const TemplateSelectionScreen = ({ onSelectTemplate, onStartBlank }) => {
+            return (
+                <div className="w-full h-screen bg-gray-800 text-white p-8 overflow-y-auto">
+                    <h1 className="text-4xl font-bold text-center mb-2">Start a New Project</h1>
+                    <p className="text-lg text-gray-400 text-center mb-12">Choose a template or start from scratch.</p>
+                    <div className="max-w-4xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div onClick={onStartBlank} className="template-card flex flex-col items-center justify-center p-6 bg-gray-700 rounded-lg border-2 border-gray-600 cursor-pointer text-center h-64">
+                                <FilePlusIcon className="w-16 h-16 mb-4 text-blue-400" />
+                                <h3 className="text-xl font-bold">Blank Canvas</h3>
+                                <p className="text-gray-400">Start with an empty project.</p>
+                            </div>
+                            {TEMPLATES.map((template, index) => (
+                                <div key={index} onClick={() => onSelectTemplate(template)} className="template-card p-6 bg-gray-700 rounded-lg border-2 border-gray-600 cursor-pointer h-64 flex flex-col">
+                                    <h3 className="text-xl font-bold mb-2">{template.name}</h3>
+                                    <p className="text-gray-400 flex-grow">{template.description}</p>
+                                    <div className="flex justify-end mt-4">
+                                        <button className="py-2 px-4 bg-blue-600 rounded-lg">Use Template</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const ChartModal = ({ chart, onSave, onClose, onAiSuggest, isLoading }) => {
             const {useState} = React;
             const [data, setData] = useState(JSON.stringify(chart.data.datasets[0].data, null, 2));
