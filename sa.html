@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.49</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.50</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1950,12 +1950,16 @@
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
 
-            const linkIntegrityMandate = `
-* **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. Prioritize official vendor documentation, stable product pages, or primary source articles. All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available.`;
-
-            // ==================================================================
-            // === NEW POWERSHELL INSTRUCTION ENHANCEMENT =======================
-            // ==================================================================
+            // --- MODIFICATION START: Replaced the old link mandate with a new, more detailed one. ---
+            const linkVerificationAndGenerationMandate = `
+* **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
+    1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
+    2.  **Identify Search Topics:** From the list of helpful resources you just generated, identify the specific, core topics that need a URL. For example, from "Official Kubernetes Documentation", the topic is "Kubernetes official documentation".
+    3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
+    4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
+    5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
+            // --- MODIFICATION END ---
+            
             const powershellStandard = `
 * **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
     * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
@@ -1964,9 +1968,6 @@
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
     * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
     * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
-            // ==================================================================
-            // === END OF ENHANCEMENT ===========================================
-            // ==================================================================
 
 
             if (originalText) {
@@ -1988,7 +1989,7 @@ ${originalText}
     * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-${linkIntegrityMandate}
+${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 
 Return only the new, complete, and rewritten markdown guide.`;
@@ -2014,7 +2015,7 @@ When generating the guide, ensure the guide as a whole meets the following requi
 * **Troubleshooting:** Include a section covering common problems.
 * **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
 * **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
-${linkIntegrityMandate}
+${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 
 Return only the complete markdown guide.`;
