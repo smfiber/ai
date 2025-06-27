@@ -95,7 +95,20 @@
                 if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
                      throw new Error("No content generated from Gemini. The response may be empty or blocked.");
                 }
-                return JSON.parse(result.candidates[0].content.parts[0].text);
+
+                // **FIX:** More robustly find and parse the JSON block from the response text.
+                // This handles cases where the API might include markdown fences or other text around the JSON object.
+                const rawText = result.candidates[0].content.parts[0].text;
+                const startIndex = rawText.indexOf('{');
+                const endIndex = rawText.lastIndexOf('}');
+                
+                if (startIndex === -1 || endIndex === -1) {
+                    throw new Error("Could not find a valid JSON object in the API response.");
+                }
+                
+                const jsonString = rawText.substring(startIndex, endIndex + 1);
+                
+                return JSON.parse(jsonString);
             };
             
             const generateIconForPoint = async (pointTitle) => {
