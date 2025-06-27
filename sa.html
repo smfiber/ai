@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.48</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.49</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1949,15 +1949,25 @@
 
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-            
+
             const linkIntegrityMandate = `
 * **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. Prioritize official vendor documentation, stable product pages, or primary source articles. All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available.`;
 
+            // ==================================================================
+            // === NEW POWERSHELL INSTRUCTION ENHANCEMENT =======================
+            // ==================================================================
             const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
-    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
-    * **Clarity:** Use clear variable names and formatting.`;
+* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
+    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
+    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset.
+    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
+    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
+    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
+            // ==================================================================
+            // === END OF ENHANCEMENT ===========================================
+            // ==================================================================
+
 
             if (originalText) {
                 // This is the prompt for refining existing text
