@@ -398,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.52</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.54</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1767,7 +1767,7 @@
                 originalGeneratedText.set(fullTitle, resultText);
                 
                 contentEl.innerHTML = '';
-                // BUG FIX: Disable image generation in modal
+                // Render content as an accordion, without generating images.
                 renderAccordionFromMarkdown(resultText, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
@@ -2038,7 +2038,6 @@
     * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
     * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
             
-            // --- MODIFICATION START: Added PowerCLI-specific standards ---
             const powerCLIStandard = `
 * **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
     * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
@@ -2046,8 +2045,6 @@
     * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
     * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
-            // --- MODIFICATION END ---
-
 
             if (originalText) {
                 // This is the prompt for refining existing text
@@ -2084,17 +2081,61 @@ Return only the new, complete, and rewritten markdown guide.`;
 - **Specific Task:** "${task}"`;
             }
 
-            return `You are an expert senior IT administrator AI. Generate a comprehensive and practical guide ${contextText}. ${optionsText}
+            return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
-Your task is to structure this guide into the most logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed and practical.
+The guide must be an all-inclusive resource for an IT professional, covering the topic from foundational knowledge to advanced application. Structure the guide logically using the following sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content must be detailed, accurate, and reflect real-world best practices.
 
-When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
+**REQUIRED GUIDE STRUCTURE & CONTENT:**
 
-* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-* **Verification:** Include a section on how to verify the task was successful.
-* **Troubleshooting:** Include a section covering common problems.
-* **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
-* **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
+* **1. Introduction:**
+    * **Overview:** Briefly explain the technology or task.
+    * **Importance:** Describe why this task/technology is important in modern IT environments.
+    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
+
+* **2. Architectural Overview (If Applicable):**
+    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
+
+* **3. Key Concepts & Terminology:**
+    * Detail the fundamental principles the user MUST understand.
+    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
+
+* **4. Prerequisites:**
+    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
+    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
+    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
+
+* **5. Detailed Step-by-Step Instructions:**
+    * **Clarity is Paramount:** Provide a clear, actionable, and ordered guide.
+    * **Granularity:** Break down major steps into smaller, numbered sub-steps.
+    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run. Include example outputs where they would aid understanding.
+    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks (e.g., "Navigate to 'Administration' > 'Users and Groups', then click the 'Add' button.").
+
+* **6. Verification and Validation:**
+    * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
+    * Describe what a successful output or system state looks like.
+
+* **7. Best Practices:**
+    * Offer expert advice on the most effective, secure, and efficient ways to perform the task. Cover performance, security, and maintainability aspects.
+
+* **8. Automation Opportunities:**
+    * **Why Automate:** Discuss the benefits of automating this task (e.g., consistency, speed, reduced error).
+    * **Scripting Examples:** Provide complete, practical script examples using relevant languages (e.g., PowerShell, PowerCLI, Python, Bash). Scripts must be robust and include comments.
+
+* **9. Security Considerations:**
+    * **Hardening:** Provide specific steps to harden the configuration.
+    * **Common Vulnerabilities:** Discuss potential security risks associated with this task/technology.
+    * **Auditing & Logging:** Recommend what to audit and how to configure logging to track relevant events.
+
+* **10. Advanced Use Cases & Scenarios:**
+    * Describe 2-3 advanced or less-common scenarios where this skill can be applied.
+
+* **11. Troubleshooting:**
+    * Provide a table of common problems, their likely causes, and step-by-step solutions. Use the format: **Problem** | **Potential Cause** | **Solution**.
+
+* **12. Helpful Resources:**
+    * Include a final section with a bulleted list of high-quality, relevant links to official documentation, in-depth articles, and community forums.
+
+**MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
@@ -2568,7 +2609,7 @@ Return only the complete markdown guide.`;
                 const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
 
                 contentEl.innerHTML = '';
-                // BUG FIX: Disable image generation in modal
+                // Render the modal content without generating images, using the accordion layout
                 renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false); 
                 
                 addModalActionButtons(buttonContainer);
@@ -2635,7 +2676,6 @@ Return only the complete markdown guide.`;
                 
                 contentArea.innerHTML = '';
                 if (isModal) {
-                    // BUG FIX: Disable image generation in modal
                     renderAccordionFromMarkdown(newText, contentEl, false);
                 } else {
                     const proseDiv = document.createElement('div');
