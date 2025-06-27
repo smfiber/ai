@@ -665,13 +665,15 @@
                 await generateAndApplyDefaultTheme();
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
-                console.error("A critical error occurred during app initialization:", error.message);
+                // BUG FIX: Safely access the error message.
+                const errorMessage = error ? error.message : "An unknown error occurred.";
+                console.error("A critical error occurred during app initialization:", errorMessage);
                 localStorage.clear();
                 const apiKeyModal = document.getElementById('apiKeyModal');
                 apiKeyModal.classList.remove('hidden');
                 const errorEl = document.getElementById('api-key-error');
                 if(errorEl) {
-                    errorEl.textContent = `Setup failed: ${error.message}. Your keys have been cleared. Please check and re-enter them.`;
+                    errorEl.textContent = `Setup failed: ${errorMessage}. Your keys have been cleared. Please check and re-enter them.`;
                 }
             } finally {
                 loadingModal.classList.add('hidden');
@@ -1557,7 +1559,7 @@
                 const jsonText = await callGeminiAPI(fullPrompt, true);
                 if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
                 
-                const fullData = parseJsonWithCorrections(jsontext);
+                const fullData = parseJsonWithCorrections(jsonText);
                 fullData.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[themeType] = fullData;
 
@@ -2110,7 +2112,7 @@ Return only the complete markdown guide.`;
             generateBtn.disabled = true;
 
             try {
-                const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for an IT website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
+                const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
                 const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(prompt), callImageGenAPI(imagePrompt)]);
                 
                 if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
