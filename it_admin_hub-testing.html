@@ -314,11 +314,11 @@
                 </div>
 
                 <h3 class="text-xl font-semibold mb-2 mt-6 themed-text-accent">Cloud Integrations (Optional)</h3>
-                <p class="mb-2 themed-text-muted text-sm">To save/load guides from Google Drive, also provide your Client ID.</p>
+                <p class="mb-2 themed-text-muted text-sm">To save/load guides from Google Drive, also provide your Client ID. This is also required for AI Image Generation.</p>
                 
                 <div class="mb-4">
                     <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted">Google Cloud Client ID</label>
-                    <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive integration">
+                    <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation">
                 </div>
                 
                 <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.41</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.44</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -407,7 +407,7 @@
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                      <div id="google-drive-section" class="hidden">
                           <h3 class="font-semibold themed-text-accent mb-2">Google Drive</h3>
-                          <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides.</p>
+                          <p id="drive-status" class="text-sm themed-text-muted mt-1 mb-3">Connect to load/save guides and enable AI image generation.</p>
                           <div class="flex gap-2">
                              <button id="auth-button" class="btn-secondary">Connect</button>
                              <button id="load-from-drive-btn" class="btn-secondary hidden">Import from Drive</button>
@@ -704,9 +704,14 @@
                         if (GOOGLE_CLIENT_ID && !gapiInited && !gisInited) {
                             document.getElementById('google-drive-section').classList.remove('hidden');
                             gapi.load('client:picker', () => {
-                                gisInited = true;
+                                gapiInited = true;
                                 initializeGapiClient();
                             });
+                             google.accounts.id.initialize({
+                                client_id: GOOGLE_CLIENT_ID,
+                                callback: () => {}
+                            });
+                            gisInited = true;
                         }
                     } else {
                         userId = null;
@@ -947,7 +952,8 @@
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
-                    apiKey: geminiApiKey,
+                    // apiKey is NOT used for gapi client init, but discoveryDocs is.
+                    // The API key is used for the Gemini API calls separately.
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 gapiInited = true;
@@ -977,6 +983,7 @@
                     }
                 },
             });
+            // Check for existing token
             tokenClient.requestAccessToken({prompt: 'none'});
         }
 
@@ -1014,7 +1021,7 @@
             } else {
                 authButton.textContent = 'Connect';
                 loadBtn.classList.add('hidden');
-                statusEl.textContent = 'Connect to load/save guides.';
+                statusEl.textContent = 'Connect to load/save guides and enable AI image generation.';
                 driveFolderId = null;
             }
         }
@@ -1114,7 +1121,8 @@
                  return;
              }
              const builder = new google.picker.PickerBuilder()
-                .setOAuthToken(token);
+                .setOAuthToken(token)
+                .setDeveloperKey(geminiApiKey); // Picker API requires an API key
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
@@ -1670,7 +1678,8 @@
                 originalGeneratedText.set(fullTitle, resultText);
                 
                 contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(resultText, contentEl, false);
+                renderAccordionFromMarkdown(resultText, contentEl, true);
+                generateAndInjectImages(contentEl);
                 
                 addModalActionButtons(buttonContainer);
 
@@ -1721,7 +1730,8 @@
                 throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
             }
         }
-
+        
+        // --- API CALL FUNCTIONS ---
         async function callApi(apiUrl, payload) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -1760,10 +1770,47 @@
         }
 
         async function callImageGenAPI(prompt) {
+            const token = gapi.client.getToken();
+            if (!token) {
+                throw new Error("Please connect your Google Account to generate images.");
+            }
+            if (!firebaseConfig || !firebaseConfig.projectId) {
+                throw new Error("Firebase project ID is not configured. Cannot make image generation request.");
+            }
+
+            const apiUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${firebaseConfig.projectId}/locations/us-central1/publishers/google/models/imagegeneration@0.0.5:predict`;
             const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-            const result = await callApi(`https://us-central1-aiplatform.googleapis.com/v1/projects/${firebaseConfig.projectId}/locations/us-central1/publishers/google/models/imagegeneration@0.0.5:predict?key=${geminiApiKey}`, payload);
-            const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
-            return base64 ? `data:image/png;base64,${base64}` : null;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for images
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token.access_token}`
+                    },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    let errorBody;
+                    try { errorBody = await response.json(); } catch { errorBody = await response.text(); }
+                    console.error("Image API Error Response:", errorBody);
+                    const errorMsg = errorBody?.error?.message || response.statusText;
+                    throw new Error(`Image generation failed (${response.status}): ${errorMsg}`);
+                }
+                const result = await response.json();
+                const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
+                return base64 ? `data:image/png;base64,${base64}` : null;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') throw new Error('The image generation service request timed out.');
+                throw error;
+            }
         }
         
         async function callColorGenAPI(prompt) {
@@ -1786,17 +1833,22 @@
             const themePrompt = "Modern Data Center";
             const imagePrompt = `Artistic, abstract background image inspired by "${themePrompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
             try {
-                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(themePrompt), callImageGenAPI(imagePrompt)]);
-                
-                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
-                else throw colorResult.reason || new Error("Failed to generate color theme.");
+                 // First generate colors, as they don't depend on Google Auth
+                const colors = await callColorGenAPI(themePrompt);
+                applyTheme(colors);
 
-                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
-                else throw imageResult.reason || new Error("Failed to generate header image.");
+                // Then attempt to generate image, which might fail if not authenticated
+                if (gapi.client.getToken()) {
+                    const imageUrl = await callImageGenAPI(imagePrompt);
+                    applyHeaderImage(imageUrl);
+                } else {
+                    console.warn("Skipping default header image generation: Google user not signed in.");
+                }
 
             } catch (error) {
                 handleApiError(null, null, 'default theme');
-                throw error;
+                // Don't re-throw, allow app to load with default styles even if theme fails
+                console.error("Failed to generate default theme, continuing with default styles.", error);
             } finally {
                 showThemeLoading(false);
             }
@@ -1856,6 +1908,7 @@
         }
         
         function applyHeaderImage(imageUrl) {
+            if (!imageUrl) return;
             const bgImageDiv = document.getElementById('header-bg-image');
             bgImageDiv.style.backgroundImage = `url('${imageUrl}')`;
         }
@@ -1920,8 +1973,8 @@
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
+            // This is the prompt for refining existing text
             if (originalText) {
-                // Refinement Prompt
                 return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
 **ORIGINAL IT GUIDE:**
@@ -1941,11 +1994,15 @@ ${originalText}
     * **Screenshot Placeholders:** Include placeholders for screenshots where visual context is beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
     * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
+4.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
+    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
+    * **Clarity:** Use clear variable names and formatting.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
 
-            // In-depth and Custom Guide Generation Prompt
+            // This is the prompt for generating new guides from scratch
             let contextText = `for the task: "${task}"`;
             if (context.cardTitle) {
                 contextText = `for the following topic.
@@ -1967,6 +2024,10 @@ When generating the guide, ensure the guide as a whole meets the following requi
 5.  **Troubleshooting:** Include a section covering common problems that administrators face.
 6.  **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links to official documentation, tutorials, or tools.
 7.  **Screenshot Placeholders:** In the 'Step-by-Step Guide' or equivalent section, include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description for an AI image generator to create a UI screenshot].
+8.  **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these rules:
+    * **Validation:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Best Practices:** Use modern cmdlets (e.g., Get-CimInstance over Get-WmiObject), handle errors appropriately (try/catch), and include comments for complex logic.
+    * **Clarity:** Use clear variable names and formatting.
 
 Return only the complete markdown guide.`;
         }
@@ -2004,6 +2065,7 @@ Return only the complete markdown guide.`;
                             </div>`;
                 });
             } else {
+                 // Still remove the placeholder text even if not generating the image container
                 processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
             }
 
@@ -2039,6 +2101,13 @@ Return only the complete markdown guide.`;
         async function generateAndInjectImages(container) {
             const placeholders = container.querySelectorAll('.image-generation-container');
             if (placeholders.length === 0) return;
+            
+            if (!gapi.client.getToken()) {
+                placeholders.forEach(placeholder => {
+                    placeholder.innerHTML = `<p class="text-sm themed-text-muted">Connect Google Account to generate images.</p>`;
+                });
+                return;
+            }
 
             placeholders.forEach(async (placeholder) => {
                 const prompt = placeholder.dataset.prompt;
@@ -2114,13 +2183,28 @@ Return only the complete markdown guide.`;
 
             try {
                 const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
-                const [colorResult, imageResult] = await Promise.allSettled([callColorGenAPI(prompt), callImageGenAPI(imagePrompt)]);
                 
-                if (colorResult.status === 'fulfilled' && colorResult.value) applyTheme(colorResult.value);
-                else throw colorResult.reason || new Error("Failed to generate color theme.");
+                const promises = [callColorGenAPI(prompt)];
+                if (gapi.client.getToken()) {
+                    promises.push(callImageGenAPI(imagePrompt));
+                } else {
+                    showThemeError("Connect your Google Account to generate a new header image.");
+                }
 
-                if (imageResult.status === 'fulfilled' && imageResult.value) applyHeaderImage(imageResult.value);
-                else throw imageResult.reason || new Error("Failed to generate header image.");
+                const [colorResult, imageResult] = await Promise.allSettled(promises);
+                
+                if (colorResult.status === 'fulfilled' && colorResult.value) {
+                    applyTheme(colorResult.value);
+                } else {
+                    throw colorResult.reason || new Error("Failed to generate color theme.");
+                }
+
+                if (imageResult && imageResult.status === 'fulfilled' && imageResult.value) {
+                    applyHeaderImage(imageResult.value);
+                } else if (imageResult) {
+                    // Show error only if image generation was attempted and failed
+                    throw imageResult.reason || new Error("Failed to generate header image.");
+                }
                 
                 document.getElementById('themeGeneratorModal').classList.add('hidden');
             } catch (error) {
@@ -2305,7 +2389,6 @@ Return only the complete markdown guide.`;
                 5.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc., for quick access to common subjects.
                 6.  **Visual Theme Generator**: A floating button allows you to describe a mood (e.g., 'ocean sunset'), and the AI creates a new color theme and header image for the application.
                 7.  **In-Depth Exploration & Refinement**: You can expand a summary to see a full guide or ask the AI to rewrite and refine any generated content with further instructions.
-                8.  **Important Note on Images**: Image generation for screenshot placeholders has been disabled in the pop-up modal views to improve readability and focus on the text content. Images are still generated on the main page.
                 Format the output as a clean markdown document using '###' for each section title.`;
 
             const feedbackPrompt = `
@@ -2313,7 +2396,7 @@ Return only the complete markdown guide.`;
                 Based on the feature descriptions below, provide constructive feedback. What is intuitive? What could be improved? What features might be missing for a senior IT administrator?
 
                 **Application Features:**
-                1.  **Cloud Storage Integration**: Connect to Google Drive/OneDrive to save/load guides.
+                1.  **Cloud Storage Integration**: Connect to Google Drive/OneDrive to save/load guides and enable AI image generation.
                 2.  **Custom Task Generator**: Enter any IT task for a step-by-step AI-generated guide.
                 3.  **Tailoring Options**: Buttons to refine guides (e.g., 'for Security', 'for Beginners').
                 4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
@@ -2414,7 +2497,8 @@ Return only the complete markdown guide.`;
                 const finalMarkdownForDisplay = `${summaryHeader}\n\n${summaryParagraph}\n\n${resultText}`;
 
                 contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, false);
+                renderAccordionFromMarkdown(finalMarkdownForDisplay, contentEl, true);
+                generateAndInjectImages(contentEl);
                 
                 addModalActionButtons(buttonContainer);
 
@@ -2478,13 +2562,18 @@ Return only the complete markdown guide.`;
                 
                 originalGeneratedText.set(textKey, newText);
                 
+                contentArea.innerHTML = '';
                 if (isModal) {
-                    renderAccordionFromMarkdown(newText, contentArea, false);
+                    renderAccordionFromMarkdown(newText, contentArea, true);
+                    generateAndInjectImages(contentArea);
                 } else {
-                    renderAccordionFromMarkdown(newText, contentArea);
-                    addPostGenerationButtons(contentArea, themeId, themeType);
+                    const proseDiv = document.createElement('div');
+                    proseDiv.className = 'prose max-w-none';
+                    proseDiv.innerHTML = convertMarkdownToHtml(newText, true);
+                    contentArea.appendChild(proseDiv);
                     generateAndInjectImages(contentArea);
                 }
+                addPostGenerationButtons(contentArea, themeId, themeType);
 
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
@@ -2524,11 +2613,13 @@ Return only the complete markdown guide.`;
             if (errText.includes('safety') || errText.includes('blocked')) {
                 message = `Request blocked for safety reasons. Please try a different prompt.`;
             } else if (errText.includes('api key not valid')) {
-                message = `Authentication failed. Your API Key is not valid.`;
+                message = `Authentication failed. Your API Key is not valid. Please re-enter it.`;
             } else if (errText.includes('429')) {
                 message = `Request limit exceeded. Please try again later.`;
             } else if (errText.includes('timed out')) {
                 message = `The request timed out. Please check your connection and try again.`;
+            } else if (errText.includes('google account to generate images')) {
+                message = `Image generation requires you to connect your Google Account. Please use the 'Connect' button in the Cloud Storage card.`
             }
             return `Sorry, a critical error occurred: ${message}`; 
         }
