@@ -388,7 +388,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.50</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.51</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1950,7 +1950,6 @@
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
 
-            // --- MODIFICATION START: Replaced the old link mandate with a new, more detailed one. ---
             const linkVerificationAndGenerationMandate = `
 * **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
     1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
@@ -1958,7 +1957,6 @@
     3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
     4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
     5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
-            // --- MODIFICATION END ---
             
             const powershellStandard = `
 * **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
@@ -1968,6 +1966,16 @@
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
     * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
     * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
+            
+            // --- MODIFICATION START: Added PowerCLI-specific standards ---
+            const powerCLIStandard = `
+* **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
+    * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
+    * **Use Correct Cmdlets and Properties:** Always use current, official PowerCLI cmdlets. Critically, verify the property names from the objects returned by cmdlets (e.g., the memory size for a VM from \`Get-VM\` is \`MemoryGB\`, not \`Memory\`).
+    * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
+    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
+    * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
+            // --- MODIFICATION END ---
 
 
             if (originalText) {
@@ -1991,6 +1999,7 @@ ${originalText}
     * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
+${powerCLIStandard}
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
@@ -2017,6 +2026,7 @@ When generating the guide, ensure the guide as a whole meets the following requi
 * **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
+${powerCLIStandard}
 
 Return only the complete markdown guide.`;
         }
@@ -2555,7 +2565,7 @@ Return only the complete markdown guide.`;
                 contentArea.innerHTML = '';
                 if (isModal) {
                     // BUG FIX: Disable image generation in modal
-                    renderAccordionFromMarkdown(newText, contentArea, false);
+                    renderAccordionFromMarkdown(newText, contentEl, false);
                 } else {
                     const proseDiv = document.createElement('div');
                     proseDiv.className = 'prose max-w-none';
