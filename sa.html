@@ -398,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.54</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.55</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -2105,10 +2105,10 @@ The guide must be an all-inclusive resource for an IT professional, covering the
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
 
 * **5. Detailed Step-by-Step Instructions:**
-    * **Clarity is Paramount:** Provide a clear, actionable, and ordered guide.
-    * **Granularity:** Break down major steps into smaller, numbered sub-steps.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run. Include example outputs where they would aid understanding.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks (e.g., "Navigate to 'Administration' > 'Users and Groups', then click the 'Add' button.").
+    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title. For example, if the title is "Domain Controller Maintenance", this section must include detailed instructions for using domain controller-specific tools like 'DCDIAG', 'REPADMIN', running health checks, reviewing replication status, checking SYSVOL health, etc. It should not contain generic advice like "install updates" or "perform backups" unless it's within the specific context of the task (e.g., "Backing up Active Directory Integrated Zones").
+    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
+    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
+    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
 
 * **6. Verification and Validation:**
     * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
