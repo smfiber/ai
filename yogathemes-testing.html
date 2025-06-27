@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.39</title>
+    <title>AI Yoga Class & Theme Generator v17.42</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ADDED: Marked.js library for Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,11 +38,21 @@
             line-height: var(--line-height-base, 1.5);
             transition: background-color 0.5s ease, color 0.5s ease;
         }
-        .prose { font-size: inherit; line-height: inherit; }
-        .prose p { margin-bottom: 1em; }
-        .prose ul { margin-left: 1.5em; list-style-type: disc; padding-left: 1em; }
-        .prose li { margin-bottom: 0.5em; }
-        .prose strong:only-child { display: block; margin-top: 1.25em; margin-bottom: 0.75em; }
+        .prose { font-size: inherit; line-height: 1.6; }
+        .prose p { margin-bottom: 1rem; }
+        .prose ul, .prose ol {
+            margin-bottom: 1rem;
+            padding-left: 1.75rem;
+        }
+        .prose ul { list-style-type: disc; }
+        .prose li { margin-bottom: 0.5rem; padding-left: 0.25rem; }
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-accent);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
 
         .card {
             background-color: var(--color-card-bg);
@@ -330,7 +339,7 @@
                     <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
                 </div>
             </div>
-            <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthModalContent" class="p-6 overflow-y-auto"></div>
             <div id="inDepthModalFooter" class="p-4 border-t flex flex-wrap gap-2 justify-center" style="border-color: var(--color-card-border);"></div>
         </div>
     </div>
@@ -371,7 +380,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.39</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.42</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -455,6 +464,12 @@
             setupEventListeners();
             populateTypographySettings();
             setupTour();
+            marked.setOptions({
+                renderer: new marked.Renderer(),
+                gfm: true,
+                breaks: false,
+                sanitize: false
+            });
         });
 
         function setupEventListeners() {
@@ -544,6 +559,8 @@
                 const accordionHeader = e.target.closest('.accordion-header');
                 if (accordionHeader) { 
                     accordionHeader.classList.toggle('active'); 
+                    const icon = accordionHeader.querySelector('.icon');
+                    if (icon) icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
                     accordionHeader.nextElementSibling.classList.toggle('open'); 
                     return;
                 }
@@ -776,9 +793,16 @@
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
-                const resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt);
+                
+                if (typeof resultText === 'object' && resultText !== null) {
+                    const values = Object.values(resultText);
+                    const markdownContent = values.find(v => typeof v === 'string' && v.includes('*'));
+                    resultText = markdownContent || JSON.stringify(resultText, null, 2);
+                }
+
                 originalGeneratedText.set(themeId, resultText); 
-                resultContainer.innerHTML = robustMarkdownToHtml(resultText);
+                resultContainer.innerHTML = convertMarkdownToHtml(resultText);
                 addPostGenerationButtons(resultContainer, themeId, themeType);
             } catch (error) {
                 handleApiError(error, resultContainer, `plan for ${item.title}`);
@@ -791,46 +815,59 @@
             let userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
-            const resultContainer = document.getElementById('gemini-result-container');
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
 
-            let fullPrompt;
-            if (selectedOptions) {
-                fullPrompt = `Generate a creative and inspiring yoga class plan for the theme "${userPrompt}", with a special focus on these elements: ${selectedOptions}. Structure the plan with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Integrate the requested elements naturally within these sections. Return as a single markdown string.`;
-            } else {
-                fullPrompt = `Generate a creative and inspiring yoga class plan based on the user's theme: "${userPrompt}". The class plan should be structured with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Make each section detailed and evocative. Return as a single markdown string.`;
-            }
+            const fullPrompt = getEnhancedPrompt(userPrompt, selectedOptions);
 
-            resultContainer.innerHTML = getLoaderHTML('Generating your custom AI yoga plan...');
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+            
+            titleEl.textContent = `Custom Plan: ${userPrompt}`;
+            contentEl.innerHTML = getLoaderHTML('Generating your custom AI yoga plan...');
+            footerEl.innerHTML = '';
+            modal.classList.remove('hidden');
 
             try {
                 const resultText = await callGeminiAPI(fullPrompt);
                 
                 originalGeneratedText.set('custom-plan', resultText);
-                createAccordionFromMarkdown(resultText, resultContainer);
-                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
+                renderAccordionFromMarkdown(resultText, contentEl);
+                addModalActionButtons(footerEl, 'custom-plan', 'custom');
 
             } catch(error) {
-                handleApiError(error, resultContainer, 'custom yoga plan');
+                handleApiError(error, contentEl, 'custom yoga plan');
             }
         }
-
+        
         function parseJsonWithCorrections(jsonString) {
-            if (!jsonString || typeof jsonString !== 'string') {
-                throw new Error("Invalid input: not a string.");
+            if (typeof jsonString !== 'string') {
+                console.warn("parseJsonWithCorrections received non-string input:", jsonString);
+                if (typeof jsonString === 'object' && jsonString !== null) {
+                    try {
+                        jsonString = JSON.stringify(jsonString);
+                    } catch (e) {
+                         throw new Error("Input is a non-stringifiable object.");
+                    }
+                } else {
+                    throw new Error("Invalid input: not a string or stringifiable object.");
+                }
             }
-            let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
+            
+            let cleanedString = jsonString.replace(/^```(json|markdown)?\s*/, '').replace(/\s*```$/, '').trim();
+            cleanedString = cleanedString.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
             cleanedString = cleanedString.replace(/,\s*(}|])/g, '$1');
 
             try {
                 return JSON.parse(cleanedString);
             } catch (error) {
-                console.error("Failed to parse JSON even after cleaning:", error);
-                console.error("Original string:", jsonString);
-                console.error("Cleaned string:", cleanedString);
-                throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
+                console.error("JSON Parse Error:", error.message);
+                console.error("Original string for context:", jsonString);
+                console.error("Cleaned string before parse:", cleanedString);
+                throw new Error(`JSON Parse Error: ${error.message}.`);
             }
         }
 
@@ -978,61 +1015,90 @@
             loader.classList.toggle('flex', isLoading);
         }
         
-        // UPDATED: Made function more robust to handle non-string inputs.
-        function robustMarkdownToHtml(text) {
-            const errorMessage = '<p class="themed-text-muted">No content was generated. Please try a different prompt or refine your request.</p>';
-            
-            // --- START FIX ---
-            // If we receive an object, try to find a markdown string within it.
-            if (text !== null && typeof text === 'object') {
-                console.error("robustMarkdownToHtml received an object:", text);
-                // A common pattern might be an object with a single key holding the text.
-                if (Object.keys(text).length === 1) {
-                    text = text[Object.keys(text)[0]];
-                } else {
-                    // If it's more complex, log it and show an error.
-                    return '<p class="text-red-500 font-bold">Error: Received complex data structure instead of Markdown text. Check the console for details.</p>';
-                }
+        // NEW: Standardized markdown conversion from IT Hub
+        function convertMarkdownToHtml(text) {
+            if (!text || typeof text !== 'string') {
+                return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
-
-            // Ensure we have a string before proceeding.
-            if (typeof text !== 'string') {
-                console.error("robustMarkdownToHtml could not resolve to a string:", text);
-                return errorMessage; 
-            }
-            // --- END FIX ---
-
-            if (!text || text.trim() === '' || text.includes('No content received from AI')) {
-                return errorMessage;
-            }
-
             let cleanText = text.replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
             if (!cleanText) {
-                return errorMessage;
+                 return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
+            }
+            return marked.parse(cleanText);
+        }
+        
+        // NEW: Robust accordion renderer from IT Hub
+        function renderAccordionFromMarkdown(markdownText, containerElement) {
+            containerElement.innerHTML = ''; 
+            if (!markdownText || !markdownText.trim()) {
+                containerElement.innerHTML = convertMarkdownToHtml(null);
+                return;
             }
 
-            // Custom renderer to apply theme styles
-            const renderer = new marked.Renderer();
-            renderer.heading = (text, level) => {
-                if (level === 2) {
-                    return `<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-3">${text}</h2>`;
+            const fullHtml = convertMarkdownToHtml(markdownText);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = fullHtml;
+
+            const nodes = Array.from(tempDiv.childNodes);
+            let currentAccordionItem = null;
+            let introContent = document.createElement('div');
+            introContent.className = 'accordion-intro mb-4 prose max-w-none';
+
+            let firstHeaderFound = false;
+
+            nodes.forEach(node => {
+                const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1');
+
+                if (!firstHeaderFound && !isHeader) {
+                    introContent.appendChild(node.cloneNode(true));
+                    return;
                 }
-                if (level === 3) {
-                    return `<h3 class="text-xl font-semibold themed-text-accent mt-6 mb-2">${text}</h3>`;
+                
+                if (isHeader) {
+                    firstHeaderFound = true;
+                    if (introContent.hasChildNodes()) {
+                        containerElement.appendChild(introContent);
+                        introContent = document.createElement('div'); 
+                        introContent.className = 'accordion-intro mb-4 prose max-w-none';
+                    }
+
+                    currentAccordionItem = document.createElement('div');
+                    currentAccordionItem.className = 'accordion-item';
+
+                    const title = node.textContent;
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'accordion-content prose max-w-none';
+
+                    currentAccordionItem.innerHTML = `
+                        <button type="button" class="accordion-header">
+                            <span class="text-left">${title}</span>
+                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    `;
+                    currentAccordionItem.appendChild(contentDiv);
+                    containerElement.appendChild(currentAccordionItem);
+                } else if (currentAccordionItem) {
+                    const contentDiv = currentAccordionItem.querySelector('.accordion-content');
+                    contentDiv.appendChild(node.cloneNode(true));
                 }
-                return `<h${level}>${text}</h${level}>`;
-            };
+            });
+            
+            if (!firstHeaderFound) {
+                containerElement.innerHTML = fullHtml;
+                return;
+            }
 
-            renderer.list = (body, ordered) => {
-                const tag = ordered ? 'ol' : 'ul';
-                return `<${tag} class="list-disc pl-5 space-y-2 mb-4">${body}</${tag}>`;
-            };
+            if (introContent.hasChildNodes()) {
+                containerElement.appendChild(introContent);
+            }
 
-            renderer.paragraph = (text) => {
-                return `<p class="mb-4">${text}</p>`;
-            };
-
-            return marked.parse(cleanText, { renderer });
+            const firstItem = containerElement.querySelector('.accordion-item');
+            if (firstItem) {
+                const header = firstItem.querySelector('.accordion-header');
+                header.classList.add('active');
+                header.querySelector('.icon').style.transform = 'rotate(180deg)';
+                firstItem.querySelector('.accordion-content').classList.add('open');
+            }
         }
 
 
@@ -1058,6 +1124,17 @@
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
                  const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
                  if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
+            });
+        }
+        
+        function addModalActionButtons(container, themeId, themeType) {
+             container.innerHTML = `
+                <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+            `;
+             container.querySelector('.copy-button').addEventListener('click', e => {
+                 const contentToCopy = document.getElementById('inDepthModalContent');
+                 copyElementTextToClipboard(contentToCopy, e.target);
             });
         }
 
@@ -1201,50 +1278,57 @@
             }
             document.body.removeChild(textarea);
         }
-
-        function createAccordionFromMarkdown(markdownText, containerElement) {
-            containerElement.innerHTML = ''; 
-            const cleanMarkdown = (markdownText || "").replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
-            
-            if (cleanMarkdown.includes('### ')) {
-                 const sections = cleanMarkdown.split(/\n(?=### |## )/);
-                 sections.forEach((sectionText, index) => {
-                    if (!sectionText.trim()) return;
-
-                    const firstLineEnd = sectionText.indexOf('\n');
-                    const titleLine = firstLineEnd !== -1 ? sectionText.substring(0, firstLineEnd) : sectionText;
-                    const title = titleLine.replace(/### |## /g, '').trim();
-                    const content = firstLineEnd !== -1 ? sectionText.substring(firstLineEnd).trim() : '';
-
-                    if (!title) return; // Skip empty sections
-
-                    const accordionItem = document.createElement('div');
-                    accordionItem.className = 'accordion-item';
-                    accordionItem.innerHTML = `
-                        <button type="button" class="accordion-header">
-                            <span class="text-left">${title}</span>
-                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content">${robustMarkdownToHtml(content)}</div>
-                    `;
-                    containerElement.appendChild(accordionItem);
-
-                    if (index === 0) { // Open the first section by default
-                        accordionItem.querySelector('.accordion-header').classList.add('active');
-                        accordionItem.querySelector('.accordion-content').classList.add('open');
-                    }
-                });
-            } else {
-                 containerElement.innerHTML = robustMarkdownToHtml(cleanMarkdown);
-            }
-        }
         
+        // NEW: Centralized prompt generation
+        function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
+             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
+             
+             if (originalText) {
+                return `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to refine it. Your task is to rewrite the entire yoga plan to incorporate the user's request.
+
+**ORIGINAL YOGA PLAN:**
+---
+${originalText}
+---
+
+**USER'S REFINEMENT REQUEST:**
+"${task}"
+
+**Instructions for rewriting:**
+1.  **Structure:** Create clear, descriptive section headers using '###' markdown syntax.
+2.  **Integrate:** Seamlessly integrate the user's request into the plan.
+3.  **Completeness:** The entire rewritten guide must be a complete, stand-alone yoga plan.
+
+Return only the new, complete, and rewritten markdown guide.`;
+            }
+
+            let contextText = `for the theme: "${task}"`;
+             if (context.cardTitle) {
+                contextText = `for the following topic.
+- **Category:** "${context.cardTitle}"
+- **Topic Description:** "${context.cardDescription}"
+- **Specific Theme:** "${task}"`;
+            }
+
+            return `You are an expert yoga instructor AI. Generate a creative and inspiring yoga class plan ${contextText}. ${optionsText}
+
+Your task is to structure this plan into logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax (e.g., ### Theme Introduction). The content within each section should be detailed and evocative.
+
+When generating the plan, ensure it includes the following sections:
+-   **Theme Introduction**: Briefly explain the theme and its intention.
+-   **Opening Meditation & Breathwork**: A short grounding meditation and a relevant pranayama technique.
+-   **Warm-up Sequence**: Gentle movements to prepare the body.
+-   **Main Sequence**: A series of poses (asanas) that embody the theme.
+-   **Peak Pose(s)**: One or two key poses that are the energetic high point of the class.
+-   **Cool-down & Stretches**: Gentle poses to wind down.
+-   **Savasana & Closing**: Guided relaxation for integration and a closing thought or mantra.
+
+Return only the complete markdown plan.`;
+        }
+
         async function handleExploreInDepth(themeId, themeType) {
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
-            if (!item) {
-                console.error("Could not find item for in-depth view", {themeId, themeType});
-                return;
-            }
+            if (!item) return;
 
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
@@ -1261,32 +1345,16 @@
             
             const isWeeklyPlan = themeType === 'hipReplacement';
             const prompt = isWeeklyPlan
-              ? `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork", "Evening Restorative") as a JSON array. Each object in the array should have a "title" for the routine and "content" with detailed, safety-focused instructions in markdown format.`
-              : `Generate a creative and inspiring yoga class plan based on the theme: "${item.title}". Structure the plan with detailed, descriptive sections using '###' markdown headers: "Theme Introduction", "Opening Meditation & Breathwork", "Warm-up Sequence", "Main Sequence", "Peak Pose(s)", "Cool-down & Stretches", and "Savasana & Closing". Make each section very detailed and evocative. Return as a single markdown string.`;
+              ? `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork"). For each routine, create a "title" and "content" with detailed, safety-focused instructions in markdown format. Structure the entire response as a single markdown document where each routine's title is a '###' header.`
+              : getEnhancedPrompt(item.title, '', '', { cardTitle: item.title, cardDescription: item.description });
 
             try {
-                const resultText = await callGeminiAPI(prompt, isWeeklyPlan);
+                let resultText = await callGeminiAPI(prompt);
+                
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 
-                if(isWeeklyPlan) {
-                    const routines = parseJsonWithCorrections(resultText);
-                    contentEl.innerHTML = '';
-                    routines.forEach((routine, index) => {
-                        const accordionItem = document.createElement('div');
-                        accordionItem.className = 'accordion-item';
-                        accordionItem.innerHTML = `<button type="button" class="accordion-header"><span class="text-left">${routine.title}</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content">${robustMarkdownToHtml(routine.content)}</div>`;
-                        contentEl.appendChild(accordionItem);
-                        if (index === 0) {
-                            accordionItem.querySelector('.accordion-header').classList.add('active');
-                            accordionItem.querySelector('.accordion-content').classList.add('open');
-                        }
-                    });
-                } else {
-                     createAccordionFromMarkdown(resultText, contentEl);
-                }
-
-                footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
-                footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                renderAccordionFromMarkdown(resultText, contentEl);
+                addModalActionButtons(footerEl, themeId, themeType);
 
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
@@ -1312,7 +1380,7 @@
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
+            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container');
             const footerEl = document.getElementById('inDepthModalFooter');
             
             const themeId = isModal ? footerEl.dataset.themeId : contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
@@ -1327,12 +1395,10 @@
             
             contentArea.innerHTML = getLoaderHTML(`Refining plan based on your request...`);
             
-            const prompt = `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to change it. Your task is to rewrite the entire yoga plan to incorporate the user's request. **ORIGINAL YOGA PLAN:**\n---\n${originalText}\n---\n\n**USER'S REFINEMENT REQUEST:**\n"${promptText}"\n\nRewrite the full yoga plan based on the user's request. Maintain the original structure (e.g., JSON format for weekly plans, or '###' markdown headers for regular plans) and level of detail. Return only the new, complete, and rewritten plan in the original format.`;
+            const prompt = getEnhancedPrompt(promptText, '', originalText);
             
-            const isWeeklyPlan = isModal && footerEl.dataset.themeType === 'hipReplacement';
-
             try {
-                const newText = await callGeminiAPI(prompt, isWeeklyPlan);
+                const newText = await callGeminiAPI(prompt);
                 if (!newText || newText.trim() === '') {
                     handleApiError({ message: "The AI returned an empty response. Please try refining with a different request." }, contentArea, 'refinement');
                     return;
@@ -1341,18 +1407,10 @@
                 originalGeneratedText.set(textKey, newText);
                 
                 if (isModal) {
-                    const contentEl = document.getElementById('inDepthModalContent');
-                    if (isWeeklyPlan) {
-                         const routines = parseJsonWithCorrections(newText);
-                         createAccordionFromMarkdown(routines.map(r => `### ${r.title}\n${r.content}`).join('\n'), contentEl);
-                    } else {
-                        createAccordionFromMarkdown(newText, contentEl);
-                    }
-                    footerEl.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm modal-copy-button">Copy Text</button>`;
-                    footerEl.querySelector('.modal-copy-button').addEventListener('click', (e) => copyElementTextToClipboard(contentEl, e.currentTarget));
+                    renderAccordionFromMarkdown(newText, contentArea);
                     if (refineContainer) refineContainer.remove();
                 } else {
-                    createAccordionFromMarkdown(newText, contentArea);
+                    contentArea.innerHTML = convertMarkdownToHtml(newText);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
                 }
 
