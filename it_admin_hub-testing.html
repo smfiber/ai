@@ -1947,23 +1947,24 @@
             modal.classList.remove('hidden');
         }
 
-        function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-            
+function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
+            const optionsText = options ?
+`With a special focus on these elements: ${options}.` :
+                '';
             const linkIntegrityMandate = `
-* **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. Prioritize official vendor documentation, stable product pages, or primary source articles. All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available.`;
+* **Link Integrity Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks. [cite: 577] Before providing a URL, you must ensure it is the most authoritative and direct link for the given topic. [cite: 578] Prioritize official vendor documentation, stable product pages, or primary source articles. [cite: 579] All links must lead directly to the relevant content and be highly unlikely to be broken or result in a 404 error. [cite: 580] Avoid links to transient sources like forum discussions or social media unless they are the definitive best resource available. [cite: 581]`;
 
             // ==================================================================
-            // === POWERSHELL INSTRUCTION ENHANCEMENT ===========================
+            // === NEW POWERSHELL INSTRUCTION ENHANCEMENT =======================
             // ==================================================================
             const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality and robustness:
-    * **Validation & Correctness:** Internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script that performs the intended task correctly.
-    * **Best Practices & Modern Cmdlets:** Use modern cmdlets (e.g., \`Get-CimInstance\` over \`Get-WmiObject\`).
-    * **Efficient Filtering:** This is critical. For cmdlets like \`Get-WinEvent\`, \`Get-ADUser\`, etc., you MUST use the \`-FilterHashtable\` or \`-Filter\` parameter for efficient, server-side filtering. DO NOT pipe the entire output of a cmdlet to \`Where-Object\` for initial filtering. For example, instead of \`Get-WinEvent -LogName Application | Where-Object {$_.Id -eq 1000}\`, you MUST use \`Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000}\`. This is non-negotiable for performance and correctness.
-    * **Robust Error Handling:** Always wrap script logic in a \`try { ... } catch { ... }\` block. In the \`try\` block, cmdlets that might fail must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered reliably.
-    * **Correct Property Names:** In loops or output, use the correct, official property names from the objects returned by cmdlets (e.g., use \`$_.Id\` for the event ID from \`Get-WinEvent\`, not \`$_.EventId\`).
-    * **Clarity:** Use clear variable names, comments for complex logic, and consistent formatting.`;
+* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
+    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
+    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. [cite: 585] DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset. [cite: 586]
+    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. [cite: 588] Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. [cite: 589] Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
+    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
+    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting. [cite: 591]`;
             // ==================================================================
             // === END OF ENHANCEMENT ===========================================
             // ==================================================================
@@ -1971,8 +1972,9 @@
 
             if (originalText) {
                 // This is the prompt for refining existing text
-                return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
-
+                return `You are an expert senior IT administrator AI. [cite: 592]
+A user has provided an IT guide and a request to refine it. [cite: 593]
+Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible. [cite: 594]
 **ORIGINAL IT GUIDE:**
 ---
 ${originalText}
@@ -1982,13 +1984,13 @@ ${originalText}
 "${task}"
 
 **Instructions for rewriting:**
-1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
-2.  **Integrate:** Seamlessly integrate the user's request into the guide.
+1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. [cite: 595] Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content. [cite: 596]
+2.  **Integrate:** Seamlessly integrate the user's request into the guide. [cite: 597]
 3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-${linkIntegrityMandate}
+    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`). [cite: 598]
+    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios. [cite: 599]
+    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links. [cite: 600]
+    ${linkIntegrityMandate}
 ${powershellStandard}
 
 Return only the new, complete, and rewritten markdown guide.`;
@@ -2000,20 +2002,22 @@ Return only the new, complete, and rewritten markdown guide.`;
                 contextText = `for the following topic.
 - **Category:** "${context.cardTitle}"
 - **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${task}"`;
+- **Specific Task:** "${task}"`; [cite: 603]
             }
 
-            return `You are an expert senior IT administrator AI. Generate a comprehensive and practical guide ${contextText}. ${optionsText}
+            return `You are an expert senior IT administrator AI. [cite: 604]
+Generate a comprehensive and practical guide ${contextText}. ${optionsText}
 
-Your task is to structure this guide into the most logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content within each section should be detailed and practical.
-
+Your task is to structure this guide into the most logical and helpful sections. [cite: 605]
+For each section, create a clear and descriptive header using '###' markdown syntax. [cite: 606]
+The content within each section should be detailed and practical. [cite: 607]
 When generating the guide, ensure the guide as a whole meets the following requirements for the specific technology being discussed:
 
-* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements.
-* **Verification:** Include a section on how to verify the task was successful.
+* **Prerequisites:** Create a dedicated "Prerequisites" section that details relevant administrative roles, permissions, and any specific licensing requirements. [cite: 608]
+* **Verification:** Include a section on how to verify the task was successful. [cite: 609]
 * **Troubleshooting:** Include a section covering common problems.
-* **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links.
-* **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. Use the format: [Screenshot: A clear, concise description].
+* **Helpful Resources:** Include a final section with a bulleted list of high-quality, relevant links. [cite: 610]
+* **Screenshot Placeholders:** Include placeholders for screenshots where visual context would be beneficial. [cite: 611] Use the format: [Screenshot: A clear, concise description].
 ${linkIntegrityMandate}
 ${powershellStandard}
 
