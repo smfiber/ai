@@ -292,6 +292,16 @@
             border: 2px solid var(--color-primary);
             box-shadow: 0 0 10px var(--color-primary);
         }
+        
+        /* NEW: Style for the 'Add New Topic' section */
+        .add-topic-container {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-card-border);
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
 
     </style>
 </head>
@@ -388,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.51</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.52</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -802,7 +812,14 @@
                      handleSaveToDriveClick(e.target);
                      return;
                 }
-
+                
+                // --- NEW FEATURE: Handle Add New Topic button click ---
+                const addTopicBtn = e.target.closest('.add-topic-button');
+                if(addTopicBtn) {
+                    handleAddNewTopic(addTopicBtn);
+                    return;
+                }
+                
                 const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
                 if (tailorBtn) {
                     tailorBtn.classList.toggle('active');
@@ -1472,11 +1489,12 @@
                     </div>
                 ` : '';
 
+                // --- MODIFICATION: Added a unique ID to the grid card selector for easy targeting ---
                 const newClass = isNew ? 'new-item-highlight' : '';
                 const truncatedTitle = truncateText(cleanTitle, 50);
 
                 return `
-                <div class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
+                <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
                     ${viewedIndicatorHtml}
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
                     <div class="mt-2 overflow-hidden">
@@ -1484,6 +1502,14 @@
                     </div>
                 </div>`;
             }).join('');
+            
+            // --- NEW FEATURE: HTML for the 'Add New Topic' form ---
+            const addNewTopicHtml = `
+                <div class="add-topic-container">
+                    <input type="text" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
+                    <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-theme-type="${themeType}">Add Topic</button>
+                </div>
+            `;
             
             const fullPrompt = fullPrompts[themeType];
             let actionButtonsHtml = '';
@@ -1510,8 +1536,43 @@
                         </div>`;
                 }
             }
-            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${actionButtonsHtml}`;
+            // --- MODIFICATION: Combine all HTML parts ---
+            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
         }
+        
+        // --- NEW FEATURE: Function to handle adding a custom topic ---
+        async function handleAddNewTopic(button) {
+            const { containerId, themeType } = button.dataset;
+            const inputField = button.previousElementSibling;
+            const newTitle = inputField.value.trim();
+
+            if (!newTitle) {
+                inputField.focus();
+                return;
+            }
+
+            const newTopic = {
+                title: newTitle,
+                id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
+                description: newTitle // Use the title as the description
+            };
+
+            allThemeData[themeType].push(newTopic);
+            allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
+
+            // Rerender the grid to include the new topic
+            populateCardGridSelector(containerId, themeType, new Set([newTopic.id]));
+
+            // Find the newly created element in the DOM
+            const newTopicElement = document.getElementById(`grid-selector-${newTopic.id}`);
+            if (newTopicElement) {
+                // Programmatically select the new element and generate its summary
+                newTopicElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // The active class is added by handleGridSelect
+                await handleGridSelect(newTopicElement);
+            }
+        }
+
 
         async function handleGenerateMoreClick(button) {
             const { containerId, themeType } = button.dataset;
@@ -1601,6 +1662,16 @@
                 return;
             }
             
+            // --- MODIFICATION: Make sure target gets the active class ---
+            // Clear any previously active button in the same grid
+            const gridContainer = target.closest('.card-grid-container');
+            const currentlyActive = gridContainer.querySelector('.active');
+            if (currentlyActive) {
+                currentlyActive.classList.remove('active');
+            }
+            target.classList.add('active');
+
+
             const card = target.closest('.card');
             const cardTitle = card.querySelector('h2').textContent;
             const cardDescription = card.querySelector('p').textContent;
