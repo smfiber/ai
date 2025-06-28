@@ -1687,17 +1687,38 @@
                 target.prepend(indicator);
             }
 
+            const prompt = `You are an Expert Technical Editor AI specializing in condensing complex IT documentation into concise, actionable summaries. Your task is to generate a brief, structured summary for the following topic.
 
-            const prompt = `
-                You are creating a summary for an IT administration guide.
-                The overall category is: "${cardTitle}"
-                The category description is: "${cardDescription}"
-                The specific topic is: "${item.title}"
+To ensure the summary is accurate and comprehensive, you will follow a two-step internal process:
+1.  **Conceptualize:** First, you will internally conceptualize a full, in-depth guide on the topic below. This conceptual guide must be based on your established **PROTOCOL 1 (Mandatory Guide Structure)**, covering everything from prerequisites to advanced automation.
+2.  **Summarize:** Second, you will synthesize the most critical information from that conceptual guide into the required five-point summary format.
 
-                Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
-                For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence.
-                Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
-            `;
+---
+**TOPIC:**
+"${item.title}"
+---
+
+**REQUIRED OUTPUT FORMAT:**
+Generate a simple markdown string consisting of exactly five bullet points. Each bullet point must be a single, clear, and descriptive sentence.
+
+* **Objective:** [State the primary goal or purpose of the task.]
+* **Prerequisites:** [Summarize the most critical permissions or software needed.]
+* **Key Steps:** [Describe the core sequence of actions in a single sentence.]
+* **Verification:** [Explain how an administrator would confirm the task was successful.]
+* **Helpful Resources:** [Describe the most important type of resource to consult, such as official documentation or a specific tool.]
+
+---
+**EXAMPLE OUTPUT:**
+For clarity, a perfect response for the topic "Disable a User Mailbox in Microsoft 365" would be:
+
+* **Objective:** Securely disable mailbox access for a departing user while retaining the mailbox data for a set period according to retention policies.
+* **Prerequisites:** Requires the 'Exchange Administrator' or 'Global Administrator' role in Microsoft 365 and the user's principal name.
+* **Key Steps:** The process involves connecting to Exchange Online via PowerShell, using the \`Disable-Mailbox\` cmdlet with the user's identity, and confirming the action.
+* **Verification:** Successful completion is verified by running the \`Get-Mailbox\` cmdlet for the user, which should no longer return an active mailbox object.
+* **Helpful Resources:** Always refer to the official Microsoft Learn documentation for the \`Disable-Mailbox\` cmdlet for the latest parameters and examples.
+---
+
+Return only the 5-point markdown summary string.`;
             
             const resultContainer = document.getElementById(`${themeType}-details`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
@@ -2018,131 +2039,103 @@
             modal.classList.remove('hidden');
         }
 
+        /**
+         * Generates a prompt for the Gemini API.
+         * This function operates in two modes:
+         * 1. Refinement Mode: If 'originalText' is provided, it creates a prompt to rewrite that text based on the 'task' (which is a refinement request).
+         * 2. Generation Mode: If 'originalText' is null, it creates a new, in-depth guide based on the "System Directive" and "Task Prompt" structure.
+         * @param {string} task - The core task or topic for the guide, or the refinement request.
+         * @param {string} [options=''] - Optional tailoring keywords (e.g., 'for beginners').
+         * @param {string} [originalText=''] - The original markdown text to be refined. If present, triggers refinement mode.
+         * @param {object} [context={}] - Additional context, like the category title and description.
+         * @returns {string} The complete prompt for the Gemini API.
+         */
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-
-            const linkVerificationAndGenerationMandate = `
-* **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
-    1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
-    2.  **Identify Search Topics:** From the list of helpful resources you just generated, identify the specific, core topics that need a URL. For example, from "Official Kubernetes Documentation", the topic is "Kubernetes official documentation".
-    3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
-    4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
-    5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
             
-            const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
-    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
-    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
-    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
-    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
-            
-            const powerCLIStandard = `
-* **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
-    * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
-    * **Use Correct Cmdlets and Properties:** Always use current, official PowerCLI cmdlets. Critically, verify the property names from the objects returned by cmdlets (e.g., the memory size for a VM from \`Get-VM\` is \`MemoryGB\`, not \`Memory\`).
-    * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
-    * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
+            const systemDirective = `[SYSTEM PROMPT - Your AI's Core Operating System]
+PERSONA & CORE DIRECTIVE:
+You are an expert system designed exclusively for generating elite-level IT documentation. Your persona is a Senior Principal IT Administrator and Technical Writer. Your entire operational process is governed by the strict protocols outlined below.
+PROTOCOL 1: MANDATORY GUIDE STRUCTURE
+Every guide you generate must follow this 13-part structure using '###' for headers.
 
+0. Executive Summary
+1. Introduction
+2. Architectural Overview
+3. Key Concepts & Terminology
+4. Prerequisites
+5. Detailed Step-by-Step Instructions
+6. Verification and Validation
+7. Best Practices (Security, Performance, Maintainability)
+8. Automation Opportunities
+9. Security Considerations
+10. Advanced Use Cases & Scenarios
+11. Troubleshooting
+12. Helpful Resources
+PROTOCOL 2: HYPERLINK GENERATION MANDATE
+You must generate valid, authoritative hyperlinks via your internal web search and verification process.
+PROTOCOL 3: POWERSHELL SCRIPTING MANDATE
+All PowerShell scripts must be production-grade, using modern cmdlets, "Filter Right" techniques, robust try/catch error handling, and be self-contained.
+PROTOCOL 4: POWERCLI SCRIPTING MANDATE
+All PowerCLI scripts must be production-grade, using verified properties, efficient filtering, robust error handling, and proper session cleanup.`;
+
+            // --- REFINEMENT MODE ---
             if (originalText) {
-                // This is the prompt for refining existing text
-                return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
+                const refinementProtocol = `PROTOCOL 5: DOCUMENT REFINEMENT MANDATE
+When tasked with refining an existing document, you will execute the following four-phase process:
+Phase 1: Analysis.
+* Deconstruct the {original_text} to identify its core concepts, structure, and intent.
+* Deconstruct the {refinement_request} to pinpoint the user's specific goals, additions, and desired changes.
+Phase 2: Synthesis & Restructuring.
+* Do not merely edit the original text. Create a new, superior guide by merging the original content with the user's request.
+* Design the most logical new structure for the combined content. Create new, clear, and descriptive ### headers. The original structure is not a constraint.
+* Rewrite the content to be seamless, clear, and authoritative.
+Phase 3: Quality Assurance.
+* Proactively apply all Core Directives to the newly synthesized guide.
+* Links: All hyperlinks must be validated according to Protocol 2.
+* PowerShell: All PowerShell scripts must be re-validated or rewritten to meet every rule in Protocol 3.
+* PowerCLI: All PowerCLI scripts must be re-validated or rewritten to meet every rule in Protocol 4.
+Phase 4: Reporting.
+* Before presenting the final guide, provide a concise "Summary of Changes." This summary must be a bulleted list explaining what you changed and why, directly referencing the user's request.`;
+                
+                const refinementUserPrompt = `[USER PROMPT]
+You will act as an expert system to refine an existing IT guide. Execute this task by strictly following PROTOCOL 5: DOCUMENT REFINEMENT MANDATE.
 
-**ORIGINAL IT GUIDE:**
 ---
+**ORIGINAL GUIDE:**
 ${originalText}
 ---
 
-**USER'S REFINEMENT REQUEST:**
+---
+**REFINEMENT REQUEST:**
 "${task}"
+---
 
-**Instructions for rewriting:**
-1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
-2.  **Integrate:** Seamlessly integrate the user's request into the guide.
-3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
+First, provide the "Summary of Changes" section, then return the new, complete, and rewritten markdown guide.`;
 
-Return only the new, complete, and rewritten markdown guide.`;
+                return `${systemDirective}\n\n${refinementProtocol}\n\n${refinementUserPrompt}`;
             }
 
-            // This is the prompt for generating new guides from scratch
-            let contextText = `for the task: "${task}"`;
-            if (context.cardTitle) {
-                contextText = `for the following topic.
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${task}"`;
-            }
+            // --- GENERATION MODE ---
+            const generationUserPrompt = `Execute your core generation protocols (Protocol 1-4) to create a comprehensive guide based on the following detailed context.
 
-            return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
+### CONTEXT FOR GUIDE GENERATION
 
-The guide must be an all-inclusive resource for an IT professional, covering the topic from foundational knowledge to advanced application. Structure the guide logically using the following sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content must be detailed, accurate, and reflect real-world best practices.
+* **High-Level Category/Technology:** \`${context.cardTitle || 'General IT'}\`
+* **Contextual Description:** \`${context.cardDescription || 'N/A'}\`
+* **Specific Task & Guide Focus:** \`${task}\`
 
-**REQUIRED GUIDE STRUCTURE & CONTENT:**
+### INSTRUCTIONS FOR CONTENT FOCUS
 
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-
-* **5. Detailed Step-by-Step Instructions:**
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title. For example, if the title is "Domain Controller Maintenance", this section must include detailed instructions for using domain controller-specific tools like 'DCDIAG', 'REPADMIN', running health checks, reviewing replication status, checking SYSVOL health, etc. It should not contain generic advice like "install updates" or "perform backups" unless it's within the specific context of the task (e.g., "Backing up Active Directory Integrated Zones").
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
-
-* **6. Verification and Validation:**
-    * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
-    * Describe what a successful output or system state looks like.
-
-* **7. Best Practices:**
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task. Cover performance, security, and maintainability aspects.
-
-* **8. Automation Opportunities:**
-    * **Why Automate:** Discuss the benefits of automating this task (e.g., consistency, speed, reduced error).
-    * **Scripting Examples:** Provide complete, practical script examples using relevant languages (e.g., PowerShell, PowerCLI, Python, Bash). Scripts must be robust and include comments.
-
-* **9. Security Considerations:**
-    * **Hardening:** Provide specific steps to harden the configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks associated with this task/technology.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging to track relevant events.
-
-* **10. Advanced Use Cases & Scenarios:**
-    * Describe 2-3 advanced or less-common scenarios where this skill can be applied.
-
-* **11. Troubleshooting:**
-    * Provide a table of common problems, their likely causes, and step-by-step solutions. Use the format: **Problem** | **Potential Cause** | **Solution**.
-
-* **12. Helpful Resources:**
-    * Include a final section with a bulleted list of high-quality, relevant links to official documentation, in-depth articles, and community forums.
-
-**MANDATORY QUALITY STANDARDS:**
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
+1.  **Primary Focus:** The "Detailed Step-by-Step Instructions" section (Protocol 1, Section 5) MUST be exclusively dedicated to the **Specific Task**. Do not deviate.
+2.  **Supporting Context:** Use the **High-Level Category** and **Contextual Description** to enrich the "Introduction," "Architectural Overview," and "Key Concepts" sections. This ensures the guide is well-rounded while remaining focused on the specific task.
+3.  **Title Generation:** The main title of the guide should be a clear and direct reflection of the **Specific Task**.
 
 Return only the complete markdown guide.`;
+            
+            return `${systemDirective}\n\n${generationUserPrompt}`;
         }
-        
+
+
         function addModalActionButtons(buttonContainer) {
             buttonContainer.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
