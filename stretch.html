@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        html, body {
+            height: 100%;
+        }
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc; /* slate-50 */
@@ -36,9 +39,8 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Custom modal for alerts and API key input */
         .custom-modal {
-            display: none; /* Changed to none by default */
+            display: none; 
             position: fixed;
             z-index: 100;
             left: 0;
@@ -55,7 +57,7 @@
             padding: 24px;
             border: 1px solid #888;
             width: 80%;
-            max-width: 400px;
+            max-width: 450px;
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -68,7 +70,35 @@
             border-radius: 8px;
             cursor: pointer;
             margin-top: 16px;
+            width: 100%;
         }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #475569;
+        }
+        .tab-button.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .action-btn {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid;
+            transition: all 0.2s;
+        }
+        .approve-btn { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .approve-btn:hover { background-color: #bbf7d0; }
+        .deny-btn { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .deny-btn:hover { background-color: #fecaca; }
+        .illustrate-btn { background-color: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+        .illustrate-btn:hover { background-color: #c7d2fe; }
     </style>
 </head>
 <body class="text-slate-800">
@@ -78,7 +108,7 @@
 
         <!-- Header -->
         <header class="w-full bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
-            <div class="mx-auto flex justify-between items-center p-4 px-4 md:px-8">
+            <div class="w-full flex justify-between items-center p-4 px-4 md:px-8">
                 <div class="flex items-center space-x-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M16.465 16.465a5 5 0 1 0-7.07-7.07l7.07 7.07Z"/><path d="m10.243 19.314 5.303-5.303"/><path d="M14.121 15.536 12 17.657"/><path d="m12.687 12.687 5.303-5.303"/><path d="m8.808 11.879 2.121-2.121"/><path d="m7.364 7.364 5.303 5.303"/><path d="m2.05 2.05 5.303 5.303"/></svg>
                     <h1 class="text-2xl font-bold text-slate-900">The Stretch Solution</h1>
@@ -88,622 +118,577 @@
                     <a href="#" id="about-link" class="text-slate-600 hover:text-indigo-600 transition-colors">About</a>
                     <a href="#" id="my-routines-link" class="text-slate-600 hover:text-indigo-600 transition-colors">My Routines</a>
                 </nav>
-                 <div id="auth-container" class="flex items-center space-x-2">
-                    <!-- This will be populated by script -->
-                </div>
+                 <div id="auth-container" class="flex items-center space-x-2"></div>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="flex-grow py-10 px-4 md:px-8">
-            <!-- Routine Creation Section -->
-            <div id="creation-section" class="view active max-w-4xl mx-auto text-center">
-                <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Intelligent Stretching, Personalized for You</h2>
-                <p class="mt-4 text-lg text-slate-600">Select your focus and preferences to begin your custom stretching routine.</p>
-
-                <div class="mt-10 p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <!-- Muscle & Ailment Selection -->
-                        <div>
-                            <label for="muscle-select" class="block text-sm font-medium text-slate-700 mb-1">Choose a Muscle</label>
-                            <select id="muscle-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                <option value="">-- Select a Major Muscle --</option>
-                            </select>
+        <main class="flex-grow w-full py-10 px-4 md:px-8">
+            <div id="app-content" class="hidden">
+                <!-- Routine Creation Section -->
+                <div id="creation-section" class="view active w-full mx-auto text-center">
+                    <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Intelligent Stretching, Personalized for You</h2>
+                    <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Select your focus and preferences to begin your custom stretching routine.</p>
+                    <div class="mt-10 p-6 md:p-8 bg-white border border-slate-200 rounded-xl shadow-sm max-w-5xl mx-auto">
+                        <div class="border-b border-slate-200 mb-6">
+                            <nav class="-mb-px flex flex-wrap justify-center gap-x-6" aria-label="Tabs">
+                                <button class="tab-button active" data-tab="search">Custom Search</button>
+                                <button class="tab-button" data-tab="muscle">Target Muscle</button>
+                                <button class="tab-button" data-tab="ailment">Common Ailments</button>
+                                <button class="tab-button" data-tab="yoga">Yoga Asanas</button>
+                            </nav>
                         </div>
-                        <div>
-                            <label for="ailment-select" class="block text-sm font-medium text-slate-700 mb-1">Choose an Ailment</label>
-                            <select id="ailment-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                <option value="">-- Select a Common Ailment --</option>
-                            </select>
-                        </div>
-                        <div class="md:col-span-2 relative">
-                             <p class="text-center text-slate-500 my-2">OR</p>
-                            <label for="search-bar" class="sr-only">Search</label>
-                            <input type="text" id="search-bar" placeholder="Type a muscle, ailment, or feeling..." class="w-full p-3 pl-10 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <svg class="w-5 h-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <div class="grid grid-cols-1 gap-6 text-left">
+                            <div id="search-tab" class="tab-content active">
+                                 <label for="search-bar" class="block text-sm font-medium text-slate-700 mb-1">Enter a Custom Focus</label>
+                                 <div class="relative">
+                                    <input type="text" id="search-bar" placeholder="e.g., 'lower back pain', 'tight hips'..." class="w-full p-3 pl-10 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><svg class="w-5 h-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+                                </div>
+                            </div>
+                            <div id="muscle-tab" class="tab-content">
+                                <label for="muscle-select" class="block text-sm font-medium text-slate-700 mb-1">Choose a Muscle</label>
+                                <select id="muscle-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                            <div id="ailment-tab" class="tab-content">
+                                <label for="ailment-select" class="block text-sm font-medium text-slate-700 mb-1">Choose an Ailment</label>
+                                <select id="ailment-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                            <div id="yoga-tab" class="tab-content">
+                                <label for="yoga-select" class="block text-sm font-medium text-slate-700 mb-1">Focus on Yoga Asanas (Poses)</label>
+                                <select id="yoga-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                            </div>
+                            <div class="border-t border-slate-200 pt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                                 <div>
+                                    <label for="routine-type-select" class="block text-sm font-medium text-slate-700 mb-1">Type of Routine</label>
+                                    <select id="routine-type-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                                </div>
+                                <div>
+                                    <label for="modality-select" class="block text-sm font-medium text-slate-700 mb-1">Stretching Modality</label>
+                                    <select id="modality-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                                </div>
+                                <div>
+                                    <label for="duration-select" class="block text-sm font-medium text-slate-700 mb-1">Duration</label>
+                                    <select id="duration-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                                </div>
+                                <div>
+                                    <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1"># of Exercises</label>
+                                    <select id="exercises-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
+                                </div>
                             </div>
                         </div>
-                        <div class="md:col-span-2 border-t border-slate-200 pt-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-                             <div>
-                                <label for="routine-type" class="block text-sm font-medium text-slate-700 mb-1">Type of Routine</label>
-                                <select id="routine-type" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>General Flexibility</option><option>Warm-up (Pre-Workout)</option><option>Cool-down (Post-Workout)</option><option>Morning Wake-up</option><option>Evening Wind-down</option><option>Office/Desk Relief</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="modality-select" class="block text-sm font-medium text-slate-700 mb-1">Stretching Modality</label>
-                                <select id="modality-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                </select>
-                            </div>
-                             <div>
-                                <label for="duration-select" class="block text-sm font-medium text-slate-700 mb-1">Duration</label>
-                                <select id="duration-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>5 Minutes</option><option selected>10 Minutes</option><option>15 Minutes</option><option>20 Minutes</option><option>30 Minutes</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1"># of Exercises</label>
-                                <select id="exercises-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                                    <option>1 Exercise</option>
-                                    <option>3 Exercises</option>
-                                    <option selected>5 Exercises</option>
-                                    <option>7 Exercises</option>
-                                    <option>10 Exercises</option>
-                                </select>
-                            </div>
+                        <div class="mt-8">
+                            <button id="generate-btn" class="w-full md:w-auto px-10 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all transform hover:scale-105">Generate My Routine</button>
                         </div>
                     </div>
-                     <div class="mt-8">
-                        <button id="generate-btn" class="w-full md:w-auto px-10 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed">
-                            Generate My Routine
-                        </button>
+                </div>
+
+                <div id="results-section" class="view w-full mx-auto">
+                    <div class="text-center mb-8 max-w-5xl mx-auto">
+                         <h2 id="routine-title" class="text-3xl font-bold text-slate-900"></h2>
+                        <div id="routine-summary-icons" class="mt-4 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-slate-600"></div>
+                    </div>
+                    <div id="loader-container" class="flex justify-center items-center h-64"></div>
+                    <div id="routine-list" class="space-y-6 max-w-5xl mx-auto"></div>
+                     <div id="results-buttons" class="mt-8 flex flex-col sm:flex-row justify-center gap-4 hidden">
+                        <button id="save-routine-btn" class="px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Save Routine</button>
+                        <button id="start-over-btn" class="px-6 py-3 text-base font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Start Over</button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Results Section -->
-            <div id="results-section" class="view max-w-4xl mx-auto">
-                <div class="text-center mb-8">
-                     <h2 id="routine-title" class="text-3xl font-bold text-slate-900"></h2>
-                    <div id="routine-summary-icons" class="mt-4 flex justify-center items-center space-x-6 text-slate-600"></div>
+                <div id="my-routines-section" class="view w-full mx-auto">
+                     <h2 class="text-3xl font-bold text-slate-900 mb-6 max-w-5xl mx-auto">My Saved Routines</h2>
+                    <div id="saved-routines-list" class="space-y-4 max-w-5xl mx-auto"></div>
                 </div>
-                <div id="loader-container" class="flex justify-center items-center h-64">
-                    <div class="loader"></div>
-                </div>
-                <div id="routine-list" class="space-y-6"></div>
-                 <div id="results-buttons" class="mt-8 flex-col md:flex-row justify-center gap-4 hidden">
-                    <button id="save-routine-btn" class="px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">Save Routine</button>
-                    <button id="start-over-btn" class="px-6 py-3 text-base font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Start Over</button>
-                </div>
-            </div>
-
-            <!-- My Routines Section -->
-            <div id="my-routines-section" class="view max-w-4xl mx-auto">
-                <h2 class="text-3xl font-bold text-slate-900 mb-6">My Saved Routines</h2>
-                <div id="saved-routines-list" class="space-y-4">
-                    <p class="text-slate-500">You have no saved routines yet.</p>
-                </div>
-            </div>
-            
-             <!-- About Section -->
-            <div id="about-section" class="view max-w-4xl mx-auto">
-                <h2 class="text-3xl font-bold text-slate-900 mb-6">About The Stretch Solution</h2>
-                <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 text-slate-600">
-                    <p>The Stretch Solution is a user-friendly web application that generates customized stretching routines based on specific muscles, common physical ailments, or user search queries.</p>
-                    <p>Our goal is to provide a personalized path to flexibility and relief. The app features AI-generated exercise descriptions, allows users to select their preferred stretching modality and routine type, and tailors the duration and number of exercises to fit their needs.</p>
-                     <p>This project leverages the power of Google's Gemini API for intelligent routine generation and Firebase for secure data storage and user authentication.</p>
+                <div id="about-section" class="view w-full mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-6 max-w-5xl mx-auto">About The Stretch Solution</h2>
+                    <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 text-slate-600 max-w-5xl mx-auto">
+                        <p>...</p>
+                    </div>
                 </div>
             </div>
         </main>
 
         <!-- Footer -->
-        <footer class="text-center py-8 border-t border-slate-200 bg-white">
-             <div class="max-w-4xl mx-auto px-4">
-                <p class="text-xs text-slate-500 max-w-2xl mx-auto">
-                    <strong>Disclaimer:</strong> The Stretch Solution is for informational purposes only and is not a substitute for professional medical advice. Consult with a healthcare professional before beginning any new exercise program.
-                </p>
-                <p id="user-id-display" class="mt-2 text-xs text-slate-400"></p>
-                <p class="mt-4 text-xs text-slate-400">
-                    Version 2.3
-                </p>
+        <footer class="text-center py-8 border-t border-slate-200 bg-white mt-auto">
+             <div class="w-full px-4 md:px-8">
+                <p class="text-xs text-slate-500 max-w-2xl mx-auto">...</p>
+                <p class="mt-4 text-xs text-slate-400">Version 4.6</p>
             </div>
         </footer>
         
-        <!-- Custom Alert Modal -->
+        <!-- MODALS -->
         <div id="custom-alert-modal" class="custom-modal">
-            <div class="modal-content">
-                <p id="modal-text"></p>
-                <button id="modal-close-btn" class="modal-button">OK</button>
+             <div class="modal-content">
+                <p id="modal-text" class="text-slate-700"></p>
+                <button id="modal-close-btn" class="modal-button !mt-6">OK</button>
             </div>
         </div>
-
-        <!-- API Key Modal (NEW) -->
-        <div id="api-key-modal" class="custom-modal" style="display: flex;">
+        
+        <div id="setup-modal" class="custom-modal" style="display: flex;">
             <div class="modal-content">
-                <h3 class="text-lg font-semibold mb-4">Enter Gemini API Key</h3>
-                <p class="text-sm text-slate-600 mb-4">To generate routines, please provide your Google Gemini API key. It's only stored for this session.</p>
-                <input type="password" id="api-key-input" class="w-full p-2 border border-slate-300 rounded-lg" placeholder="Enter your API key...">
-                <button id="save-api-key-btn" class="modal-button">Save & Start</button>
+                 <h3 class="text-xl font-semibold mb-4">Application Setup & Login</h3>
+                <div class="text-left mb-4">
+                    <label for="api-key-input" class="block text-sm font-medium text-slate-700">Gemini API Key (Required)</label>
+                    <input type="password" id="api-key-input" class="mt-1 w-full p-2 border border-slate-300 rounded-lg" placeholder="Enter your Gemini API Key...">
+                </div>
+                <div class="text-left mb-4">
+                     <label for="firebase-config-input" class="block text-sm font-medium text-slate-700">Firebase Config (Required)</label>
+                     <textarea id="firebase-config-input" rows="6" class="mt-1 w-full p-2 border border-slate-300 rounded-lg font-mono text-xs" placeholder="Paste your Firebase config object here..."></textarea>
+                </div>
+                <div class="border-t border-slate-200 my-4"></div>
+                 <div id="auth-tabs" class="border-b border-slate-200 mb-4">
+                    <nav class="-mb-px flex justify-center gap-x-6" aria-label="Tabs">
+                        <button class="tab-button active" data-auth-tab="login">Login</button>
+                        <button class="tab-button" data-auth-tab="signup">Sign Up</button>
+                    </nav>
+                </div>
+                <div id="login-form-container" class="tab-content active" data-auth-tab-content="login">
+                    <form id="login-form" class="space-y-4 text-left">
+                        <div>
+                            <label for="login-email-input" class="block text-sm font-medium text-slate-700">Email</label>
+                            <input type="email" id="login-email-input" required class="mt-1 block w-full px-3 py-2 bg-white border-slate-300 rounded-md text-sm shadow-sm">
+                        </div>
+                        <div>
+                            <label for="login-password-input" class="block text-sm font-medium text-slate-700">Password</label>
+                            <input type="password" id="login-password-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm">
+                        </div>
+                        <button type="submit" class="modal-button">Login & Initialize</button>
+                    </form>
+                </div>
+                <div id="signup-form-container" class="tab-content" data-auth-tab-content="signup">
+                     <form id="signup-form" class="space-y-4 text-left">
+                        <div>
+                            <label for="signup-email-input" class="block text-sm font-medium text-slate-700">Email</label>
+                            <input type="email" id="signup-email-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm">
+                        </div>
+                        <div>
+                            <label for="signup-password-input" class="block text-sm font-medium text-slate-700">Password</label>
+                             <input type="password" id="signup-password-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm">
+                             <p class="text-xs text-slate-500 mt-1">Must be at least 6 characters.</p>
+                        </div>
+                        <button type="submit" class="modal-button">Create Account & Initialize</button>
+                    </form>
+                </div>
             </div>
         </div>
-
     </div>
     
     <script type="module">
-        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, collection, getDocs, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // App and Firebase Configuration
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-stretch-solution';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIza...", authDomain: "...", projectId: "..."}; // Fallback config
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, collection, getDocs, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // --- MODIFICATION: API key is now a 'let' and initialized to null
+        let app, auth, db;
         let geminiApiKey = null; 
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- Data (omitted for brevity, remains unchanged) ---
-        const muscleData = [ { name: "Masseter", location: "Side of the jaw", function: "Elevates the mandible (closes the jaw)" }, { name: "Temporalis", location: "Side of the head", function: "Elevates and retracts the mandible" }, { name: "Sternocleidomastoid", location: "Side of the neck", function: "Rotates head to opposite side, flexes neck" }, { name: "Scalenes", location: "Side of the neck", function: "Elevate ribs, flex and laterally flex neck" }, { name: "Splenius Capitis", location: "Back of the neck", function: "Extends and rotates head" }, { name: "Levator Scapulae", location: "Side of the neck to scapula", function: "Elevates the scapula" }, { name: "Trapezius", location: "Upper back and neck", function: "Elevates, depresses, and retracts scapula" }, { name: "Latissimus Dorsi", location: "Mid to lower back", function: "Extends, adducts, and medially rotates arm" }, { name: "Rhomboids", location: "Between the scapulae", function: "Retract and rotate the scapulae" }, { name: "Erector Spinae", location: "Group running along the spine", function: "Extends the vertebral column" }, { name: "Multifidus", location: "Deep spine muscles", function: "Stabilizes the vertebrae" }, { name: "Quadratus Lumborum", location: "Posterior abdominal wall", function: "Lateral flexion of vertebral column" }, { name: "Pectoralis Major", location: "Upper chest", function: "Adducts, flexes, and rotates arm" }, { name: "Pectoralis Minor", location: "Deep to pectoralis major", function: "Stabilizes and depresses scapula" }, { name: "Serratus Anterior", location: "Side of the ribs", function: "Protracts and rotates scapula" }, { name: "Rectus Abdominis", location: "Front of the abdomen", function: "Flexes vertebral column" }, { name: "External Obliques", location: "Side of the abdomen", function: "Rotates and flexes trunk" }, { name: "Internal Obliques", location: "Deep to external obliques", function: "Rotates and flexes trunk" }, { name: "Transversus Abdominis", location: "Deepest abdominal muscle", function: "Compresses abdomen, stabilizes back" }, { name: "Deltoid", location: "Shoulder cap", function: "Abducts, flexes, and extends arm" }, { name: "Rotator Cuff (Supraspinatus, Infraspinatus, Teres Minor, Subscapularis)", location: "Shoulder joint", function: "Stabilizes and rotates shoulder" }, { name: "Biceps Brachii", location: "Front of the upper arm", function: "Flexes elbow and supinates forearm" }, { name: "Brachialis", location: "Deep to the biceps", function: "Main flexor of the elbow" }, { name: "Triceps Brachii", location: "Back of the upper arm", function: "Extends the elbow" }, { name: "Brachioradialis", location: "Lateral forearm", function: "Flexes the elbow" }, { name: "Wrist Flexors", location: "Anterior forearm", function: "Flex the wrist and fingers" }, { name: "Wrist Extensors", location: "Posterior forearm", function: "Extend the wrist and fingers" }, { name: "Gluteus Maximus", location: "Buttocks", function: "Extension and lateral rotation of the hip" }, { name: "Gluteus Medius", location: "Side of the hip", function: "Abduction and medial rotation of the hip" }, { name: "Gluteus Minimus", location: "Deep to gluteus medius", function: "Abduction and medial rotation of the hip" }, { name: "Tensor Fasciae Latae (TFL)", location: "Anterolateral hip", function: "Flexes, abducts, and medially rotates hip" }, { name: "Iliopsoas", location: "Deep in the front of the hip", function: "Primary hip flexor" }, { name: "Quadriceps Femoris (Rectus Femoris, Vastus Lateralis, Medialis, Intermedius)", location: "Front of the thigh", function: "Extends the knee, flexes the hip" }, { name: "Hamstrings (Biceps Femoris, Semitendinosus, Semimembranosus)", location: "Back of the thigh", function: "Flexes the knee, extends the hip" }, { name: "Adductors (Longus, Brevis, Magnus)", location: "Inner thigh", function: "Adduct the hip" }, { name: "Sartorius", location: "Crosses the thigh", function: "Flexes and rotates the hip and knee" }, { name: "Gastrocnemius", location: "Superficial calf", function: "Plantar flexes foot, flexes knee" }, { name: "Soleus", location: "Deep to gastrocnemius", function: "Plantar flexes the foot" }, { name: "Tibialis Anterior", location: "Front of the shin", function: "Dorsiflexes and inverts the foot" }, { name: "Fibularis (Peroneus) Longus & Brevis", location: "Side of the lower leg", function: "Evert the foot" } ];
-        const ailmentData = [ { name: "Ankle Sprain", description: "Stretching or tearing of ligaments surrounding the ankle, often from a twist or roll.", role: "PT helps manage swelling, restore range of motion, improve strength, and retrain balance (proprioception) to prevent future sprains." }, { name: "Achilles Tendonitis", description: "Inflammation or degeneration of the Achilles tendon, the large tendon connecting the calf muscles to the heel bone.", role: "Therapy focuses on managing load, specific exercises (especially eccentric) to heal the tendon, and stretching the calf muscles." }, { name: "Shin Splints", description: "Pain along the shin bone (tibia), common in runners, caused by overuse and inflammation of the muscles, tendons, and bone tissue.", role: "PT addresses the underlying cause, which may include stretching tight calf muscles, strengthening weaker leg muscles, and analyzing gait." }, { name: "Bursitis (Hip, Knee, Shoulder)", description: "Inflammation of a bursa, a small fluid-filled sac that acts as a cushion between bones, tendons, and muscles.", role: "Focuses on reducing inflammation, stretching surrounding tight muscles, and strengthening to correct any biomechanical issues causing the irritation." }, { name: "Carpal Tunnel Syndrome", description: "A condition caused by pressure on the median nerve as it passes through the carpal tunnel in the wrist, leading to numbness, tingling, and weakness.", role: "PT uses nerve gliding exercises, wrist splinting, and ergonomic advice to reduce pressure on the nerve." }, { name: "De Quervain's Tenosynovitis", description: "Painful inflammation of tendons on the thumb side of the wrist.", role: "Therapy involves activity modification, splinting, and gentle stretching and strengthening to reduce strain on the affected tendons." }, { name: "Golfer's Elbow (Medial Epicondylitis)", description: "Pain and inflammation on the inner side of the elbow, affecting the wrist flexor tendons.", role: "Treatment includes stretching the wrist flexors, strengthening exercises, and technique modification for aggravating activities." }, { name: "IT Band Syndrome", description: "Pain on the outside of the knee caused by irritation of the iliotibial (IT) band, a thick band of tissue running from the hip to the knee.", role: "Focuses on releasing tension in the IT band and TFL muscle, and strengthening hip abductor muscles to improve leg mechanics." }, { name: "Piriformis Syndrome", description: "A condition where the piriformis muscle in the buttock spasms and causes pain, sometimes irritating the nearby sciatic nerve.", role: "PT involves stretching the piriformis and surrounding hip rotator muscles, and strengthening the gluteal muscles." }, { name: "Sciatica", description: "Pain that radiates along the path of the sciatic nerve, branching from the lower back through the hips and buttocks and down each leg.", role: "Therapy aims to relieve pressure on the sciatic nerve through specific exercises (like nerve glides), core strengthening, and manual therapy." }, { name: "Whiplash", description: "A neck injury due to forceful, rapid back-and-forth movement of the neck, like the cracking of a whip.", role: "Gentle range-of-motion exercises, pain management, and strengthening of the deep neck flexors and upper back muscles are key." } ];
-        const modalityData = [ { name: "Static Stretching", description: "Involves holding a stretch in a challenging but comfortable position for a period of time, typically between 15 and 60 seconds.", nature: "Passive. The muscle is lengthened and held, relying on the duration of the stretch to increase flexibility. It is performed without movement." }, { name: "Dynamic Stretching", description: "Uses momentum from controlled, swinging motions to move a joint through its full range of motion. Examples include leg swings and torso twists.", nature: "Active. Involves movement and muscular effort to stretch the muscles. It is ideal for warm-ups as it mimics the movements of the upcoming activity." }, { name: "Ballistic Stretching", description: "Uses momentum from a bouncing movement to push a muscle beyond its normal range of motion. Due to a higher risk of injury, it is generally not recommended for the general public.", nature: "Active & Forceful. Involves bouncing or jerky movements. It can trigger the stretch reflex, potentially tightening the muscle instead of lengthening it." }, { name: "Proprioceptive Neuromuscular Facilitation (PNF)", description: "A more advanced form of flexibility training that involves both stretching and contracting the muscle group being targeted.", nature: "Active & Passive. Typically involves a sequence of 'contract-relax' or 'hold-relax' where the muscle is passively stretched, then isometrically contracted, then relaxed and stretched further." }, { name: "Active Isolated Stretching (AIS)", description: "A technique where you hold each stretch for only two seconds. It works by contracting the opposing muscle group to relax the target muscle.", nature: "Active. Relies on reciprocal inhibition (contracting one muscle relaxes its opposite). It involves many repetitions of short-duration stretches." }, { name: "Myofascial Release", description: "A technique that involves applying gentle, sustained pressure to the myofascial connective tissue to eliminate pain and restore motion. Often performed with tools like foam rollers or massage balls.", nature: "Passive. Focuses on releasing tension in the fascia, the connective tissue that surrounds muscles, rather than the muscle fibers themselves." }, { name: "Yoga (Asanas)", description: "A mind-body practice that combines physical postures, breathing techniques, and meditation or relaxation.", nature: "Active & Passive. Many yoga poses are forms of static or dynamic stretching, often held for several breaths. It improves flexibility, strength, and balance simultaneously." }, { name: "Chair Yoga", description: "A gentle form of yoga that is practiced sitting in a chair, or standing using a chair for support.", nature: "Active & Passive. Modifies traditional yoga poses so they can be done while seated, making stretching accessible to people with mobility or balance issues." } ];
-
-        // --- Global State ---
+        let firebaseConfigObj = null;
         let userId = null;
+        let isInitialized = false;
         let currentRoutine = null;
 
-        // --- UI Elements ---
-        const creationSection = document.getElementById('creation-section');
-        const resultsSection = document.getElementById('results-section');
-        const myRoutinesSection = document.getElementById('my-routines-section');
-        const aboutSection = document.getElementById('about-section');
-        const views = [creationSection, resultsSection, myRoutinesSection, aboutSection];
+        const ui = {
+            appContent: document.getElementById('app-content'),
+            setupModal: document.getElementById('setup-modal'),
+            customAlertModal: document.getElementById('custom-alert-modal'),
+            modalText: document.getElementById('modal-text'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            authContainer: document.getElementById('auth-container'),
+            loginForm: document.getElementById('login-form'),
+            signupForm: document.getElementById('signup-form'),
+            authTabs: document.getElementById('auth-tabs'),
+            muscleSelect: document.getElementById('muscle-select'),
+            ailmentSelect: document.getElementById('ailment-select'),
+            yogaSelect: document.getElementById('yoga-select'),
+            routineTypeSelect: document.getElementById('routine-type-select'),
+            modalitySelect: document.getElementById('modality-select'),
+            durationSelect: document.getElementById('duration-select'),
+            exercisesSelect: document.getElementById('exercises-select'),
+            searchBar: document.getElementById('search-bar'),
+            generateBtn: document.getElementById('generate-btn'),
+            routineList: document.getElementById('routine-list'),
+            loaderContainer: document.getElementById('loader-container'),
+            views: Array.from(document.querySelectorAll('.view'))
+        };
         
-        const authContainer = document.getElementById('auth-container');
-        const userIdDisplay = document.getElementById('user-id-display');
-        const generateBtn = document.getElementById('generate-btn');
-        const muscleSelect = document.getElementById('muscle-select');
-        const ailmentSelect = document.getElementById('ailment-select');
-        const modalitySelect = document.getElementById('modality-select');
-
-        // --- Populate Dropdowns ---
-        function populateMuscles() {
-            muscleSelect.innerHTML = '<option value="">-- Select a Major Muscle --</option>';
-            muscleData.sort((a, b) => a.name.localeCompare(b.name));
-            muscleData.forEach(muscle => {
-                const option = document.createElement('option');
-                option.value = muscle.name;
-                option.textContent = muscle.name;
-                option.title = `Location: ${muscle.location}\nFunction: ${muscle.function}`;
-                muscleSelect.appendChild(option);
-            });
-        }
+        window.onload = () => {
+            setupModalEventListeners();
+            setupNavigationEventListeners();
+            ui.modalCloseBtn.onclick = () => { ui.customAlertModal.style.display = 'none'; };
+        };
         
-        function populateAilments() {
-            ailmentSelect.innerHTML = '<option value="">-- Select a Common Ailment --</option>';
-            ailmentData.sort((a, b) => a.name.localeCompare(b.name));
-            ailmentData.forEach(ailment => {
-                const option = document.createElement('option');
-                option.value = ailment.name;
-                option.textContent = ailment.name;
-                option.title = `Description: ${ailment.description}\n\nRole of Physical Therapy: ${ailment.role}`;
-                ailmentSelect.appendChild(option);
+        function setupModalEventListeners() {
+            ui.authTabs.addEventListener('click', (e) => {
+                if (e.target.matches('.tab-button')) {
+                    const tab = e.target.dataset.authTab;
+                    ui.authTabs.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.querySelectorAll('[data-auth-tab-content]').forEach(content => {
+                        content.style.display = content.dataset.authTabContent === tab ? 'block' : 'none';
+                    });
+                }
             });
-        }
-
-        function populateModalities() {
-            modalitySelect.innerHTML = '<option value="Any Modality">-- Any Modality --</option>';
-            modalityData.sort((a, b) => a.name.localeCompare(b.name));
-            modalityData.forEach(modality => {
-                const option = document.createElement('option');
-                option.value = modality.name;
-                option.textContent = modality.name;
-                option.title = `Description: ${modality.description}\n\nNature of Stretch: ${modality.nature}`;
-                modalitySelect.appendChild(option);
-            });
-        }
-
-        // --- Custom Alert Modal ---
-        const modal = document.getElementById('custom-alert-modal');
-        const modalText = document.getElementById('modal-text');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
-
-        function showAlert(message) {
-            modalText.textContent = message;
-            modal.style.display = 'flex';
-        }
-
-        modalCloseBtn.onclick = function() {
-            modal.style.display = 'none';
+            ui.loginForm.addEventListener('submit', (e) => { e.preventDefault(); triggerInitialization(false); });
+            ui.signupForm.addEventListener('submit', (e) => { e.preventDefault(); triggerInitialization(true); });
         }
         
-        // --- MODIFICATION: New API Key Modal Logic ---
-        const apiKeyModal = document.getElementById('api-key-modal');
-        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-        const apiKeyInput = document.getElementById('api-key-input');
+        function setupNavigationEventListeners() {
+            handleMainTabs();
+            ui.generateBtn.addEventListener('click', generateRoutine);
+            document.getElementById('save-routine-btn').addEventListener('click', saveRoutine);
+            ui.routineList.addEventListener('click', handleRoutineListClick);
+            document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); showView('creation-section'); });
+            document.getElementById('about-link').addEventListener('click', (e) => { e.preventDefault(); showView('about-section'); });
+            document.getElementById('my-routines-link').addEventListener('click', (e) => { 
+                e.preventDefault(); 
+                if (userId) { loadSavedRoutines(); showView('my-routines-section'); } 
+                else { showAlert('Please log in to view your routines.'); }
+            });
+            document.getElementById('start-over-btn').addEventListener('click', () => showView('creation-section'));
+        }
+        
+        function triggerInitialization(isSignUp) {
+            geminiApiKey = document.getElementById('api-key-input').value.trim();
+            const configString = document.getElementById('firebase-config-input').value.trim();
+            if (!geminiApiKey || !configString) { showAlert("Please provide both your Gemini API Key and Firebase Config."); return; }
+            try {
+                const jsonString = configString.match(/\{[\s\S]*\}/)[0];
+                if (!jsonString) throw new Error("Invalid format.");
+                firebaseConfigObj = new Function(`return ${jsonString}`)();
+            } catch (e) { showAlert("Invalid Firebase config format. Please paste the entire object."); return; }
+            initializeAppAndAuth(isSignUp);
+        }
 
-        saveApiKeyBtn.addEventListener('click', () => {
-            const inputKey = apiKeyInput.value.trim();
-            if (inputKey) {
-                geminiApiKey = inputKey;
-                apiKeyModal.style.display = 'none';
-                init(); // Initialize the app now that we have the key
-            } else {
-                alert("Please enter a valid API key to continue."); // Using native alert here is fine for this simple check
+        async function initializeAppAndAuth(isSignUp) {
+            if (isInitialized) { isSignUp ? await handleSignUp() : await handleLogin(); return; }
+            try {
+                app = initializeApp(firebaseConfigObj);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                onAuthStateChanged(auth, user => { updateAuthStateUI(user); });
+                await (isSignUp ? handleSignUp() : handleLogin());
+            } catch (e) {
+                 showAlert(`Firebase initialization failed: ${e.message}`);
+                 console.error("Firebase Init Error:", e);
+                 isInitialized = false; 
             }
-        });
-
-        // Close alert modal if clicking outside of it
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
         }
 
-        // --- Authentication ---
-        onAuthStateChanged(auth, async user => {
+        async function handleLogin() {
+            const email = document.getElementById('login-email-input').value;
+            const password = document.getElementById('login-password-input').value;
+            try { await signInWithEmailAndPassword(auth, email, password); } 
+            catch (error) { handleFirebaseError(error); }
+        }
+
+        async function handleSignUp() {
+             const email = document.getElementById('signup-email-input').value;
+             const password = document.getElementById('signup-password-input').value;
+             try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                showAlert('Account created successfully! You are now logged in.');
+             } catch (error) { handleFirebaseError(error); }
+        }
+        
+        function updateAuthStateUI(user) {
             if (user) {
-                userId = user.uid;
-                authContainer.innerHTML = `<p class="text-sm text-slate-600 mr-4">Welcome!</p><button id="logout-btn" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Logout</button>`;
-                userIdDisplay.textContent = `User ID: ${userId}`;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                loadSavedRoutines();
+                if (!isInitialized) { // Only run this part once on initial successful login
+                    isInitialized = true;
+                    userId = user.uid;
+                    ui.appContent.style.display = 'block';
+                    ui.setupModal.style.display = 'none';
+                    ui.authContainer.innerHTML = `<p class="text-sm text-slate-600 mr-2 hidden sm:block">Welcome, ${user.email}</p><button id="logout-btn" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Logout</button>`;
+                    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).catch(err => showAlert(`Logout failed: ${err.message}`)));
+                    populateAllDropDowns();
+                }
             } else {
+                isInitialized = false; 
                 userId = null;
-                currentRoutine = null;
-                 authContainer.innerHTML = `<button id="login-btn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Login / Sign Up</button>`;
-                userIdDisplay.textContent = 'Not logged in.';
-                document.getElementById('login-btn').addEventListener('click', async () => {
-                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error("Authentication Error:", error);
-                        showAlert("Could not log in. Please try again later.");
-                    }
-                });
-                document.getElementById('saved-routines-list').innerHTML = '<p class="text-slate-500">Please log in to see your saved routines.</p>';
+                ui.appContent.style.display = 'none';
+                ui.setupModal.style.display = 'flex';
+                ui.authContainer.innerHTML = `<button id="login-show-btn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Setup / Login</button>`;
+                document.getElementById('login-show-btn').addEventListener('click', () => { ui.setupModal.style.display = 'flex'; });
             }
-        });
+        }
 
-        // --- View Navigation ---
-        function showView(viewToShow) {
-            views.forEach(view => view.classList.remove('active'));
-            viewToShow.classList.add('active');
+        function showView(viewId) {
+            ui.views.forEach(view => view.style.display = view.id === viewId ? 'block' : 'none');
             window.scrollTo(0,0);
         }
-        document.getElementById('home-link').addEventListener('click', (e) => { e.preventDefault(); showView(creationSection); });
-        document.getElementById('about-link').addEventListener('click', (e) => { e.preventDefault(); showView(aboutSection); });
-        document.getElementById('my-routines-link').addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            if(userId) {
-                loadSavedRoutines();
-                showView(myRoutinesSection);
-            } else {
-                showAlert('Please log in to view your routines.');
-            }
-        });
-        document.getElementById('start-over-btn').addEventListener('click', () => showView(creationSection));
-        
-        // --- Gemini API Call for Text ---
-        async function callGeminiTextAPI(prompt) {
-            // MODIFICATION: Check if API key exists
-            if (!geminiApiKey) {
-                showAlert("API Key is not set. Please refresh and enter your API key.");
-                throw new Error("API Key is missing.");
-            }
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            "exercises": {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        "name": { "type": "STRING", "description": "Name of the stretch" },
-                                        "instructions": { "type": "STRING", "description": "Step-by-step instructions" },
-                                        "benefit": { "type": "STRING", "description": "Why this is beneficial" }
-                                    },
-                                    required: ["name", "instructions", "benefit"]
-                                }
-                            }
-                        }
-                    }
+
+        function handleMainTabs() {
+            const mainTabsContainer = document.querySelector('#creation-section nav[aria-label="Tabs"]');
+            mainTabsContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.tab-button')) {
+                    const tab = e.target.dataset.tab;
+                    mainTabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('#creation-section .tab-content').forEach(content => content.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.getElementById(`${tab}-tab`).classList.add('active');
                 }
-            };
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
             });
-
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`Text API call failed with status: ${response.status}. Body: ${errorBody}`);
-            }
-
-            const result = await response.json();
-            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
-                console.error("Unexpected API response:", result);
-                throw new Error("Unexpected text API response structure");
-            }
-            const text = result.candidates[0].content.parts[0].text;
-            return JSON.parse(text);
         }
         
-        // --- Gemini API Call for Images ---
-        async function generateImageForExercise(exerciseName) {
-             // MODIFICATION: Check if API key exists
-            if (!geminiApiKey) {
-                console.error("Cannot generate image without an API key.");
-                return `https://placehold.co/400x400/e2e8f0/64748b?text=API+Key+Missing`;
-            }
-            const prompt = `Minimalist line art illustration of a person correctly performing the "${exerciseName}" stretch. Use clean, bold lines and a simple, limited color palette on a solid light gray background (#f0f0f0). The full body should be visible to clearly show the posture, form, and muscles being stretched, with an emphasis on anatomical accuracy and clarity.`;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiApiKey}`;
-            const payload = {
-                instances: [{ prompt: prompt }],
-                parameters: { "sampleCount": 1 }
+        function handleFirebaseError(error) {
+            console.error("Firebase Auth Error:", error.code, error.message);
+            const messages = {
+                'auth/invalid-email': 'Please enter a valid email address.',
+                'auth/user-not-found': 'Invalid email or password.',
+                'auth/invalid-credential': 'Invalid email or password.',
+                'auth/wrong-password': 'Incorrect password.',
+                'auth/email-already-in-use': 'An account with this email already exists.',
+                'auth/weak-password': 'Password must be at least 6 characters.'
             };
-
+            showAlert(messages[error.code] || `An error occurred: ${error.message}`);
+        }
+        
+        async function populateSelectFromAI(selectElement, prompt, schema, loadingText, errorText, sort = true) {
+            selectElement.innerHTML = `<option value="">-- ${loadingText} --</option>`;
+            if (!geminiApiKey) { selectElement.innerHTML = `<option value="">-- API Key Required --</option>`; return; }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema }};
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Image generation API call failed with status: ${response.status}`);
-                }
-
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API call failed: ${response.status}`);
                 const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                } else {
-                    console.error("Invalid image data in API response:", result);
-                    throw new Error("Invalid image data in API response.");
-                }
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                const dataKey = Object.keys(data)[0];
+                let items = data[dataKey];
+                if (sort) items.sort();
+                selectElement.innerHTML = `<option value="">-- Select an Option --</option>`;
+                items.forEach(item => { const option = document.createElement('option'); option.value = item; option.textContent = item; selectElement.appendChild(option); });
             } catch (error) {
-                console.error(`Error generating image for ${exerciseName}:`, error);
-                return `https://placehold.co/400x400/e2e8f0/64748b?text=Image+Error`; // Return placeholder on failure
+                console.error(`Error populating ${selectElement.id}:`, error);
+                selectElement.innerHTML = `<option value="">-- ${errorText} --</option>`;
+                showAlert(`Could not load data for ${selectElement.id}. Check API key & network.`);
             }
         }
-
-        // --- Routine Generation and Rendering ---
-        generateBtn.addEventListener('click', async () => {
-            showView(resultsSection);
-            document.getElementById('routine-list').innerHTML = '';
-            document.getElementById('loader-container').style.display = 'flex';
+        
+        function populateAllDropDowns() {
+            const commonSchema = (key) => ({ type: "OBJECT", properties: { [key]: { type: "ARRAY", items: { type: "STRING" } } } });
+            const musclePrompt = `When considering exercise for rehabilitation or flexibility, what are all of the major and minor muscle groups, and individual muscles within those groups, that people commonly focus on stretching? Return a JSON object containing a single key 'muscleFocusAreas' which is an array of strings. Each string should represent a muscle group or individual muscle, formatted as 'Common Name - Technical Term(s)'. For example: 'Hamstrings - Biceps Femoris, Semitendinosus, Semimembranosus'. Provide an extensive and exhaustive list, ordered alphabetically.`;
+            populateSelectFromAI(ui.muscleSelect, musclePrompt, commonSchema('muscleFocusAreas'), "Loading Muscles...", "Load Failed");
+            const ailmentPrompt = `When considering exercise for rehabilitation, what are all the common ailments, injuries, or conditions that individuals seek to address or recover from through structured exercise programs? Return a JSON object containing a single key 'commonAilments' which is an array of strings. Each string should be a concise and commonly understood name for an ailment, suitable for a dropdown menu. Aim for a comprehensive and exhaustive list of these conditions, ordered alphabetically.`;
+            populateSelectFromAI(ui.ailmentSelect, ailmentPrompt, commonSchema('commonAilments'), "Loading Ailments...", "Load Failed");
+            const yogaPrompt = `When practicing yoga asanas (poses), what are all of the major and minor muscle groups, and individual muscles within those groups, that people commonly focus on engaging, strengthening, or stretching? Return a JSON object containing a single key 'yogaFocusAreas' which is an array of strings. Each string should represent a muscle group or individual muscle, formatted as 'Common Name - Technical Term(s)'. Prioritize common yoga terminology for groups where applicable (e.g., 'Core', 'Hamstrings'), but expand to include all relevant anatomical muscles that are specifically targeted. Provide an extensive and exhaustive list, ordered alphabetically.`;
+            populateSelectFromAI(ui.yogaSelect, yogaPrompt, commonSchema('yogaFocusAreas'), "Loading Yoga Areas...", "Load Failed");
+            populateSelectFromAI(ui.routineTypeSelect, `Return a JSON object with a key 'routineTypes' containing an array of common stretching routine types (e.g., "Restorative"), ordered alphabetically.`, commonSchema('routineTypes'), "Loading Types...", "Load Failed");
+            const modalityPrompt = `When considering exercise, what are the primary modalities or overarching categories of routines that focus on mind-body connection, flexibility, and gentle movement? Return a JSON object containing a single key 'routineModalities' which is an array of strings. Each string should be a concise and commonly understood name for a distinct exercise modality, suitable for a dropdown menu. Aim for a comprehensive and exhaustive list of these broader categories. Provide the list ordered alphabetically.`;
+            populateSelectFromAI(ui.modalitySelect, modalityPrompt, commonSchema('routineModalities'), "Loading Modalities...", "Load Failed");
+            populateSelectFromAI(ui.durationSelect, `Return a JSON object with a key 'durations' which is an array of strings for routine durations from 15 to 120 minutes in 15-min increments (e.g., '15 Minutes').`, commonSchema('durations'), "Loading Durations...", "Load Failed", false);
+            populateSelectFromAI(ui.exercisesSelect, `Return a JSON object with a key 'exerciseCounts' which is an array of strings for number of exercises from 3 to 15 (e.g., '3 Exercises').`, commonSchema('exerciseCounts'), "Loading Counts...", "Load Failed", false);
+        }
+        
+        function showAlert(message) {
+            ui.modalText.textContent = message;
+            ui.customAlertModal.style.display = 'flex';
+        }
+        
+        async function generateRoutine() {
+            showView('results-section');
+            ui.routineList.innerHTML = '';
+            ui.loaderContainer.innerHTML = '<div class="loader"></div>';
             document.getElementById('results-buttons').classList.add('hidden');
-            document.getElementById('routine-summary-icons').innerHTML = '';
-
-            const muscle = muscleSelect.value;
-            const ailment = ailmentSelect.value;
-            const searchTerm = document.getElementById('search-bar').value;
-            const routineType = document.getElementById('routine-type').value;
-            const modality = modalitySelect.value;
-            const duration = document.getElementById('duration-select').value;
-            const numExercisesText = document.getElementById('exercises-select').value;
-            const numExercises = parseInt(numExercisesText.split(' ')[0]);
-
-            let focus = muscle || ailment || searchTerm;
-            if (!focus) {
-                showAlert("Please select a muscle, ailment, or enter a search term.");
-                showView(creationSection);
-                return;
-            }
-            let title = `Your ${duration} ${modality !== 'Any Modality' ? modality : ''} Routine for ${focus}`;
-            document.getElementById('routine-title').textContent = title;
             
-            const summaryIcons = document.getElementById('routine-summary-icons');
-            summaryIcons.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                    <span>${duration}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5H9.5a2.5 2.5 0 0 0 0 5H12"/><path d="M12 14H9.5a2.5 2.5 0 0 1 0 5H12"/><path d="M15 9h-2.5a2.5 2.5 0 0 0 0 5H15"/></svg>
-                    <span>${numExercisesText}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                   <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    <span>${routineType}</span>
-                </div>
-            `;
+            const routineType = ui.routineTypeSelect.value, modality = ui.modalitySelect.value, duration = ui.durationSelect.value, numExercisesText = ui.exercisesSelect.value;
+            const numExercises = parseInt(numExercisesText.split(' ')[0]);
+            const activeTab = document.querySelector('.tab-button.active').dataset.tab;
+            let focus = '';
 
-            const prompt = `Generate a "${routineType}" stretching routine for "${focus}". If the number of exercises requested is 1, please provide the single most effective and well-known exercise for the given focus. Otherwise, generate a routine that lasts approximately ${duration} and consists of ${numExercises} exercises. The stretching modality should be "${modality}". For each exercise, provide a name, step-by-step instructions, and a brief explanation of why it's beneficial for the specified focus. Ensure the exercises are distinct and suitable for the context.`;
+            switch (activeTab) {
+                case 'search': focus = ui.searchBar.value.trim(); break;
+                case 'muscle': focus = ui.muscleSelect.value; break;
+                case 'ailment': focus = ui.ailmentSelect.value; break;
+                case 'yoga': focus = ui.yogaSelect.value; break;
+            }
+
+            if (!focus) { showAlert("Please select an option or enter a search term."); showView('creation-section'); return; }
+            let title = `Your ${duration} ${modality} Routine for ${focus}`;
+            document.getElementById('routine-title').textContent = title;
+
+            const prompt = `Generate a "${routineType}" stretching routine for "${focus}". The routine should last approximately ${duration} and consist of ${numExercises} exercises. For each exercise, provide a name, step-by-step instructions, and its benefit.`;
 
             try {
-                const response = await callGeminiTextAPI(prompt);
-                if (!response.exercises || response.exercises.length === 0) {
-                   throw new Error("The API did not return any exercises. The response might be improperly formatted.");
-                }
+                const response = await callGeminiForRoutine(prompt);
                 currentRoutine = { title, exercises: response.exercises, createdAt: new Date().toISOString() };
-                renderRoutine(currentRoutine, true); // Pass true to generate images
+                await renderRoutine(currentRoutine);
             } catch (error) {
                 console.error("Error generating routine:", error);
-                document.getElementById('routine-list').innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
-                    <strong class="font-bold">Generation Failed!</strong>
-                    <p class="block sm:inline">Sorry, we couldn't generate a routine. The AI may be experiencing high demand. Please try again later.</p>
-                    <p class="text-xs mt-2 text-red-600">Error: ${error.message}</p>
-                    </div>`;
+                ui.routineList.innerHTML = `<div class="bg-red-100 p-4 rounded-lg text-center text-red-700"><p><strong>Generation Failed!</strong> Please try again later.</p></div>`;
             } finally {
-                document.getElementById('loader-container').style.display = 'none';
+                ui.loaderContainer.innerHTML = '';
                 document.getElementById('results-buttons').classList.remove('hidden');
-                document.getElementById('results-buttons').style.display = 'flex';
             }
-        });
-
-
-        function renderRoutine(routine, generateImages = false) {
-            const routineList = document.getElementById('routine-list');
-            routineList.innerHTML = ''; 
-            
-            routine.exercises.forEach((exercise, index) => {
+        }
+        
+        async function renderRoutine(routine) {
+            ui.routineList.innerHTML = '';
+            for (const [index, exercise] of routine.exercises.entries()) {
                 const exerciseEl = document.createElement('div');
                 exerciseEl.className = 'bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col md:flex-row gap-6';
-                const imageContainerId = `image-container-${index}`;
-
+                const imageContainerId = `image-container-${Date.now()}-${index}`;
                 exerciseEl.innerHTML = `
-                    <div id="${imageContainerId}" class="w-full md:w-1/3 h-64 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <div class="loader"></div>
+                    <div class="w-full md:w-1/3">
+                        <div id="${imageContainerId}" class="w-full h-64 bg-slate-100 rounded-lg flex items-center justify-center p-2">
+                             <button class="action-btn illustrate-btn" data-exercise-name="${exercise.name}">Illustrate</button>
+                        </div>
+                        <div class="moderation-controls mt-2 flex justify-center gap-x-2" style="display: none;">
+                            <button class="action-btn approve-btn" data-exercise-name="${exercise.name}">Approve</button>
+                            <button class="action-btn deny-btn">Deny</button>
+                        </div>
                     </div>
                     <div class="w-full md:w-2/3">
                         <h3 class="text-xl font-semibold text-slate-900">${exercise.name}</h3>
                         <div class="mt-4 text-slate-600 space-y-4">
-                            <div>
-                                <h4 class="font-semibold text-slate-800">Instructions:</h4>
-                                <p class="mt-1">${exercise.instructions}</p>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-slate-800">Why it's beneficial:</h4>
-                                <p class="mt-1">${exercise.benefit}</p>
-                            </div>
+                            <div><h4 class="font-semibold text-slate-800">Instructions:</h4><p class="mt-1">${exercise.instructions}</p></div>
+                            <div><h4 class="font-semibold text-slate-800">Why it's beneficial:</h4><p class="mt-1">${exercise.benefit}</p></div>
                         </div>
                     </div>
                 `;
-                routineList.appendChild(exerciseEl);
-
-                if (generateImages) {
-                    generateImageForExercise(exercise.name).then(imageUrl => {
-                        const imageContainer = document.getElementById(imageContainerId);
-                        if (imageContainer) {
-                           imageContainer.innerHTML = `<img src="${imageUrl}" alt="Illustration of ${exercise.name}" class="w-full h-full object-cover rounded-lg">`;
-                        }
-                    });
-                } else {
-                    const imageContainer = document.getElementById(imageContainerId);
-                    if(imageContainer) {
-                         imageContainer.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                            <p class="mt-2 text-sm">Saved Routine</p>
-                         </div>`;
-                    }
+                ui.routineList.appendChild(exerciseEl);
+                if (isInitialized) { // Check if we are online before checking for image
+                   await getImageForExercise(exercise.name, document.getElementById(imageContainerId), true);
                 }
-            });
+            }
         }
         
-        // --- Save & Load Routines (Firestore) ---
-        document.getElementById('save-routine-btn').addEventListener('click', async () => {
-            if (!userId) {
-                showAlert("Please log in to save routines.");
+        async function getImageForExercise(exerciseName, containerElement, isInitialLoad = false) {
+             if (!isInitialized || !db) {
+                console.error("Firestore not ready for image check.");
                 return;
             }
-            if (!currentRoutine) {
-                 showAlert("No routine to save.");
-                 return;
-            }
+            containerElement.innerHTML = '<div class="loader"></div>';
 
+            const approvedImg = await findApprovedImageInFirebase(exerciseName);
+            if (approvedImg) {
+                containerElement.innerHTML = approvedImg.svgData;
+                containerElement.nextElementSibling.style.display = 'none';
+            } else if (isInitialLoad) {
+                 containerElement.innerHTML = `<button class="action-btn illustrate-btn" data-exercise-name="${exerciseName}">Illustrate</button>`;
+            } 
+            else {
+                const generatedSvg = await generateSvgForExercise(exerciseName);
+                if (generatedSvg) {
+                    containerElement.innerHTML = generatedSvg;
+                    containerElement.nextElementSibling.style.display = 'flex';
+                } else {
+                     containerElement.innerHTML = '<p class="text-xs text-slate-500">Illustration failed.</p>';
+                     containerElement.nextElementSibling.style.display = 'none';
+                }
+            }
+        }
+        
+        async function findApprovedImageInFirebase(exerciseName) {
+            if (!isInitialized) return null;
             try {
-                const routinesCol = collection(db, `artifacts/${appId}/users/${userId}/routines`);
+                const docRef = doc(db, "approved_images", exerciseName);
+                const docSnap = await getDoc(docRef);
+                return docSnap.exists() ? docSnap.data() : null;
+            } catch (error) {
+                console.error("Error fetching approved image:", error);
+                // Don't show alert here, it can be spammy. The error is logged.
+                return null;
+            }
+        }
+
+        async function generateSvgForExercise(exerciseName) {
+            const prompt = `Generate only the raw SVG code for an anatomically correct, minimalist stick-figure illustration showing a person performing the '${exerciseName}' stretch. The SVG must clearly show the body's position and the muscles being targeted. Use a viewBox of '0 0 100 100', a transparent background, and a 'currentColor' stroke with a width of 1.5. Do not include any XML declaration, comments, or other text outside of the <svg> tags.`;
+            try {
+                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                 if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+                 const result = await response.json();
+                 const rawText = result.candidates[0].content.parts[0].text;
+                 const svgMatch = rawText.match(/<svg[\s\S]*?<\/svg>/);
+                 return svgMatch ? svgMatch[0] : null;
+            } catch(error) {
+                console.error(`Error generating SVG for ${exerciseName}:`, error);
+                return null;
+            }
+        }
+        
+        async function callGeminiForRoutine(prompt) {
+            const schema = { type: "OBJECT", properties: { "exercises": { type: "ARRAY", items: { type: "OBJECT", properties: { "name": { "type": "STRING" }, "instructions": { "type": "STRING" }, "benefit": { "type": "STRING" }}, required: ["name", "instructions", "benefit"]}}}};
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema }};
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+            const result = await response.json();
+            return JSON.parse(result.candidates[0].content.parts[0].text);
+        }
+
+        async function handleRoutineListClick(e) {
+            const target = e.target;
+            const exerciseName = target.dataset.exerciseName;
+
+            if (target.classList.contains('illustrate-btn')) {
+                const imageContainer = target.parentElement;
+                await getImageForExercise(exerciseName, imageContainer, false);
+            } else if (target.classList.contains('approve-btn')) {
+                const moderationControls = target.closest('.moderation-controls');
+                const imageContainer = moderationControls.previousElementSibling;
+                const svgData = imageContainer.innerHTML;
+                if (exerciseName && svgData.startsWith('<svg')) {
+                    await saveApprovedImageToFirebase(exerciseName, svgData);
+                    moderationControls.innerHTML = `<p class="text-xs text-green-700">Approved!</p>`;
+                }
+            } else if (target.classList.contains('deny-btn')) {
+                const moderationControls = target.closest('.moderation-controls');
+                const imageContainer = moderationControls.previousElementSibling;
+                imageContainer.innerHTML = `<button class="action-btn illustrate-btn" data-exercise-name="${exerciseName}">Illustrate Again</button>`;
+                moderationControls.style.display = 'none';
+            }
+        }
+        
+        async function saveApprovedImageToFirebase(exerciseName, svgData) {
+             try {
+                const docRef = doc(db, "approved_images", exerciseName);
+                await setDoc(docRef, { svgData, approvedAt: new Date().toISOString() });
+                showAlert(`Image for "${exerciseName}" approved and saved.`);
+            } catch (error) {
+                console.error("Error saving approved image:", error);
+                showAlert("Could not save approved image.");
+            }
+        }
+        
+        async function saveRoutine() {
+            if (!userId) { showAlert("Please log in to save routines."); return; }
+            if (!currentRoutine) { showAlert("No routine to save."); return; }
+            try {
+                const routinesCol = collection(db, "users", userId, "routines");
                 await addDoc(routinesCol, currentRoutine);
                 showAlert("Routine saved successfully!");
             } catch (error) {
                 console.error("Error saving routine: ", error);
-                showAlert("Could not save routine. Please try again.");
+                showAlert("Could not save routine.");
             }
-        });
+        }
 
         async function loadSavedRoutines() {
             if (!userId) return;
-            
-            const routinesCol = collection(db, `artifacts/${appId}/users/${userId}/routines`);
-            const routineSnapshot = await getDocs(routinesCol);
+            const routinesCol = collection(db, "users", userId, "routines");
             const savedList = document.getElementById('saved-routines-list');
-            savedList.innerHTML = '';
-            
-            if (routineSnapshot.empty) {
-                 savedList.innerHTML = '<p class="text-slate-500">You have no saved routines yet.</p>';
-                 return;
-            }
-            
-            const routines = [];
-            routineSnapshot.forEach(doc => {
-                routines.push({ id: doc.id, ...doc.data() });
-            });
-
-            routines.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-            routines.forEach(routine => {
-                const routineEl = document.createElement('div');
-                routineEl.className = 'bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:border-indigo-500 transition-colors';
-                routineEl.innerHTML = `<h4 class="font-semibold text-lg">${routine.title}</h4> <p class="text-xs text-slate-400">Saved on: ${new Date(routine.createdAt).toLocaleDateString()}</p>`;
-                routineEl.addEventListener('click', () => {
-                    currentRoutine = routine;
-                    document.getElementById('routine-title').textContent = routine.title;
-                    renderRoutine(routine, false); 
-                    const summaryIcons = document.getElementById('routine-summary-icons');
-                    summaryIcons.innerHTML = ''; 
-                    
-                    showView(resultsSection);
-                    document.getElementById('loader-container').style.display = 'none';
-                    document.getElementById('results-buttons').classList.remove('hidden');
-                    document.getElementById('results-buttons').style.display = 'flex';
+            try {
+                const routineSnapshot = await getDocs(routinesCol);
+                savedList.innerHTML = routineSnapshot.empty ? '<p class="text-slate-500">You have no saved routines yet.</p>' : '';
+                const routines = [];
+                routineSnapshot.forEach(doc => routines.push({ id: doc.id, ...doc.data() }));
+                routines.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                routines.forEach(routine => {
+                    const routineEl = document.createElement('div');
+                    routineEl.className = 'bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:border-indigo-500';
+                    routineEl.innerHTML = `<h4 class="font-semibold text-lg">${routine.title}</h4><p class="text-xs text-slate-400">Saved: ${new Date(routine.createdAt).toLocaleDateString()}</p>`;
+                    routineEl.addEventListener('click', async () => {
+                        document.getElementById('routine-title').textContent = routine.title;
+                        showView('results-section');
+                        await renderRoutine(routine);
+                    });
+                    savedList.appendChild(routineEl);
                 });
-                savedList.appendChild(routineEl);
-            });
+            } catch (error) {
+                console.error("Error loading saved routines: ", error);
+                savedList.innerHTML = `<p class="text-red-500">Could not load routines. Check connection.</p>`
+            }
         }
-
-        // --- Input Disabling Logic ---
-         const searchBar = document.getElementById('search-bar');
-         function updateInputStates() {
-            const muscleValue = muscleSelect.value;
-            const ailmentValue = ailmentSelect.value;
-            const searchValue = searchBar.value;
-            const searchIsActive = searchValue !== '';
-            const muscleIsActive = muscleValue !== '';
-            const ailmentIsActive = ailmentValue !== '';
-            muscleSelect.disabled = searchIsActive || ailmentIsActive;
-            if (muscleSelect.disabled) muscleSelect.classList.add('bg-slate-100');
-            else muscleSelect.classList.remove('bg-slate-100');
-            ailmentSelect.disabled = searchIsActive || muscleIsActive;
-            if (ailmentSelect.disabled) ailmentSelect.classList.add('bg-slate-100');
-            else ailmentSelect.classList.remove('bg-slate-100');
-            searchBar.disabled = muscleIsActive || ailmentIsActive;
-            if (searchBar.disabled) searchBar.classList.add('bg-slate-100');
-            else searchBar.classList.remove('bg-slate-100');
-         }
-         muscleSelect.addEventListener('change', () => {
-             if (muscleSelect.value) { ailmentSelect.value = ''; searchBar.value = ''; }
-             updateInputStates();
-         });
-         ailmentSelect.addEventListener('change', () => {
-            if (ailmentSelect.value) { muscleSelect.value = ''; searchBar.value = ''; }
-             updateInputStates();
-         });
-         searchBar.addEventListener('input', () => {
-            if (searchBar.value) { muscleSelect.value = ''; ailmentSelect.value = ''; }
-             updateInputStates();
-         });
-         
-        // --- MODIFICATION: App initialization is now a function called after API key is entered
-        function init() {
-            populateMuscles();
-            populateAilments();
-            populateModalities();
-            showView(creationSection);
-            updateInputStates();
-        }
-
-        // --- Initial Load ---
-        // The script now waits for the user to provide an API key. 
-        // The API Key modal is shown by default via inline style.
-        // The init() function is called via the 'save-api-key-btn' event listener.
-
     </script>
 </body>
 </html>
