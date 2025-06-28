@@ -398,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.59</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.60</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1741,12 +1741,14 @@
             const categoryTitle = card.querySelector('h2').textContent;
             const existingTitles = allThemeData[themeType].map(item => item.title);
             
-            const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
-            
-            Existing Task List:
-            - ${existingTitles.join('\n- ')}
+            const prompt = `Generate 10 additional, high-level topics for the IT category "${categoryTitle}". These topics should be of a similar advanced nature to the existing ones, focusing on strategic implementation, security, or automation. Do not suggest elementary or introductory tasks.
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
+Crucially, these topics must be new and not present in the following list:
+Existing Task List:
+- ${existingTitles.join('\n- ')}
+
+For each new topic, provide a unique "id", a concise "title", and a short "description" highlighting its relevance to a senior administrator.
+IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
