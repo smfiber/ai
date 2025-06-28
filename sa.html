@@ -398,7 +398,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.55</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.60</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -511,6 +511,348 @@
         const viewedItemIds = new Set();
         let firebaseConfig = null;
         let appIsInitialized = false;
+
+        const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
+        
+        // UPDATE: All `fullPrompt` values have been updated based on user request.
+        const categoriesToGenerate = [
+            { 
+                key: 'activeDirectory', 
+                title: 'Active Directory Management', 
+                description: "Tasks for managing users, groups, GPOs, and other AD objects.", 
+                initialPrompt: `Generate 10 advanced administrative topics for Active Directory Management. Focus on security hardening, Group Policy optimization, replication troubleshooting, and disaster recovery scenarios. The output should be targeted at senior administrators managing large-scale enterprise environments. For each, give a unique "id", a concise "title", and a short "description" explaining its strategic importance.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced and strategic topics for Active Directory Management. This list should serve as a complete curriculum for a senior administrator, covering multi-forest architecture, security hardening, advanced Group Policy implementation, PKI integration, disaster recovery, and integration with cloud identity providers. Exclude elementary concepts. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the topic's complexity and importance.${jsonInstruction}` 
+            },
+            { 
+                key: 'aiProgramming', 
+                title: 'Artificial Intelligence Programming', 
+                description: "Concepts and guides for getting started with AI development and programming.", 
+                initialPrompt: `Generate 10 topics on AI and Machine Learning from a systems administrator's perspective. Focus on deploying, managing, and automating the infrastructure for AI workloads, MLOps pipelines, and using AI for predictive infrastructure monitoring. Avoid purely theoretical programming concepts. For each, give a unique "id", a concise "title", and a short "description" relevant to infrastructure management.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 topics on AI/ML infrastructure and operations for systems administrators. This curriculum should cover deploying and scaling GPU-accelerated workloads, managing data pipelines, implementing MLOps principles, monitoring the health of AI systems, and using infrastructure-as-code to manage AI environments. Focus on the practical challenges of running AI in production. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the infrastructure concept.${jsonInstruction}`
+            },
+            { 
+                key: 'citrixAdmin', 
+                title: 'Citrix Administration', 
+                description: "Managing Citrix Virtual Apps and Desktops environments.", 
+                initialPrompt: `Generate 10 high-level administrative topics for Citrix Virtual Apps and Desktops environments. Focus on performance tuning, advanced security configurations with Citrix ADC, Workspace Environment Management (WEM) optimization, and automation with PowerShell. These topics should be for administrators in complex enterprise deployments. For each, give a unique "id", a concise "title", and a short "description" of its impact.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced topics for administering Citrix Virtual Apps and Desktops. This list should cover a wide range of enterprise-level challenges, including multi-site architecture, advanced Citrix ADC configurations, deep performance analysis, scripting with the PowerShell SDK, and comprehensive security hardening of the entire Citrix stack. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of its application in a complex environment.${jsonInstruction}`
+            },
+            { 
+                key: 'geminiInfographics', 
+                title: 'Create Infographics in Gemini', 
+                description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", 
+                initialPrompt: `Generate 10 ideas for using Gemini to create data-driven technical infographics for an administrative audience. Focus on visualizing system performance metrics, network topology, security audit results, and project status reports. The goal is to produce professional, high-impact visuals for technical presentations and documentation. For each, give a unique "id", a concise "title", and a short "description" of the infographic's purpose.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 sophisticated, data-driven infographic concepts for a senior technical audience. The list should cover a broad range of administrative domains, such as visualizing multi-cloud cost analysis, mapping out complex network security architectures, reporting on compliance audit findings, and illustrating incident response timelines. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the data being visualized and its strategic purpose.${jsonInstruction}`
+            },
+            { 
+                key: 'geminiLinkedIn', 
+                title: 'Create LinkedIn Posts using Gemini', 
+                description: "Use Gemini to draft engaging and professional posts for LinkedIn.", 
+                initialPrompt: `Generate 10 strategic content ideas for a systems administrator to post on LinkedIn using Gemini. Focus on topics that showcase technical leadership, such as authoring posts on complex project outcomes, interpreting new technology trends for businesses, and sharing advanced scripting techniques to build a professional brand. For each, give a unique "id", a concise "title", and a short "description" of the post's objective.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 content strategies for a technical leader on LinkedIn, produced via Gemini. The list should provide a full content calendar covering themes like analyzing emerging enterprise technologies, authoring technical deep-dives on successful projects, debating architectural best practices, and mentoring junior administrators, all aimed at establishing a strong professional presence. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the content's goal and target audience.${jsonInstruction}`
+            },
+            { 
+                key: 'dataCenterPractices', 
+                title: 'Data Center Best Practices', 
+                description: "Guides on data center operations, cooling, power, and security.", 
+                initialPrompt: `Generate 10 best practices for modern data center management aimed at senior administrators. Focus on enterprise-level topics such as power and cooling efficiency, infrastructure automation and orchestration, high-availability strategies, and physical security standards for compliance. For each, give a unique "id", a concise "title", and a short "description" of its business impact.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 best practices for modern, large-scale data center operations. This list should provide a deep dive into strategic topics like hyper-converged infrastructure management, advanced power and cooling optimization, data center infrastructure management (DCIM) software, network fabric automation, and robust physical security and compliance protocols. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the practice and its enterprise-level impact.${jsonInstruction}`
+            },
+            { 
+                key: 'webDesignBestPractices', 
+                title: 'Designing Web Pages Best Practices', 
+                description: "Best practices for UI/UX, accessibility, and performance in web design.", 
+                initialPrompt: `Generate 10 best practices for systems administrators responsible for hosting modern web applications. Focus on performance tuning, security hardening of the webserver stack, implementing robust caching strategies, and ensuring high availability and scalability. Avoid UI/UX design topics. For each, give a unique "id", a concise "title", and a short "description" from an infrastructure perspective.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 best practices for hosting, securing, and optimizing modern web applications from an infrastructure standpoint. This list should cover advanced topics like configuring reverse proxies and load balancers, implementing Content Delivery Networks (CDNs), hardening web servers against common exploits, and setting up performance monitoring and alerting. Avoid UI/UX topics. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the infrastructure principle.${jsonInstruction}`
+            },
+            { 
+                key: 'webDesignGemini', 
+                title: 'Designing Web Pages with Gemini AI', 
+                description: "Using Gemini AI to assist in the design and development of web pages.", 
+                initialPrompt: `Generate 10 practical ways a systems administrator can use Gemini AI to assist in managing web infrastructure. Focus on generating security reports from logs, creating automation scripts for deployment, drafting technical documentation for web services, and generating configuration files for servers like Nginx or Apache. For each, give a unique "id", a concise "title", and a short "description" of the administrative task being automated or simplified.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 ways a systems administrator can leverage Gemini AI to manage web application infrastructure. This list should cover a broad range of tasks, including analyzing web server logs to identify security threats, generating complex web server configuration files, creating Infrastructure-as-Code templates for web deployments, and drafting post-mortem reports for service outages. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of how AI streamlines the administrative task.${jsonInstruction}`
+            },
+            { 
+                key: 'dosCommands', 
+                title: 'DOS Commands for Administrators', 
+                description: "A reference for essential DOS and Command Prompt commands for system admins.", 
+                initialPrompt: `Generate 10 powerful and less-common DOS/CMD commands or command chains for advanced system diagnostics and troubleshooting. Focus on tasks related to networking, file system integrity, and process management that are essential for high-level problem-solving in a Windows environment. For each, give a unique "id", the "title" as the command itself, and a short "description" of its advanced use case.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 powerful and less-common DOS/CMD commands, command chains, and batch scripting techniques for advanced Windows troubleshooting. This list should cover deep system diagnostics, network analysis, security forensics, and complex file system operations that are critical for senior-level administrators. For each, give a unique "id", the "title" (as the command), and a detailed "description" explaining the advanced scenario where it would be used.${jsonInstruction}`
+            },
+             { 
+                key: 'geminiCliGuide', 
+                title: 'A Guide to Using the Gemini CLI', 
+                description: "Learn how to use the Gemini Command Line Interface for various tasks.", 
+                initialPrompt: `Generate 10 powerful use cases for the Gemini CLI focused on systems administration. These topics should cover advanced automation, data extraction for reporting, and integration with administrative scripts. Avoid introductory examples. For each, give a unique "id", a concise "title" for the use case, and a short "description" highlighting its value in a production environment.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced and strategic use cases for the Gemini CLI. This list should cover a wide range of administrative tasks, including complex data analysis, workflow automation, integration with CI/CD pipelines, and security operations. The focus should be on providing a deep and broad understanding of the CLI's capabilities beyond basic commands. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" that outlines its relevance in a production environment.${jsonInstruction}`
+            },
+            { 
+                key: 'hpeProLiant', 
+                title: 'HPE ProLiant Server Management', 
+                description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", 
+                initialPrompt: `Generate 10 advanced topics for managing HPE ProLiant servers at scale. Focus on firmware and driver management with SUM, advanced iLO configuration for security, scripting with the Redfish API, and integrating with tools like OneView for infrastructure automation. For each, give a unique "id", a concise "title", and a short "description" of its value in an enterprise data center.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced topics for managing an enterprise fleet of HPE ProLiant servers. This list should cover a full range of tasks, including deep security hardening with iLO, advanced scripting with the Redfish API and PowerShell, integration with HPE OneView, managing storage controllers, and advanced performance troubleshooting. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of its relevance in a large data center.${jsonInstruction}`
+            },
+            { 
+                key: 'javascriptForHtml', 
+                title: 'JavaScript for HTML', 
+                description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", 
+                initialPrompt: `Generate 10 use cases for JavaScript relevant to a systems administrator. Focus on writing scripts to interact with REST APIs for automation, creating custom dashboards for monitoring tools, and scripting for browser-based administrative consoles. Avoid foundational web design concepts. For each, give a unique "id", a concise "title", and a short "description" of the administrative application.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced use cases for JavaScript in systems administration. This list should cover a wide range of applications, such as building custom web-based dashboards for monitoring systems, scripting interactions with various REST APIs for automation, developing browser extensions to streamline administrative tasks, and creating front-ends for PowerShell or Python backend tools. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the administrative tool or solution being built.${jsonInstruction}`
+            },
+            { 
+                key: 'linuxCliAdmin', 
+                title: 'Linux CLI for Administration', 
+                description: "A reference for essential Linux commands for system administrators.", 
+                initialPrompt: `Generate 10 advanced Linux CLI commands or one-liners for senior systems administrators. Focus on performance analysis (e.g., using perf or strace), complex text manipulation with awk and sed, network packet analysis with tcpdump, and security auditing. For each, give a unique "id", the "title" as the command, and a short "description" of its high-level use case.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced Linux CLI commands, tools, and scripting techniques for senior administrators. The list should provide a deep dive into areas like kernel tuning, advanced performance monitoring (e.g., eBPF), complex text processing with awk/sed, network traffic analysis, and security auditing with tools like auditd and SELinux. For each, give a unique "id", the "title" (as the command/tool), and a detailed "description" of its application in complex troubleshooting or management scenarios.${jsonInstruction}`
+            },
+            { 
+                key: 'm365Admin', 
+                title: 'Microsoft 365 Administration', 
+                description: "Administering users, services, and security in Microsoft 365.", 
+                initialPrompt: `Generate 10 strategic administrative topics for Microsoft 365. Focus on cross-service integration, license optimization and management, data governance and lifecycle management, and preparing for and responding to security incidents using the full M365 suite. For each, give a unique "id", a concise "title", and a short "description" of the holistic management concept.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced administrative tasks for Microsoft 365. This list should focus on holistic and cross-service management, including designing a comprehensive data governance strategy, managing licensing and subscriptions for cost optimization, orchestrating security incident response across the entire Defender suite, and planning for business continuity and disaster recovery of M365 services. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the strategic, cross-functional administrative task.${jsonInstruction}`
+            },
+            { 
+                key: 'm365ConditionalAccess', 
+                title: 'M365: Conditional Access Policies', 
+                description: "Enforce access controls based on user location, device health, and risk level.", 
+                initialPrompt: `Generate 10 sophisticated scenarios for implementing M365 Conditional Access Policies. Focus on complex use cases like enforcing granular controls for privileged roles, integrating with Defender for Cloud Apps for session control, and designing policies for hybrid identity environments. For each, give a unique "id", a concise "title", and a short "description" of the specific security challenge it solves.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced scenarios and configurations for M365 Conditional Access Policies. This list should cover a wide range of enterprise security challenges, including securing access for third-party vendors, implementing risk-based policies that respond to threats in real-time, enforcing granular controls on unmanaged devices, and creating policies for complex hybrid and multi-cloud environments. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the intricate security problem it solves.${jsonInstruction}`
+            },
+            { 
+                key: 'm365Dlp', 
+                title: 'M365: Data Loss Prevention (DLP)', 
+                description: "Create policies to prevent sensitive information from being shared inappropriately.", 
+                initialPrompt: `Generate 10 advanced strategies for implementing M365 Data Loss Prevention (DLP). Focus on creating policies with complex conditions and exceptions, utilizing Endpoint DLP, tuning policies to reduce false positives, and integrating DLP with information governance. For each, give a unique "id", a concise "title", and a short "description" of the data protection goal.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced policy ideas and configurations for M365 Data Loss Prevention (DLP). This should include complex strategies such as using machine learning-based trainable classifiers, implementing exact data match (EDM) for custom sensitive data, leveraging Endpoint DLP for actions on devices, and creating a full DLP lifecycle strategy from policy creation to incident response and tuning. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the sophisticated data protection scenario.${jsonInstruction}`
+            },
+            { 
+                key: 'm365ExchangeAdmin', 
+                title: 'M365: Exchange Admin Center', 
+                description: "Manage all aspects of your organization's email, including mailboxes, distribution groups, mail flow rules, and anti-spam policies.", 
+                initialPrompt: `Generate 10 advanced tasks for the M365 Exchange Admin Center. Focus on mail flow troubleshooting using extended message traces, configuring advanced anti-phishing policies, managing transport rules for compliance, and performing eDiscovery and litigation holds. For each, give a unique "id", a concise "title", and a short "description" of its importance in enterprise email management.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced tasks and procedures for the M365 Exchange Admin Center. This should cover the full breadth of enterprise email management, including designing and managing complex mail flow rules, performing advanced eDiscovery and compliance searches, managing journaling and archiving for regulatory needs, and troubleshooting intricate client connectivity and authentication issues. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the high-stakes administrative task.${jsonInstruction}`
+            },
+            { 
+                key: 'm365AdminCenter', 
+                title: 'M365: Microsoft 365 Admin Center', 
+                description: "Your primary portal for managing your Microsoft 365 subscription, serving as a launching point to more specialized admin centers.", 
+                initialPrompt: `Generate 10 strategic tasks managed through the main Microsoft 365 Admin Center. Focus on interpreting organizational health scores, managing licensing for cost optimization, configuring cross-tenant collaboration settings, and initiating advanced compliance and security reports. For each, give a unique "id", a concise "title", and a short "description" of the administrative goal.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 strategic tasks, features, and navigation guides for the main Microsoft 365 Admin Center. This should focus on high-level administrative functions like managing cross-tenant settings for mergers and acquisitions, analyzing and acting on usage and adoption metrics, configuring organization-wide settings for new services, and navigating the complex web of interconnected admin centers for holistic governance. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the strategic administrative function.${jsonInstruction}`
+            },
+            { 
+                key: 'm365DefenderEndpoint', 
+                title: 'M365: Microsoft Defender for Endpoint', 
+                description: "Manage endpoint security, vulnerability assessments, and response actions for devices.", 
+                initialPrompt: `Generate 10 advanced operational tasks in Microsoft Defender for Endpoint. Focus on threat hunting with advanced queries, creating custom detection rules, managing attack surface reduction policies, and responding to and isolating compromised devices effectively. For each, give a unique "id", a concise "title", and a short "description" of the security operation.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks and security operations in Microsoft Defender for Endpoint. This should cover the entire security lifecycle, from proactive attack surface reduction and vulnerability management to advanced threat hunting with KQL, creating custom IOC detection rules, and orchestrating automated investigation and response (AIR) playbooks. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the advanced security operation.${jsonInstruction}`
+            },
+            { 
+                key: 'm365DefenderIdentity', 
+                title: 'M365: Microsoft Defender for Identity', 
+                description: "Monitor and protect against identity-based threats and compromised user accounts.", 
+                initialPrompt: `Generate 10 key tasks for leveraging Microsoft Defender for Identity. Focus on investigating advanced threats like lateral movement, configuring and testing honeytoken accounts, tuning security alerts, and integrating identity signals with a broader SIEM/XDR strategy. For each, give a unique "id", a concise "title", and a short "description" highlighting its role in identity threat detection.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 features, alerts, and investigation guides for Microsoft Defender for Identity. This should provide a deep dive into detecting sophisticated identity-based attacks, such as pass-the-hash/ticket, golden ticket attacks, and reconnaissance. Include topics on configuring honeytokens, integrating with SIEM, and using the data for proactive threat hunting. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the identity threat detection and response technique.${jsonInstruction}`
+            },
+            { 
+                key: 'm365DefenderXdr', 
+                title: 'M365: Microsoft Defender XDR Portal', 
+                description: "A unified portal to manage and respond to security threats across your Microsoft 365 environment.", 
+                initialPrompt: `Generate 10 advanced use cases for the Microsoft Defender XDR portal. Focus on correlating incidents across different domains (identity, endpoint, email), automating response actions with playbooks, proactive threat hunting across the entire dataset, and managing multi-tenant security environments. For each, give a unique "id", a concise "title", and a short "description" of the unified security operation.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 features, investigation workflows, and administrative tasks within the Microsoft Defender XDR portal. This should focus on leveraging the unified nature of the portal, including correlating alerts from different services into single incidents, performing advanced threat hunting across endpoints, identities, and cloud apps, and managing automated responses that span the entire M365 ecosystem. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the cross-domain security workflow.${jsonInstruction}`
+            },
+            { 
+                key: 'm365Mfa', 
+                title: 'M365: Multi-Factor Authentication (MFA)', 
+                description: "Configure and manage MFA settings to enhance security.", 
+                initialPrompt: `Generate 10 advanced topics for managing MFA in a large enterprise. Focus on deploying passwordless authentication methods, configuring Authentication Strengths for granular control, managing MFA for service accounts and privileged identities, and troubleshooting complex user lockout scenarios. For each, give a unique "id", a concise "title", and a short "description" of the advanced security measure.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 aspects of configuring and managing MFA in M365. This should provide a deep dive into advanced topics like deploying passwordless methods (FIDO2, Windows Hello for Business), configuring Authentication Strengths to enforce phishing-resistant MFA for admins, managing named locations and trusted IPs, and creating a full user adoption and communication plan for an MFA rollout. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the modern authentication concept.${jsonInstruction}`
+            },
+             { 
+                key: 'm365Pim', 
+                title: 'M365: Privileged Identity Management (PIM)', 
+                description: "Provide just-in-time privileged access to resources.", 
+                initialPrompt: `Generate 10 advanced concepts for implementing Privileged Identity Management (PIM) in M365. Focus on conducting access reviews, creating time-bound assignments for privileged roles, configuring custom approval workflows, and auditing PIM activity for compliance. For each, give a unique "id", a concise "title", and a short "description" of the just-in-time access strategy.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 concepts and procedures for using Privileged Identity Management (PIM) in M365. This should provide a complete guide to implementing a least-privilege model, covering topics like configuring PIM for Entra ID and Azure resources, setting up complex approval workflows, performing regular access reviews for compliance, and auditing all privileged activity through detailed logs and alerts. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the PIM strategy.${jsonInstruction}`
+            },
+            { 
+                key: 'm365PowerPlatformAdmin', 
+                title: 'M365: Power Platform Admin Center', 
+                description: "Manage environments, data policies, and integrations for Power Apps, Power Automate, and Power BI.", 
+                initialPrompt: `Generate 10 strategic governance tasks for the Power Platform Admin Center. Focus on creating robust environment strategies, establishing tenant-wide DLP policies, monitoring capacity and consumption, and managing connectors for security and compliance. For each, give a unique "id", a concise "title", and a short "description" of the governance principle being applied.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks and governance policies for the Power Platform Admin Center. This should focus on establishing a Center of Excellence (CoE), implementing granular DLP policies, managing application and flow lifecycle, monitoring tenant-wide analytics for adoption and risk, and configuring capacity and licensing for cost-effectiveness. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the enterprise governance policy or task.${jsonInstruction}`
+            },
+            { 
+                key: 'm365SharepointAdmin', 
+                title: 'M365: SharePoint Admin Center', 
+                description: "Control your organization's SharePoint sites and OneDrive settings. Manage site collections, sharing policies, and storage limits.", 
+                initialPrompt: `Generate 10 strategic tasks within the SharePoint Admin Center for large enterprises. Focus on configuring hub sites and architecture, managing external sharing policies for security, setting tenant-wide storage and site creation policies, and implementing information governance and sensitivity labels. For each, give a unique "id", a concise "title", and a short "description" of the governance outcome.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks and settings in the SharePoint Admin Center. This should cover large-scale information architecture, including configuring hub sites and site designs, managing advanced external sharing and guest access policies, implementing retention and sensitivity labels for compliance, and managing migration to SharePoint from on-premises file shares. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the enterprise content management task.${jsonInstruction}`
+            },
+            { 
+                key: 'm365Sso', 
+                title: 'M365: Single Sign-On (SSO)', 
+                description: "Manage SSO for thousands of pre-integrated SaaS applications.", 
+                initialPrompt: `Generate 10 advanced scenarios for configuring SSO in Microsoft Entra ID. Focus on integrating non-gallery applications, configuring attribute mapping and claims transformation, implementing certificate-based authentication, and troubleshooting complex SSO failures. For each, give a unique "id", a concise "title", and a short "description" of the integration challenge.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 concepts and procedures for configuring SSO for apps in M365. This should cover advanced scenarios such as integrating complex SaaS applications with custom claims rules, configuring provisioning for automated user lifecycle management, troubleshooting SAML and OpenID Connect authentication flows, and managing certificate-based authentication for SSO. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the advanced identity federation concept.${jsonInstruction}`
+            },
+            { 
+                key: 'm365TeamsAdmin', 
+                title: 'M365: Teams Admin Center', 
+                description: "Manage all aspects of Microsoft Teams, including user policies, meeting settings, app integrations, and call quality.", 
+                initialPrompt: `Generate 10 advanced governance and management tasks for the Teams Admin Center. Focus on configuring custom policies for meetings and messaging, managing app permissions and integrations at scale, troubleshooting call quality issues using the Call Quality Dashboard, and implementing sensitivity labels for Teams. For each, give a unique "id", a concise "title", and a short "description" of the administrative control.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 policies, settings, and management tasks for the Teams Admin Center. This should provide a deep dive into enterprise governance, covering topics like managing app permission policies, configuring meeting and live event settings for security, analyzing call quality data to troubleshoot issues, and implementing a full lifecycle management strategy for Teams creation, archival, and deletion. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the scalable governance task.${jsonInstruction}`
+            },
+            { 
+                key: 'm365UserGroupMgmt', 
+                title: 'M365: User and Group Management', 
+                description: "Advanced management of user accounts, security groups, and distribution lists.", 
+                initialPrompt: `Generate 10 advanced topics for User and Group Management in Microsoft 365. Focus on dynamic group creation with complex rules, managing access packages for governance, scripting bulk operations with PowerShell, and strategies for managing guest user lifecycles. For each, give a unique "id", a concise "title", and a short "description" of the scalable management technique.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 advanced user and group management tasks and scenarios in M365. This should focus on large-scale and automated management techniques, such as creating complex dynamic groups based on user attributes, managing access to resources via access packages, scripting bulk operations with PowerShell and the Graph API, and implementing robust processes for guest user onboarding and offboarding. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the enterprise-scale management technique.${jsonInstruction}`
+            },
+            { 
+                key: 'msGraphScripting', 
+                title: 'MS Graph scripting', 
+                description: "Automating M365 tasks using the Microsoft Graph API.", 
+                initialPrompt: `Generate 10 powerful automation tasks that can be accomplished with MS Graph scripting. Focus on generating security and compliance reports, automating user and group lifecycle management, managing Intune policies, and creating custom monitoring solutions. These should be tasks that are difficult or impossible to do through the GUI. For each, give a unique "id", a concise "title", and a short "description" of the automation's value.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced tasks to automate with Microsoft Graph scripting. This list should focus on tasks that are difficult or impossible through the UI, such as performing complex cross-service reporting, automating security and compliance checks, managing Intune-enrolled devices, and creating custom background services that react to events within the M365 ecosystem. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the high-value automation task.${jsonInstruction}`
+            },
+            { 
+                key: 'psForM365AdminCenter', 
+                title: 'PowerShell for Microsoft 365 Admin Center', 
+                description: "Using PowerShell to manage core M365 settings, licenses, and users.", 
+                initialPrompt: `Generate 10 PowerShell tasks for the main M365 Admin Center that demonstrate advanced automation. Focus on generating comprehensive license and usage reports, performing bulk user updates, managing multi-tenant configurations, and creating scheduled tasks for routine administrative checks. For each, give a unique "id", a concise "title", and a short "description" of the automation goal.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for the main M365 Admin Center. This should focus on automation that goes beyond simple user management, such as generating detailed reports on service health and usage, managing company-wide settings and domains, and scripting complex, multi-step administrative processes that involve multiple M365 services. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the automation script's purpose.${jsonInstruction}`
+            },
+            { 
+                key: 'psForM365Entra', 
+                title: 'PowerShell for Microsoft Entra', 
+                description: "Using PowerShell to manage users, groups, devices, and applications in Microsoft Entra ID.", 
+                initialPrompt: `Generate 10 advanced PowerShell tasks for Microsoft Entra. Focus on scripting the management of service principals and app registrations, generating detailed audit log reports, managing administrative units, and automating complex user lifecycle processes across hybrid environments. For each, give a unique "id", a concise "title", and a short "description" of the large-scale automation.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for Microsoft Entra. This should cover the full breadth of identity management automation, including managing app registrations and service principals at scale, scripting the configuration of Conditional Access policies, generating detailed audit and sign-in log reports for security analysis, and managing administrative units for delegated permissions. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the enterprise identity automation task.${jsonInstruction}`
+            },
+            { 
+                key: 'psForM365Exchange', 
+                title: 'PowerShell for Microsoft Exchange Online', 
+                description: "Using PowerShell to manage mailboxes, transport rules, and other Exchange Online features.", 
+                initialPrompt: `Generate 10 advanced PowerShell tasks for Microsoft Exchange Online. Focus on creating complex transport rules, managing eDiscovery and content searches, generating detailed mailbox permission reports, and automating the management of shared mailboxes and distribution lists at scale. For each, give a unique "id", a concise "title", and a short "description" that highlights its administrative efficiency.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for Exchange Online. This should focus on tasks that are essential for large-scale management, such as creating complex transport rules for compliance, performing advanced eDiscovery searches, managing mailbox permissions and litigation holds in bulk, and generating detailed reports on mail flow and message hygiene. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the powerful email administration script.${jsonInstruction}`
+            },
+            { 
+                key: 'psForM365Sharepoint', 
+                title: 'PowerShell for Microsoft SharePoint Online', 
+                description: "Using PowerShell to manage SharePoint sites, lists, permissions, and settings.", 
+                initialPrompt: `Generate 10 advanced PowerShell tasks for SharePoint Online administration. Focus on managing site collections in bulk, generating detailed reports on user permissions and external sharing, automating the application of site designs and templates, and managing term stores and metadata. For each, give a unique "id", a concise "title", and a short "description" of the large-scale management task.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for SharePoint Online. This should cover large-scale content and site management, including scripting the creation and configuration of site collections, generating detailed reports on storage usage and permissions, managing hub sites and site associations, and automating the application of governance policies across the tenant. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the bulk management script.${jsonInstruction}`
+            },
+             { 
+                key: 'psForM365Teams', 
+                title: 'PowerShell for Microsoft Teams', 
+                description: "Using PowerShell to manage Teams, channels, policies, and users in Microsoft Teams.", 
+                initialPrompt: `Generate 10 advanced PowerShell tasks for managing Microsoft Teams. Focus on creating and managing teams and channels in bulk, applying custom policies to large groups of users, generating reports on Teams usage and guest access, and automating the team lifecycle from creation to archival. For each, give a unique "id", a concise "title", and a short "description" of the governance automation.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for Microsoft Teams. This should focus on governance and management at scale, including scripting the creation of Teams from templates, applying custom policies to thousands of users, managing app setup policies and permissions, and generating detailed reports on user activity and team lifecycle. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the Teams governance automation.${jsonInstruction}`
+            },
+            { 
+                key: 'powershellWindowsServer', 
+                title: 'PowerShell for Windows Server Administration', 
+                description: "Automating Windows Server management with PowerShell scripts and cmdlets.", 
+                initialPrompt: `Generate 10 topics on creating robust, reusable PowerShell scripts for Windows Server Administration. Focus on building advanced functions with error handling, desired state configuration (DSC), managing services on remote servers at scale (JEA), and automating complex Active Directory health checks. For each, give a unique "id", a concise "title", and a short "description" of the advanced scripting concept.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced PowerShell tasks for Windows Server Administration. This should cover a wide range of topics, including Desired State Configuration (DSC), Just Enough Administration (JEA), managing Hyper-V and Failover Clustering, automating Active Directory health checks, and creating advanced functions and modules for reusable code. For each, give a "title", and a detailed "description" of the task.${jsonInstruction}`
+            },
+            { 
+                key: 'powershellScripts', 
+                title: 'PowerShell Scripts', 
+                description: "A collection of useful PowerShell scripts for various administrative tasks.", 
+                initialPrompt: `Generate 10 ideas for advanced PowerShell scripts for experienced administrators. Focus on developing utility scripts that solve complex problems, such as a script to perform a comprehensive security audit of a server, a tool to automate patch management and reporting, or a script to manage and rotate API keys and service account passwords. For each, give a unique "id", a concise "title" for the script, and a short "description" of the problem it solves.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 useful and practical PowerShell script ideas for administrators. This should focus on creating tool-level scripts that solve complex, real-world problems, such as a script to perform a full security audit on a server, a tool to automate patch management across a fleet of servers, or a script to manage the entire lifecycle of a user in a hybrid environment. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the script's purpose and the problem it solves.${jsonInstruction}`
+            },
+            {
+                key: 'scomAdmin',
+                title: 'SCOM Administration',
+                description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).',
+                initialPrompt: `Generate 10 advanced topics for SCOM Administration. Focus on creating custom management packs, tuning overrides to reduce alert noise, configuring distributed monitoring, and integrating SCOM with other tools like ServiceNow for automated ticketing. For each, give a unique "id", a concise "title", and a short "description" of the enterprise monitoring strategy.${jsonInstruction}`,
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced administrative tasks for SCOM. This should provide a deep dive into enterprise monitoring, including creating and tuning custom management packs, configuring distributed monitoring for complex applications, managing gateways for untrusted domains, and integrating SCOM with other systems like Azure Monitor and ServiceNow for a unified operations view. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the advanced monitoring task.${jsonInstruction}`
+            },
+            {
+                key: 'serviceNowAdmin',
+                title: 'ServiceNow Platform Administration',
+                description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.',
+                initialPrompt: `Generate 10 advanced topics for ServiceNow Platform Administration. Focus on creating complex workflows, scripting with Business Rules and Script Includes, managing CMDB health and reconciliation, and configuring integrations with external systems using the Integration Hub. For each, give a unique "id", a concise "title", and a short "description" of the platform customization or integration.${jsonInstruction}`,
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced administrative tasks for the ServiceNow platform. This should cover the full scope of platform ownership, including advanced workflow and Flow Designer usage, scripting with Business Rules and Script Includes, managing the health and population of the CMDB, developing custom applications, and configuring complex integrations using IntegrationHub. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the platform administration or development task.${jsonInstruction}`
+            },
+            { 
+                key: 'usefulApis', 
+                title: 'Useful APIs for Web Development', 
+                description: "A curated list of public APIs that are useful for web development projects.", 
+                initialPrompt: `Generate a list of 10 useful public APIs from a systems administrator's perspective. Focus on APIs that can be used for infrastructure automation, security monitoring, and creating custom operational dashboards, such as APIs from cloud providers, security intelligence feeds, or hardware vendors. For each, give a unique "id", the "title" (API name), and a short "description" of its administrative use case.${jsonInstruction}`, 
+                fullPrompt: `Generate a list of 40-50 useful public APIs for web developers, from the perspective of a systems administrator. This list should focus on APIs that can be leveraged for infrastructure automation, security monitoring, and operational intelligence. Examples include APIs from cloud providers, DNS services, security vulnerability databases, and hardware vendors. For each, give a unique "id", the "title" (API name), and a detailed "description" of how it can be used in an administrative or operational context.${jsonInstruction}`
+            },
+            { 
+                key: 'vmwareEsxi', 
+                title: 'VMware ESXi Administration', 
+                description: "Guides and best practices for managing VMware ESXi environments.", 
+                initialPrompt: `Generate 10 advanced topics for VMware ESXi Administration in an enterprise. Focus on performance tuning of vSphere clusters, managing Distributed Resource Scheduler (DRS) and High Availability (HA) rules, security hardening of hosts and vCenter, and managing vSphere Lifecycle Manager for updates. For each, give a unique "id", a concise "title", and a short "description" of its importance in a production cluster.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced administrative tasks for VMware ESXi. This should provide a deep dive into managing a large vSphere environment, including advanced performance tuning of clusters, configuring DRS and HA for business-critical applications, security hardening of ESXi hosts and vCenter, managing vSAN, and automating operations with PowerCLI and vRealize Orchestrator. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the enterprise virtualization task.${jsonInstruction}`
+            },
+            { 
+                key: 'vmwarePowerCli', 
+                title: 'VMware PowerCLI', 
+                description: "Automating VMware vSphere administration using PowerCLI.", 
+                initialPrompt: `Generate 10 advanced tasks that can be automated with VMware PowerCLI. Focus on creating complex reports on VM inventory and performance, automating VM deployments from templates, managing host profiles and cluster configurations, and scripting disaster recovery failover plans. For each, give a unique "id", a concise "title", and a short "description" that highlights the automation's efficiency.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced tasks using VMware PowerCLI. This should focus on complex automation scenarios, such as scripting the deployment of entire clusters, generating detailed performance and capacity reports, automating disaster recovery testing and failover, and managing host profiles and compliance across a large number of hosts. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the automation script's purpose.${jsonInstruction}`
+            },
+             { 
+                key: 'windows11Admin', 
+                title: 'Windows 11 Administration', 
+                description: "Key tasks and features for administering Windows 11 in an enterprise.", 
+                initialPrompt: `Generate 10 key administrative topics for managing Windows 11 in the enterprise. Focus on deployment and management with Autopilot and Intune, configuring security features like virtualization-based security (VBS), managing the OS with modern policies (MDM), and troubleshooting compatibility issues. For each, give a unique "id", a concise "title", and a short "description" of the modern management task.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks specific to Windows 11. This should provide a deep dive into modern, enterprise-level management, including large-scale deployment with Windows Autopilot, managing security features like Secured-core and virtualization-based security (VBS), configuring systems with Intune and Configuration Manager co-management, and troubleshooting advanced application and hardware compatibility issues. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the modern endpoint management task.${jsonInstruction}`
+            },
+            { 
+                key: 'windows12Features', 
+                title: 'Windows 12 - New Features', 
+                description: "Exploring the announced and anticipated new features of Windows 12.", 
+                initialPrompt: `Generate 10 anticipated new features for Windows 12 from an enterprise administrator's perspective. Focus on potential improvements in security, management at scale, AI integration for administrative tasks, and performance that would have a significant impact on IT operations. For each, give a unique "id", a concise "title", and a short "description" analyzing its potential impact.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 anticipated new features and changes for Windows 12, aimed at senior systems administrators. This list should provide a deep and speculative analysis of potential improvements in security, AI-driven management, enterprise deployment and servicing, and integration with cloud services, explaining the potential impact of each feature on IT operations. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the anticipated feature and its administrative relevance.${jsonInstruction}`
+            },
+            { 
+                key: 'windowsServer', 
+                title: 'Windows Server Administration', 
+                description: "Essential tasks for managing Windows Server instances.", 
+                initialPrompt: `Generate 10 advanced topics for Windows Server Administration. Focus on high-level concepts such as designing and managing a highly available failover cluster, implementing a multi-site Active Directory replication topology, deploying a public key infrastructure (PKI), and advanced Group Policy management. For each, give a unique "id", a concise "title", and a short "description" of the architectural concept.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 common and advanced administrative tasks for Windows Server. This should cover a broad range of high-level topics, such as designing and managing a highly available failover cluster, implementing a multi-site Active Directory replication topology, deploying and managing a Public Key Infrastructure (PKI), and creating advanced Group Policy objects for security and configuration management. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the architectural or administrative concept.${jsonInstruction}`
+            },
+            { 
+                key: 'windowsServer2019', 
+                title: 'Windows Server 2019 Administration', 
+                description: "Key tasks and features for administering Windows Server 2019.", 
+                initialPrompt: `Generate 10 key administrative topics specific to Windows Server 2019. Focus on managing features like Storage Spaces Direct, Windows Admin Center, Shielded VMs for Hyper-V, and the containerization features introduced or enhanced in this version. For each, give a unique "id", a concise "title", and a short "description" of the feature's role in a modern data center.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks specific to Windows Server 2019. This should cover the key features of this version in depth, including managing Storage Spaces Direct, leveraging Windows Admin Center for day-to-day tasks, implementing Shielded VMs in Hyper-V, using System Insights for predictive analytics, and managing Windows Defender Advanced Threat Protection. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the task.${jsonInstruction}`
+            },
+            { 
+                key: 'windowsServer2022', 
+                title: 'Windows Server 2022 Administration', 
+                description: "Key tasks and new features for administering Windows Server 2022.", 
+                initialPrompt: `Generate 10 key administrative topics for Windows Server 2022. Focus on advanced features such as Secured-core server capabilities, SMB over QUIC, Azure Arc integration, and improvements to containerization and networking performance. For each, give a unique "id", a concise "title", and a short "description" highlighting its security or management benefits.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 administrative tasks specific to Windows Server 2022. This should provide a deep dive into its most impactful features, such as implementing a Secured-core server strategy, configuring and managing SMB over QUIC, leveraging Azure Arc for hybrid management, and taking advantage of networking and storage performance improvements for demanding workloads. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the task.${jsonInstruction}`
+            },
+            { 
+                key: 'windowsServer2025', 
+                title: 'Windows Server 2025', 
+                description: "Exploring the new features and administration changes in Windows Server 2025.", 
+                initialPrompt: `Generate 10 significant new features anticipated in Windows Server 2025 for senior administrators. Focus on impactful changes like hotpatching for non-Azure machines, next-generation Active Directory and SMB features, and AI-driven management capabilities that will define the future of Windows Server administration. For each, give a unique "id", a concise "title", and a short "description" analyzing its strategic importance.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 new features and administrative tasks for Windows Server 2025. This should provide a deep and speculative look into the next generation of Windows Server, focusing on anticipated features like "hotpatching" for non-Azure VMs, next-generation Active Directory capabilities, AI-driven management insights, and significant improvements in security, storage, and networking for the modern data center. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the new feature or task.${jsonInstruction}`
+            },
+            { 
+                key: 'windowsServer2025Azure', 
+                title: 'Windows Server 2025 Datacenter: Azure Edition', 
+                description: "Exploring features specific to the Azure Edition of Windows Server 2025, like Hotpatching and SMB over QUIC.", 
+                initialPrompt: `Generate 10 key features and management tasks specific to Windows Server 2025 Azure Edition. Focus on the unique benefits of this edition, such as advanced hotpatching, SMB over QUIC implementation, and its tight integration with Azure management and governance services like Azure Arc. For each, give a unique "id", a concise "title", and a short "description" of its cloud-hybrid value.${jsonInstruction}`, 
+                fullPrompt: `Generate a comprehensive list of 40-50 features and management tasks specific to Windows Server 2025 Azure Edition. This should provide a deep dive into the unique capabilities of this edition, focusing on its tight integration with Azure. Include topics like advanced "hotpatching", implementing SMB over QUIC for secure file access, and using Azure Arc to manage these servers as native Azure resources, complete with Azure policies and governance. For each, give a unique "id", a concise, descriptive "title", and a detailed "description" of the hybrid cloud feature.${jsonInstruction}`
+            }
+        ];
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
@@ -1225,193 +1567,6 @@
 
         async function loadAppContent(loadingMessageEl) {
             try {
-                const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
-                
-                const categoriesToGenerate = [
-                    { 
-                        key: 'activeDirectory', 
-                        title: 'Active Directory Management', 
-                        description: "Tasks for managing users, groups, GPOs, and other AD objects.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'aiProgramming', 
-                        title: 'Artificial Intelligence Programming', 
-                        description: "Concepts and guides for getting started with AI development and programming.", 
-                        initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'citrixAdmin', 
-                        title: 'Citrix Administration', 
-                        description: "Managing Citrix Virtual Apps and Desktops environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'geminiInfographics', 
-                        title: 'Create Infographics in Gemini', 
-                        description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", 
-                        initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'geminiLinkedIn', 
-                        title: 'Create LinkedIn Posts using Gemini', 
-                        description: "Use Gemini to draft engaging and professional posts for LinkedIn.", 
-                        initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'dataCenterPractices', 
-                        title: 'Data Center Best Practices', 
-                        description: "Guides on data center operations, cooling, power, and security.", 
-                        initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'webDesignBestPractices', 
-                        title: 'Designing Web Pages Best Practices', 
-                        description: "Best practices for UI/UX, accessibility, and performance in web design.", 
-                        initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'webDesignGemini', 
-                        title: 'Designing Web Pages with Gemini AI', 
-                        description: "Using Gemini AI to assist in the design and development of web pages.", 
-                        initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'dosCommands', 
-                        title: 'DOS Commands for Administrators', 
-                        description: "A reference for essential DOS and Command Prompt commands for system admins.", 
-                        initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters.${jsonInstruction}` 
-                    },
-                     { 
-                        key: 'geminiCliGuide', 
-                        title: 'A Guide to Using the Gemini CLI', 
-                        description: "Learn how to use the Gemini Command Line Interface for various tasks.", 
-                        initialPrompt: `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced use cases and commands for the Gemini CLI. For each, give a unique "id", "title", and a detailed "description" of the use case.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'hpeProLiant', 
-                        title: 'HPE ProLiant Server Management', 
-                        description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", 
-                        initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'javascriptForHtml', 
-                        title: 'JavaScript for HTML', 
-                        description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", 
-                        initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'linuxCliAdmin', 
-                        title: 'Linux CLI for Administration', 
-                        description: "A reference for essential Linux commands for system administrators.", 
-                        initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration. For each, give a unique "id", "title" (the command), and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'm365Admin', 
-                        title: 'Microsoft 365 Administration', 
-                        description: "Administering users, services, and security in Microsoft 365.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'msGraphScripting', 
-                        title: 'MS Graph scripting', 
-                        description: "Automating M365 tasks using the Microsoft Graph API.", 
-                        initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'powershellM365', 
-                        title: 'PowerShell for M365 Administration', 
-                        description: "Using PowerShell to manage Microsoft 365 services like Exchange Online and SharePoint.", 
-                        initialPrompt: `Generate 10 common PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for M365 Administration. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'powershellWindowsServer', 
-                        title: 'PowerShell for Windows Server Administration', 
-                        description: "Automating Windows Server management with PowerShell scripts and cmdlets.", 
-                        initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task.${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'powershellScripts', 
-                        title: 'PowerShell Scripts', 
-                        description: "A collection of useful PowerShell scripts for various administrative tasks.", 
-                        initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose.${jsonInstruction}` 
-                    },
-                    {
-                        key: 'scomAdmin',
-                        title: 'SCOM Administration',
-                        description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).',
-                        initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`,
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}`
-                    },
-                    {
-                        key: 'serviceNowAdmin',
-                        title: 'ServiceNow Platform Administration',
-                        description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.',
-                        initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`,
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}`
-                    },
-                    { 
-                        key: 'usefulApis', 
-                        title: 'Useful APIs for Web Development', 
-                        description: "A curated list of public APIs that are useful for web development projects.", 
-                        initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate a list of 40-50 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'vmwareEsxi', 
-                        title: 'VMware ESXi Administration', 
-                        description: "Guides and best practices for managing VMware ESXi environments.", 
-                        initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'vmwarePowerCli', 
-                        title: 'VMware PowerCLI', 
-                        description: "Automating VMware vSphere administration using PowerCLI.", 
-                        initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'windowsServer2019', 
-                        title: 'Windows Server 2019 Administration', 
-                        description: "Key tasks and features for administering Windows Server 2019.", 
-                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'windowsServer2022', 
-                        title: 'Windows Server 2022 Administration', 
-                        description: "Key tasks and new features for administering Windows Server 2022.", 
-                        initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    },
-                    { 
-                        key: 'windowsServer', 
-                        title: 'Windows Server Administration', 
-                        description: "Essential tasks for managing Windows Server instances.", 
-                        initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                        fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
-                    }
-                ];
-                
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
 
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
@@ -1586,12 +1741,14 @@
             const categoryTitle = card.querySelector('h2').textContent;
             const existingTitles = allThemeData[themeType].map(item => item.title);
             
-            const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
-            
-            Existing Task List:
-            - ${existingTitles.join('\n- ')}
+            const prompt = `Generate 10 additional, high-level topics for the IT category "${categoryTitle}". These topics should be of a similar advanced nature to the existing ones, focusing on strategic implementation, security, or automation. Do not suggest elementary or introductory tasks.
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
+Crucially, these topics must be new and not present in the following list:
+Existing Task List:
+- ${existingTitles.join('\n- ')}
+
+For each new topic, provide a unique "id", a concise "title", and a short "description" highlighting its relevance to a senior administrator.
+IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1687,38 +1844,17 @@
                 target.prepend(indicator);
             }
 
-            const prompt = `You are an Expert Technical Editor AI specializing in condensing complex IT documentation into concise, actionable summaries. Your task is to generate a brief, structured summary for the following topic.
 
-To ensure the summary is accurate and comprehensive, you will follow a two-step internal process:
-1.  **Conceptualize:** First, you will internally conceptualize a full, in-depth guide on the topic below. This conceptual guide must be based on your established **PROTOCOL 1 (Mandatory Guide Structure)**, covering everything from prerequisites to advanced automation.
-2.  **Summarize:** Second, you will synthesize the most critical information from that conceptual guide into the required five-point summary format.
+            const prompt = `
+                You are creating a summary for an IT administration guide.
+                The overall category is: "${cardTitle}"
+                The category description is: "${cardDescription}"
+                The specific topic is: "${item.title}"
 
----
-**TOPIC:**
-"${item.title}"
----
-
-**REQUIRED OUTPUT FORMAT:**
-Generate a simple markdown string consisting of exactly five bullet points. Each bullet point must be a single, clear, and descriptive sentence.
-
-* **Objective:** [State the primary goal or purpose of the task.]
-* **Prerequisites:** [Summarize the most critical permissions or software needed.]
-* **Key Steps:** [Describe the core sequence of actions in a single sentence.]
-* **Verification:** [Explain how an administrator would confirm the task was successful.]
-* **Helpful Resources:** [Describe the most important type of resource to consult, such as official documentation or a specific tool.]
-
----
-**EXAMPLE OUTPUT:**
-For clarity, a perfect response for the topic "Disable a User Mailbox in Microsoft 365" would be:
-
-* **Objective:** Securely disable mailbox access for a departing user while retaining the mailbox data for a set period according to retention policies.
-* **Prerequisites:** Requires the 'Exchange Administrator' or 'Global Administrator' role in Microsoft 365 and the user's principal name.
-* **Key Steps:** The process involves connecting to Exchange Online via PowerShell, using the \`Disable-Mailbox\` cmdlet with the user's identity, and confirming the action.
-* **Verification:** Successful completion is verified by running the \`Get-Mailbox\` cmdlet for the user, which should no longer return an active mailbox object.
-* **Helpful Resources:** Always refer to the official Microsoft Learn documentation for the \`Disable-Mailbox\` cmdlet for the latest parameters and examples.
----
-
-Return only the 5-point markdown summary string.`;
+                Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
+                For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence.
+                Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
+            `;
             
             const resultContainer = document.getElementById(`${themeType}-details`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
@@ -1990,16 +2126,23 @@ Return only the 5-point markdown summary string.`;
         }
         
         function getAppPrompts() {
-            return {
-                "Generate Detailed Guide": getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" }),
-                "Refine Existing Guide": getEnhancedPrompt("{refinement_request}", "", "{original_text}"),
-                "Generate In-Depth Guide": getEnhancedPrompt("{item_title}"),
-                "Generate Summary": `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`,
-                "Generate UI Screenshot": `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`,
-                "Generate Color Theme": `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON.`,
-                "Discover New Topic": `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`,
-                "Gemini CLI Guide": `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`
-            };
+            const prompts = {};
+
+            // Add dynamic category prompts
+            categoriesToGenerate.forEach(cat => {
+                prompts[`${cat.title} (Initial Load)`] = cat.initialPrompt;
+                prompts[`${cat.title} (Full Details)`] = cat.fullPrompt;
+            });
+
+            // Add other static/generic prompts
+            prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" });
+            prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
+            prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
+            prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
+            prompts["Generate Color Theme"] = `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON object.`;
+            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`;
+            
+            return prompts;
         }
         
         function displayPromptsInModal() {
@@ -2009,7 +2152,10 @@ Return only the 5-point markdown summary string.`;
 
             const prompts = getAppPrompts();
 
-            for (const [title, promptText] of Object.entries(prompts)) {
+            const sortedTitles = Object.keys(prompts).sort();
+
+            for (const title of sortedTitles) {
+                const promptText = prompts[title];
                 const promptContainer = document.createElement('div');
                 promptContainer.className = 'mb-6';
                 
@@ -2039,103 +2185,131 @@ Return only the 5-point markdown summary string.`;
             modal.classList.remove('hidden');
         }
 
-        /**
-         * Generates a prompt for the Gemini API.
-         * This function operates in two modes:
-         * 1. Refinement Mode: If 'originalText' is provided, it creates a prompt to rewrite that text based on the 'task' (which is a refinement request).
-         * 2. Generation Mode: If 'originalText' is null, it creates a new, in-depth guide based on the "System Directive" and "Task Prompt" structure.
-         * @param {string} task - The core task or topic for the guide, or the refinement request.
-         * @param {string} [options=''] - Optional tailoring keywords (e.g., 'for beginners').
-         * @param {string} [originalText=''] - The original markdown text to be refined. If present, triggers refinement mode.
-         * @param {object} [context={}] - Additional context, like the category title and description.
-         * @returns {string} The complete prompt for the Gemini API.
-         */
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
+            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
+
+            const linkVerificationAndGenerationMandate = `
+* **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
+    1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
+    2.  **Identify Search Topics:** From the list of helpful resources you just generated, identify the specific, core topics that need a URL. For example, from "Official Kubernetes Documentation", the topic is "Kubernetes official documentation".
+    3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
+    4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
+    5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
             
-            const systemDirective = `[SYSTEM PROMPT - Your AI's Core Operating System]
-PERSONA & CORE DIRECTIVE:
-You are an expert system designed exclusively for generating elite-level IT documentation. Your persona is a Senior Principal IT Administrator and Technical Writer. Your entire operational process is governed by the strict protocols outlined below.
-PROTOCOL 1: MANDATORY GUIDE STRUCTURE
-Every guide you generate must follow this 13-part structure using '###' for headers.
+            const powershellStandard = `
+* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
+    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
+    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
+    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset.
+    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
+    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
+    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
+            
+            const powerCLIStandard = `
+* **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
+    * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
+    * **Use Correct Cmdlets and Properties:** Always use current, official PowerCLI cmdlets. Critically, verify the property names from the objects returned by cmdlets (e.g., the memory size for a VM from \`Get-VM\` is \`MemoryGB\`, not \`Memory\`).
+    * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
+    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
+    * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
 
-0. Executive Summary
-1. Introduction
-2. Architectural Overview
-3. Key Concepts & Terminology
-4. Prerequisites
-5. Detailed Step-by-Step Instructions
-6. Verification and Validation
-7. Best Practices (Security, Performance, Maintainability)
-8. Automation Opportunities
-9. Security Considerations
-10. Advanced Use Cases & Scenarios
-11. Troubleshooting
-12. Helpful Resources
-PROTOCOL 2: HYPERLINK GENERATION MANDATE
-You must generate valid, authoritative hyperlinks via your internal web search and verification process.
-PROTOCOL 3: POWERSHELL SCRIPTING MANDATE
-All PowerShell scripts must be production-grade, using modern cmdlets, "Filter Right" techniques, robust try/catch error handling, and be self-contained.
-PROTOCOL 4: POWERCLI SCRIPTING MANDATE
-All PowerCLI scripts must be production-grade, using verified properties, efficient filtering, robust error handling, and proper session cleanup.`;
-
-            // --- REFINEMENT MODE ---
             if (originalText) {
-                const refinementProtocol = `PROTOCOL 5: DOCUMENT REFINEMENT MANDATE
-When tasked with refining an existing document, you will execute the following four-phase process:
-Phase 1: Analysis.
-* Deconstruct the {original_text} to identify its core concepts, structure, and intent.
-* Deconstruct the {refinement_request} to pinpoint the user's specific goals, additions, and desired changes.
-Phase 2: Synthesis & Restructuring.
-* Do not merely edit the original text. Create a new, superior guide by merging the original content with the user's request.
-* Design the most logical new structure for the combined content. Create new, clear, and descriptive ### headers. The original structure is not a constraint.
-* Rewrite the content to be seamless, clear, and authoritative.
-Phase 3: Quality Assurance.
-* Proactively apply all Core Directives to the newly synthesized guide.
-* Links: All hyperlinks must be validated according to Protocol 2.
-* PowerShell: All PowerShell scripts must be re-validated or rewritten to meet every rule in Protocol 3.
-* PowerCLI: All PowerCLI scripts must be re-validated or rewritten to meet every rule in Protocol 4.
-Phase 4: Reporting.
-* Before presenting the final guide, provide a concise "Summary of Changes." This summary must be a bulleted list explaining what you changed and why, directly referencing the user's request.`;
-                
-                const refinementUserPrompt = `[USER PROMPT]
-You will act as an expert system to refine an existing IT guide. Execute this task by strictly following PROTOCOL 5: DOCUMENT REFINEMENT MANDATE.
+                // This is the prompt for refining existing text
+                return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
+**ORIGINAL IT GUIDE:**
 ---
-**ORIGINAL GUIDE:**
 ${originalText}
 ---
 
----
-**REFINEMENT REQUEST:**
+**USER'S REFINEMENT REQUEST:**
 "${task}"
----
 
-First, provide the "Summary of Changes" section, then return the new, complete, and rewritten markdown guide.`;
+**Instructions for rewriting:**
+1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
+2.  **Integrate:** Seamlessly integrate the user's request into the guide.
+3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
+    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
+    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
+    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
+${linkVerificationAndGenerationMandate}
+${powershellStandard}
+${powerCLIStandard}
 
-                return `${systemDirective}\n\n${refinementProtocol}\n\n${refinementUserPrompt}`;
+Return only the new, complete, and rewritten markdown guide.`;
             }
 
-            // --- GENERATION MODE ---
-            const generationUserPrompt = `Execute your core generation protocols (Protocol 1-4) to create a comprehensive guide based on the following detailed context.
+            // This is the prompt for generating new guides from scratch
+            let contextText = `for the task: "${task}"`;
+            if (context.cardTitle) {
+                contextText = `for the following topic.
+- **Category:** "${context.cardTitle}"
+- **Topic Description:** "${context.cardDescription}"
+- **Specific Task:** "${task}"`;
+            }
 
-### CONTEXT FOR GUIDE GENERATION
+            return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
-* **High-Level Category/Technology:** \`${context.cardTitle || 'General IT'}\`
-* **Contextual Description:** \`${context.cardDescription || 'N/A'}\`
-* **Specific Task & Guide Focus:** \`${task}\`
+The guide must be an all-inclusive resource for an IT professional, covering the topic from foundational knowledge to advanced application. Structure the guide logically using the following sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content must be detailed, accurate, and reflect real-world best practices.
 
-### INSTRUCTIONS FOR CONTENT FOCUS
+**REQUIRED GUIDE STRUCTURE & CONTENT:**
 
-1.  **Primary Focus:** The "Detailed Step-by-Step Instructions" section (Protocol 1, Section 5) MUST be exclusively dedicated to the **Specific Task**. Do not deviate.
-2.  **Supporting Context:** Use the **High-Level Category** and **Contextual Description** to enrich the "Introduction," "Architectural Overview," and "Key Concepts" sections. This ensures the guide is well-rounded while remaining focused on the specific task.
-3.  **Title Generation:** The main title of the guide should be a clear and direct reflection of the **Specific Task**.
+* **1. Introduction:**
+    * **Overview:** Briefly explain the technology or task.
+    * **Importance:** Describe why this task/technology is important in modern IT environments.
+    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
+
+* **2. Architectural Overview (If Applicable):**
+    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
+
+* **3. Key Concepts & Terminology:**
+    * Detail the fundamental principles the user MUST understand.
+    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
+
+* **4. Prerequisites:**
+    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
+    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
+    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
+
+* **5. Detailed Step-by-Step Instructions:**
+    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title. For example, if the title is "Domain Controller Maintenance", this section must include detailed instructions for using domain controller-specific tools like 'DCDIAG', 'REPADMIN', running health checks, reviewing replication status, checking SYSVOL health, etc. It should not contain generic advice like "install updates" or "perform backups" unless it's within the specific context of the task (e.g., "Backing up Active Directory Integrated Zones").
+    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
+    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
+    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
+
+* **6. Verification and Validation:**
+    * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
+    * Describe what a successful output or system state looks like.
+
+* **7. Best Practices:**
+    * Offer expert advice on the most effective, secure, and efficient ways to perform the task. Cover performance, security, and maintainability aspects.
+
+* **8. Automation Opportunities:**
+    * **Why Automate:** Discuss the benefits of automating this task (e.g., consistency, speed, reduced error).
+    * **Scripting Examples:** Provide complete, practical script examples using relevant languages (e.g., PowerShell, PowerCLI, Python, Bash). Scripts must be robust and include comments.
+
+* **9. Security Considerations:**
+    * **Hardening:** Provide specific steps to harden the configuration.
+    * **Common Vulnerabilities:** Discuss potential security risks associated with this task/technology.
+    * **Auditing & Logging:** Recommend what to audit and how to configure logging to track relevant events.
+
+* **10. Advanced Use Cases & Scenarios:**
+    * Describe 2-3 advanced or less-common scenarios where this skill can be applied.
+
+* **11. Troubleshooting:**
+    * Provide a table of common problems, their likely causes, and step-by-step solutions. Use the format: **Problem** | **Potential Cause** | **Solution**.
+
+* **12. Helpful Resources:**
+    * Include a final section with a bulleted list of high-quality, relevant links to official documentation, in-depth articles, and community forums.
+
+**MANDATORY QUALITY STANDARDS:**
+${linkVerificationAndGenerationMandate}
+${powershellStandard}
+${powerCLIStandard}
 
 Return only the complete markdown guide.`;
-            
-            return `${systemDirective}\n\n${generationUserPrompt}`;
         }
-
-
+        
         function addModalActionButtons(buttonContainer) {
             buttonContainer.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -2505,7 +2679,7 @@ Return only the complete markdown guide.`;
                 2.  **Custom Task Generator**: Enter any IT task for a step-by-step AI-generated guide.
                 3.  **Tailoring Options**: Buttons to refine guides (e.g., 'for Security', 'for Beginners').
                 4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
-                5.  **Visual Theme Generator**: Floating button to generate a new color theme and header image from a text prompt.
+                5.  **Visual Theme Generator**: A floating button to generate a new color theme and header image from a text prompt.
                 6.  **In-Depth Exploration & Refinement**: Expand summaries to full guides or ask AI to rewrite content.
 
                 Format your feedback as a clean markdown document. Use '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
