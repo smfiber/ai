@@ -467,7 +467,7 @@
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
             <!-- FIX: Updated version number -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.3</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.4</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1327,12 +1327,6 @@
                     handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
                     return;
                 }
-                
-                const generateRemainingBtn = e.target.closest('#generate-remaining-sections-btn');
-                if (generateRemainingBtn) {
-                    generateAndAppendRemainingSections(generateRemainingBtn);
-                    return;
-                }
 
                 const showAllBtn = e.target.closest('.show-all-button');
                 if (showAllBtn) {
@@ -1374,7 +1368,8 @@
 
                 const generateDetailedStepsBtn = e.target.closest('#generate-detailed-steps-btn');
                 if (generateDetailedStepsBtn) {
-                    generateAndAppendDetailedInstructions(generateDetailedStepsBtn);
+                    // FIX: Changed function name to reflect new combined logic
+                    generateFullDetailedGuide(generateDetailedStepsBtn);
                     return;
                 }
             });
@@ -2504,9 +2499,9 @@ Return only these sections in markdown format. Do not include any other sections
                 handleApiError(error, contentEl, 'initial in-depth content');
             }
         }
-
-        // FIX: Reworked the prompt to provide the full initial content as context.
-        async function generateAndAppendDetailedInstructions(button) {
+        
+        // FIX: Reworked this function to perform a two-step generation process for the full guide.
+        async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
             const cardName = firstModalFooter.dataset.cardName;
@@ -2515,44 +2510,13 @@ Return only these sections in markdown format. Do not include any other sections
             if (!initialContentMarkdown) {
                 console.error("No initial content found to generate detailed steps from.");
                 handleApiError({ message: "Initial guide content missing. Cannot generate detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = `Generate Detailed Steps`;
-                }
                 return;
             }
-
-            const detailedStepsPrompt = `You are an expert senior IT administrator and technical writer AI.
-You are continuing a guide for the topic "${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}" in the category "${cardName}".
-Here is the first part of the guide you have already written:
-
----
-**CONTEXT (DO NOT REGENERATE):**
-${initialContentMarkdown}
----
-
-Your task is to generate ONLY the "Detailed Step-by-Step Instructions" section to continue this guide.
-This section must be extremely detailed and practical. Explain how an administrator would access, use, administer, configure, and manage each item or concept mentioned in the context provided.
-Provide step-by-step instructions where appropriate for each relevant item.
-
-**SECTION TO GENERATE:**
-
-* **5. Detailed Step-by-Step Instructions:**
-    * **Task-Specific and Comprehensive:** This section MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title, directly leveraging and expanding on the key concepts from the context.
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
-
-**MANDATORY QUALITY STANDARDS:**
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
-
-Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown format. Do not include any other sections or introductory text.`;
-
-            button.disabled = true;
-            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Steps...</span>`;
             
+            button.disabled = true;
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
+
+            // Setup the second modal immediately.
             const detailedModal = document.getElementById('inDepthDetailedModal');
             const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
             const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
@@ -2560,12 +2524,10 @@ Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown form
             const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
             const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
 
-            const detailedModalTitle = `${fullTitleFromFirstModal} - Detailed Steps`;
+            const detailedModalTitle = `Complete Guide: ${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}`;
             detailedTitleEl.textContent = detailedModalTitle;
-            detailedContentEl.innerHTML = getLoaderHTML(`Generating Detailed Step-by-Step Instructions...`);
             detailedButtonContainer.innerHTML = '';
-            detailedStatusMessage.textContent = '';
-
+            
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
             detailedFooterEl.dataset.cardName = cardName;
             
@@ -2573,104 +2535,70 @@ Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown form
             detailedModal.classList.remove('hidden');
 
             try {
+                // --- Part 1: Generate Detailed Steps ---
+                detailedContentEl.innerHTML = getLoaderHTML('Generating detailed steps (Part 1 of 2)...');
+                const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+                
+                const detailedStepsPrompt = `You are an expert senior IT administrator. Based on the provided context for a guide on "${topicName}", generate ONLY the "Detailed Step-by-Step Instructions" section.
+                
+                **CONTEXT (DO NOT REGENERATE):**
+                ---
+                ${initialContentMarkdown}
+                ---
+
+                **SECTION TO GENERATE:**
+                * **5. Detailed Step-by-Step Instructions:** This section MUST be extremely detailed, practical, and directly expand on the concepts from the context. Include specific GUI actions and exact CLI commands.
+
+                Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown format.`;
+
                 let detailedStepsText = await callGeminiAPI(detailedStepsPrompt);
                 detailedStepsText = detailedStepsText ? detailedStepsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!detailedStepsText) throw new Error("Failed to generate detailed steps.");
+                
+                const guideSoFar = `${initialContentMarkdown}\n\n${detailedStepsText}`;
 
-                // Store the combination of initial content + detailed steps for the next stage
-                const combinedForNextStage = `${initialContentMarkdown}\n\n${detailedStepsText}`;
-                originalGeneratedText.set(detailedModalTitle, combinedForNextStage);
+                // --- Part 2: Generate Remaining Sections ---
+                detailedContentEl.innerHTML = getLoaderHTML('Generating final sections (Part 2 of 2)...');
+                const remainingSectionsPrompt = `You are an expert senior IT administrator completing a guide on "${topicName}".
+                
+                **GUIDE SO FAR (FOR CONTEXT, DO NOT REGENERATE):**
+                ---
+                ${guideSoFar}
+                ---
 
-                detailedContentEl.innerHTML = '';
-                renderAccordionFromMarkdown(detailedStepsText, detailedContentEl, false);
+                Your task is to generate ONLY the remaining sections to complete this guide: "6. Verification and Validation", "7. Best Practices", "8. Automation Opportunities", "9. Security Considerations", "10. Advanced Use Cases & Scenarios", "11. Troubleshooting", and "12. Helpful Resources".
+                
+                Adhere to the following quality standards:
+                ${linkVerificationAndGenerationMandate}
+                ${powershellStandard}
+                ${powerCLIStandard}
 
-                addDetailedModalActionButtons(detailedButtonContainer, true);
+                Return ONLY these new sections (6 through 12) in markdown format.`;
 
-            } catch (error) {
-                handleApiError(error, detailedContentEl, 'detailed step-by-step instructions');
-            } finally {
-                button.disabled = false;
-                button.innerHTML = `Generate Detailed Steps`;
-            }
-        }
-        
-        // FIX: Reworked prompt logic to use the full guide-so-far as context.
-        async function generateAndAppendRemainingSections(button) {
-            const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
-            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
-            const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
-            const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
-
-            const fullTitleOfDetailedModal = detailedFooterEl.dataset.fullTitle;
-            const guideSoFar = originalGeneratedText.get(fullTitleOfDetailedModal);
-
-            if (!guideSoFar) {
-                console.error("Missing content for generating remaining sections.");
-                handleApiError({ message: "Context missing for remaining sections generation." }, detailedContentEl, "remaining sections");
-                return;
-            }
-            
-            const topicName = fullTitleOfDetailedModal.replace(/In-Depth: |Custom Guide: /g, '').replace(' - Detailed Steps', '');
-
-            const remainingSectionsPrompt = `You are an expert senior IT administrator and technical writer AI.
-You are completing a comprehensive guide on the topic: "${topicName}".
-
-Here is the guide you have written so far, which you should use for context but NOT repeat in your output:
----
-**GUIDE SO FAR (DO NOT REGENERATE):**
-${guideSoFar}
----
-
-Your task is to generate ONLY the remaining sections to complete this guide. These sections are "Verification and Validation", "Best Practices", "Automation Opportunities", "Security Considerations", "Advanced Use Cases & Scenarios", "Troubleshooting", and "Helpful Resources".
-
-**SECTIONS TO GENERATE:**
-
-* **6. Verification and Validation:**
-    * Provide specific commands or procedures to run to confirm the task was completed successfully.
-* **7. Best Practices:**
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-* **8. Automation Opportunities:**
-    * Provide complete, practical script examples.
-* **9. Security Considerations:**
-    * Discuss potential security risks and provide hardening steps.
-* **10. Advanced Use Cases & Scenarios:**
-    * Describe 2-3 advanced or less-common scenarios.
-* **11. Troubleshooting:**
-    * Provide a table of common problems, causes, and solutions.
-* **12. Helpful Resources:**
-    * Include a bulleted list of high-quality, relevant links.
-
-**MANDATORY QUALITY STANDARDS:**
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
-
-Return ONLY these new sections (6 through 12) in markdown format.`;
-
-            button.disabled = true;
-            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Remaining...</span>`;
-            detailedContentEl.innerHTML += getLoaderHTML(`Generating remaining guide sections...`); 
-
-            try {
                 let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
                 remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!remainingSectionsText) throw new Error("Failed to generate remaining sections.");
 
+                // --- Final Assembly ---
                 const finalCompleteGuideMarkdown = `${guideSoFar}\n\n${remainingSectionsText}`;
-
-                // Update the stored text with the fully complete guide
-                originalGeneratedText.set(fullTitleOfDetailedModal, finalCompleteGuideMarkdown);
+                originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
                 addDetailedModalActionButtons(detailedButtonContainer, false);
-                detailedStatusMessage.textContent = 'Full guide generated!';
+                detailedStatusMessage.textContent = 'Full guide generated successfully!';
 
             } catch (error) {
-                handleApiError(error, detailedContentEl, 'remaining guide sections');
+                handleApiError(error, detailedContentEl, 'full detailed guide');
+            } finally {
                  button.disabled = false;
-                 button.innerHTML = `Generate Remaining Sections`;
+                 button.innerHTML = `Generate Detailed Steps`;
             }
         }
+        
+        // This function is no longer needed as its logic is merged into generateFullDetailedGuide
+        // async function generateAndAppendRemainingSections(button) { ... }
 
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
             buttonContainer.innerHTML = '';
@@ -2682,7 +2610,7 @@ Return ONLY these new sections (6 through 12) in markdown format.`;
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                     <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                    <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate detailed step-by-step instructions">Generate Detailed Steps</button>
+                    <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate a full, detailed guide in a new modal">Generate Full Detailed Guide</button>
                     ${saveDriveBtnHtml}
                 `;
             } else {
@@ -2709,26 +2637,17 @@ Return ONLY these new sections (6 through 12) in markdown format.`;
             }
         }
 
-        function addDetailedModalActionButtons(buttonContainer, isOnlyDetailedSteps = false) {
-            buttonContainer.innerHTML = '';
-
+        // FIX: Simplified this function as the multi-step generation is gone.
+        // It now only shows the final set of buttons for a completed guide.
+        function addDetailedModalActionButtons(buttonContainer) {
             const saveDriveBtnHtml = gapi.client.getToken() !== null ?
                 `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
             
-            if (isOnlyDetailedSteps) {
-                 buttonContainer.innerHTML = `
-                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                    <button id="generate-remaining-sections-btn" class="btn-primary text-sm px-4 py-2" title="Generate the rest of the guide sections">Generate Remaining Sections</button>
-                    ${saveDriveBtnHtml}
-                `;
-            } else {
-                buttonContainer.innerHTML = `
-                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                    ${saveDriveBtnHtml}
-                `;
-            }
+            buttonContainer.innerHTML = `
+                <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                ${saveDriveBtnHtml}
+            `;
             
             const copyButton = buttonContainer.querySelector('.copy-button');
             if (copyButton) {
