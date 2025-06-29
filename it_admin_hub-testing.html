@@ -2342,8 +2342,6 @@ Return only the new, complete, and rewritten markdown guide.`;
 
             return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
-The guide must be an all-inclusive resource for an IT professional, covering the topic from foundational knowledge to advanced application. Structure the guide logically using the following sections. For each section, create a clear and descriptive header using '###' markdown syntax. The content must be detailed, accurate, and reflect real-world best practices.
-
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
 
 * **1. Introduction:**
@@ -2683,13 +2681,8 @@ Return ONLY these sections in markdown format.`;
                 });
             }
 
-            const refineButton = buttonContainer.querySelector('.modal-refine-button');
-            if (refineButton) {
-                refineButton.addEventListener('click', e => {
-                    const targetModalId = e.target.closest('#inDepthModalButtons') ? 'inDepthModal' : 'inDepthDetailedModal';
-                    toggleRefineUI(e.target.parentElement, true, targetModalId);
-                });
-            }
+            // FIX: This redundant listener was removed to prevent the refine UI from closing immediately.
+            // The main delegated listener in setupEventListeners() handles this button correctly.
         }
 
         function addDetailedModalActionButtons(buttonContainer, isOnlyDetailedSteps = false) {
@@ -2728,12 +2721,7 @@ Return ONLY these sections in markdown format.`;
                 });
             }
 
-            const refineButton = buttonContainer.querySelector('.modal-refine-button');
-            if (refineButton) {
-                refineButton.addEventListener('click', e => {
-                    toggleRefineUI(e.target.parentElement, true, 'inDepthDetailedModal');
-                });
-            }
+            // FIX: This redundant listener was also removed.
         }
         
         function handleTextSelection(e) {
