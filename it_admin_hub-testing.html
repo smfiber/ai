@@ -357,6 +357,20 @@
             </div>
         </div>
     </div>
+    <!-- NEW: Second modal for detailed guides -->
+    <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="--tw-bg-opacity: 0.85;">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh; transform: translateY(-20px);">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary"></h2>
+                <button id="closeInDepthDetailedModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="inDepthDetailedModalContent" class="p-6 overflow-y-auto"></div>
+            <div id="inDepthDetailedModalFooter" class="p-4 border-t" style="border-color: var(--color-card-border);">
+                 <div id="inDepthDetailedModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="detailed-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
+        </div>
+    </div>
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -750,7 +764,7 @@
                 title: 'PowerShell for Microsoft Teams', 
                 description: "Using PowerShell to manage Teams, channels, policies, and users in Microsoft Teams.", 
                 initialPrompt: `Generate 10 common PowerShell tasks for Microsoft Teams. For each, give a unique "id", "title", and a short "description".${jsonInstruction}`, 
-                fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Microsoft Teams. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
+                fullPrompt: `Generate 40-50 policies, settings, and management tasks for the Teams Admin Center. For each, give a unique "id", "title", and a detailed "description".${jsonInstruction}` 
             },
             { 
                 key: 'powershellWindowsServer', 
@@ -857,7 +871,8 @@
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
-        let originalGeneratedText = new Map();
+        // Stores the full markdown content of generated guides, keyed by their modal title
+        let originalGeneratedText = new Map(); 
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -1130,7 +1145,8 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal'].forEach(id => {
+            // Event listeners for closing modals
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.addEventListener('click', (e) => {
@@ -1191,16 +1207,27 @@
 
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
                 if (modalRefineBtn) {
-                    toggleRefineUI(modalRefineBtn.parentElement, true);
+                    // Check if the clicked button belongs to the main inDepthModal or inDepthDetailedModal
+                    const targetModalId = e.target.closest('#inDepthModalButtons') ? 'inDepthModal' : 'inDepthDetailedModal';
+                    toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
                     return;
                 }
                 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) {
-                    handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                    // Determine which modal's content to refine
+                    const targetModalId = submitRefineBtn.closest('#inDepthModalFooter') ? 'inDepthModal' : 'inDepthDetailedModal';
+                    handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
                     return;
                 }
                 
+                // NEW: Handle 'Generate Remaining Sections' button click
+                const generateRemainingBtn = e.target.closest('#generate-remaining-sections-btn');
+                if (generateRemainingBtn) {
+                    generateAndAppendRemainingSections(generateRemainingBtn);
+                    return;
+                }
+
                 const showAllBtn = e.target.closest('.show-all-button');
                 if (showAllBtn) {
                     handleShowAllClick(showAllBtn);
@@ -1390,13 +1417,20 @@
                 driveFolderId = null;
             }
 
-            // *** FIX: Refresh modal buttons to show/hide "Save to Drive" correctly ***
+            // Refresh buttons for both modals
             if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
-                // Determine if it's the initial phase or full guide phase
-                const inDepthModalContent = document.getElementById('inDepthModalContent');
                 const currentFullTitle = document.getElementById('inDepthModalTitle').textContent;
-                const isInitial = !currentFullTitle || !originalGeneratedText.get(currentFullTitle) || !originalGeneratedText.get(currentFullTitle).includes("### Detailed Step-by-Step Instructions");
-                addModalActionButtons(modalButtons, isInitial);
+                // This logic is tricky now with multi-stage. Let's assume initialPhase is true here
+                // as this modal *always* starts in initial phase for "in-depth" content.
+                // For custom guides, it is also initial phase.
+                addModalActionButtons(modalButtons, true);
+            }
+            if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) {
+                const currentFullTitle = document.getElementById('inDepthDetailedModalTitle').textContent;
+                // Check if detailed modal content already includes remaining sections
+                const isOnlyDetailedSteps = !originalGeneratedText.get(currentFullTitle) || 
+                                           !originalGeneratedText.get(currentFullTitle).includes("### Verification and Validation");
+                addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'), isOnlyDetailedSteps);
             }
         }
 
@@ -1432,17 +1466,22 @@
         }
         
         async function handleSaveToDriveClick(button) {
-             const modalFooter = button.closest('#inDepthModalFooter');
-             const { cardName, fullTitle } = modalFooter.dataset;
-             
+             // Determine which modal triggered the save
+             const modalFooter = button.closest('#inDepthModalFooter') || button.closest('#inDepthDetailedModalFooter');
+             if (!modalFooter) return; // Should not happen if button exists inside a footer
+
+             const titleElement = modalFooter.closest('.card').querySelector('h2');
+             const fullTitle = titleElement.textContent; // Get the actual title from the h2
+
              const rawMarkdown = originalGeneratedText.get(fullTitle);
              if (!rawMarkdown) {
                 console.error("Could not find markdown to save for:", fullTitle);
                 return;
              }
 
-             const fileName = `${cardName} - ${document.getElementById('inDepthModalTitle').textContent}.md`.replace(/In-Depth: |Custom Guide: /g, '');
-             const statusEl = document.getElementById('modal-status-message');
+             const cardName = modalFooter.dataset.cardName || "Custom Task"; // Use dataset, fallback for custom
+             const fileName = `${cardName} - ${fullTitle}.md`.replace(/In-Depth: |Custom Guide: /g, '');
+             const statusEl = modalFooter.querySelector('p[id$="status-message"]'); // Get the correct status message element
              
              await saveContentToDrive(rawMarkdown, fileName, statusEl);
         }
@@ -1893,6 +1932,7 @@
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
+            // This will now open the first modal with initial details
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
@@ -1901,35 +1941,61 @@
 
             const fullTitle = `Custom Guide: ${userPrompt}`;
             titleEl.textContent = truncateText(fullTitle, 40);
-            contentEl.innerHTML = getLoaderHTML(`Generating your custom guide for "${userPrompt}"...`);
+            contentEl.innerHTML = getLoaderHTML(`Generating initial sections for your custom guide for "${userPrompt}"...`);
             buttonContainer.innerHTML = '';
             document.getElementById('modal-status-message').textContent = '';
             
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = "Custom Task"; 
             
-            modal.classList.remove('hidden');
+            modal.classList.remove('hidden'); // Show the first modal
             
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                         .map(btn => btn.textContent.trim())
                                         .join(', ');
 
-            const prompt = getEnhancedPrompt(userPrompt, selectedOptions);
+            // Modified prompt to get only initial sections for custom guides too
+            const initialCustomPrompt = `You are an expert senior IT administrator and technical writer AI.
+Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following custom topic:
+- **Topic:** "${userPrompt}"
+- **Tailoring Options:** ${selectedOptions ? selectedOptions : 'None'}
+
+Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
+
+**REQUIRED SECTIONS & CONTENT:**
+
+* **1. Introduction:**
+    * **Overview:** Briefly explain the technology or task.
+    * **Importance:** Describe why this task/technology is important in modern IT environments.
+    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
+
+* **2. Architectural Overview (If Applicable):**
+    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
+
+* **3. Key Concepts & Terminology:**
+    * Detail the fundamental principles the user MUST understand.
+    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
+
+* **4. Prerequisites:**
+    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
+    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
+    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
+
+Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
-                let resultText = await callGeminiAPI(prompt);
-                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                let initialResultText = await callGeminiAPI(initialCustomPrompt);
+                initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(fullTitle, resultText);
+                originalGeneratedText.set(fullTitle, initialResultText); // Store for later access by generateAndAppendDetailedInstructions
                 
                 contentEl.innerHTML = '';
-                // Render content as an accordion, without generating images.
-                renderAccordionFromMarkdown(resultText, contentEl, false); 
+                renderAccordionFromMarkdown(initialResultText, contentEl, false); 
                 
-                addModalActionButtons(buttonContainer);
+                addModalActionButtons(buttonContainer, true); // Still initial phase for this first modal
 
             } catch(error) {
-                handleApiError(error, contentEl, 'custom IT guide');
+                handleApiError(error, contentEl, 'custom IT guide (initial sections)');
             } finally {
                 promptInput.value = '';
             }
@@ -2138,7 +2204,7 @@
             prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
-            prompts["Generate Color Theme"] = `Based on the theme "{prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON object.`;
+            prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). Return only the complete, valid JSON object.`;
             prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`;
             
             return prompts;
@@ -2306,7 +2372,7 @@ ${powerCLIStandard}
 Return only the complete markdown guide.`;
         }
         
-        // MODIFIED handleExploreInDepth function
+        // MODIFIED handleExploreInDepth function - prepares and opens the *first* modal
         async function handleExploreInDepth(themeId, themeType, cardName) {
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
             if (!item) {
@@ -2331,7 +2397,7 @@ Return only the complete markdown guide.`;
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = cardName;
 
-            modal.classList.remove('hidden');
+            modal.classList.remove('hidden'); // Show the first modal
 
             const context = { cardTitle: cardName, cardDescription: item.description };
 
@@ -2370,19 +2436,14 @@ Return only these sections in markdown format. Do not include any other sections
                 let initialResultText = await callGeminiAPI(initialPrompt);
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                // Save this initial content
+                // Save this initial content associated with the full title of the *first* modal
                 originalGeneratedText.set(fullTitle, initialResultText);
 
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false);
 
-                // Add buttons, including the new 'Generate Detailed Steps' button
-                addModalActionButtons(buttonContainer, true); // Pass 'true' to indicate initial phase
-
-                // Store themeId, themeType, cardName for the generateAndAppendDetailedInstructions
-                contentEl.dataset.themeId = themeId;
-                contentEl.dataset.themeType = themeType;
-                contentEl.dataset.cardName = cardName;
+                // Add buttons, including the new 'Generate Detailed Steps' button for the FIRST modal
+                addModalActionButtons(buttonContainer, true); 
 
             } catch (error) {
                 handleApiError(error, contentEl, 'initial in-depth content');
@@ -2390,51 +2451,143 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
 
-        // New function to handle the second phase of generation
+        // MODIFIED function to handle the second phase of generation and open a NEW modal
         async function generateAndAppendDetailedInstructions(button) {
-            const modal = document.getElementById('inDepthModal');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
-            const buttonContainer = document.getElementById('inDepthModalButtons');
+            // Get data from the *first* modal's footer
+            const firstModalFooter = document.getElementById('inDepthModalFooter');
+            const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
+            const themeId = firstModalFooter.dataset.themeId;
+            const themeType = firstModalFooter.dataset.themeType;
+            const cardName = firstModalFooter.dataset.cardName;
 
-            const fullTitle = footerEl.dataset.fullTitle;
-            const themeId = footerEl.dataset.themeId;
-            const themeType = footerEl.dataset.themeType;
-            const cardName = footerEl.dataset.cardName;
+            // Get the initial content from the first modal (it's already stored)
+            const initialContentMarkdown = originalGeneratedText.get(fullTitleFromFirstModal); 
 
-            const currentModalContent = originalGeneratedText.get(fullTitle); // Get the markdown of currently displayed content
-
-            if (!currentModalContent) {
+            if (!initialContentMarkdown) {
                 console.error("No initial content found to extract key concepts from.");
-                handleApiError({ message: "Initial guide content missing for detailed instructions." }, contentEl, "detailed instructions");
+                handleApiError({ message: "Initial guide content missing for detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
                 return;
             }
 
-            // Extract Key Concepts & Terminology from the current modal content
+            // Extract Key Concepts & Terminology from the first modal's content
             const keyConceptsRegex = /###\s*Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
-            const match = currentModalContent.match(keyConceptsRegex);
+            const match = initialContentMarkdown.match(keyConceptsRegex);
             const keyConceptsContent = match ? match[1].trim() : "No key concepts found.";
 
-            // This is the complete prompt for the rest of the guide, including Detailed Step-by-Step Instructions
-            // and all subsequent sections.
-            const fullGuideRemainingSectionsPrompt = `You are an expert senior IT administrator and technical writer AI.
-Building upon the following context and key concepts related to "${fullTitle.replace('In-Depth: ', '')}" from the category "${cardName}":
+            // Define the prompt for ONLY the Detailed Step-by-Step Instructions
+            const detailedStepsPrompt = `You are an expert senior IT administrator and technical writer AI.
+Based on the following context and key concepts related to "${fullTitleFromFirstModal.replace('In-Depth: ', '')}" from the category "${cardName}":
 
 ---
 ${keyConceptsContent}
 ---
 
-Your task is to generate the "Detailed Step-by-Step Instructions" section, and ALL subsequent sections of a comprehensive IT administration guide.
-Specifically, for the "Detailed Step-by-Step Instructions", explain in detail how an administrator would access, use, administer, configure, and manage each item or similar concept mentioned in the provided "Key Concepts & Terminology" markdown.
+Your task is to generate ONLY the "Detailed Step-by-Step Instructions" section for this IT administration guide.
+Explain in detail how an administrator would access, use, administer, configure, and manage each item or similar concept mentioned in the provided "Key Concepts & Terminology" markdown.
 Provide step-by-step instructions where appropriate for each relevant item.
 
-**REQUIRED SECTIONS & CONTENT (continue from where the guide would have left off):**
+**REQUIRED SECTION & CONTENT:**
 
 * **5. Detailed Step-by-Step Instructions:**
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title, directly leveraging and expanding on the key concepts provided.
+    * **Task-Specific and Comprehensive:** This section MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title, directly leveraging and expanding on the key concepts provided.
     * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
     * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
     * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
+
+**MANDATORY QUALITY STANDARDS:**
+${linkVerificationAndGenerationMandate}
+${powershellStandard}
+${powerCLIStandard}
+
+Return ONLY this section in markdown format.`;
+
+            // Disable button on the *first* modal and show loading state
+            button.disabled = true;
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Steps...</span>`;
+            
+            // Get elements for the *NEW* detailed modal
+            const detailedModal = document.getElementById('inDepthDetailedModal');
+            const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
+            const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
+            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
+            const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+            const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
+
+            const detailedModalTitle = `${fullTitleFromFirstModal} - Detailed Steps`; // Specific title for this stage in the new modal
+            detailedTitleEl.textContent = detailedModalTitle;
+            detailedContentEl.innerHTML = getLoaderHTML(`Generating Detailed Step-by-Step Instructions...`);
+            detailedButtonContainer.innerHTML = ''; // Clear buttons initially
+            detailedStatusMessage.textContent = '';
+
+            // Store context for the new modal, including key concepts for the next stage
+            detailedFooterEl.dataset.themeId = themeId;
+            detailedFooterEl.dataset.themeType = themeType;
+            detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
+            detailedFooterEl.dataset.cardName = cardName;
+            detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent; // Pass key concepts to next stage
+
+            detailedModal.classList.remove('hidden'); // Show the NEW modal
+
+            try {
+                let detailedStepsText = await callGeminiAPI(detailedStepsPrompt);
+                detailedStepsText = detailedStepsText ? detailedStepsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+
+                // Store only the generated detailed steps + initial content for the next stage's context
+                const combinedForNextStage = `${initialContentMarkdown}\n\n${detailedStepsText}`;
+                originalGeneratedText.set(detailedModalTitle, combinedForNextStage);
+
+                // Clear and render ONLY the detailed steps in the NEW modal
+                detailedContentEl.innerHTML = '';
+                renderAccordionFromMarkdown(detailedStepsText, detailedContentEl, false);
+
+                // Add buttons for the detailed steps phase in the NEW modal
+                addDetailedModalActionButtons(detailedButtonContainer, true); // Pass true for isOnlyDetailedSteps
+
+            } catch (error) {
+                handleApiError(error, detailedContentEl, 'detailed step-by-step instructions');
+            } finally {
+                // Re-enable the button on the *first* modal
+                button.disabled = false;
+                button.innerHTML = `Generate Detailed Steps`; // Reset button text
+            }
+        }
+
+        // NEW function for generating remaining sections (triggered from detailed modal)
+        async function generateAndAppendRemainingSections(button) {
+            const detailedModal = document.getElementById('inDepthDetailedModal');
+            const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
+            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
+            const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+            const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
+
+            const fullTitleOfDetailedModal = detailedFooterEl.dataset.fullTitle;
+            const cardName = detailedFooterEl.dataset.cardName;
+            const keyConceptsContent = detailedFooterEl.dataset.keyConceptsContent; // Retrieved from dataset
+            const currentContentInDetailedModal = originalGeneratedText.get(fullTitleOfDetailedModal);
+
+            if (!currentContentInDetailedModal || !keyConceptsContent) {
+                console.error("Missing content or key concepts for generating remaining sections.");
+                handleApiError({ message: "Context missing for remaining sections generation." }, detailedContentEl, "remaining sections");
+                return;
+            }
+            
+            // Extract the original topic name from the first modal's title (which is part of detailedModalTitle)
+            const topicName = fullTitleOfDetailedModal.replace('In-Depth: ', '').replace(' - Detailed Steps', '');
+
+            const remainingSectionsPrompt = `You are an expert senior IT administrator and technical writer AI.
+Building upon the following context, including key concepts and previously generated detailed steps, related to "${topicName}" from the category "${cardName}":
+
+---
+KEY CONCEPTS:
+${keyConceptsContent}
+
+PREVIOUSLY GENERATED DETAILED STEPS (for context, do NOT regenerate):
+${currentContentInDetailedModal}
+---
+
+Your task is to generate ONLY the "Verification and Validation", "Best Practices", "Automation Opportunities", "Security Considerations", "Advanced Use Cases & Scenarios", "Troubleshooting", and "Helpful Resources" sections to complete this comprehensive IT administration guide.
+
+**REQUIRED SECTIONS & CONTENT:**
 
 * **6. Verification and Validation:**
     * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
@@ -2465,40 +2618,40 @@ ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
 
-Return only the complete markdown guide for these sections, continuing logically from the Key Concepts & Terminology.`;
+Return ONLY these sections in markdown format.`;
 
             // Disable button and show loading
             button.disabled = true;
-            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
-            contentEl.innerHTML += getLoaderHTML(`Generating detailed instructions and remaining guide sections...`); // Append new loader
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Remaining...</span>`;
+            detailedContentEl.innerHTML += getLoaderHTML(`Generating remaining guide sections...`); 
 
             try {
-                let detailedResultText = await callGeminiAPI(fullGuideRemainingSectionsPrompt);
-                detailedResultText = detailedResultText ? detailedResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
+                remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                // Combine the initial content with the newly generated detailed content
-                const finalCombinedMarkdown = `${currentModalContent}\n\n${detailedResultText}`;
+                // Combine the currently displayed content (initial + detailed steps) with the new remaining sections
+                const finalCompleteGuideMarkdown = `${currentContentInDetailedModal}\n\n${remainingSectionsText}`;
 
-                // Update the originalGeneratedText map with the complete guide
-                originalGeneratedText.set(fullTitle, finalCombinedMarkdown);
+                // Update the stored content for this modal's key with the full guide
+                originalGeneratedText.set(fullTitleOfDetailedModal, finalCompleteGuideMarkdown);
 
-                // Clear and re-render the entire modal content
-                contentEl.innerHTML = '';
-                renderAccordionFromMarkdown(finalCombinedMarkdown, contentEl, false);
+                // Clear and re-render the content in the NEW modal with the full guide
+                detailedContentEl.innerHTML = '';
+                renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
-                // Re-add buttons for the fully generated guide
-                addModalActionButtons(buttonContainer, false); // Pass 'false' to indicate full guide phase
+                // Update buttons for the full guide phase in the NEW modal
+                addDetailedModalActionButtons(detailedButtonContainer, false); // Pass false for isOnlyDetailedSteps
+                detailedStatusMessage.textContent = 'Full guide generated!';
 
             } catch (error) {
-                handleApiError(error, contentEl, 'detailed instructions');
+                handleApiError(error, detailedContentEl, 'remaining guide sections');
             } finally {
-                // The button will be re-rendered by addModalActionButtons based on the phase
-                // So no need to re-enable or reset its text here directly
+                // Button will be re-rendered by addDetailedModalActionButtons, no direct reset needed
             }
         }
 
 
-        // MODIFIED addModalActionButtons to handle phases
+        // MODIFIED addModalActionButtons to handle phases for the FIRST modal
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
             buttonContainer.innerHTML = ''; // Clear existing buttons
 
@@ -2506,11 +2659,11 @@ Return only the complete markdown guide for these sections, continuing logically
                 `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
 
             if (isInitialPhase) {
-                // Buttons for the initial phase (summary only)
+                // Buttons for the initial phase (summary only) in the FIRST modal
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                     <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                    <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate detailed step-by-step instructions and more">Generate Detailed Steps</button>
+                    <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate detailed step-by-step instructions">Generate Detailed Steps</button>
                     ${saveDriveBtnHtml}
                 `;
                  // Add specific event listener for the new button
@@ -2519,7 +2672,7 @@ Return only the complete markdown guide for these sections, continuing logically
                 });
 
             } else {
-                // Buttons for the full guide phase
+                // This 'else' block primarily for custom guides generated via gemini-form or fallback
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                     <button class="btn-secondary text-sm copy-button">Copy Text</button>
@@ -2527,22 +2680,64 @@ Return only the complete markdown guide for these sections, continuing logically
                 `;
             }
 
-            // Common event listeners for both phases
+            // Common event listeners for both phases (applies to the modal this buttonContainer belongs to)
             buttonContainer.querySelector('.copy-button').addEventListener('click', e => {
-                const contentToCopy = document.getElementById('inDepthModalContent');
+                const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]'); // Gets content from parent modal
                 copyElementTextToClipboard(contentToCopy, e.target);
             });
 
             // Re-attach save to drive listener if the button exists
-            if (document.getElementById('save-to-drive-btn')) {
-                document.getElementById('save-to-drive-btn').addEventListener('click', e => {
+            if (buttonContainer.querySelector('#save-to-drive-btn')) { // Use buttonContainer.querySelector
+                buttonContainer.querySelector('#save-to-drive-btn').addEventListener('click', e => {
                     handleSaveToDriveClick(e.target);
                 });
             }
 
             // Refine button listener (re-attached each time)
             buttonContainer.querySelector('.modal-refine-button').addEventListener('click', e => {
-                toggleRefineUI(e.target.parentElement, true);
+                const targetModalId = e.target.closest('#inDepthModalButtons') ? 'inDepthModal' : 'inDepthDetailedModal';
+                toggleRefineUI(e.target.parentElement, true, targetModalId);
+            });
+        }
+
+        // NEW function to add buttons specifically for the NEW detailed modal
+        function addDetailedModalActionButtons(buttonContainer, isOnlyDetailedSteps = false) {
+            buttonContainer.innerHTML = ''; // Clear existing buttons
+
+            const saveDriveBtnHtml = gapi.client.getToken() !== null ?
+                `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+            
+            if (isOnlyDetailedSteps) {
+                 buttonContainer.innerHTML = `
+                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                    <button id="generate-remaining-sections-btn" class="btn-primary text-sm px-4 py-2" title="Generate the rest of the guide sections">Generate Remaining Sections</button>
+                    ${saveDriveBtnHtml}
+                `;
+                document.getElementById('generate-remaining-sections-btn').addEventListener('click', (e) => {
+                    generateAndAppendRemainingSections(e.target);
+                });
+            } else {
+                buttonContainer.innerHTML = `
+                    <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                    ${saveDriveBtnHtml}
+                `;
+            }
+            
+            buttonContainer.querySelector('.copy-button').addEventListener('click', e => {
+                const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]'); // Gets content from parent modal
+                copyElementTextToClipboard(contentToCopy, e.target);
+            });
+
+            if (buttonContainer.querySelector('#save-to-drive-btn')) {
+                buttonContainer.querySelector('#save-to-drive-btn').addEventListener('click', e => {
+                    handleSaveToDriveClick(e.target);
+                });
+            }
+
+            buttonContainer.querySelector('.modal-refine-button').addEventListener('click', e => {
+                toggleRefineUI(e.target.parentElement, true, 'inDepthDetailedModal'); // Always target this modal
             });
         }
         
@@ -2950,44 +3145,34 @@ Return only the complete markdown guide for these sections, continuing logically
             }
         }
         
-        function toggleRefineUI(buttonContainer, isModal = false) {
-            let refineContainer = buttonContainer.nextElementSibling;
-            if (refineContainer && refineContainer.classList.contains('refine-container')) {
+        function toggleRefineUI(buttonContainer, isModal = false, targetModalId = 'inDepthModal') {
+            const refineContainerId = `refine-container-${targetModalId}`; // Unique ID for refine container
+            let refineContainer = document.getElementById(refineContainerId);
+
+            if (refineContainer) {
                 refineContainer.remove();
                 return;
             }
 
             refineContainer = document.createElement('div');
+            refineContainer.id = refineContainerId;
             refineContainer.className = 'refine-container w-full';
             refineContainer.innerHTML = `
                 <textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea>
-                <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>
+                <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}" data-target-modal-id="${targetModalId}">Submit Refinement</button>
             `;
             buttonContainer.insertAdjacentElement('afterend', refineContainer);
             refineContainer.querySelector('textarea').focus();
         }
 
-        async function handleRefineRequest(refineContainer) {
+        async function handleRefineRequest(refineContainer, targetModalId) {
             const refinementRequest = refineContainer.querySelector('textarea').value;
             if (!refinementRequest) return;
 
-            const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
-            
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
-            
-            let themeId, themeType, textKey;
-            if (isModal) {
-                const footerEl = document.getElementById('inDepthModalFooter');
-                themeId = footerEl.dataset.themeId;
-                themeType = footerEl.dataset.themeType;
-                textKey = footerEl.dataset.fullTitle;
-            } else {
-                const exploreButton = contentArea.querySelector('.explore-button');
-                themeId = exploreButton?.dataset.themeId || 'custom-plan';
-                themeType = exploreButton?.dataset.themeType || 'custom';
-                textKey = themeId;
-            }
-            
+            const contentArea = document.getElementById(`${targetModalId}Content`);
+            const titleElement = document.getElementById(`${targetModalId}Title`);
+            const textKey = titleElement.textContent; // Use the current title of the target modal as the key
+
             const originalText = originalGeneratedText.get(textKey);
 
             if (!originalText) {
@@ -3003,21 +3188,20 @@ Return only the complete markdown guide for these sections, continuing logically
                 let newText = await callGeminiAPI(prompt);
                 newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(textKey, newText);
+                originalGeneratedText.set(textKey, newText); // Update the stored text for this modal's key
                 
                 contentArea.innerHTML = '';
-                if (isModal) {
-                    renderAccordionFromMarkdown(newText, contentEl, false);
-                } else {
-                    const proseDiv = document.createElement('div');
-                    proseDiv.className = 'prose max-w-none';
-                    proseDiv.innerHTML = convertMarkdownToHtml(newText, true);
-                    contentArea.appendChild(proseDiv);
-                    generateAndInjectImages(contentArea);
-                }
+                // Use renderAccordionFromMarkdown for both modals if they use accordion layout
+                renderAccordionFromMarkdown(newText, contentArea, false); // No image generation in modals yet
+                
                 // Re-add buttons for the fully generated guide or refined guide
-                const currentButtonContainer = isModal ? document.getElementById('inDepthModalButtons') : refineContainer.parentElement.querySelector('.button-bar');
-                addModalActionButtons(currentButtonContainer, !isModal && !newText.includes("### Detailed Step-by-Step Instructions")); // Re-evaluate initial phase for non-modal context
+                const currentButtonContainer = document.getElementById(`${targetModalId}Buttons`);
+                // For refinement, we always show the full set of buttons, so isInitialPhase is false
+                if (targetModalId === 'inDepthModal') {
+                    addModalActionButtons(currentButtonContainer, false); 
+                } else { // It's the detailed modal
+                    addDetailedModalActionButtons(currentButtonContainer, false); // isOnlyDetailedSteps = false
+                }
 
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
