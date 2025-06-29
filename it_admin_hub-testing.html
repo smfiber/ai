@@ -302,6 +302,28 @@
             gap: 0.75rem;
             align-items: center;
         }
+        
+        /* NEW: Styles for the Search Gemini feature */
+        #search-gemini-button {
+            position: fixed;
+            z-index: 100; /* Ensure it's on top of content */
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        #search-gemini-button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
 
     </style>
 </head>
@@ -371,6 +393,23 @@
             </div>
         </div>
     </div>
+    <!-- NEW: Search Gemini Modal -->
+    <div id="searchGeminiModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-85 flex items-center justify-center p-4" style="z-index: 70;">
+        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">Search Gemini</h2>
+                <button id="closeSearchGeminiModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium themed-text-muted mb-2">You asked about:</label>
+                    <div id="searchText" class="w-full p-3 themed-input bg-gray-100 border rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto"></div>
+                </div>
+                <div id="searchGeminiResult" class="prose max-w-none"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -398,6 +437,12 @@
             <div id="promptsModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
+    
+    <!-- NEW: Floating button for Search Gemini -->
+    <button id="search-gemini-button" class="hidden">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
+      <span>Search Gemini</span>
+    </button>
 
     <div id="app-container" class="container mx-auto px-4 sm:px-6 lg:px-8 hidden">
         <header class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
@@ -412,7 +457,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.57</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.58</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -480,7 +525,6 @@
             </div>
         </main>
         
-        <!-- BUG FIX: Moved floating action buttons and settings panel inside the app-container -->
         <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
         </button>
@@ -512,7 +556,6 @@
     </div>
 
     <script type="module">
-        // --- AUTH FIX: Import signInWithPopup and remove redirect-related methods ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -976,14 +1019,11 @@
             }
         }
 
-        // --- AUTH FIX: Changed to use signInWithPopup ---
         async function handleLogin() {
             const provider = new GoogleAuthProvider();
-            // BUG FIX: Add the new scope to the provider for the login request.
             provider.addScope('https://www.googleapis.com/auth/cloud-platform');
             try {
                 const result = await signInWithPopup(auth, provider);
-                // onAuthStateChanged will handle the UI update.
                 console.log("Popup sign-in successful for:", result.user.displayName);
             } catch (error) {
                 console.error("Google Sign-In Popup failed:", error);
@@ -1002,7 +1042,6 @@
                 });
             }
             signOut(auth).then(() => {
-                // *** FIX: Explicitly update UI to signed-out state before clearing keys ***
                 updateSigninStatus(false);
                 localStorage.removeItem('geminiApiKey');
                 localStorage.removeItem('firebaseConfig');
@@ -1032,7 +1071,6 @@
                 await generateAndApplyDefaultTheme();
                 await loadAppContent(loadingMessageEl);
             } catch (error) {
-                // BUG FIX: Safely access the error message.
                 const errorMessage = error ? error.message : "An unknown error occurred.";
                 console.error("A critical error occurred during app initialization:", errorMessage);
                 localStorage.clear();
@@ -1072,7 +1110,6 @@
                                 gapiInited = true;
                                 initializeGapiClient();
                             });
-                             // *** FIX: Add credential_mode to help with Cross-Origin policies ***
                              google.accounts.id.initialize({
                                 client_id: GOOGLE_CLIENT_ID,
                                 callback: () => {},
@@ -1146,7 +1183,7 @@
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
             // Event listeners for closing modals
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.addEventListener('click', (e) => {
@@ -1156,6 +1193,18 @@
                     });
                 }
             });
+            
+            // NEW: Event listener for Search Gemini button
+            document.getElementById('search-gemini-button').addEventListener('click', handleSearchGemini);
+
+            document.addEventListener('mouseup', handleTextSelection);
+            document.addEventListener('mousedown', (e) => {
+                 const searchButton = document.getElementById('search-gemini-button');
+                 if (!searchButton.contains(e.target)) {
+                    searchButton.classList.add('hidden');
+                 }
+            });
+
 
             document.addEventListener('click', (e) => {
                 if (e.target.classList.contains('copy-code-button')) {
@@ -1169,7 +1218,6 @@
                      return;
                 }
                 
-                // --- NEW FEATURE: Handle Add New Topic button click ---
                 const addTopicBtn = e.target.closest('.add-topic-button');
                 if(addTopicBtn) {
                     handleAddNewTopic(addTopicBtn);
@@ -1207,7 +1255,6 @@
 
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
                 if (modalRefineBtn) {
-                    // Check if the clicked button belongs to the main inDepthModal or inDepthDetailedModal
                     const targetModalId = e.target.closest('#inDepthModalButtons') ? 'inDepthModal' : 'inDepthDetailedModal';
                     toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
                     return;
@@ -1215,13 +1262,11 @@
                 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) {
-                    // Determine which modal's content to refine
                     const targetModalId = submitRefineBtn.closest('#inDepthModalFooter') ? 'inDepthModal' : 'inDepthDetailedModal';
                     handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
                     return;
                 }
                 
-                // NEW: Handle 'Generate Remaining Sections' button click
                 const generateRemainingBtn = e.target.closest('#generate-remaining-sections-btn');
                 if (generateRemainingBtn) {
                     generateAndAppendRemainingSections(generateRemainingBtn);
@@ -1266,7 +1311,6 @@
                     settingsPanel.classList.add('hidden');
                 }
 
-                // FIX: Add event listener for the Generate Detailed Steps button directly
                 const generateDetailedStepsBtn = e.target.closest('#generate-detailed-steps-btn');
                 if (generateDetailedStepsBtn) {
                     generateAndAppendDetailedInstructions(generateDetailedStepsBtn);
@@ -1321,10 +1365,9 @@
             localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
             localStorage.setItem('googleClientId', tempGoogleClientId);
             
-            // Re-initialize and then trigger login
             loadConfigFromStorage();
             initializeFirebase(); 
-            handleLogin(); // Trigger popup login
+            handleLogin();
         }
 
         // --- Google Drive & Firebase Functions ---
@@ -1356,15 +1399,12 @@
                         gapi.client.setToken(tokenResponse);
                         updateSigninStatus(true);
                     } else {
-                        // This case handles explicit denials from the user in the popup
                         console.error('User denied access or token response was invalid.', tokenResponse);
                         updateSigninStatus(false);
                     }
                 },
-                // *** FIX: Add a callback for when the popup is closed by the user ***
                 popup_closed_callback: () => {
                     console.log('User closed the Google auth popup.');
-                    // Optionally update the UI to reflect that the user cancelled.
                     const statusEl = document.getElementById('drive-status');
                     if (statusEl.textContent.includes('Connecting')) {
                         statusEl.textContent = 'Connection cancelled.';
@@ -1372,9 +1412,7 @@
                     }
                 }
             });
-            // *** FIX: Wrap the silent token request in a try/catch to suppress console errors ***
             try {
-                // Check for existing token silently. The error is expected if the user isn't logged in.
                 tokenClient.requestAccessToken({prompt: 'none'});
             } catch (err) {
                 console.log("Could not silently get token, user interaction will be required.");
@@ -1390,10 +1428,8 @@
 
             if (gapi.client.getToken() === null) {
                 document.getElementById('drive-status').textContent = 'Connecting to Google Drive...';
-                // This will trigger the popup for the user to grant consent.
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
-                // User is already connected, so this is a sign-out action.
                 const token = gapi.client.getToken();
                 if (token) {
                     google.accounts.oauth2.revoke(token.access_token, () => {
@@ -1424,17 +1460,12 @@
                 driveFolderId = null;
             }
 
-            // Refresh buttons for both modals
             if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
                 const currentFullTitle = document.getElementById('inDepthModalTitle').textContent;
-                // This logic is tricky now with multi-stage. Let's assume initialPhase is true here
-                // as this modal *always* starts in initial phase for "in-depth" content.
-                // For custom guides, it is also initial phase.
                 addModalActionButtons(modalButtons, true);
             }
             if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) {
                 const currentFullTitle = document.getElementById('inDepthDetailedModalTitle').textContent;
-                // Check if detailed modal content already includes remaining sections
                 const isOnlyDetailedSteps = !originalGeneratedText.get(currentFullTitle) || 
                                            !originalGeneratedText.get(currentFullTitle).includes("### Verification and Validation");
                 addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'), isOnlyDetailedSteps);
@@ -1462,7 +1493,6 @@
                     });
                     driveFolderId = folderResponse.result.id;
                 }
-                // *** FIX: Only update status *after* folder is confirmed ***
                 driveStatusEl.textContent = 'Connected to Google Drive.';
                 return driveFolderId;
             } catch (error) {
@@ -1473,12 +1503,11 @@
         }
         
         async function handleSaveToDriveClick(button) {
-             // Determine which modal triggered the save
              const modalFooter = button.closest('#inDepthModalFooter') || button.closest('#inDepthDetailedModalFooter');
-             if (!modalFooter) return; // Should not happen if button exists inside a footer
+             if (!modalFooter) return;
 
              const titleElement = modalFooter.closest('.card').querySelector('h2');
-             const fullTitle = titleElement.textContent; // Get the actual title from the h2
+             const fullTitle = titleElement.textContent;
 
              const rawMarkdown = originalGeneratedText.get(fullTitle);
              if (!rawMarkdown) {
@@ -1486,9 +1515,9 @@
                 return;
              }
 
-             const cardName = modalFooter.dataset.cardName || "Custom Task"; // Use dataset, fallback for custom
+             const cardName = modalFooter.dataset.cardName || "Custom Task";
              const fileName = `${cardName} - ${fullTitle}.md`.replace(/In-Depth: |Custom Guide: /g, '');
-             const statusEl = modalFooter.querySelector('p[id$="status-message"]'); // Get the correct status message element
+             const statusEl = modalFooter.querySelector('p[id$="status-message"]');
              
              await saveContentToDrive(rawMarkdown, fileName, statusEl);
         }
@@ -1543,7 +1572,7 @@
              }
              const builder = new google.picker.PickerBuilder()
                 .setOAuthToken(token)
-                .setDeveloperKey(geminiApiKey); // Picker API requires an API key
+                .setDeveloperKey(geminiApiKey);
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
@@ -1691,7 +1720,6 @@
                     </div>
                 ` : '';
 
-                // --- MODIFICATION: Added a unique ID to the grid card selector for easy targeting ---
                 const newClass = isNew ? 'new-item-highlight' : '';
                 const truncatedTitle = truncateText(cleanTitle, 50);
 
@@ -1705,7 +1733,6 @@
                 </div>`;
             }).join('');
             
-            // --- NEW FEATURE: HTML for the 'Add New Topic' form ---
             const addNewTopicHtml = `
                 <div class="add-topic-container">
                     <input type="text" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
@@ -1738,11 +1765,9 @@
                         </div>`;
                 }
             }
-            // --- MODIFICATION: Combine all HTML parts ---
             container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
         }
         
-        // --- NEW FEATURE: Function to handle adding a custom topic ---
         async function handleAddNewTopic(button) {
             const { containerId, themeType } = button.dataset;
             const inputField = button.previousElementSibling;
@@ -1756,21 +1781,17 @@
             const newTopic = {
                 title: newTitle,
                 id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
-                description: newTitle // Use the title as the description
+                description: newTitle
             };
 
             allThemeData[themeType].push(newTopic);
             allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
 
-            // Rerender the grid to include the new topic
             populateCardGridSelector(containerId, themeType, new Set([newTopic.id]));
 
-            // Find the newly created element in the DOM
             const newTopicElement = document.getElementById(`grid-selector-${newTopic.id}`);
             if (newTopicElement) {
-                // Programmatically select the new element and generate its summary
                 newTopicElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // The active class is added by handleGridSelect
                 await handleGridSelect(newTopicElement);
             }
         }
@@ -1793,7 +1814,7 @@
             Existing Task List:
             - ${existingTitles.join('\n- ')}
 
-            For each new task, provide a unique "id", a "title", and a short "description". IMPORTANT: Ensure your response is ONLY a valid JSON array. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").`;
+            For each new task, provide a unique "id", a "title", and a short "description". ${jsonInstruction}`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -1864,8 +1885,6 @@
                 return;
             }
             
-            // --- MODIFICATION: Make sure target gets the active class ---
-            // Clear any previously active button in the same grid
             const gridContainer = target.closest('.card-grid-container');
             const currentlyActive = gridContainer.querySelector('.active');
             if (currentlyActive) {
@@ -1880,7 +1899,6 @@
 
             await markItemAsViewed(cardTitle, item.title);
             
-            // After an item is viewed, we add the visual indicator manually if it's not already there.
             if (!target.querySelector('.viewed-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'viewed-indicator';
@@ -1939,7 +1957,6 @@
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
-            // This will now open the first modal with initial details
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
@@ -1955,13 +1972,12 @@
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = "Custom Task"; 
             
-            modal.classList.remove('hidden'); // Show the first modal
+            modal.classList.remove('hidden');
             
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                         .map(btn => btn.textContent.trim())
                                         .join(', ');
 
-            // Modified prompt to get only initial sections for custom guides too
             const initialCustomPrompt = `You are an expert senior IT administrator and technical writer AI.
 Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following custom topic:
 - **Topic:** "${userPrompt}"
@@ -1994,12 +2010,12 @@ Return only these sections in markdown format. Do not include any other sections
                 let initialResultText = await callGeminiAPI(initialCustomPrompt);
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(fullTitle, initialResultText); // Store for later access by generateAndAppendDetailedInstructions
+                originalGeneratedText.set(fullTitle, initialResultText);
                 
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false); 
                 
-                addModalActionButtons(buttonContainer, true); // Still initial phase for this first modal
+                addModalActionButtons(buttonContainer, true);
 
             } catch(error) {
                 handleApiError(error, contentEl, 'custom IT guide (initial sections)');
@@ -2013,18 +2029,14 @@ Return only these sections in markdown format. Do not include any other sections
             if (!jsonString || typeof jsonString !== 'string') {
                 throw new Error("Invalid input: not a string.");
             }
-            // Start by removing markdown fences that the AI might add
             let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
             
             try {
-                // Attempt to parse the now-cleaner string
                 return JSON.parse(cleanedString);
             } catch (error) {
-                // If it still fails, log everything for debugging
                 console.error("Failed to parse JSON even after cleaning:", error);
                 console.error("Original string received from API:", jsonString);
                 console.error("String after cleaning attempts:", cleanedString);
-                // Throw a more informative error to the caller
                 throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
             }
         }
@@ -2032,7 +2044,7 @@ Return only these sections in markdown format. Do not include any other sections
         // --- API CALL FUNCTIONS ---
         async function callApi(apiUrl, payload, authorization = null) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout for all calls
+            const timeoutId = setTimeout(() => controller.abort(), 90000);
 
             const headers = { 'Content-Type': 'application/json' };
             if (authorization) {
@@ -2111,11 +2123,9 @@ Return only these sections in markdown format. Do not include any other sections
             const themePrompt = "Modern Data Center";
             const imagePrompt = `Artistic, abstract background image inspired by "${themePrompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
             try {
-                 // First generate colors, as they don't depend on Google Auth
                 const colors = await callColorGenAPI(themePrompt);
                 applyTheme(colors);
 
-                // Then attempt to generate image, which might fail if not authenticated
                 if (gapi.client.getToken()) {
                     const imageUrl = await callImageGenAPI(imagePrompt);
                     applyHeaderImage(imageUrl);
@@ -2125,7 +2135,6 @@ Return only these sections in markdown format. Do not include any other sections
 
             } catch (error) {
                 handleApiError(null, null, 'default theme');
-                // Don't re-throw, allow app to load with default styles even if theme fails
                 console.error("Failed to generate default theme, continuing with default styles.", error);
             } finally {
                 showThemeLoading(false);
@@ -2200,13 +2209,11 @@ Return only these sections in markdown format. Do not include any other sections
         function getAppPrompts() {
             const prompts = {};
 
-            // Add dynamic category prompts
             categoriesToGenerate.forEach(cat => {
                 prompts[`${cat.title} (Initial Load)`] = cat.initialPrompt;
                 prompts[`${cat.title} (Full Details)`] = cat.fullPrompt;
             });
 
-            // Add other static/generic prompts
             prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" });
             prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
@@ -2308,7 +2315,6 @@ ${powerCLIStandard}
 Return only the new, complete, and rewritten markdown guide.`;
             }
 
-            // This is the prompt for generating new guides from scratch
             let contextText = `for the task: "${task}"`;
             if (context.cardTitle) {
                 contextText = `for the following topic.
@@ -2341,35 +2347,34 @@ The guide must be an all-inclusive resource for an IT professional, covering the
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
 
 * **5. Detailed Step-by-Step Instructions:**
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title. For example, if the title is "Domain Controller Maintenance", this section must include detailed instructions for using domain controller-specific tools like 'DCDIAG', 'REPADMIN', running health checks, reviewing replication status, checking SYSVOL health, etc. It should not contain generic advice like "install updates" or "perform backups" unless it's within the specific context of the task (e.g., "Backing up Active Directory Integrated Zones").
+    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
     * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
+    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
+    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
 
 * **6. Verification and Validation:**
-    * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
+    * Provide specific commands or procedures to run to confirm the task was completed successfully.
     * Describe what a successful output or system state looks out.
 
 * **7. Best Practices:**
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task. Cover performance, security, and maintainability aspects.
+    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
 
 * **8. Automation Opportunities:**
-    * **Why Automate:** Discuss the benefits of automating this task (e.g., consistency, speed, reduced error).
-    * **Scripting Examples:** Provide complete, practical script examples using relevant languages (e.g., PowerShell, PowerCLI, Python, Bash). Scripts must be robust and include comments.
+    * **Why Automate:** Discuss the benefits of automating this task.
+    * **Scripting Examples:** Provide complete, practical script examples.
 
 * **9. Security Considerations:**
     * **Hardening:** Provide specific steps to harden the configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks associated with this task/technology.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging to track relevant events.
+    * **Common Vulnerabilities:** Discuss potential security risks.
+    * **Auditing & Logging:** Recommend what to audit and how to configure logging.
 
 * **10. Advanced Use Cases & Scenarios:**
-    * Describe 2-3 advanced or less-common scenarios where this skill can be applied.
-
+    * Describe 2-3 advanced or less-common scenarios.
 * **11. Troubleshooting:**
-    * Provide a table of common problems, their likely causes, and step-by-step solutions. Use the format: **Problem** | **Potential Cause** | **Solution**.
+    * Provide a table of common problems, their likely causes, and step-by-step solutions.
 
 * **12. Helpful Resources:**
-    * Include a final section with a bulleted list of high-quality, relevant links to official documentation, in-depth articles, and community forums.
+    * Include a final section with a bulleted list of high-quality, relevant links.
 
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
@@ -2379,7 +2384,6 @@ ${powerCLIStandard}
 Return only the complete markdown guide.`;
         }
         
-        // MODIFIED handleExploreInDepth function - prepares and opens the *first* modal
         async function handleExploreInDepth(themeId, themeType, cardName) {
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
             if (!item) {
@@ -2396,7 +2400,7 @@ Return only the complete markdown guide.`;
             const fullTitle = `In-Depth: ${item.title}`;
             titleEl.textContent = fullTitle;
             contentEl.innerHTML = getLoaderHTML(`Generating foundational guide for ${item.title}...`);
-            buttonContainer.innerHTML = ''; // Clear buttons initially
+            buttonContainer.innerHTML = '';
             document.getElementById('modal-status-message').textContent = '';
 
             footerEl.dataset.themeId = themeId;
@@ -2404,11 +2408,10 @@ Return only the complete markdown guide.`;
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = cardName;
 
-            modal.classList.remove('hidden'); // Show the first modal
+            modal.classList.remove('hidden');
 
             const context = { cardTitle: cardName, cardDescription: item.description };
 
-            // Prompt for the initial sections
             const initialPrompt = `You are an expert senior IT administrator and technical writer AI.
 Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following topic:
 - **Category:** "${context.cardTitle}"
@@ -2425,31 +2428,28 @@ Structure these sections logically using '###' markdown syntax for headers. The 
     * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
 
 * **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
+    * For complex topics, explain the high-level architecture. Describe the main components and how they interact.
 
 * **3. Key Concepts & Terminology:**
     * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
+    * Define all relevant terminology and acronyms clearly.
 
 * **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
+    * **Permissions:** Detail the specific administrative roles or granular permissions required.
     * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
+    * **System Requirements:** Specify any hardware or network prerequisites.
 
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
-                // First AI call for initial sections
                 let initialResultText = await callGeminiAPI(initialPrompt);
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                // Save this initial content associated with the full title of the *first* modal
                 originalGeneratedText.set(fullTitle, initialResultText);
 
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false);
 
-                // Add buttons, including the new 'Generate Detailed Steps' button for the FIRST modal
                 addModalActionButtons(buttonContainer, true); 
 
             } catch (error) {
@@ -2458,35 +2458,28 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
 
-        // MODIFIED function to handle the second phase of generation and open a NEW modal
         async function generateAndAppendDetailedInstructions(button) {
-            // Get data from the *first* modal's footer
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
             const themeId = firstModalFooter.dataset.themeId;
             const themeType = firstModalFooter.dataset.themeType;
             const cardName = firstModalFooter.dataset.cardName;
-
-            // Get the initial content from the first modal (it's already stored)
             const initialContentMarkdown = originalGeneratedText.get(fullTitleFromFirstModal); 
 
             if (!initialContentMarkdown) {
                 console.error("No initial content found to extract key concepts from.");
                 handleApiError({ message: "Initial guide content missing for detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
-                // Re-enable the button on the *first* modal if it was disabled
                 if (button) {
                     button.disabled = false;
-                    button.innerHTML = `Generate Detailed Steps`; // Reset button text
+                    button.innerHTML = `Generate Detailed Steps`;
                 }
                 return;
             }
 
-            // Extract Key Concepts & Terminology from the first modal's content
             const keyConceptsRegex = /###\s*Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
             const match = initialContentMarkdown.match(keyConceptsRegex);
             const keyConceptsContent = match ? match[1].trim() : "No key concepts found.";
 
-            // Define the prompt for ONLY the Detailed Step-by-Step Instructions
             const detailedStepsPrompt = `You are an expert senior IT administrator and technical writer AI.
 Based on the following context and key concepts related to "${fullTitleFromFirstModal.replace('In-Depth: ', '')}" from the category "${cardName}":
 
@@ -2502,9 +2495,9 @@ Provide step-by-step instructions where appropriate for each relevant item.
 
 * **5. Detailed Step-by-Step Instructions:**
     * **Task-Specific and Comprehensive:** This section MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title, directly leveraging and expanding on the key concepts provided.
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run, including necessary parameters. Include example outputs where they would aid understanding.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation (e.g., "In Server Manager, navigate to 'Tools' > 'Active Directory Users and Computers'. Right-click the domain and select...").
+    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps.
+    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
+    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
 
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
@@ -2513,11 +2506,9 @@ ${powerCLIStandard}
 
 Return ONLY this section in markdown format.`;
 
-            // Disable button on the *first* modal and show loading state
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Steps...</span>`;
             
-            // Get elements for the *NEW* detailed modal
             const detailedModal = document.getElementById('inDepthDetailedModal');
             const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
             const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
@@ -2525,48 +2516,41 @@ Return ONLY this section in markdown format.`;
             const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
             const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
 
-            const detailedModalTitle = `${fullTitleFromFirstModal} - Detailed Steps`; // Specific title for this stage in the new modal
+            const detailedModalTitle = `${fullTitleFromFirstModal} - Detailed Steps`;
             detailedTitleEl.textContent = detailedModalTitle;
             detailedContentEl.innerHTML = getLoaderHTML(`Generating Detailed Step-by-Step Instructions...`);
-            detailedButtonContainer.innerHTML = ''; // Clear buttons initially
+            detailedButtonContainer.innerHTML = '';
             detailedStatusMessage.textContent = '';
 
-            // Store context for the new modal, including key concepts for the next stage
             detailedFooterEl.dataset.themeId = themeId;
             detailedFooterEl.dataset.themeType = themeType;
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
             detailedFooterEl.dataset.cardName = cardName;
-            detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent; // Pass key concepts to next stage
+            detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent;
 
-            detailedModal.classList.remove('hidden'); // Show the NEW modal
+            detailedModal.classList.remove('hidden');
 
             try {
                 let detailedStepsText = await callGeminiAPI(detailedStepsPrompt);
                 detailedStepsText = detailedStepsText ? detailedStepsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                // Store only the generated detailed steps + initial content for the next stage's context
                 const combinedForNextStage = `${initialContentMarkdown}\n\n${detailedStepsText}`;
                 originalGeneratedText.set(detailedModalTitle, combinedForNextStage);
 
-                // Clear and render ONLY the detailed steps in the NEW modal
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(detailedStepsText, detailedContentEl, false);
 
-                // Add buttons for the detailed steps phase in the NEW modal
-                addDetailedModalActionButtons(detailedButtonContainer, true); // Pass true for isOnlyDetailedSteps
+                addDetailedModalActionButtons(detailedButtonContainer, true);
 
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'detailed step-by-step instructions');
             } finally {
-                // Re-enable the button on the *first* modal
                 button.disabled = false;
-                button.innerHTML = `Generate Detailed Steps`; // Reset button text
+                button.innerHTML = `Generate Detailed Steps`;
             }
         }
 
-        // NEW function for generating remaining sections (triggered from detailed modal)
         async function generateAndAppendRemainingSections(button) {
-            const detailedModal = document.getElementById('inDepthDetailedModal');
             const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
             const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
             const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
@@ -2574,7 +2558,7 @@ Return ONLY this section in markdown format.`;
 
             const fullTitleOfDetailedModal = detailedFooterEl.dataset.fullTitle;
             const cardName = detailedFooterEl.dataset.cardName;
-            const keyConceptsContent = detailedFooterEl.dataset.keyConceptsContent; // Retrieved from dataset
+            const keyConceptsContent = detailedFooterEl.dataset.keyConceptsContent;
             const currentContentInDetailedModal = originalGeneratedText.get(fullTitleOfDetailedModal);
 
             if (!currentContentInDetailedModal || !keyConceptsContent) {
@@ -2583,7 +2567,6 @@ Return ONLY this section in markdown format.`;
                 return;
             }
             
-            // Extract the original topic name from the first modal's title (which is part of detailedModalTitle)
             const topicName = fullTitleOfDetailedModal.replace('In-Depth: ', '').replace(' - Detailed Steps', '');
 
             const remainingSectionsPrompt = `You are an expert senior IT administrator and technical writer AI.
@@ -2602,28 +2585,19 @@ Your task is to generate ONLY the "Verification and Validation", "Best Practices
 **REQUIRED SECTIONS & CONTENT:**
 
 * **6. Verification and Validation:**
-    * Provide specific commands or procedures to run to confirm the task was completed successfully and the system is in the expected state.
-    * Describe what a successful output or system state looks like.
-
+    * Provide specific commands or procedures to run to confirm the task was completed successfully.
 * **7. Best Practices:**
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task. Cover performance, security, and maintainability aspects.
-
+    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
 * **8. Automation Opportunities:**
-    * **Why Automate:** Discuss the benefits of automating this task (e.g., consistency, speed, reduced error).
-    * **Scripting Examples:** Provide complete, practical script examples using relevant languages (e.g., PowerShell, PowerCLI, Python, Bash). Scripts must be robust and include comments.
-
+    * Provide complete, practical script examples.
 * **9. Security Considerations:**
-    * **Hardening:** Provide specific steps to harden the configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks associated with this task/technology.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging to track relevant events.
-
+    * Discuss potential security risks and provide hardening steps.
 * **10. Advanced Use Cases & Scenarios:**
-    * Describe 2-3 advanced or less-common scenarios where this skill can be applied.
+    * Describe 2-3 advanced or less-common scenarios.
 * **11. Troubleshooting:**
-    * Provide a table of common problems, their likely causes, and step-by-step solutions. Use the format: **Problem** | **Potential Cause** | **Solution**.
-
+    * Provide a table of common problems, causes, and solutions.
 * **12. Helpful Resources:**
-    * Include a final section with a bulleted list of high-quality, relevant links to official documentation, in-depth articles, and community forums.
+    * Include a bulleted list of high-quality, relevant links.
 
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
@@ -2632,7 +2606,6 @@ ${powerCLIStandard}
 
 Return ONLY these sections in markdown format.`;
 
-            // Disable button and show loading
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Remaining...</span>`;
             detailedContentEl.innerHTML += getLoaderHTML(`Generating remaining guide sections...`); 
@@ -2641,53 +2614,35 @@ Return ONLY these sections in markdown format.`;
                 let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
                 remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                // Combine the currently displayed content (initial + detailed steps) with the new remaining sections
                 const finalCompleteGuideMarkdown = `${currentContentInDetailedModal}\n\n${remainingSectionsText}`;
 
-                // Update the stored content for this modal's key with the full guide
                 originalGeneratedText.set(fullTitleOfDetailedModal, finalCompleteGuideMarkdown);
 
-                // Clear and re-render the content in the NEW modal with the full guide
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
-                // Update buttons for the full guide phase in the NEW modal
-                addDetailedModalActionButtons(detailedButtonContainer, false); // Pass false for isOnlyDetailedSteps
+                addDetailedModalActionButtons(detailedButtonContainer, false);
                 detailedStatusMessage.textContent = 'Full guide generated!';
 
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'remaining guide sections');
-            } finally {
-                // Button will be re-rendered by addDetailedModalActionButtons, no direct reset needed
             }
         }
 
-
-        // MODIFIED addModalActionButtons to handle phases for the FIRST modal
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
-            buttonContainer.innerHTML = ''; // Clear existing buttons
+            buttonContainer.innerHTML = '';
 
             const saveDriveBtnHtml = gapi.client.getToken() !== null ?
                 `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
 
             if (isInitialPhase) {
-                // Buttons for the initial phase (summary only) in the FIRST modal
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                     <button class="btn-secondary text-sm copy-button">Copy Text</button>
                     <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate detailed step-by-step instructions">Generate Detailed Steps</button>
                     ${saveDriveBtnHtml}
                 `;
-                 // Add specific event listener for the new button
-                // This listener should be within a global click handler or applied directly after element creation
-                // and should target the element by ID if it's unique.
-                // The current setup with `document.addEventListener('click', (e) => { ... });`
-                // and `e.target.closest('#generate-detailed-steps-btn')` already handles this,
-                // so no *additional* listener here is strictly necessary, but it doesn't hurt.
-                // However, I've moved the listener to the global click handler in setupEventListeners
-                // to centralize event handling for dynamic elements.
             } else {
-                // This 'else' block primarily for custom guides generated via gemini-form or fallback
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                     <button class="btn-secondary text-sm copy-button">Copy Text</button>
@@ -2695,10 +2650,6 @@ Return ONLY these sections in markdown format.`;
                 `;
             }
 
-            // Common event listeners for both phases (applies to the modal this buttonContainer belongs to)
-            // Ensure these are correctly attached to the dynamically created buttons.
-            // Using event delegation in the main document.addEventListener('click') block is generally safer
-            // for dynamically added elements.
             const copyButton = buttonContainer.querySelector('.copy-button');
             if (copyButton) {
                 copyButton.addEventListener('click', e => {
@@ -2723,9 +2674,8 @@ Return ONLY these sections in markdown format.`;
             }
         }
 
-        // NEW function to add buttons specifically for the NEW detailed modal
         function addDetailedModalActionButtons(buttonContainer, isOnlyDetailedSteps = false) {
-            buttonContainer.innerHTML = ''; // Clear existing buttons
+            buttonContainer.innerHTML = '';
 
             const saveDriveBtnHtml = gapi.client.getToken() !== null ?
                 `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
@@ -2737,7 +2687,6 @@ Return ONLY these sections in markdown format.`;
                     <button id="generate-remaining-sections-btn" class="btn-primary text-sm px-4 py-2" title="Generate the rest of the guide sections">Generate Remaining Sections</button>
                     ${saveDriveBtnHtml}
                 `;
-                // Listener for generate-remaining-sections-btn is already in the global click handler.
             } else {
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -2746,7 +2695,6 @@ Return ONLY these sections in markdown format.`;
                 `;
             }
             
-            // Ensure listeners are attached to the dynamically created buttons
             const copyButton = buttonContainer.querySelector('.copy-button');
             if (copyButton) {
                 copyButton.addEventListener('click', e => {
@@ -2770,6 +2718,56 @@ Return ONLY these sections in markdown format.`;
             }
         }
         
+        // NEW: Show/hide logic for the search button
+        function handleTextSelection(e) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            const searchButton = document.getElementById('search-gemini-button');
+
+            const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent');
+
+            if (selectedText && isInsideModal) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                searchButton.style.top = `${window.scrollY + rect.top - searchButton.offsetHeight - 5}px`;
+                searchButton.style.left = `${window.scrollX + rect.left + (rect.width / 2) - (searchButton.offsetWidth / 2)}px`;
+                searchButton.classList.remove('hidden');
+            } else {
+                if (!e.target.closest('#search-gemini-button')) {
+                    searchButton.classList.add('hidden');
+                }
+            }
+        }
+
+        // NEW: Function to handle the Gemini search
+        async function handleSearchGemini() {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            if (!selectedText) return;
+
+            const modal = document.getElementById('searchGeminiModal');
+            const searchTextEl = document.getElementById('searchText');
+            const resultEl = document.getElementById('searchGeminiResult');
+            
+            searchTextEl.textContent = selectedText;
+            resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
+            modal.classList.remove('hidden');
+
+            const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
+
+            try {
+                let resultText = await callGeminiAPI(prompt);
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
+            } catch (error) {
+                handleApiError(error, resultEl, 'Gemini search');
+            } finally {
+                 // Hide the search button after the search is initiated
+                document.getElementById('search-gemini-button').classList.add('hidden');
+            }
+        }
+
+
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
@@ -2783,7 +2781,6 @@ Return ONLY these sections in markdown format.`;
                             </div>`;
                 });
             } else {
-                 // Still remove the placeholder text even if not generating the image container
                 processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
             }
 
@@ -2871,7 +2868,7 @@ Return ONLY these sections in markdown format.`;
             button.disabled = true;
 
             const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent);
-            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. IMPORTANT: Ensure any double quotes in string values are properly escaped (e.g., \\"like this\\"). Return ONLY a valid JSON object.`;
+            const prompt = `Generate 1 new, useful IT administration category NOT on this list: ${existingTitles.join(', ')}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). Prompts must request a JSON array of objects, each with id, title, and description. ${jsonInstruction}. Return ONLY a valid JSON object.`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -2920,7 +2917,6 @@ Return ONLY these sections in markdown format.`;
                 if (imageResult && imageResult.status === 'fulfilled' && imageResult.value) {
                     applyHeaderImage(imageResult.value);
                 } else if (imageResult) {
-                    // Show error only if image generation was attempted and failed
                     throw imageResult.reason || new Error("Failed to header image.");
                 }
                 
@@ -2951,7 +2947,7 @@ Return ONLY these sections in markdown format.`;
             
             if (cardData.length === 0) return;
         
-            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}. IMPORTANT: Ensure any double quotes in string values are properly escaped.`;
+            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}. ${jsonInstruction}.`;
             
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
@@ -3175,7 +3171,7 @@ Return ONLY these sections in markdown format.`;
         }
         
         function toggleRefineUI(buttonContainer, isModal = false, targetModalId = 'inDepthModal') {
-            const refineContainerId = `refine-container-${targetModalId}`; // Unique ID for refine container
+            const refineContainerId = `refine-container-${targetModalId}`;
             let refineContainer = document.getElementById(refineContainerId);
 
             if (refineContainer) {
@@ -3200,7 +3196,7 @@ Return ONLY these sections in markdown format.`;
 
             const contentArea = document.getElementById(`${targetModalId}Content`);
             const titleElement = document.getElementById(`${targetModalId}Title`);
-            const textKey = titleElement.textContent; // Use the current title of the target modal as the key
+            const textKey = titleElement.textContent;
 
             const originalText = originalGeneratedText.get(textKey);
 
@@ -3217,19 +3213,16 @@ Return ONLY these sections in markdown format.`;
                 let newText = await callGeminiAPI(prompt);
                 newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set(textKey, newText); // Update the stored text for this modal's key
+                originalGeneratedText.set(textKey, newText);
                 
                 contentArea.innerHTML = '';
-                // Use renderAccordionFromMarkdown for both modals if they use accordion layout
-                renderAccordionFromMarkdown(newText, contentArea, false); // No image generation in modals yet
+                renderAccordionFromMarkdown(newText, contentArea, false);
                 
-                // Re-add buttons for the fully generated guide or refined guide
                 const currentButtonContainer = document.getElementById(`${targetModalId}Buttons`);
-                // For refinement, we always show the full set of buttons, so isInitialPhase is false
                 if (targetModalId === 'inDepthModal') {
                     addModalActionButtons(currentButtonContainer, false); 
-                } else { // It's the detailed modal
-                    addDetailedModalActionButtons(currentButtonContainer, false); // isOnlyDetailedSteps = false
+                } else {
+                    addDetailedModalActionButtons(currentButtonContainer, false);
                 }
 
             } catch(error) {
@@ -3251,7 +3244,6 @@ Return ONLY these sections in markdown format.`;
 
         function sanitizeTitle(title) {
             if (typeof title !== 'string') return '';
-            // Removes leading/trailing quotes, asterisks, hyphens, and whitespace.
             return title.replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
         }
         
