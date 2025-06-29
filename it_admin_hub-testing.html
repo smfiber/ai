@@ -345,12 +345,12 @@
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
-                    <input type="password" id="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
+                    <input type="password" id="geminiApiKeyInput" name="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
                 </div>
 
                 <div class="mb-4">
                     <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
-                    <textarea id="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here."></textarea>
+                    <textarea id="firebaseConfigInput" name="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here."></textarea>
                      <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. You can paste the entire snippet.</p>
                 </div>
 
@@ -359,7 +359,7 @@
                 
                 <div class="mb-4">
                     <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted">Google Cloud Client ID</label>
-                    <input type="password" id="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation">
+                    <input type="password" id="googleClientIdInput" name="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation">
                 </div>
                 
                 <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
@@ -410,8 +410,9 @@
             </div>
             <div class="p-6 overflow-y-auto">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium themed-text-muted mb-2">You asked about:</label>
-                    <div id="searchText" class="w-full p-3 themed-input bg-gray-100 border rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto"></div>
+                    <!-- FIX: Added for attribute to label and id to textarea for accessibility. Changed div to readonly textarea for semantics. -->
+                    <label for="searchGeminiQueryText" class="block text-sm font-medium themed-text-muted mb-2">You asked about:</label>
+                    <textarea id="searchGeminiQueryText" name="searchGeminiQueryText" readonly class="w-full p-3 themed-input bg-gray-100 border rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto"></textarea>
                 </div>
                 <div id="searchGeminiResult" class="prose max-w-none"></div>
             </div>
@@ -426,7 +427,7 @@
             </div>
             <div class="p-6">
                 <p class="mb-6 themed-text-muted">Describe a mood or concept to create a new color palette and header image for the app.</p>
-                <textarea id="theme-prompt" rows="3" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Modern data center at dusk'"></textarea>
+                <textarea id="theme-prompt" name="theme-prompt" rows="3" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Modern data center at dusk'"></textarea>
                 <button id="generate-theme-btn" class="btn-primary w-full mt-4" title="Generate new app visuals based on your text">Generate Visuals</button>
                 <div id="theme-loader-container" class="hidden mt-4 flex items-center space-x-3">
                     <div class="loader themed-loader" style="width:25px; height:25px;"></div>
@@ -465,7 +466,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.61</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.2</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -498,7 +499,7 @@
                     <h2 class="text-2xl font-bold mb-2 themed-text-primary">Generative AI Prompt</h2>
                     <p class="mb-6 themed-text-muted">Need a guide for a specific task? Enter any keyword or concept, and let AI craft a step-by-step plan for you.</p>
                     <form id="gemini-form">
-                        <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
+                        <input type="text" id="gemini-prompt" name="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
                         
                         <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
                             <div class="accordion-item">
@@ -551,7 +552,7 @@
         <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
-        <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
+        <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" name="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" name="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" name="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
 
         <footer class="mt-16 py-8 text-center border-t" style="border-color: var(--color-card-border);">
             <div class="max-w-4xl mx-auto px-4">
@@ -1062,9 +1063,11 @@
                 console.log("Popup sign-in successful for:", result.user.displayName);
             } catch (error) {
                 console.error("Google Sign-In Popup failed:", error);
+                // The Cross-Origin-Opener-Policy console error can sometimes be associated with popup blockers or browser settings.
+                // It's often a non-critical warning from the gapi library itself.
                 const errorEl = document.getElementById('api-key-error');
                 if (errorEl) {
-                   errorEl.textContent = `Login failed: ${error.code}. Please try again.`;
+                   errorEl.textContent = `Login failed: ${error.code}. Please check browser pop-up settings and try again.`;
                 }
             }
         }
@@ -1789,9 +1792,11 @@
                 </div>`;
             }).join('');
             
+            // FIX: Added unique id and name attributes to the input field
+            const topicInputId = `add-topic-input-${themeType}`;
             const addNewTopicHtml = `
                 <div class="add-topic-container">
-                    <input type="text" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
+                    <input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
                     <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-theme-type="${themeType}">Add Topic</button>
                 </div>
             `;
@@ -2505,7 +2510,7 @@ Return only these sections in markdown format. Do not include any other sections
                 return;
             }
 
-	    const keyConceptsRegex = /###\s*(?:\d+\.\s*)?Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
+            const keyConceptsRegex = /###\s*(?:\d+\.\s*)?Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
             const match = initialContentMarkdown.match(keyConceptsRegex);
             const keyConceptsContent = match ? match[1].trim() : "No key concepts found.";
 
@@ -2555,7 +2560,7 @@ Return ONLY this section in markdown format.`;
             detailedFooterEl.dataset.themeType = themeType;
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
             detailedFooterEl.dataset.cardName = cardName;
-            detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent;
+            detailedFooterEl.dataset.initialContent = initialContentMarkdown; // Pass the initial content
             
             document.body.classList.add('detailed-modal-open');
             detailedModal.classList.remove('hidden');
@@ -2588,31 +2593,33 @@ Return ONLY this section in markdown format.`;
 
             const fullTitleOfDetailedModal = detailedFooterEl.dataset.fullTitle;
             const cardName = detailedFooterEl.dataset.cardName;
-            const keyConceptsContent = detailedFooterEl.dataset.keyConceptsContent;
-            const currentContentInDetailedModal = originalGeneratedText.get(fullTitleOfDetailedModal);
+            const initialContent = detailedFooterEl.dataset.initialContent; // Retrieve initial content
+            const detailedStepsMarkdown = originalGeneratedText.get(fullTitleOfDetailedModal);
 
-            if (!currentContentInDetailedModal || !keyConceptsContent) {
-                console.error("Missing content or key concepts for generating remaining sections.");
+            if (!detailedStepsMarkdown || !initialContent) {
+                console.error("Missing content for generating remaining sections.");
                 handleApiError({ message: "Context missing for remaining sections generation." }, detailedContentEl, "remaining sections");
                 return;
             }
             
             const topicName = fullTitleOfDetailedModal.replace('In-Depth: ', '').replace(' - Detailed Steps', '');
 
+            // FIX: Restructured the prompt for clarity to the AI.
             const remainingSectionsPrompt = `You are an expert senior IT administrator and technical writer AI.
-Building upon the following context, including key concepts and previously generated detailed steps, related to "${topicName}" from the category "${cardName}":
+You are completing a comprehensive guide on the topic: "${topicName}".
 
+Here is the context from the guide's beginning, which you should use but NOT repeat in your output:
 ---
-KEY CONCEPTS:
-${keyConceptsContent}
-
-PREVIOUSLY GENERATED DETAILED STEPS (for context, do NOT regenerate):
-${currentContentInDetailedModal}
+**PART 1: INITIAL SECTIONS (DO NOT REGENERATE)**
+${initialContent}
+---
+**PART 2: DETAILED STEPS (DO NOT REGENERATE)**
+${detailedStepsMarkdown}
 ---
 
-Your task is to generate ONLY the "Verification and Validation", "Best Practices", "Automation Opportunities", "Security Considerations", "Advanced Use Cases & Scenarios", "Troubleshooting", and "Helpful Resources" sections to complete this comprehensive IT administration guide.
+Your task is to generate ONLY the remaining sections to complete this guide. These sections are "Verification and Validation", "Best Practices", "Automation Opportunities", "Security Considerations", "Advanced Use Cases & Scenarios", "Troubleshooting", and "Helpful Resources".
 
-**REQUIRED SECTIONS & CONTENT:**
+**SECTIONS TO GENERATE:**
 
 * **6. Verification and Validation:**
     * Provide specific commands or procedures to run to confirm the task was completed successfully.
@@ -2634,7 +2641,7 @@ ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
 
-Return ONLY these sections in markdown format.`;
+Return ONLY these new sections (6 through 12) in markdown format.`;
 
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating Remaining...</span>`;
@@ -2644,7 +2651,7 @@ Return ONLY these sections in markdown format.`;
                 let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
                 remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-                const finalCompleteGuideMarkdown = `${currentContentInDetailedModal}\n\n${remainingSectionsText}`;
+                const finalCompleteGuideMarkdown = `${detailedStepsMarkdown}\n\n${remainingSectionsText}`;
 
                 originalGeneratedText.set(fullTitleOfDetailedModal, finalCompleteGuideMarkdown);
 
@@ -2694,9 +2701,6 @@ Return ONLY these sections in markdown format.`;
                     handleSaveToDriveClick(e.target);
                 });
             }
-
-            // FIX: This redundant listener was removed to prevent the refine UI from closing immediately.
-            // The main delegated listener in setupEventListeners() handles this button correctly.
         }
 
         function addDetailedModalActionButtons(buttonContainer, isOnlyDetailedSteps = false) {
@@ -2734,28 +2738,31 @@ Return ONLY these sections in markdown format.`;
                     handleSaveToDriveClick(e.target);
                 });
             }
-
-            // FIX: This redundant listener was also removed.
         }
         
         function handleTextSelection(e) {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
-
-            const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent');
-
+            const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent');
+            
+            // FIX: Removed the 'else' block that was causing the button to hide prematurely.
+            // The global 'mousedown' listener is now solely responsible for hiding the button.
             if (selectedText && isInsideModal) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
-                searchButton.style.top = `${window.scrollY + rect.top - searchButton.offsetHeight - 5}px`;
+                
+                // Position button above the selection
+                let top = window.scrollY + rect.top - searchButton.offsetHeight - 5;
+                // Ensure it doesn't go off-screen
+                if (top < window.scrollY) {
+                    top = window.scrollY + rect.bottom + 5;
+                }
+                
+                searchButton.style.top = `${top}px`;
                 searchButton.style.left = `${window.scrollX + rect.left + (rect.width / 2) - (searchButton.offsetWidth / 2)}px`;
                 searchButton.classList.remove('hidden');
-            } else {
-                if (!e.target.closest('#search-gemini-button')) {
-                    searchButton.classList.add('hidden');
-                }
-            }
+            } 
         }
 
         async function handleSearchGemini() {
@@ -2764,10 +2771,10 @@ Return ONLY these sections in markdown format.`;
             if (!selectedText) return;
 
             const modal = document.getElementById('searchGeminiModal');
-            const searchTextEl = document.getElementById('searchText');
+            const searchTextEl = document.getElementById('searchGeminiQueryText');
             const resultEl = document.getElementById('searchGeminiResult');
             
-            searchTextEl.textContent = selectedText;
+            searchTextEl.value = selectedText; // Use .value for textarea
             resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
             
             document.body.classList.add('search-modal-open');
@@ -3201,8 +3208,11 @@ Return ONLY these sections in markdown format.`;
             refineContainer = document.createElement('div');
             refineContainer.id = refineContainerId;
             refineContainer.className = 'refine-container w-full';
+            
+            // FIX: Added unique id and name attributes to the textarea
+            const textareaId = `refine-textarea-${targetModalId}`;
             refineContainer.innerHTML = `
-                <textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea>
+                <textarea id="${textareaId}" name="${textareaId}" class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea>
                 <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}" data-target-modal-id="${targetModalId}">Submit Refinement</button>
             `;
             buttonContainer.insertAdjacentElement('afterend', refineContainer);
