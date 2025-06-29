@@ -2493,7 +2493,7 @@ Return only these sections in markdown format. Do not include any other sections
                 return;
             }
 
-            const keyConceptsRegex = /###\s*Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
+	    const keyConceptsRegex = /###\s*(?:\d+\.\s*)?Key Concepts\s*&\s*Terminology\n([\s\S]*?)(?=(?:###|$))/i;
             const match = initialContentMarkdown.match(keyConceptsRegex);
             const keyConceptsContent = match ? match[1].trim() : "No key concepts found.";
 
