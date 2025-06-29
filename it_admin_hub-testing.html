@@ -357,9 +357,9 @@
             </div>
         </div>
     </div>
-    <!-- NEW: Second modal for detailed guides -->
-    <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4" style="--tw-bg-opacity: 0.85;">
-        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh; transform: translateY(-20px);">
+    <!-- FIX: Increased z-index to ensure this modal appears on top of the previous one. -->
+    <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" style="z-index: 60;">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary"></h2>
                 <button id="closeInDepthDetailedModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
