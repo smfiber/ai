@@ -265,7 +265,6 @@
         .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
         .grid-card-selector.active small { color: rgba(255, 255, 255, 0.8); }
 
-        /* NEW: Visual indicator for viewed items */
         .viewed-indicator {
             position: absolute;
             top: 0.5rem;
@@ -287,13 +286,11 @@
             height: 0.75rem;
         }
 
-        /* Style for newly generated items */
         .new-item-highlight {
             border: 2px solid var(--color-primary);
             box-shadow: 0 0 10px var(--color-primary);
         }
         
-        /* NEW: Style for the 'Add New Topic' section */
         .add-topic-container {
             margin-top: 1.5rem;
             padding-top: 1.5rem;
@@ -303,10 +300,9 @@
             align-items: center;
         }
         
-        /* NEW: Styles for the Search Gemini feature */
         #search-gemini-button {
             position: fixed;
-            z-index: 100; /* Ensure it's on top of content */
+            z-index: 100;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -325,7 +321,6 @@
             transform: translateY(-2px);
         }
         
-        /* FIX: Rules to manage visibility when modals are layered */
         body.detailed-modal-open #inDepthModal {
             visibility: hidden;
         }
@@ -401,20 +396,22 @@
             </div>
         </div>
     </div>
-    <!-- NEW: Search Gemini Modal -->
     <div id="searchGeminiModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-85 flex items-center justify-center p-4" style="z-index: 70;">
-        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
+        <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 class="text-2xl font-bold themed-text-primary">Search Gemini</h2>
+                <h2 id="searchGeminiModalTitle" class="text-2xl font-bold themed-text-primary">Search Gemini</h2>
                 <button id="closeSearchGeminiModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto">
                 <div class="mb-4">
-                    <!-- FIX: Added for attribute to label and id to textarea for accessibility. Changed div to readonly textarea for semantics. -->
                     <label for="searchGeminiQueryText" class="block text-sm font-medium themed-text-muted mb-2">You asked about:</label>
                     <textarea id="searchGeminiQueryText" name="searchGeminiQueryText" readonly class="w-full p-3 themed-input bg-gray-100 border rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto"></textarea>
                 </div>
                 <div id="searchGeminiResult" class="prose max-w-none"></div>
+            </div>
+            <div id="searchGeminiModalFooter" class="p-4 border-t" style="border-color: var(--color-card-border);">
+                <div id="searchGeminiModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="search-gemini-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
         </div>
     </div>
@@ -447,7 +444,6 @@
         </div>
     </div>
     
-    <!-- NEW: Floating button for Search Gemini -->
     <button id="search-gemini-button" class="hidden">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
       <span>Search Gemini</span>
@@ -466,8 +462,8 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <!-- FIX: Updated version number -->
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.4</div>
+            <!-- UPDATED: Version number -->
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.6</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -516,7 +512,6 @@
 
                         <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
                     </form>
-                    <!-- This container is no longer used for custom guides, but kept for potential future use or other content -->
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
@@ -581,7 +576,7 @@
 
         const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
         
-        // FIX: Moved prompt constants to global scope for broader access
+        // --- Prompt Constants ---
         const linkVerificationAndGenerationMandate = `
 * **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
     1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
@@ -915,7 +910,7 @@
                 title: 'Windows Server Administration', 
                 description: "Essential tasks for managing Windows Server instances.", 
                 initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, 
-                fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` 
+                fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` 
             },
             { 
                 key: 'windowsServer2019', 
@@ -952,7 +947,6 @@
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
-        // Stores the full markdown content of generated guides, keyed by their modal title
         let originalGeneratedText = new Map(); 
 
         // --- Google Drive Integration State & Config ---
@@ -960,7 +954,6 @@
         let gisInited = false;
         let tokenClient;
         let GOOGLE_CLIENT_ID = '';
-        // BUG FIX: Added cloud-platform scope for Vertex AI image generation
         const G_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/cloud-platform';
         let driveFolderId = null;
 
@@ -1012,14 +1005,12 @@
             return false;
         }
         
-        // --- Login/Logout UI and Handlers ---
         function setupAuthUI(user) {
             const authStatusEl = document.getElementById('auth-status');
             const appContainer = document.getElementById('app-container');
             const apiKeyModal = document.getElementById('apiKeyModal');
 
             if (user) {
-                // User is LOGGED IN
                 appContainer.classList.remove('hidden');
                 apiKeyModal.classList.add('hidden');
                 
@@ -1040,7 +1031,6 @@
                 }
 
             } else {
-                // User is LOGGED OUT
                  authStatusEl.innerHTML = `
                      <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
@@ -1050,7 +1040,6 @@
                 document.getElementById('login-button').addEventListener('click', handleLogin);
                 
                 appContainer.classList.add('hidden');
-                // Only show API key modal if the user is logged out AND there are no keys saved
                 if (!localStorage.getItem('geminiApiKey')) {
                      apiKeyModal.classList.remove('hidden');
                 }
@@ -1065,8 +1054,6 @@
                 console.log("Popup sign-in successful for:", result.user.displayName);
             } catch (error) {
                 console.error("Google Sign-In Popup failed:", error);
-                // The Cross-Origin-Opener-Policy console error can sometimes be associated with popup blockers or browser settings.
-                // It's often a non-critical warning from the gapi library itself.
                 const errorEl = document.getElementById('api-key-error');
                 if (errorEl) {
                    errorEl.textContent = `Login failed: ${error.code}. Please check browser pop-up settings and try again.`;
@@ -1222,7 +1209,6 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // FIX: Updated modal closing logic to handle multiple layers
             ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
@@ -1230,18 +1216,13 @@
                         if (e.target.id === id || e.target.closest('[id^="close"]')) {
                             modal.classList.add('hidden');
                             
-                            if (id === 'inDepthDetailedModal') {
-                                document.body.classList.remove('detailed-modal-open');
-                            }
-                            if (id === 'searchGeminiModal') {
-                                document.body.classList.remove('search-modal-open');
-                            }
+                            if (id === 'inDepthDetailedModal') document.body.classList.remove('detailed-modal-open');
+                            if (id === 'searchGeminiModal') document.body.classList.remove('search-modal-open');
                         }
                     });
                 }
             });
             
-            // NEW: Event listener for Search Gemini button
             document.getElementById('search-gemini-button').addEventListener('click', handleSearchGemini);
 
             document.addEventListener('mouseup', handleTextSelection);
@@ -1260,11 +1241,6 @@
                     return;
                 }
                 
-                if (e.target.id === 'save-to-drive-btn') {
-                     handleSaveToDriveClick(e.target);
-                     return;
-                }
-                
                 const addTopicBtn = e.target.closest('.add-topic-button');
                 if(addTopicBtn) {
                     handleAddNewTopic(addTopicBtn);
@@ -1276,13 +1252,9 @@
                     tailorBtn.classList.toggle('active');
                     return;
                 }
-
+                
                 const gridSelector = e.target.closest('.grid-card-selector');
                 if (gridSelector) {
-                    const container = gridSelector.closest('.card-grid-container').parentElement;
-                    const currentlyActive = container.querySelector('.grid-card-selector.active');
-                    if(currentlyActive) currentlyActive.classList.remove('active');
-                    gridSelector.classList.add('active');
                     handleGridSelect(gridSelector);
                     return;
                 }
@@ -1296,34 +1268,24 @@
                 
                 const refineBtn = e.target.closest('.refine-button');
                 if (refineBtn) {
-                    toggleRefineUI(refineBtn.parentElement);
+                    toggleRefineUI(refineBtn.parentElement, false, 'summary');
                     return;
                 }
 
-                // FIX: Refactored to be more robust by checking modal visibility directly
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
                 if (modalRefineBtn) {
-                    const inDepthModal = document.getElementById('inDepthModal');
-                    const detailedModal = document.getElementById('inDepthDetailedModal');
                     let targetModalId;
-
-                    if (!inDepthModal.classList.contains('hidden')) {
-                        targetModalId = 'inDepthModal';
-                    } else if (!detailedModal.classList.contains('hidden')) {
-                        targetModalId = 'inDepthDetailedModal';
-                    }
-
-                    if (targetModalId) {
-                        toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
-                    } else {
-                        console.error("Could not determine the active modal for refinement.");
-                    }
+                    if (!document.getElementById('inDepthModal').classList.contains('hidden')) targetModalId = 'inDepthModal';
+                    else if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) targetModalId = 'inDepthDetailedModal';
+                    else if (!document.getElementById('searchGeminiModal').classList.contains('hidden')) targetModalId = 'searchGeminiModal';
+                    
+                    if (targetModalId) toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
                     return;
                 }
                 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) {
-                    const targetModalId = submitRefineBtn.closest('#inDepthModalFooter') ? 'inDepthModal' : 'inDepthDetailedModal';
+                    const targetModalId = submitRefineBtn.dataset.targetModalId;
                     handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
                     return;
                 }
@@ -1339,14 +1301,12 @@
                     handleGenerateMoreClick(generateMoreBtn);
                     return;
                 }
-
+                
                 const accordionHeader = e.target.closest('.accordion-header');
                 if (accordionHeader) { 
                     accordionHeader.classList.toggle('active');
                     const icon = accordionHeader.querySelector('.icon');
-                    if(icon) {
-                       icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
-                    }
+                    if(icon) icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
                     accordionHeader.nextElementSibling.classList.toggle('open'); 
                     return;
                 }
@@ -1365,11 +1325,17 @@
                 if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
                     settingsPanel.classList.add('hidden');
                 }
-
+                
                 const generateDetailedStepsBtn = e.target.closest('#generate-detailed-steps-btn');
                 if (generateDetailedStepsBtn) {
-                    // FIX: Changed function name to reflect new combined logic
                     generateFullDetailedGuide(generateDetailedStepsBtn);
+                    return;
+                }
+
+                // FIX: Centralized action button handler to prevent double-firing.
+                const actionButton = e.target.closest('.modal-action-button');
+                if (actionButton) {
+                    handleModalActionButton(actionButton);
                     return;
                 }
             });
@@ -1500,7 +1466,6 @@
             const authButton = document.getElementById('auth-button');
             const loadBtn = document.getElementById('load-from-drive-btn');
             const statusEl = document.getElementById('drive-status');
-            const modalButtons = document.getElementById('inDepthModalButtons');
             
             if (isSignedIn) {
                 authButton.textContent = 'Disconnect';
@@ -1517,14 +1482,13 @@
             }
 
             if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
-                const currentFullTitle = document.getElementById('inDepthModalTitle').textContent;
-                addModalActionButtons(modalButtons, true);
+                addModalActionButtons(document.getElementById('inDepthModalButtons'));
             }
             if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) {
-                const currentFullTitle = document.getElementById('inDepthDetailedModalTitle').textContent;
-                const isOnlyDetailedSteps = !originalGeneratedText.get(currentFullTitle) || 
-                                           !originalGeneratedText.get(currentFullTitle).includes("### Verification and Validation");
-                addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'), isOnlyDetailedSteps);
+                addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'));
+            }
+            if (!document.getElementById('searchGeminiModal').classList.contains('hidden')) {
+                addSearchGeminiModalActionButtons(document.getElementById('searchGeminiModalButtons'));
             }
         }
 
@@ -1556,26 +1520,6 @@
                 driveStatusEl.textContent = 'Error with Drive folder access.';
                 return null;
             }
-        }
-        
-        async function handleSaveToDriveClick(button) {
-             const modalFooter = button.closest('#inDepthModalFooter') || button.closest('#inDepthDetailedModalFooter');
-             if (!modalFooter) return;
-
-             const titleElement = modalFooter.closest('.card').querySelector('h2');
-             const fullTitle = titleElement.textContent;
-
-             const rawMarkdown = originalGeneratedText.get(fullTitle);
-             if (!rawMarkdown) {
-                console.error("Could not find markdown to save for:", fullTitle);
-                return;
-             }
-
-             const cardName = modalFooter.dataset.cardName || "Custom Task";
-             const fileName = `${cardName} - ${fullTitle}.md`.replace(/In-Depth: |Custom Guide: /g, '');
-             const statusEl = modalFooter.querySelector('p[id$="status-message"]');
-             
-             await saveContentToDrive(rawMarkdown, fileName, statusEl);
         }
 
         async function saveContentToDrive(content, fileName, statusElement) {
@@ -1610,6 +1554,8 @@
             } catch (error) {
                 console.error('Error saving file to Drive:', error);
                 statusElement.textContent = 'Error saving file. Check console.';
+                // Re-throw the error so the caller's catch/finally block can execute
+                throw error;
             }
         }
 
@@ -1770,9 +1716,7 @@
                 
                 const viewedIndicatorHtml = isViewed ? `
                     <div class="viewed-indicator" title="Viewed">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                     </div>
                 ` : '';
 
@@ -1789,7 +1733,6 @@
                 </div>`;
             }).join('');
             
-            // FIX: Added unique id and name attributes to the input field
             const topicInputId = `add-topic-input-${themeType}`;
             const addNewTopicHtml = `
                 <div class="add-topic-container">
@@ -2042,26 +1985,6 @@ Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key
 - **Tailoring Options:** ${selectedOptions ? selectedOptions : 'None'}
 
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-
-**REQUIRED SECTIONS & CONTENT:**
-
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
@@ -2092,21 +2015,16 @@ Return only these sections in markdown format. Do not include any other sections
             try {
                 return JSON.parse(cleanedString);
             } catch (error) {
-                console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
-                
-                // Advanced correction for unquoted keys, trailing commas etc.
+                console.warn("Initial JSON.parse failed. Attempting correction.", error);
                 try {
-                    // This is a more aggressive cleaning step that should be used cautiously.
-                    // It can sometimes fix malformed JSON from the LLM.
                     const correctedJsonString = cleanedString
-                        .replace(/\\'/g, "'") // Handle escaped single quotes if needed
-                        .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3'); // Add quotes to keys
+                        .replace(/\\'/g, "'")
+                        .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
                     return JSON.parse(correctedJsonString);
                 } catch (finalError) {
                      console.error("Failed to parse JSON even after cleaning:", error);
-                    console.error("Original string received from API:", jsonString);
-                    console.error("String after cleaning attempts:", cleanedString);
-                    throw new Error(`JSON Parse Error: ${error.message}. Check console for the problematic string.`);
+                    console.error("Original string from API:", jsonString);
+                    throw new Error(`JSON Parse Error: ${error.message}.`);
                 }
             }
         }
@@ -2266,8 +2184,7 @@ Return only these sections in markdown format. Do not include any other sections
         
         function applyHeaderImage(imageUrl) {
             if (!imageUrl) return;
-            const bgImageDiv = document.getElementById('header-bg-image');
-            bgImageDiv.style.backgroundImage = `url('${imageUrl}')`;
+            document.getElementById('header-bg-image').style.backgroundImage = `url('${imageUrl}')`;
         }
 
         function showThemeLoading(isLoading) {
@@ -2278,19 +2195,16 @@ Return only these sections in markdown format. Do not include any other sections
         
         function getAppPrompts() {
             const prompts = {};
-
             categoriesToGenerate.forEach(cat => {
                 prompts[`${cat.title} (Initial Load)`] = cat.initialPrompt;
                 prompts[`${cat.title} (Full Details)`] = cat.fullPrompt;
             });
-
             prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" });
             prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
             prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has "id", "title", and "description". ${jsonInstruction}`;
-            
+            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
             return prompts;
         }
         
@@ -2298,44 +2212,27 @@ Return only these sections in markdown format. Do not include any other sections
             const modal = document.getElementById('promptsModal');
             const contentEl = document.getElementById('promptsModalContent');
             contentEl.innerHTML = ''; 
-
             const prompts = getAppPrompts();
-
             for (const [title, promptText] of Object.entries(prompts)) {
                 const promptContainer = document.createElement('div');
                 promptContainer.className = 'mb-6';
-                
-                const promptTitle = document.createElement('h3');
-                promptTitle.className = 'text-lg font-semibold themed-text-accent mb-2';
-                promptTitle.textContent = title;
-                promptContainer.appendChild(promptTitle);
-
-                const codeBlockContainer = document.createElement('div');
-                codeBlockContainer.className = 'code-block-container !mt-0';
-                
-                const header = document.createElement('div');
-                header.className = 'code-block-header';
-                header.innerHTML = `<span>Prompt</span><button class="copy-code-button">Copy</button>`;
-                codeBlockContainer.appendChild(header);
-
-                const pre = document.createElement('pre');
-                pre.className = 'text-sm';
-                pre.style.color = 'var(--code-text)';
-                pre.textContent = promptText;
-                codeBlockContainer.appendChild(pre);
-                
-                promptContainer.appendChild(codeBlockContainer);
+                promptContainer.innerHTML = `
+                    <h3 class="text-lg font-semibold themed-text-accent mb-2">${title}</h3>
+                    <div class="code-block-container !mt-0">
+                        <div class="code-block-header">
+                            <span>Prompt</span><button class="copy-code-button">Copy</button>
+                        </div>
+                        <pre class="text-sm" style="color: var(--code-text);">${promptText}</pre>
+                    </div>
+                `;
                 contentEl.appendChild(promptContainer);
             }
-
             modal.classList.remove('hidden');
         }
 
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-
             if (originalText) {
-                // This is the prompt for refining existing text
                 return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
 
 **ORIGINAL IT GUIDE:**
@@ -2347,12 +2244,12 @@ ${originalText}
 "${task}"
 
 **Instructions for rewriting:**
-1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
+1.  **Structure:** Create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
 2.  **Integrate:** Seamlessly integrate the user's request into the guide.
-3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
+3.  **Quality Standards:** The entire rewritten guide must still meet these requirements:
+    * **Code Blocks:** Wrap code in markdown fences with the language specified (e.g., \`\`\`powershell\`).
+    * **Practicality:** Ensure all advice is practical and reflects real-world scenarios.
+    * **Helpful Resources:** Ensure a final section with a bulleted list of high-quality, relevant links.
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
@@ -2367,57 +2264,21 @@ Return only the new, complete, and rewritten markdown guide.`;
 - **Topic Description:** "${context.cardDescription}"
 - **Specific Task:** "${task}"`;
             }
-
             return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
-
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-
-* **5. Detailed Step-by-Step Instructions:**
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
-
-* **6. Verification and Validation:**
-    * Provide specific commands or procedures to run to confirm the task was completed successfully.
-    * Describe what a successful output or system state looks out.
-
-* **7. Best Practices:**
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-
-* **8. Automation Opportunities:**
-    * **Why Automate:** Discuss the benefits of automating this task.
-    * **Scripting Examples:** Provide complete, practical script examples.
-
-* **9. Security Considerations:**
-    * **Hardening:** Provide specific steps to harden the configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging.
-
-* **10. Advanced Use Cases & Scenarios:**
-    * Describe 2-3 advanced or less-common scenarios.
-* **11. Troubleshooting:**
-    * Provide a table of common problems, their likely causes, and step-by-step solutions.
-
-* **12. Helpful Resources:**
-    * Include a final section with a bulleted list of high-quality, relevant links.
+* **1. Introduction**
+* **2. Architectural Overview (If Applicable)**
+* **3. Key Concepts & Terminology**
+* **4. Prerequisites**
+* **5. Detailed Step-by-Step Instructions**
+* **6. Verification and Validation**
+* **7. Best Practices**
+* **8. Automation Opportunities**
+* **9. Security Considerations**
+* **10. Advanced Use Cases & Scenarios**
+* **11. Troubleshooting**
+* **12. Helpful Resources**
 
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
@@ -2429,10 +2290,7 @@ Return only the complete markdown guide.`;
         
         async function handleExploreInDepth(themeId, themeType, cardName) {
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
-            if (!item) {
-                console.error("Could not find item for in-depth view", { themeId, themeType });
-                return;
-            }
+            if (!item) return;
 
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
@@ -2454,53 +2312,20 @@ Return only the complete markdown guide.`;
             modal.classList.remove('hidden');
 
             const context = { cardTitle: cardName, cardDescription: item.description };
-
-            const initialPrompt = `You are an expert senior IT administrator and technical writer AI.
-Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following topic:
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${item.title}"
-
-Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-
-**REQUIRED SECTIONS & CONTENT:**
-
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact.
-
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly.
-
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required.
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites.
-
-Return only these sections in markdown format. Do not include any other sections.`;
+            const initialPrompt = `You are an expert IT administrator AI. Generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a guide on "${item.title}" within the category "${context.cardTitle}". Structure these sections using '###' markdown headers. The content must be detailed and practical. Return only these sections in markdown format.`;
 
             try {
                 let initialResultText = await callGeminiAPI(initialPrompt);
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-
                 originalGeneratedText.set(fullTitle, initialResultText);
-
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false);
-
                 addModalActionButtons(buttonContainer, true); 
-
             } catch (error) {
                 handleApiError(error, contentEl, 'initial in-depth content');
             }
         }
         
-        // FIX: Reworked this function to perform a two-step generation process for the full guide.
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -2508,7 +2333,6 @@ Return only these sections in markdown format. Do not include any other sections
             const initialContentMarkdown = originalGeneratedText.get(fullTitleFromFirstModal); 
 
             if (!initialContentMarkdown) {
-                console.error("No initial content found to generate detailed steps from.");
                 handleApiError({ message: "Initial guide content missing. Cannot generate detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
                 return;
             }
@@ -2516,7 +2340,6 @@ Return only these sections in markdown format. Do not include any other sections
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
 
-            // Setup the second modal immediately.
             const detailedModal = document.getElementById('inDepthDetailedModal');
             const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
             const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
@@ -2535,60 +2358,33 @@ Return only these sections in markdown format. Do not include any other sections
             detailedModal.classList.remove('hidden');
 
             try {
-                // --- Part 1: Generate Detailed Steps ---
                 detailedContentEl.innerHTML = getLoaderHTML('Generating detailed steps (Part 1 of 2)...');
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-                
                 const detailedStepsPrompt = `You are an expert senior IT administrator. Based on the provided context for a guide on "${topicName}", generate ONLY the "Detailed Step-by-Step Instructions" section.
-                
-                **CONTEXT (DO NOT REGENERATE):**
-                ---
-                ${initialContentMarkdown}
-                ---
-
-                **SECTION TO GENERATE:**
-                * **5. Detailed Step-by-Step Instructions:** This section MUST be extremely detailed, practical, and directly expand on the concepts from the context. Include specific GUI actions and exact CLI commands.
-
-                Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown format.`;
-
+                **CONTEXT (DO NOT REGENERATE):**\n---\n${initialContentMarkdown}\n---\n
+                **SECTION TO GENERATE:**\n* **5. Detailed Step-by-Step Instructions:** This MUST be extremely detailed, practical, and directly expand on the context. Include specific GUI actions and exact CLI commands. Return ONLY this section in markdown format.`;
                 let detailedStepsText = await callGeminiAPI(detailedStepsPrompt);
                 detailedStepsText = detailedStepsText ? detailedStepsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!detailedStepsText) throw new Error("Failed to generate detailed steps.");
-                
                 const guideSoFar = `${initialContentMarkdown}\n\n${detailedStepsText}`;
 
-                // --- Part 2: Generate Remaining Sections ---
                 detailedContentEl.innerHTML = getLoaderHTML('Generating final sections (Part 2 of 2)...');
                 const remainingSectionsPrompt = `You are an expert senior IT administrator completing a guide on "${topicName}".
-                
-                **GUIDE SO FAR (FOR CONTEXT, DO NOT REGENERATE):**
-                ---
-                ${guideSoFar}
-                ---
-
+                **GUIDE SO FAR (FOR CONTEXT, DO NOT REGENERATE):**\n---\n${guideSoFar}\n---\n
                 Your task is to generate ONLY the remaining sections to complete this guide: "6. Verification and Validation", "7. Best Practices", "8. Automation Opportunities", "9. Security Considerations", "10. Advanced Use Cases & Scenarios", "11. Troubleshooting", and "12. Helpful Resources".
-                
-                Adhere to the following quality standards:
-                ${linkVerificationAndGenerationMandate}
-                ${powershellStandard}
-                ${powerCLIStandard}
-
-                Return ONLY these new sections (6 through 12) in markdown format.`;
-
+                Adhere to all quality standards. Return ONLY these new sections (6 through 12) in markdown format.`;
                 let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
                 remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!remainingSectionsText) throw new Error("Failed to generate remaining sections.");
 
-                // --- Final Assembly ---
                 const finalCompleteGuideMarkdown = `${guideSoFar}\n\n${remainingSectionsText}`;
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
-                addDetailedModalActionButtons(detailedButtonContainer, false);
+                addDetailedModalActionButtons(detailedButtonContainer);
                 detailedStatusMessage.textContent = 'Full guide generated successfully!';
-
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'full detailed guide');
             } finally {
@@ -2597,144 +2393,152 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // This function is no longer needed as its logic is merged into generateFullDetailedGuide
-        // async function generateAndAppendRemainingSections(button) { ... }
+        // FIX: Centralized action button handler
+        function handleModalActionButton(actionButton) {
+            if (actionButton.disabled) return;
+
+            const modalCard = actionButton.closest('.card');
+            if (!modalCard) return;
+
+            const action = actionButton.dataset.action;
+            const contentElement = modalCard.querySelector('[id$="Content"], [id$="Result"]');
+            const titleElement = modalCard.querySelector('h2');
+            const statusElement = modalCard.querySelector('p[id$="-status-message"]');
+
+            if (action === 'copy') {
+                copyElementTextToClipboard(contentElement, actionButton);
+            } else if (action === 'save-drive') {
+                const originalButtonHTML = actionButton.innerHTML;
+                actionButton.disabled = true;
+                actionButton.innerHTML = `<div class="loader themed-loader" style="width:16px; height:16px; border-width: 2px; display: inline-block;"></div> Saving...`;
+
+                const fullTitle = titleElement.textContent;
+                const markdown = originalGeneratedText.get(fullTitle);
+                const cardName = modalCard.querySelector('[id$="Footer"]')?.dataset?.cardName || "Gemini Search";
+                const fileName = `${cardName} - ${fullTitle}.md`.replace(/Search: |In-Depth: |Custom Guide: /g, '');
+
+                if (markdown) {
+                    saveContentToDrive(markdown, fileName, statusElement)
+                        .catch(() => { /* Error is handled in saveContentToDrive */ })
+                        .finally(() => {
+                            actionButton.disabled = false;
+                            actionButton.innerHTML = originalButtonHTML;
+                        });
+                } else {
+                    if (statusElement) statusElement.textContent = "Could not find content to save.";
+                    actionButton.disabled = false;
+                    actionButton.innerHTML = originalButtonHTML;
+                }
+            }
+        }
 
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
-            buttonContainer.innerHTML = '';
-
             const saveDriveBtnHtml = gapi.client.getToken() !== null ?
-                `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+                `<button data-action="save-drive" class="modal-action-button btn-secondary">Save to Google Drive</button>` : '';
 
             if (isInitialPhase) {
                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                    <button data-action="copy" class="modal-action-button btn-secondary text-sm">Copy Text</button>
                     <button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate a full, detailed guide in a new modal">Generate Full Detailed Guide</button>
                     ${saveDriveBtnHtml}
                 `;
             } else {
-                buttonContainer.innerHTML = `
+                 buttonContainer.innerHTML = `
                     <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                    <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                    <button data-action="copy" class="modal-action-button btn-secondary text-sm">Copy Text</button>
                     ${saveDriveBtnHtml}
                 `;
             }
-
-            const copyButton = buttonContainer.querySelector('.copy-button');
-            if (copyButton) {
-                copyButton.addEventListener('click', e => {
-                    const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]');
-                    copyElementTextToClipboard(contentToCopy, e.target);
-                });
-            }
-
-            const saveDriveButton = buttonContainer.querySelector('#save-to-drive-btn');
-            if (saveDriveButton) {
-                saveDriveButton.addEventListener('click', e => {
-                    handleSaveToDriveClick(e.target);
-                });
-            }
         }
 
-        // FIX: Simplified this function as the multi-step generation is gone.
-        // It now only shows the final set of buttons for a completed guide.
         function addDetailedModalActionButtons(buttonContainer) {
             const saveDriveBtnHtml = gapi.client.getToken() !== null ?
-                `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+                `<button data-action="save-drive" class="modal-action-button btn-secondary">Save to Google Drive</button>` : '';
             
             buttonContainer.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                <button data-action="copy" class="modal-action-button btn-secondary text-sm">Copy Text</button>
                 ${saveDriveBtnHtml}
             `;
-            
-            const copyButton = buttonContainer.querySelector('.copy-button');
-            if (copyButton) {
-                copyButton.addEventListener('click', e => {
-                    const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]');
-                    copyElementTextToClipboard(contentToCopy, e.target);
-                });
-            }
-
-            const saveDriveButton = buttonContainer.querySelector('#save-to-drive-btn');
-            if (saveDriveButton) {
-                saveDriveButton.addEventListener('click', e => {
-                    handleSaveToDriveClick(e.target);
-                });
-            }
         }
         
         function handleTextSelection(e) {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
-            const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent');
+            const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent, #searchGeminiResult');
             
-            // FIX: Removed the 'else' block that was causing the button to hide prematurely.
-            // The global 'mousedown' listener is now solely responsible for hiding the button.
             if (selectedText && isInsideModal) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
                 
-                // Position button above the selection
                 let top = window.scrollY + rect.top - searchButton.offsetHeight - 5;
-                // Ensure it doesn't go off-screen
-                if (top < window.scrollY) {
-                    top = window.scrollY + rect.bottom + 5;
-                }
+                if (top < window.scrollY) top = window.scrollY + rect.bottom + 5;
                 
                 searchButton.style.top = `${top}px`;
                 searchButton.style.left = `${window.scrollX + rect.left + (rect.width / 2) - (searchButton.offsetWidth / 2)}px`;
                 searchButton.classList.remove('hidden');
             } 
         }
-
+        
         async function handleSearchGemini() {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             if (!selectedText) return;
 
             const modal = document.getElementById('searchGeminiModal');
+            const titleEl = document.getElementById('searchGeminiModalTitle');
             const searchTextEl = document.getElementById('searchGeminiQueryText');
             const resultEl = document.getElementById('searchGeminiResult');
+            const buttonContainer = document.getElementById('searchGeminiModalButtons');
+            const footerEl = document.getElementById('searchGeminiModalFooter');
             
-            searchTextEl.value = selectedText; // Use .value for textarea
+            const fullTitle = `Search: ${truncateText(selectedText, 50)}`;
+            titleEl.textContent = fullTitle;
+            searchTextEl.value = selectedText;
             resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
+            buttonContainer.innerHTML = '';
+            
+            footerEl.dataset.fullTitle = fullTitle;
+            footerEl.dataset.cardName = "Gemini Search";
             
             document.body.classList.add('search-modal-open');
             modal.classList.remove('hidden');
 
-            const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
+            const prompt = `You are an expert IT administrator AI. Explain: "${selectedText}". Structure your response in markdown with sections for Definition, a Practical Example, and Key Considerations.`;
 
             try {
                 let resultText = await callGeminiAPI(prompt);
-                resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
+                resultText = resultText ? resultText.replace(/^```(markdown)?\n?|```/g, '').trim() : '';
+                originalGeneratedText.set(fullTitle, resultText);
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
+                addSearchGeminiModalActionButtons(buttonContainer);
             } catch (error) {
                 handleApiError(error, resultEl, 'Gemini search');
             } finally {
                 document.getElementById('search-gemini-button').classList.add('hidden');
             }
         }
-
+        
+        function addSearchGeminiModalActionButtons(buttonContainer) {
+            const saveDriveBtnHtml = gapi.client.getToken() !== null ?
+                `<button data-action="save-drive" class="modal-action-button btn-secondary">Save to Google Drive</button>` : '';
+            
+            buttonContainer.innerHTML = `
+                <button class="btn-secondary text-sm modal-refine-button">Refine Explanation</button>
+                <button data-action="copy" class="modal-action-button btn-secondary text-sm">Copy Text</button>
+                ${saveDriveBtnHtml}
+            `;
+        }
 
         function convertMarkdownToHtml(text, generateImages = true) {
             if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
-            let processedText;
-            if (generateImages) {
-                processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
-                    const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
-                    return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}">
-                                <div class="loader themed-loader"></div>
-                                <p class="mt-2 text-sm italic">${description}</p>
-                            </div>`;
-                });
-            } else {
+            let processedText = text;
+            if (!generateImages) {
                 processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
             }
-
 
             let html = marked.parse(processedText);
             const tempDiv = document.createElement('div');
@@ -2742,21 +2546,11 @@ Return only these sections in markdown format. Do not include any other sections
 
             tempDiv.querySelectorAll('pre').forEach(preBlock => {
                 if (preBlock.parentElement.classList.contains('code-block-container')) return;
-
                 const codeBlock = preBlock.querySelector('code');
                 const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
-                
                 const container = document.createElement('div');
                 container.className = 'code-block-container';
-                
-                const header = document.createElement('div');
-                header.className = 'code-block-header';
-                header.innerHTML = `
-                    <span>${lang}</span>
-                    <button class="copy-code-button">Copy</button>
-                `;
-
-                container.appendChild(header);
+                container.innerHTML = `<div class="code-block-header"><span>${lang}</span><button class="copy-code-button">Copy</button></div>`;
                 preBlock.parentNode.insertBefore(container, preBlock);
                 container.appendChild(preBlock);
             });
@@ -2769,9 +2563,7 @@ Return only these sections in markdown format. Do not include any other sections
             if (placeholders.length === 0) return;
             
             if (!gapi.client.getToken()) {
-                placeholders.forEach(placeholder => {
-                    placeholder.innerHTML = `<p class="text-sm themed-text-muted">Connect Google Account to generate images.</p>`;
-                });
+                placeholders.forEach(p => p.innerHTML = `<p class="text-sm themed-text-muted">Connect Google Account to generate images.</p>`);
                 return;
             }
 
@@ -2812,7 +2604,6 @@ Return only these sections in markdown format. Do not include any other sections
             });
         }
         
-        // FIX: Reworked prompt to be more robust and prevent API errors.
         async function handleDiscoverMoreClick() {
             const button = document.getElementById('discover-more-button');
             const errorP = document.getElementById('discover-more-error');
@@ -2823,8 +2614,8 @@ Return only these sections in markdown format. Do not include any other sections
             const titlesString = existingTitles.length > 0 ? `[${existingTitles.map(t => `"${t}"`).join(', ')}]` : 'the default ones';
             
             const prompt = `Generate 1 new, useful IT administration category that is NOT in the following list: ${titlesString}.
-Return your response as a single, valid JSON object with the following keys: "key" (string, camelCase, unique), "title" (string), "description" (string), "initialPrompt" (string), and "fullPrompt" (string).
-The "initialPrompt" and "fullPrompt" values should be prompts for an AI to generate a JSON array of objects, where each object has an "id", "title", and "description".
+Return your response as a single, valid JSON object with the following keys: "key" (camelCase, unique), "title", "description", "initialPrompt", and "fullPrompt".
+The prompts should instruct an AI to create a JSON array of objects with "id", "title", and "description".
 ${jsonInstruction}`;
 
             try {
@@ -2949,6 +2740,7 @@ ${jsonInstruction}`;
         }
 
         function copyElementTextToClipboard(element, button) {
+            if (!element) return;
             const textToCopy = element.innerText;
             const textarea = document.createElement('textarea');
             textarea.value = textToCopy;
@@ -3051,84 +2843,31 @@ ${jsonInstruction}`;
             document.getElementById('modal-status-message').innerHTML = '';
             modal.classList.remove('hidden');
 
-            const helpPrompt = `
-                Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
-                The features are: 
-                1.  **Cloud Storage Integration**: A dedicated card on the main screen allows you to connect to Google Drive and/or Microsoft OneDrive. Once connected, you can save guides. Google Drive also supports importing guides.
-                2.  **Saving Guides**: Inside the guide modal, buttons will appear to save the guide to your connected cloud services. The file is saved to an "IT Administration Hub" folder with a descriptive name.
-                3.  **Custom Task Generator**: User enters any IT task, and the AI creates a detailed, step-by-step guide inside a pop-up modal.
-                4.  **Tailoring Options**: Buttons to refine the custom guide (e.g., 'for Security', 'for Beginners').
-                5.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc., for quick access to common subjects.
-                6.  **Visual Theme Generator**: A floating button allows you to describe a mood (e.g., 'ocean sunset'), and the AI creates a new color theme and header image for the application.
-                7.  **In-Depth Exploration & Refinement**: You can expand a summary to see a full guide or ask the AI to rewrite and refine any generated content with further instructions.
-                Format the output as a clean markdown document using '###' for each section title.`;
-
-            const feedbackPrompt = `
-                You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. 
-                Based on the feature descriptions below, provide constructive feedback. What is intuitive? What could be improved? What features might be missing for a senior IT administrator?
-
-                **Application Features:**
-                1.  **Cloud Storage Integration**: Connect to Google Drive/OneDrive to save/load guides and enable AI image generation.
-                2.  **Custom Task Generator**: Enter any IT task for a step-by-step AI-generated guide.
-                3.  **Tailoring Options**: Buttons to refine guides (e.g., 'for Security', 'for Beginners').
-                4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
-                5.  **Visual Theme Generator**: A floating button to generate a new color theme and header image from a text prompt.
-                6.  **In-Depth Exploration & Refinement**: Expand summaries to full guides or ask AI to rewrite content.
-
-                Format your feedback as a clean markdown document. Use '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
+            const helpPrompt = `Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections using '###' for each section title.`;
+            const feedbackPrompt = `You are an AI expert in user experience (UX) and IT administration tools. Review this "IT Administration Hub" application and provide constructive feedback on its features. Format your feedback in markdown using '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
             
             try {
                 const [helpResult, feedbackResult] = await Promise.all([
                     callGeminiAPI(helpPrompt),
                     callGeminiAPI(feedbackPrompt)
                 ]);
-
                 const helpText = helpResult ? helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 const feedbackText = feedbackResult ? feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                
                 contentEl.innerHTML = `
                     <div class="accordion-item">
-                        <button type="button" class="accordion-header active">
-                            <span class="text-left font-semibold">Application Help Guide</span>
-                            <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content open prose max-w-none">
-                            ${marked.parse(helpText || '<p class="themed-text-muted">Could not load help content.</p>')}
-                        </div>
+                        <button type="button" class="accordion-header active"><span class="text-left font-semibold">Application Help Guide</span><svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                        <div class="accordion-content open prose max-w-none">${marked.parse(helpText || '<p>Could not load help.</p>')}</div>
                     </div>
                     <div class="accordion-item">
-                        <button type="button" class="accordion-header">
-                            <span class="text-left font-semibold">AI-Generated Feedback</span>
-                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content prose max-w-none">
-                            ${marked.parse(feedbackText || '<p class="themed-text-muted">Could not load feedback.</p>')}
-                        </div>
-                    </div>
-                `;
-
-                contentEl.querySelectorAll('pre:not(code-block-container pre)').forEach(preBlock => {
-                    const codeBlock = preBlock.querySelector('code');
-                    const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
-                    
-                    const container = document.createElement('div');
-                    container.className = 'code-block-container';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'code-block-header';
-                    header.innerHTML = `<span>${lang}</span><button class="copy-code-button">Copy</button>`;
-
-                    container.appendChild(header);
-                    preBlock.parentNode.insertBefore(container, preBlock);
-                    container.appendChild(preBlock);
-                });
-
+                        <button type="button" class="accordion-header"><span class="text-left font-semibold">AI-Generated Feedback</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                        <div class="accordion-content prose max-w-none">${marked.parse(feedbackText || '<p>Could not load feedback.</p>')}</div>
+                    </div>`;
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
         }
         
-        function toggleRefineUI(buttonContainer, isModal = false, targetModalId = 'inDepthModal') {
+        function toggleRefineUI(buttonContainer, isModal = false, targetModalId) {
             const refineContainerId = `refine-container-${targetModalId}`;
             let refineContainer = document.getElementById(refineContainerId);
 
@@ -3141,7 +2880,6 @@ ${jsonInstruction}`;
             refineContainer.id = refineContainerId;
             refineContainer.className = 'refine-container w-full';
             
-            // FIX: Added unique id and name attributes to the textarea
             const textareaId = `refine-textarea-${targetModalId}`;
             refineContainer.innerHTML = `
                 <textarea id="${textareaId}" name="${textareaId}" class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea>
@@ -3155,14 +2893,14 @@ ${jsonInstruction}`;
             const refinementRequest = refineContainer.querySelector('textarea').value;
             if (!refinementRequest) return;
 
-            const contentArea = document.getElementById(`${targetModalId}Content`);
+            const contentArea = document.getElementById(`${targetModalId}Content`) || document.getElementById(`${targetModalId}Result`);
             const titleElement = document.getElementById(`${targetModalId}Title`);
             const textKey = titleElement.textContent;
 
             const originalText = originalGeneratedText.get(textKey);
 
             if (!originalText) {
-                handleApiError({message: "Could not find the original text to refine. Please generate the content again first."}, contentArea, "refinement");
+                handleApiError({message: "Could not find the original text to refine."}, contentArea, "refinement");
                 return;
             }
             
@@ -3173,18 +2911,19 @@ ${jsonInstruction}`;
             try {
                 let newText = await callGeminiAPI(prompt);
                 newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                
                 originalGeneratedText.set(textKey, newText);
                 
                 contentArea.innerHTML = '';
-                renderAccordionFromMarkdown(newText, contentArea, false);
+                if(targetModalId.includes('Modal')) {
+                     renderAccordionFromMarkdown(newText, contentArea, false);
+                } else {
+                    contentArea.innerHTML = marked.parse(newText);
+                }
                 
                 const currentButtonContainer = document.getElementById(`${targetModalId}Buttons`);
-                if (targetModalId === 'inDepthModal') {
-                    addModalActionButtons(currentButtonContainer, false); 
-                } else {
-                    addDetailedModalActionButtons(currentButtonContainer, false);
-                }
+                if (targetModalId === 'inDepthModal') addModalActionButtons(currentButtonContainer); 
+                else if (targetModalId === 'inDepthDetailedModal') addDetailedModalActionButtons(currentButtonContainer);
+                else if (targetModalId === 'searchGeminiModal') addSearchGeminiModalActionButtons(currentButtonContainer);
 
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
@@ -3209,9 +2948,7 @@ ${jsonInstruction}`;
         }
         
         function truncateText(text, maxLength = 50) {
-            if (typeof text !== 'string' || text.length <= maxLength) {
-                return text;
-            }
+            if (typeof text !== 'string' || text.length <= maxLength) return text;
             return text.substring(0, maxLength) + '...';
         }
 
