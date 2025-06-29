@@ -39,6 +39,9 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        #app-container {
+            position: relative;
+        }
         .custom-modal {
             display: none; 
             position: fixed;
@@ -175,7 +178,7 @@
 <body class="text-slate-800">
 
     <!-- App Container -->
-    <div class="min-h-screen flex flex-col">
+    <div id="app-container" class="min-h-screen flex flex-col">
 
         <!-- Header -->
         <header class="w-full bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
@@ -285,7 +288,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 7.3</p>
+                <p class="mt-4 text-xs text-slate-400">Version 7.5</p>
             </div>
         </footer>
         
@@ -338,7 +341,7 @@
             organSystems: () => `When practicing yoga asanas (poses), what are all of the major and minor organ systems of the human body that people commonly believe are stimulated, supported, or positively impacted by the practice? Return a JSON object containing a single key 'yogaOrganSystemFocus' which is an array of strings. Each string should represent an organ system, formatted as 'Common Name - Technical Term(s)' if a common name exists, or just the technical term if it's widely recognized. Provide an extensive and exhaustive list, ordered alphabetically.`,
             routine: (numExercises, focusArea) => `Create a balanced routine with exactly ${numExercises} yoga poses or exercises that primarily target or support the '${focusArea}'. For each item, provide a "name", brief step-by-step "instructions", and its single primary "benefit". Keep the instructions and benefit to 1-2 sentences each. The tone should be encouraging and informative.`,
             details: (exerciseName) => `Provide a detailed guide for the yoga pose or topic "${exerciseName}". Include the following sections with clear headings using markdown ###: "Step-by-Step Instructions", "Key Benefits", and "Modifications and Precautions". Use bullet points for the benefits and modifications sections. The tone should be encouraging and informative, like a professional yoga guide.`,
-            imageGeneration: (exerciseName) => `A clear, minimalist vector illustration of a person performing the yoga pose: '${exerciseName}'. The style should be clean line art with subtle, calming color accents like #4f46e5. The figure should be gender-neutral and depicted on a simple yoga mat against a plain, light gray background (#f3f4f6). Focus on anatomically correct form and clarity. Square aspect ratio.`
+            imageGeneration: (cleanExerciseName) => `Side profile, full-body, instructional diagram of the yoga pose: '${cleanExerciseName}'. The image must be an anatomically precise, clean-line vector illustration. Depict a gender-neutral figure on a yoga mat. The style should be minimalist, dynamic yet clear, suitable for a modern fitness app. The background must be a solid white. IMPORTANT NEGATIVE PROMPT: Do not include any text, words, letters, labels, or watermarks in the image.`
         };
 
         // --- UI ELEMENTS MAPPING ---
@@ -543,7 +546,7 @@
 
                 exerciseEl.innerHTML = `
                     <div class="w-full md:w-1/3">
-                        <div id="${exerciseId}-container" class="aspect-square bg-slate-100 rounded-lg flex items-center justify-center p-2">
+                        <div id="${exerciseId}-container" class="aspect-square bg-white rounded-lg flex items-center justify-center p-2 border border-slate-200">
                              <div class="loader"></div>
                         </div>
                     </div>
@@ -581,12 +584,12 @@
             const img = document.createElement('img');
             img.className = 'w-full h-auto object-cover rounded-lg';
             img.alt = `Illustration for ${exercise.name}`;
-            if (imageCache[exercise.name]) {
-                img.src = imageCache[exercise.name];
+            const cleanExerciseName = exercise.name.replace(/\s*\(.*\)\s*/, '').trim();
+            if (imageCache[cleanExerciseName]) {
+                img.src = imageCache[cleanExerciseName];
             } else {
-                 // You can optionally show a mini-loader here too
                  img.src = `https://placehold.co/400x400/eef2ff/4f46e5?text=Loading...`;
-                 generateAndDisplayImage(exercise.name, null, img); // Generate and update the modal image
+                 generateAndDisplayImage(exercise.name, null, img);
             }
             ui.detailsImageContainer.appendChild(img);
 
@@ -601,8 +604,10 @@
         }
 
         async function generateAndDisplayImage(exerciseName, container, modalImgElement = null) {
-            if (imageCache[exerciseName]) {
-                const imageUrl = imageCache[exerciseName];
+            const cleanExerciseName = exerciseName.replace(/\s*\(.*\)\s*/, '').trim();
+
+            if (imageCache[cleanExerciseName]) {
+                const imageUrl = imageCache[cleanExerciseName];
                 if (container) {
                     container.innerHTML = `<img src="${imageUrl}" alt="Illustration for ${exerciseName}" class="w-full h-full object-cover rounded-lg">`;
                 }
@@ -613,9 +618,9 @@
             }
 
             try {
-                const prompt = PROMPT_TEMPLATES.imageGeneration(exerciseName);
+                const prompt = PROMPT_TEMPLATES.imageGeneration(cleanExerciseName);
                 const imageUrl = await callImagenAPI(prompt);
-                imageCache[exerciseName] = imageUrl; // Cache the result
+                imageCache[cleanExerciseName] = imageUrl;
                 if (container) {
                     container.innerHTML = `<img src="${imageUrl}" alt="Illustration for ${exerciseName}" class="w-full h-full object-cover rounded-lg">`;
                 }
@@ -625,10 +630,11 @@
             } catch (error) {
                 console.error(`Failed to generate image for ${exerciseName}:`, error);
                 if (container) {
-                     container.innerHTML = `<div class="text-center text-xs text-red-500 p-2">Image generation failed</div>`;
+                     container.innerHTML = `<div class="text-center text-xs text-red-500 p-2">Image failed</div>`;
                 }
                  if (modalImgElement) {
                     modalImgElement.alt = "Image generation failed";
+                    modalImgElement.src = `https://placehold.co/400x400/fecaca/991b1b?text=Error`;
                  }
             }
         }
