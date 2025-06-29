@@ -1295,10 +1295,24 @@
                     return;
                 }
 
+                // FIX: Refactored to be more robust by checking modal visibility directly
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
                 if (modalRefineBtn) {
-                    const targetModalId = e.target.closest('#inDepthModalButtons') ? 'inDepthModal' : 'inDepthDetailedModal';
-                    toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
+                    const inDepthModal = document.getElementById('inDepthModal');
+                    const detailedModal = document.getElementById('inDepthDetailedModal');
+                    let targetModalId;
+
+                    if (!inDepthModal.classList.contains('hidden')) {
+                        targetModalId = 'inDepthModal';
+                    } else if (!detailedModal.classList.contains('hidden')) {
+                        targetModalId = 'inDepthDetailedModal';
+                    }
+
+                    if (targetModalId) {
+                        toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
+                    } else {
+                        console.error("Could not determine the active modal for refinement.");
+                    }
                     return;
                 }
                 
