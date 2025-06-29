@@ -325,8 +325,12 @@
             transform: translateY(-2px);
         }
         
-        /* FIX: New rule to hide the first modal when the second one is layered on top */
-        body.modal-layered #inDepthModal {
+        /* FIX: Rules to manage visibility when modals are layered */
+        body.detailed-modal-open #inDepthModal {
+            visibility: hidden;
+        }
+        body.search-modal-open #inDepthModal,
+        body.search-modal-open #inDepthDetailedModal {
             visibility: hidden;
         }
 
@@ -461,7 +465,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.59</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.60</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1186,7 +1190,7 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // FIX: Modified the modal closing logic to handle layering
+            // FIX: Updated modal closing logic to handle multiple layers
             ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
@@ -1194,10 +1198,11 @@
                         if (e.target.id === id || e.target.closest('[id^="close"]')) {
                             modal.classList.add('hidden');
                             
-                            // If closing the detailed modal, remove the layering class from the body
-                            // so the original modal becomes visible again.
                             if (id === 'inDepthDetailedModal') {
-                                document.body.classList.remove('modal-layered');
+                                document.body.classList.remove('detailed-modal-open');
+                            }
+                            if (id === 'searchGeminiModal') {
+                                document.body.classList.remove('search-modal-open');
                             }
                         }
                     });
@@ -2539,7 +2544,7 @@ Return ONLY this section in markdown format.`;
             detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent;
             
             // FIX: Add layering class to body and show the modal
-            document.body.classList.add('modal-layered');
+            document.body.classList.add('detailed-modal-open');
             detailedModal.classList.remove('hidden');
 
             try {
@@ -2763,13 +2768,17 @@ Return ONLY these sections in markdown format.`;
             
             searchTextEl.textContent = selectedText;
             resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
+            
+            // FIX: Add layering class for the search modal
+            document.body.classList.add('search-modal-open');
             modal.classList.remove('hidden');
 
             const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
 
             try {
                 let resultText = await callGeminiAPI(prompt);
-                resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                // FIX: More aggressive cleaning of markdown fences
+                resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
             } catch (error) {
                 handleApiError(error, resultEl, 'Gemini search');
