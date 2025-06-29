@@ -324,6 +324,11 @@
             filter: brightness(1.1);
             transform: translateY(-2px);
         }
+        
+        /* FIX: New rule to hide the first modal when the second one is layered on top */
+        body.modal-layered #inDepthModal {
+            visibility: hidden;
+        }
 
     </style>
 </head>
@@ -379,7 +384,6 @@
             </div>
         </div>
     </div>
-    <!-- FIX: Increased z-index to ensure this modal appears on top of the previous one. -->
     <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" style="z-index: 60;">
         <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -457,7 +461,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.58</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.59</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1182,13 +1186,19 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // Event listeners for closing modals
+            // FIX: Modified the modal closing logic to handle layering
             ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.addEventListener('click', (e) => {
                         if (e.target.id === id || e.target.closest('[id^="close"]')) {
                             modal.classList.add('hidden');
+                            
+                            // If closing the detailed modal, remove the layering class from the body
+                            // so the original modal becomes visible again.
+                            if (id === 'inDepthDetailedModal') {
+                                document.body.classList.remove('modal-layered');
+                            }
                         }
                     });
                 }
@@ -2527,7 +2537,9 @@ Return ONLY this section in markdown format.`;
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
             detailedFooterEl.dataset.cardName = cardName;
             detailedFooterEl.dataset.keyConceptsContent = keyConceptsContent;
-
+            
+            // FIX: Add layering class to body and show the modal
+            document.body.classList.add('modal-layered');
             detailedModal.classList.remove('hidden');
 
             try {
