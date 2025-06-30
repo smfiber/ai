@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Whiteboard 2.0</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- iro.js Color Picker -->
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- Base & Layout Styles --- */
+        :root {
+            --bg-color: #111827;
+            --surface-color: rgba(31, 41, 55, 0.7); /* bg-gray-800 with transparency */
+            --border-color: rgba(55, 65, 81, 0.8); /* bg-gray-700 with transparency */
+            --accent-color: #4f46e5;
+            --text-color: #ffffff;
+            --text-muted-color: #9ca3af;
+        }
+        body { 
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+        }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+
+        #main-layout { display: flex; height: 100vh; width: 100vw; }
+        #whiteboard-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #app-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 1rem; }
+        #main-content { position: relative; flex-grow: 1; background-color: #1f2937; border-radius: 0.75rem; }
+
+        /* --- Glassmorphism & Enhanced UI --- */
+        .glass-ui {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        /* --- Chat Column --- */
+        #chat-container { 
+            width: 350px; 
+            flex-shrink: 0; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 1rem; 
+            position: relative;
+            transition: width 0.3s ease, padding 0.3s ease, transform 0.3s ease;
+            z-index: 50;
+        }
+        #chat-container.hidden {
+            width: 0;
+            padding: 0;
+            transform: translateX(-100%);
+            overflow: hidden;
+        }
+        #chat-content-wrapper {
+             width: 100%; height: 100%; display: flex; flex-direction: column;
+        }
+        #toggle-chat-btn {
+            position: absolute; top: 50%; right: -14px; transform: translateY(-50%); z-index: 55;
+            background-color: #374151; color: white; border: 1px solid #4b5563; border-left: none;
+            width: 28px; height: 60px; border-radius: 0 1rem 1rem 0; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #show-chat-btn {
+            position: absolute; top: 50%; left: 0; transform: translateY(-50%); z-index: 55;
+            background-color: #374151; color: white; border: 1px solid #4b5563; border-left: none;
+            width: 28px; height: 60px; border-radius: 0 1rem 1rem 0; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #chat-header { font-size: 1.5rem; font-weight: bold; color: white; margin-bottom: 1rem; text-align: center; border-bottom: 1px solid #4b5563; padding-bottom: 0.5rem;}
+        #chat-messages { flex-grow: 1; overflow-y: auto; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.15; color: white; scrollbar-width: thin; scrollbar-color: var(--accent-color) transparent;}
+        #chat-input { background: #374151; border: 1px solid #4b5563; color: white; padding: 0.5rem; border-radius: 0.5rem; outline: none; resize: none; height: 8rem; width: 100%; margin-bottom: 0.5rem; }
+        .chat-btn { background: var(--accent-color); color: white; padding: 0 1rem; border-radius: 0.5rem; border: none; cursor: pointer; height: 2.5rem; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s, transform 0.1s; }
+        .chat-btn:hover { background: #4338ca; transform: translateY(-2px); }
+        .chat-btn:disabled { background: #374151; opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* --- Whiteboard Canvas --- */
+        #whiteboard, #overlay-canvas, #event-capture-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #whiteboard { z-index: 1; }
+        #overlay-canvas { z-index: 2; pointer-events: none; }
+        #event-capture-layer { z-index: 3; }
+        #text-input-container { position: absolute; display: none; z-index: 20; }
+        #text-input { background: #1f2937; border: 1px dashed #6b7280; color: white; outline: none; padding: 4px; border-radius: 4px; }
+
+
+        /* --- Toolbar & Microinteractions --- */
+        .tool-btn, .size-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tool-btn:hover:not(:disabled), .size-btn:hover { transform: scale(1.15) rotate(-5deg); filter: brightness(1.2); }
+        .tool-btn.selected, .size-btn.selected { background-color: var(--accent-color); color: white; transform: scale(1.1); }
+        #toolbar { gap: 0.5rem; }
+        .toolbar-section { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem; }
+        
+        /* --- Color Picker --- */
+        #color-picker-container { position: relative; }
+        #color-picker-popover {
+            visibility: hidden; opacity: 0;
+            position: absolute; bottom: 120%; left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            padding: 1rem;
+            z-index: 100;
+            transition: all 0.2s ease-out;
+        }
+        #color-picker-popover.visible { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
+        #color-picker-btn { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 2px solid white; cursor: pointer; transition: transform 0.2s; }
+        #color-picker-btn:hover { transform: scale(1.1); }
+        #eyedropper-btn { font-size: 1.25rem; }
+        body.eyedropper-active { cursor: crosshair; }
+
+        /* --- Modals & Overlays --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal { transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-overlay.visible .modal { transform: scale(1); }
+        
+        /* --- Command Palette --- */
+        #command-palette-overlay { z-index: 20000; }
+        #command-palette { width: 640px; max-width: 90vw; }
+        #command-input { width: 100%; background-color: #374151; border: none; padding: 1rem; font-size: 1.25rem; color: white; outline: none; }
+        #command-list { max-height: 400px; overflow-y: auto; }
+        .command-item { padding: 0.75rem 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .command-item:hover, .command-item.selected { background-color: var(--accent-color); }
+        .command-item kbd { background-color: #4b5563; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+    </style>
+</head>
+<body class="text-white antialiased">
+    <div id="main-layout">
+        <!-- Chat Column -->
+        <div id="chat-container">
+            <div id="chat-content-wrapper" class="glass-ui">
+                <button id="toggle-chat-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="flex justify-between items-center mb-4 p-4">
+                    <h2 id="chat-header" class="flex-grow text-center">Live Chat</h2>
+                    <div class="flex gap-2">
+                         <button id="save-chat-btn" class="chat-btn" title="Save Chat History"><i class="fa-solid fa-save"></i></button>
+                         <button id="clear-chat-btn" class="chat-btn" title="Clear Chat History"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <div id="chat-messages" class="flex-grow px-4"></div>
+                <div id="chat-input-area" class="p-4">
+                    <textarea id="chat-input" placeholder="Connecting to chat..." disabled></textarea>
+                    <div class="flex justify-between w-full">
+                        <button id="gif-search-btn" class="chat-btn" disabled><i class="fa-solid fa-photo-film"></i> &nbsp; GIF</button>
+                        <button id="chat-send-btn" class="chat-btn" disabled><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Whiteboard Column -->
+        <div id="whiteboard-wrapper">
+            <button id="show-chat-btn" class="hidden"><i class="fa-solid fa-chevron-right"></i></button>
+            <div id="app-container">
+                <!-- Header -->
+                <header class="flex flex-col md:flex-row justify-between items-start mb-4 pb-4 border-b border-gray-700">
+                    <div>
+                        <h1 id="whiteboard-title" class="text-2xl font-bold text-white rounded px-1"></h1>
+                        <p id="whiteboard-description" class="text-sm text-gray-400 rounded px-1"></p>
+                    </div>
+                     <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
+                        <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1</span></div>
+                         <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help"><i class="fa-solid fa-circle-question"></i></button>
+                    </div>
+                </header>
+                <!-- Toolbar -->
+                <div id="toolbar" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-4 glass-ui p-2">
+                     <div class="toolbar-section glass-ui">
+                        <button data-tool="select" class="tool-btn p-2" title="Select & Move"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7 19 2.5-7.5L22 3z"/></svg></button>
+                        <button data-tool="pen" class="tool-btn selected p-2" title="Pen"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+                        <div class="dropdown">
+                             <button class="tool-btn p-2" title="Shapes"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></button>
+                             <div class="dropdown-content flex flex-col items-start gap-1 p-2 rounded-md bg-gray-600 shadow-lg">
+                                <button data-tool="line" class="tool-btn p-2" title="Line"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"></line></svg></button>
+                                <button data-tool="rectangle" class="tool-btn p-2" title="Rectangle"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg></button>
+                                <button data-tool="circle" class="tool-btn p-2" title="Circle"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg></button>
+                                <button data-tool="triangle" class="tool-btn p-2" title="Triangle"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18L12 4z"/></svg></button>
+                             </div>
+                        </div>
+                        <button data-tool="text" class="tool-btn p-2" title="Text"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
+                    </div>
+                     <div class="toolbar-section glass-ui">
+                        <button id="undo-btn" class="tool-btn p-2" title="Undo" disabled><i class="fa-solid fa-undo"></i></button>
+                        <button id="redo-btn" class="tool-btn p-2" title="Redo" disabled><i class="fa-solid fa-redo"></i></button>
+                    </div>
+                     <div class="toolbar-section glass-ui">
+                        <button id="duplicate-btn" class="tool-btn p-2 text-green-400" title="Duplicate Selected" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                        <button id="front-btn" class="tool-btn p-2 text-blue-400" title="Bring to Front" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></button>
+                        <button id="delete-btn" class="tool-btn p-2 text-red-400" title="Delete Selected" disabled><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                    </div>
+                    <div class="toolbar-section glass-ui">
+                        <button id="brush-size-selector" class="tool-btn p-2" title="Brush Size"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                    </div>
+                    <div id="color-picker-container" class="toolbar-section glass-ui">
+                        <button id="eyedropper-btn" class="tool-btn p-2" title="Eyedropper"><i class="fa-solid fa-eye-dropper"></i></button>
+                        <button id="color-picker-btn" title="Select Color"></button>
+                        <div id="color-picker-popover" class="glass-ui">
+                            <div class="color-picker-wheel"></div>
+                        </div>
+                    </div>
+                    <div class="toolbar-section glass-ui">
+                        <button id="toggle-grid-btn" class="tool-btn p-2 selected" title="Toggle Grid"><i class="fa-solid fa-border-all"></i></button>
+                        <button id="toggle-snap-btn" class="tool-btn p-2 selected" title="Toggle Snapping"><i class="fa-solid fa-magnet"></i></button>
+                    </div>
+                    <div class="toolbar-section glass-ui">
+                        <button id="clear-canvas-btn" class="tool-btn p-2 text-red-400" title="Clear Canvas"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+                <!-- Main Content Area -->
+                <main id="main-content" class="flex-grow w-full h-full min-h-0 relative">
+                    <canvas id="whiteboard" class="shadow-inner rounded-lg"></canvas>
+                    <canvas id="overlay-canvas" class="rounded-lg"></canvas>
+                    <div id="event-capture-layer" class="rounded-lg"></div>
+                    <div id="text-input-container"><input type="text" id="text-input" /></div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="command-palette-overlay" class="modal-overlay">
+        <div id="command-palette" class="glass-ui flex flex-col overflow-hidden">
+            <input id="command-input" type="text" placeholder="Type a command...">
+            <div id="command-list"></div>
+        </div>
+    </div>
+    
+    <div id="help-modal-overlay" class="modal-overlay">
+        <div id="help-modal" class="modal glass-ui">
+            <!-- Help content updated in JS -->
+        </div>
+    </div>
+
+    <div id="gif-search-modal-overlay" class="modal-overlay">
+        <div id="gif-search-modal" class="modal glass-ui">
+            <!-- GIF search content -->
+        </div>
+    </div>
+     <div id="confirm-modal-overlay" class="modal-overlay">
+        <div id="confirm-modal" class="modal glass-ui">
+            <!-- Confirmation content -->
+        </div>
+    </div>
+    <div id="api-key-modal-overlay" class="modal-overlay">
+        <div id="api-key-modal" class="modal glass-ui p-6">
+            <h2 class="text-2xl font-bold mb-4">Enter API Keys</h2>
+            <p class="text-gray-300 mb-6">This app requires API keys for full functionality (AI features, chat, GIF search). Keys are stored only in your browser.</p>
+            <div class="space-y-4">
+                <div>
+                    <label for="gemini-api-key-input" class="block text-sm font-medium text-gray-200 mb-1">Google AI (Gemini & Firebase) API Key</label>
+                    <input type="password" id="gemini-api-key-input" class="w-full bg-gray-800 p-2 rounded border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="Enter your Google Cloud API key">
+                     <p class="text-xs text-gray-400 mt-1">Used for AI features and real-time database.</p>
+                </div>
+                <div>
+                    <label for="tenor-api-key-input" class="block text-sm font-medium text-gray-200 mb-1">Tenor API Key</label>
+                    <input type="password" id="tenor-api-key-input" class="w-full bg-gray-800 p-2 rounded border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="Enter your Tenor API key">
+                     <p class="text-xs text-gray-400 mt-1">Used for searching GIFs.</p>
+                </div>
+            </div>
+            <div class="flex justify-end mt-8">
+                <button id="save-api-keys-btn" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold chat-btn">Save and Continue</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- App Configuration ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
+        const whiteboardId = appId;
+        
+        // --- API Key Globals ---
+        let geminiApiKey;
+        let tenorApiKey;
+
+        // --- DOM Elements ---
+        const whiteboardTitleEl = document.getElementById('whiteboard-title');
+        const whiteboardDescriptionEl = document.getElementById('whiteboard-description');
+        const eventCaptureLayer = document.getElementById('event-capture-layer');
+        const canvas = document.getElementById('whiteboard');
+        const ctx = canvas.getContext('2d');
+        const overlayCanvas = document.getElementById('overlay-canvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const textInputContainer = document.getElementById('text-input-container');
+        const textInput = document.getElementById('text-input');
+        const chatContainer = document.getElementById('chat-container');
+        const toggleChatBtn = document.getElementById('toggle-chat-btn');
+        const showChatBtn = document.getElementById('show-chat-btn');
+        const chatMessagesContainer = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const frontBtn = document.getElementById('front-btn');
+        const duplicateBtn = document.getElementById('duplicate-btn');
+        const clearCanvasBtn = document.getElementById('clear-canvas-btn');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const toggleGridBtn = document.getElementById('toggle-grid-btn');
+        const toggleSnapBtn = document.getElementById('toggle-snap-btn');
+        const apiKeyModalOverlay = document.getElementById('api-key-modal-overlay');
+        const saveApiKeysBtn = document.getElementById('save-api-keys-btn');
+        const geminiInput = document.getElementById('gemini-api-key-input');
+        const tenorInput = document.getElementById('tenor-api-key-input');
+        const colorPickerBtn = document.getElementById('color-picker-btn');
+        const colorPickerPopover = document.getElementById('color-picker-popover');
+        const eyedropperBtn = document.getElementById('eyedropper-btn');
+        const commandPaletteOverlay = document.getElementById('command-palette-overlay');
+        const commandInput = document.getElementById('command-input');
+        const commandList = document.getElementById('command-list');
+
+        // --- Firebase & State Globals ---
+        let db, userId, auth, colorPicker;
+        let isEyedropperActive = false;
+        let unsubscribeFromDrawings, unsubscribeFromState, unsubscribeFromEvents, unsubscribeFromChat;
+        const state = {
+            action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 2, currentEpoch: 0,
+            allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
+            tempDrawing: null, transformHandle: null, isTexting: false, isShiftDown: false,
+            undoStack: [], redoStack: [],
+            isGridVisible: true, isSnapEnabled: true, gridSize: 20,
+            originalObjectState: null,
+        };
+        let commands = [];
+        let activeCommandIndex = 0;
+
+        // --- Phase 1 Feature Setup ---
+
+        function setupColorPicker() {
+            colorPicker = new iro.ColorPicker('.color-picker-wheel', {
+                width: 200,
+                color: state.currentColor,
+                borderWidth: 1,
+                borderColor: "#fff",
+                layout: [
+                    { component: iro.ui.Wheel },
+                    { component: iro.ui.Slider, options: { sliderType: 'hue' } },
+                    { component: iro.ui.Slider, options: { sliderType: 'saturation' } },
+                    { component: iro.ui.Slider, options: { sliderType: 'value' } },
+                    { component: iro.ui.Slider, options: { sliderType: 'alpha' } },
+                ]
+            });
+
+            colorPicker.on('color:change', function(color) {
+                state.currentColor = color.rgbaString;
+                colorPickerBtn.style.backgroundColor = state.currentColor;
+            });
+
+            colorPickerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                colorPickerPopover.classList.toggle('visible');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!colorPickerPopover.contains(e.target) && !colorPickerBtn.contains(e.target)) {
+                    colorPickerPopover.classList.remove('visible');
+                }
+            });
+        }
+
+        function activateEyedropper() {
+            isEyedropperActive = true;
+            document.body.classList.add('eyedropper-active');
+            eventCaptureLayer.style.cursor = 'crosshair';
+
+            const pickColor = (e) => {
+                const pos = getMousePos(e);
+                const dpr = window.devicePixelRatio || 1;
+                const pixel = ctx.getImageData(pos.x * dpr, pos.y * dpr, 1, 1).data;
+                const color = `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3] / 255})`;
+                
+                state.currentColor = color;
+                colorPicker.color.set(color);
+                colorPickerBtn.style.backgroundColor = color;
+                deactivateEyedropper();
+            };
+
+            eventCaptureLayer.addEventListener('click', pickColor, { once: true });
+        }
+
+        function deactivateEyedropper() {
+            isEyedropperActive = false;
+            document.body.classList.remove('eyedropper-active');
+            eventCaptureLayer.style.cursor = 'default';
+        }
+
+        function setupCommandPalette() {
+            commands = [
+                { name: 'Toggle Grid', action: () => toggleGridBtn.click(), shortcut: 'G' },
+                { name: 'Toggle Snap', action: () => toggleSnapBtn.click(), shortcut: 'S' },
+                { name: 'Clear Canvas', action: () => clearCanvasBtn.click(), shortcut: 'Del' },
+                { name: 'Select Tool: Pen', action: () => selectTool('pen') },
+                { name: 'Select Tool: Select/Move', action: () => selectTool('select') },
+                { name: 'Select Tool: Text', action: () => selectTool('text') },
+            ];
+            renderCommandList(commands);
+
+            window.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    showModal(commandPaletteOverlay);
+                    commandInput.focus();
+                    commandInput.select();
+                }
+            });
+            
+            commandInput.addEventListener('input', () => {
+                const query = commandInput.value.toLowerCase();
+                const filteredCommands = commands.filter(cmd => cmd.name.toLowerCase().includes(query));
+                renderCommandList(filteredCommands);
+            });
+
+            commandInput.addEventListener('keydown', (e) => {
+                const items = commandList.querySelectorAll('.command-item');
+                if (items.length === 0) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeCommandIndex = (activeCommandIndex + 1) % items.length;
+                    updateCommandSelection();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeCommandIndex = (activeCommandIndex - 1 + items.length) % items.length;
+                    updateCommandSelection();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const selectedItem = commandList.querySelector('.command-item.selected');
+                    if (selectedItem) selectedItem.click();
+                } else if (e.key === 'Escape') {
+                    hideModal(commandPaletteOverlay);
+                }
+            });
+
+            commandPaletteOverlay.addEventListener('click', (e) => {
+                if (e.target === commandPaletteOverlay) hideModal(commandPaletteOverlay);
+            });
+        }
+
+        function renderCommandList(commandArray) {
+            commandList.innerHTML = '';
+            activeCommandIndex = 0;
+            commandArray.forEach((cmd) => {
+                const item = document.createElement('div');
+                item.className = 'command-item';
+                item.innerHTML = `<span>${cmd.name}</span>${cmd.shortcut ? `<kbd>${cmd.shortcut}</kbd>` : ''}`;
+                item.addEventListener('click', () => {
+                    cmd.action();
+                    hideModal(commandPaletteOverlay);
+                });
+                commandList.appendChild(item);
+            });
+            updateCommandSelection();
+        }
+        
+        function updateCommandSelection() {
+            const items = commandList.querySelectorAll('.command-item');
+            items.forEach((item, index) => item.classList.toggle('selected', index === activeCommandIndex));
+        }
+        
+        function selectTool(tool) {
+            state.currentTool = tool;
+            eventCaptureLayer.style.cursor = tool === 'select' ? 'default' : (tool === 'text' ? 'text' : 'crosshair');
+            document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('selected'));
+            const btn = document.querySelector(`[data-tool="${tool}"]`);
+            if(btn) {
+                const parentDropdownBtn = btn.closest('.dropdown')?.querySelector('.tool-btn');
+                if (parentDropdownBtn) parentDropdownBtn.classList.add('selected');
+                else btn.classList.add('selected');
+            }
+            state.selectedObjectId = null;
+            drawOverlay();
+        }
+
+        // --- Core Drawing & State Logic (Restored) ---
+        function drawGrid() { if (!state.isGridVisible) return; ctx.save(); ctx.strokeStyle = '#374151'; ctx.lineWidth = 0.5; for (let x = 0; x < canvas.width; x += state.gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } for (let y = 0; y < canvas.height; y += state.gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); } ctx.restore(); }
+        function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = document.getElementById('main-content').getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { const targetWidth = rect.width * dpr; const targetHeight = rect.height * dpr; if (c.width !== targetWidth || c.height !== targetHeight) { c.width = targetWidth; c.height = targetHeight; if (c.style) { c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; } c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
+        function drawOverlay() { overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); if (state.tempDrawing) { drawObject(overlayCtx, state.tempDrawing); } const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { drawSelectionBox(selectedObject); deleteBtn.disabled = false; frontBtn.disabled = false; duplicateBtn.disabled = false; } else { deleteBtn.disabled = true; frontBtn.disabled = true; duplicateBtn.disabled = true; } }
+        function drawObject(context, data) { if (!data) return; context.save(); const center = getObjectCenter(data); context.translate(center.x, center.y); context.rotate(data.rotation || 0); context.strokeStyle = data.color; context.fillStyle = data.color; context.lineWidth = data.lineWidth || 2; context.lineCap = 'round'; context.lineJoin = 'round'; switch(data.type) { case 'path': if (!data.points || data.points.length < 1) break; const pathCenter = getObjectCenter({type:'path', points: data.points}); context.translate(-pathCenter.x, -pathCenter.y); context.beginPath(); if (data.points.length < 3) { context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y); } else { context.moveTo(data.points[0].x, data.points[0].y); for (var i = 1; i < data.points.length - 2; i++) { var c = (data.points[i].x + data.points[i + 1].x) / 2; var d = (data.points[i].y + data.points[i + 1].y) / 2; context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d); } context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y); } context.stroke(); break; case 'line': if (!data.points || data.points.length < 2) break; const halfWidth = (data.points[1].x - data.points[0].x) / 2; const halfHeight = (data.points[1].y - data.points[0].y) / 2; context.beginPath(); context.moveTo(-halfWidth, -halfHeight); context.lineTo(halfWidth, halfHeight); context.stroke(); break; case 'rectangle': context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height); break; case 'circle': context.beginPath(); context.arc(0, 0, data.radius, 0, 2 * Math.PI); context.stroke(); break; case 'triangle': if (!data.points || data.points.length < 3) break; const triCenter = getObjectCenter({ type: 'triangle', points: data.points }); const p1 = { x: data.points[0].x - triCenter.x, y: data.points[0].y - triCenter.y }; const p2 = { x: data.points[1].x - triCenter.x, y: data.points[1].y - triCenter.y }; const p3 = { x: data.points[2].x - triCenter.x, y: data.points[2].y - triCenter.y }; context.beginPath(); context.moveTo(p1.x, p1.y); context.lineTo(p2.x, p2.y); context.lineTo(p3.x, p3.y); context.closePath(); context.stroke(); break; case 'text': context.font = `${data.fontSize}px Inter`; context.textBaseline = 'middle'; context.textAlign = 'center'; context.fillText(data.text, 0, 0); break; } context.restore(); }
+        function drawSelectionBox(obj) { const handles = getTransformHandles(obj); if (!handles) return; overlayCtx.save(); overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 1; overlayCtx.setLineDash([4, 4]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tl.x, handles.tl.y); overlayCtx.lineTo(handles.tr.x, handles.tr.y); overlayCtx.lineTo(handles.br.x, handles.br.y); overlayCtx.lineTo(handles.bl.x, handles.bl.y); overlayCtx.closePath(); overlayCtx.stroke(); overlayCtx.setLineDash([]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tm.x, handles.tm.y); overlayCtx.lineTo(handles.rot.x, handles.rot.y); overlayCtx.stroke(); overlayCtx.fillStyle = '#4f46e5'; overlayCtx.beginPath(); overlayCtx.arc(handles.rot.x, handles.rot.y, 6, 0, 2*Math.PI); overlayCtx.fill(); Object.values(handles).forEach(handle => { if(handle.type === 'resize'){ overlayCtx.fillStyle = 'white'; overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 2; overlayCtx.fillRect(handle.x - 5, handle.y - 5, 10, 10); overlayCtx.strokeRect(handle.x - 5, handle.y - 5, 10, 10); } }); overlayCtx.restore(); }
+        function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.x - obj.radius, y: obj.y - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x - metrics.width / 2, y: obj.y - height / 2, width: metrics.width, height: height || obj.fontSize }; case 'path': case 'line': case 'triangle': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; default: return null; } }
+        function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
+        function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
+        function getTransformHandles(obj) { const bounds = getObjectBounds(obj); if (!bounds) return null; const center = getObjectCenter(obj); const w = bounds.width; const h = bounds.height; const angle = obj.rotation || 0; const corners = { tl: {x: center.x - w/2, y: center.y - h/2}, tr: {x: center.x + w/2, y: center.y - h/2}, bl: {x: center.x - w/2, y: center.y + h/2}, br: {x: center.x + w/2, y: center.y + h/2} }; const rotationHandleOffset = 30; const topMid = { x: center.x, y: center.y - h/2 }; const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset }; const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`; return { tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'}, tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'}, bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'}, br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'}, tm: rotatePoint(topMid, center, angle), rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`} }; }
+        function handleMouseDown(e) { if (state.isTexting || isEyedropperActive) return; if (!userId) { console.warn("Cannot draw: User not authenticated."); return; } const pos = getMousePos(e); state.startPos = pos; state.action = 'none'; if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { state.action = handle.type; state.transformHandle = key; state.originalObjectState = JSON.parse(JSON.stringify(selectedObject)); state.originalObjectState.center = getObjectCenter(selectedObject); return; } } } const clickedObjectId = findClickedObject(pos.x, pos.y); if (clickedObjectId) { state.selectedObjectId = clickedObjectId; state.action = 'moving'; const obj = state.allDrawings.get(clickedObjectId); const center = getObjectCenter(obj); state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y }; state.originalObjectState = JSON.parse(JSON.stringify(obj)); } else { state.selectedObjectId = null; } drawOverlay(); } else if (state.currentTool === 'text') { startTextEntry(snapToGrid(pos)); } else { state.action = 'drawing'; state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } }
+        function handleMouseMove(e) { let pos = getMousePos(e); let cursor = 'default'; if (state.action !== 'none') { if(state.action === 'moving') cursor = 'grabbing'; const selObj = state.allDrawings.get(state.selectedObjectId); if (selObj) { const handles = getTransformHandles(selObj); if (handles[state.transformHandle] && state.action === 'rotating') cursor = handles.rot.cursor; if (handles[state.transformHandle] && state.action === 'resizing') cursor = handles[state.transformHandle].cursor; } } else if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); let onHandle = false; for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { cursor = handle.cursor; onHandle = true; break; } } if(!onHandle && findClickedObject(pos.x, pos.y)) cursor = 'grab'; } else if(findClickedObject(pos.x, pos.y)) { cursor = 'grab'; } } else if (state.currentTool !== 'select') { cursor = state.currentTool === 'text' ? 'text' : 'crosshair'; } eventCaptureLayer.style.cursor = cursor; if (!state.startPos) return; if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -state.originalObjectState.rotation || 0; const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (selectedObject.type === 'rectangle') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x - newWidth / 2; selectedObject.y = center.y - newHeight / 2; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } drawOverlay(); } }
+        async function handleMouseUp(e) { if (!state.startPos) return; const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
+        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [start, end] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'triangle', points: [ {x: x1, y: y2}, {x: cx, y: y1}, {x: x2, y: y2} ] }; default: return null; } }
+        function findClickedObject(x, y) { for (let i = state.sortedDrawings.length - 1; i >= 0; i--) { const obj = state.sortedDrawings[i]; const center = getObjectCenter(obj); const angle = -(obj.rotation || 0); const localClick = rotatePoint({x,y}, center, angle); const bounds = getObjectBounds(obj); if (!bounds) continue; const fuzz = (obj.lineWidth || 2) / 2 + 5; if (localClick.x >= bounds.x - fuzz && localClick.x <= bounds.x + bounds.width + fuzz && localClick.y >= bounds.y - fuzz && localClick.y <= bounds.y + bounds.height + fuzz) { return obj.id; } } return null; }
+        function moveObjectTo(obj, newCenterX, newCenterY) { const bounds = getObjectBounds(obj); if (!bounds) return; const oldCenterX = bounds.x + bounds.width / 2; const oldCenterY = bounds.y + bounds.height / 2; const dx = newCenterX - oldCenterX; const dy = newCenterY - oldCenterY; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else { obj.x += dx; obj.y += dy; } }
+        function startTextEntry(pos) { state.isTexting = true; textInputContainer.style.left = `${pos.x}px`; textInputContainer.style.top = `${pos.y}px`; textInputContainer.style.display = 'block'; textInput.style.color = state.currentColor; textInput.style.fontSize = `${state.currentBrushSize * 5 + 12}px`; textInput.value = ''; textInput.focus(); const finish = async (shouldAddText) => { if (!state.isTexting) return; state.isTexting = false; document.removeEventListener('mousedown', handleClickOutside, true); if (shouldAddText) { const text = textInput.value.trim(); if (text) { const fontSize = state.currentBrushSize * 5 + 12; const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: fontSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; const newDocRef = await addObjectToFirestore(textData); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }}); } } } textInput.value = ''; textInputContainer.style.display = 'none'; }; const handleClickOutside = (event) => { if (!textInputContainer.contains(event.target)) { finish(true); } }; textInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { finish(false); } }; setTimeout(() => { document.addEventListener('mousedown', handleClickOutside, true); }, 0); }
+        async function addObjectToFirestore(objData) { if (!userId) { console.error("Cannot add object: User not authenticated."); return null; } try { const docRef = await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
+        async function updateObjectInFirestore(docId, updatedData, originalData) { if(originalData) { pushToUndoStack({ type: 'update', payload: { id: docId, before: originalData, after: {...originalData, ...updatedData} }}); } try { await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, docId), { ...updatedData, timestamp: serverTimestamp() }); } catch (error) { console.error("Error updating document: ", error); } }
+        async function deleteSelectedObject() { if (!state.selectedObjectId) return; const objectToDelete = state.allDrawings.get(state.selectedObjectId); if(objectToDelete) { pushToUndoStack({ type: 'delete', payload: objectToDelete }); } try { await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, state.selectedObjectId)); state.selectedObjectId = null; redrawCanvas(); } catch (error) { console.error("Error deleting document: ", error); } }
+        async function bringToFront() { if (!state.selectedObjectId) return; await updateObjectInFirestore(state.selectedObjectId, {}, state.allDrawings.get(state.selectedObjectId)); }
+        async function duplicateSelectedObject() { if (!state.selectedObjectId) return; const original = state.allDrawings.get(state.selectedObjectId); const { id, timestamp, ...cloneData } = original; const center = getObjectCenter(cloneData); moveObjectTo(cloneData, center.x + 20, center.y + 20); const newDocRef = await addObjectToFirestore(cloneData); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: cloneData }}); state.selectedObjectId = newDocRef.id; drawOverlay(); } }
+        function updateUndoRedoButtons() { undoBtn.disabled = state.undoStack.length === 0; redoBtn.disabled = state.redoStack.length === 0; }
+        function pushToUndoStack(action) { state.undoStack.push(action); state.redoStack = []; updateUndoRedoButtons(); }
+        async function handleUndo() { if (state.undoStack.length === 0) return; const action = state.undoStack.pop(); state.redoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, action.payload.id)); break; case 'delete': const { id: delId, ...delData } = action.payload; await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, delId), delData); break; case 'update': const { id: updId, before: beforeData } = action.payload; const { id: ignoredId, ...updData } = beforeData; await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
+        async function handleRedo() { if (state.redoStack.length === 0) return; const action = state.redoStack.pop(); state.undoStack.push(action); state.selectedObjectId = null; switch (action.type) { case 'add': const { id: addId, data: addData } = action.payload; await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, addId), addData); break; case 'delete': await deleteDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, action.payload.id)); break; case 'update': const { id: updId, after: afterData } = action.payload; const { id: ignoredId, ...updData } = afterData; await updateDoc(doc(db, `artifacts/${whiteboardId}/public/data/drawings`, updId), updData); break; } updateUndoRedoButtons(); }
+        function showModal(modal) { modal.classList.add('visible'); }
+        function hideModal(modal) { modal.classList.remove('visible'); }
+        function getMousePos(evt) { const rect = eventCaptureLayer.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
+        function snapToGrid(pos) { if (!state.isSnapEnabled) return pos; return { x: Math.round(pos.x / state.gridSize) * state.gridSize, y: Math.round(pos.y / state.gridSize) * state.gridSize, }; }
+
+        // --- Main App Initialization ---
+        function initializeAppLogic(gKey, tKey) {
+            geminiApiKey = gKey;
+            tenorApiKey = tKey;
+
+            const firebaseConfig = {
+                apiKey: geminiApiKey,
+                authDomain: "whiteboard-00.firebaseapp.com",
+                projectId: "whiteboard-00",
+                storageBucket: "whiteboard-00.appspot.com",
+                messagingSenderId: "34696279859",
+                appId: "1:34696279859:web:a01addc7e57a8d06947046",
+            };
+
+            hideModal(apiKeyModalOverlay);
+            
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            setLogLevel('debug');
+            
+            onAuthStateChanged(auth, async (user) => { 
+                if (user) { 
+                    userId = user.uid; 
+                    document.getElementById('userId').textContent = userId;
+                    chatInput.disabled = false;
+                    chatSendBtn.disabled = false;
+                    // gifSearchBtn.disabled = false; // Enable when ready
+                    chatInput.placeholder = 'Say something...';
+                    // Setup listeners
+                    // setupStateListener(); 
+                    // setupEventsListener(); 
+                    // setupChatListener(); 
+                } else { 
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                           await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Sign-in failed:", error);
+                        document.getElementById('userId').textContent = 'Auth Error';
+                        chatInput.placeholder = 'Chat disabled. Check API key.';
+                    }
+                } 
+            });
+
+            // Setup Event Listeners for UI
+            document.querySelectorAll('#toolbar .tool-btn').forEach(button => {
+                button.addEventListener('click', (e) => selectTool(e.currentTarget.dataset.tool));
+            });
+            undoBtn.addEventListener('click', handleUndo);
+            redoBtn.addEventListener('click', handleRedo);
+            deleteBtn.addEventListener('click', deleteSelectedObject);
+            frontBtn.addEventListener('click', bringToFront);
+            duplicateBtn.addEventListener('click', duplicateSelectedObject);
+            toggleGridBtn.addEventListener('click', () => { state.isGridVisible = !state.isGridVisible; toggleGridBtn.classList.toggle('selected', state.isGridVisible); redrawCanvas(); });
+            toggleSnapBtn.addEventListener('click', () => { state.isSnapEnabled = !state.isSnapEnabled; toggleSnapBtn.classList.toggle('selected', state.isSnapEnabled); });
+            eventCaptureLayer.addEventListener('mousedown', handleMouseDown); 
+            window.addEventListener('mousemove', handleMouseMove); 
+            window.addEventListener('mouseup', handleMouseUp); 
+            window.addEventListener('resize', redrawCanvas, { passive: true });
+            
+            redrawCanvas();
+        }
+
+        window.addEventListener('load', () => {
+            setupColorPicker();
+            setupCommandPalette();
+
+            eyedropperBtn.addEventListener('click', () => {
+                if (isEyedropperActive) deactivateEyedropper();
+                else activateEyedropper();
+            });
+            
+            colorPickerBtn.style.backgroundColor = state.currentColor;
+
+            saveApiKeysBtn.addEventListener('click', () => {
+                const geminiKey = geminiInput.value.trim();
+                const tenorKey = tenorInput.value.trim();
+
+                if (geminiKey) { // Tenor key is optional for now
+                    localStorage.setItem('geminiApiKey', geminiKey);
+                    if(tenorKey) localStorage.setItem('tenorApiKey', tenorKey);
+                    initializeAppLogic(geminiKey, tenorKey);
+                } else {
+                    alert("Please provide the Google AI API key to continue."); 
+                }
+            });
+
+            const storedGeminiKey = localStorage.getItem('geminiApiKey');
+            const storedTenorKey = localStorage.getItem('tenorApiKey');
+
+            if (storedGeminiKey) {
+                initializeAppLogic(storedGeminiKey, storedTenorKey);
+            } else {
+                showModal(apiKeyModalOverlay);
+            }
+        });
+    </script>
+</body>
+</html>
