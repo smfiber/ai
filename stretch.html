@@ -255,7 +255,7 @@
                  <p class="text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 9.3</p>
+                <p class="mt-4 text-xs text-slate-400">Version 9.4</p>
             </div>
         </footer>
         
@@ -619,7 +619,6 @@
                 } else {
                     const benefitLabel = (routineType === 'peak-pose') ? 'Preparation Focus' : 'Benefit';
                     const benefitText = exercise.benefit || exercise.preparation_focus || 'Not specified.';
-                    // FIX: Changed the recursive reference from benefitHtml to benefitText
                     benefitHtml = `<div><h4 class="font-semibold text-slate-800">${benefitLabel}:</h4><p class="mt-1 text-slate-600">${benefitText}</p></div>`;
                 }
 
@@ -648,7 +647,13 @@
             if (!exercise) return;
 
             ui.detailsTitle.textContent = exercise.name;
-            ui.detailsContent.innerHTML = '<div class="flex justify-center items-center h-48"><div class="skeleton h-32 w-full"></div></div>';
+            // FIX: Improved loading state for the modal
+            ui.detailsContent.innerHTML = `
+                <div class="text-center p-8">
+                    <i data-lucide="loader-2" class="mx-auto h-10 w-10 text-teal-500 animate-spin"></i>
+                    <p class="mt-4 text-slate-600">Fetching exercise details from the AI...</p>
+                </div>
+            `;
             
             const sanitizedInstructions = (exercise.instructions || '').replace(/"/g, '&quot;');
             ui.detailsYoutubeButtons.innerHTML = `
@@ -671,7 +676,6 @@
         }
 
         // --- CORE API CALLER ---
-        // FIX: Reworked function to be more robust against API error responses.
         async function callGeminiAPI(type, prompt, schema = null, expectJson = true) {
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
             const payload = {
@@ -684,20 +688,17 @@
 
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
-            // First, check if the response is OK. If not, parse the error message.
             if (!response.ok) {
                 let errorText = `API request failed with status ${response.status}`;
                 try {
                     const errorResult = await response.json();
                     errorText = errorResult.error ? errorResult.error.message : JSON.stringify(errorResult);
                 } catch (e) {
-                    // The error response itself was not valid JSON.
                     errorText = `${errorText}. Could not parse error response.`;
                 }
                 throw new Error(`AI processing failed: ${errorText}`);
             }
 
-            // If the response is OK, then we can safely parse the JSON body.
             const result = await response.json();
 
             if (!result.candidates?.[0]?.content?.parts) {
@@ -739,7 +740,6 @@
             });
             const targetView = document.getElementById(viewId);
             targetView.style.display = 'block';
-            // A small delay to allow the display property to apply before adding the class for the animation
             setTimeout(() => targetView.classList.add('active'), 10);
             window.scrollTo(0,0);
         }
