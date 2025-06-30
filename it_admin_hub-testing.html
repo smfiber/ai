@@ -1381,12 +1381,11 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
              let cardName;
              let topicTitle;
 
-            // MODIFICATION: Logic for Search Gemini modal updated
             if (modal.parentElement.id === 'searchGeminiModal') {
                 contentToSave = document.getElementById('searchGeminiResult').innerText;
                 cardName = "Gemini Search";
                 const fullTopicTitle = document.getElementById('searchGeminiQueryText').value;
-                topicTitle = truncateText(fullTopicTitle, 40); // Truncate for filename
+                topicTitle = truncateText(fullTopicTitle, 40);
                 statusEl = document.getElementById('search-modal-status-message');
             } else {
                 const modalFooter = button.closest('[id$="ModalFooter"]');
@@ -1404,7 +1403,8 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
              }
 
              const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
-             await saveContentToDrive(content, fileName, statusEl);
+             // FIX: Corrected variable name from 'content' to 'contentToSave'
+             await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
         async function saveContentToDrive(content, fileName, statusElement) {
@@ -1454,8 +1454,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 });
 
                 statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
-                // MODIFICATION: Removed setTimeout to make message persistent
-                // setTimeout(()=> statusElement.textContent = '', 4000);
             } catch (error) {
                 console.error('Error saving file to Drive:', error);
                 statusElement.textContent = 'Error saving file. Check console.';
@@ -2624,8 +2622,7 @@ Return only these sections in markdown format. Do not include any other sections
                 document.execCommand('copy');
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';
-                // MODIFICATION: Removed setTimeout to make message persistent
-                // setTimeout(() => { button.textContent = originalText; }, 2000);
+                setTimeout(() => { button.textContent = originalText; }, 2000);
             } catch (err) {
                 console.error('Fallback: Oops, unable to copy', err);
             }
@@ -2828,7 +2825,6 @@ Return only these sections in markdown format. Do not include any other sections
                 
                 originalGeneratedText.set(textKey, newText);
 
-                // MODIFICATION: Update query text after successful refinement
                 if (isSearchModal) {
                     const queryTextEl = document.getElementById('searchGeminiQueryText');
                     const newQueryText = `${queryTextEl.value} (Refined: ${refinementRequest})`;
@@ -2988,8 +2984,7 @@ Return only these sections in markdown format. Do not include any other sections
             try {
                 await updateDoc(docRef, { title: newTitle });
                 e.target.textContent = '✓';
-                // MODIFICATION: Removed setTimeout to make message persistent
-                // setTimeout(() => e.target.innerHTML = '&#10004;', 2000);
+                setTimeout(() => e.target.innerHTML = '&#10004;', 2000);
             } catch (error) {
                 console.error("Error updating sticky topic:", error);
             }
