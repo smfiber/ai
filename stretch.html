@@ -20,10 +20,17 @@
             background-color: #f8fafc; /* slate-50 */
             color: #334155; /* slate-700 */
         }
-        .custom-select {
+        .custom-select, .custom-input {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            background-color: white;
+            border: 1px solid #cbd5e1; /* slate-300 */
+            border-radius: 0.5rem;
+        }
+        .custom-select {
             background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="%2364748b" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>');
             background-position: right 1rem center;
             background-repeat: no-repeat;
@@ -222,25 +229,49 @@
                 <div id="creation-section" class="view active w-full mx-auto text-center">
                     <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Intelligent Health Routines, Personalized for You</h2>
                     <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Select your focus area and preferences, and let our AI create the perfect stretching or yoga routine for you.</p>
-                    <div class="mt-10 p-6 md:p-8 bg-white border border-slate-200 rounded-xl shadow-sm max-w-5xl mx-auto">
+                    <div class="mt-10 p-6 md:p-8 bg-white border border-slate-200 rounded-xl shadow-sm max-w-7xl mx-auto">
                         
                         <div class="border-b border-slate-200 mb-6">
-                            <nav id="focus-tabs-container" class="-mb-px flex flex-wrap justify-center gap-x-2 sm:gap-x-6">
+                            <nav id="focus-tabs-container" class="-mb-px flex flex-wrap justify-center gap-x-1 sm:gap-x-4">
                                 <button class="focus-tab active" data-target="muscle-focus">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                                    <span>By Muscle Group</span>
+                                    <span>Muscle Group</span>
                                 </button>
                                 <button class="focus-tab" data-target="system-focus">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                                    <span>By Organ System</span>
+                                    <span>Organ System</span>
                                 </button>
                                 <button class="focus-tab" data-target="pose-type-focus">
                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    <span>By Pose Type</span>
+                                    <span>Pose Type</span>
                                 </button>
                                 <button class="focus-tab" data-target="benefit-focus">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
-                                    <span>By Desired Benefit</span>
+                                    <span>Desired Benefit</span>
+                                </button>
+                                 <button class="focus-tab" data-target="chakra-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0 0-10 10" /><path d="M12 22a10 10 0 0 1-10-10" /><path d="M2 12a10 10 0 0 1 10 10" /><path d="M22 12a10 10 0 0 0-10 10" /></svg>
+                                    <span>Chakra System</span>
+                                </button>
+                                <button class="focus-tab" data-target="difficulty-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                    <span>Difficulty Level</span>
+                                </button>
+                                <button class="focus-tab" data-target="movement-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-1.5 0-2.25 1.06-4 1.06-2 0-2-1-4-1-3 0-6 8-6 12.22A4.91 4.91 0 0 0 7 17c1.5 0 2.25-1.06 4-1.06Z"/></svg>
+                                    <span>Anatomical Movement</span>
+                                </button>
+                                <button class="focus-tab" data-target="props-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                                    <span>Props</span>
+                                </button>
+                                <button class="focus-tab" data-target="peak-pose-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a4 4 0 0 0 4 4h0a4 4 0 0 0 4-4V3"/><path d="M12 10v11"/><path d="M6 8.5C6 7 7.5 3 12 3s6 4 6 5.5"/><path d="M2 14h20"/></svg>
+                                    <span>Peak Pose Sequence</span>
+                                </button>
+                                <button class="focus-tab" data-target="ailment-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+                                    <span>Ailment Relief</span>
                                 </button>
                             </nav>
                         </div>
@@ -248,32 +279,48 @@
                         <div id="focus-content-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                            <div id="muscle-focus" class="focus-content active">
                                 <label for="muscle-group-select" class="block text-sm font-medium text-slate-700 mb-1">Select Muscle Group</label>
-                                <select id="muscle-group-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                    <option>Loading...</option>
-                                </select>
+                                <select id="muscle-group-select" class="custom-select"></select>
                            </div>
                            <div id="system-focus" class="focus-content">
                                 <label for="organ-system-select" class="block text-sm font-medium text-slate-700 mb-1">Select Organ System</label>
-                                <select id="organ-system-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                    <option>Loading...</option>
-                                </select>
+                                <select id="organ-system-select" class="custom-select"></select>
                            </div>
                            <div id="pose-type-focus" class="focus-content">
                                 <label for="pose-type-select" class="block text-sm font-medium text-slate-700 mb-1">Select Pose Type</label>
-                                <select id="pose-type-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                    <option>Loading...</option>
-                                </select>
+                                <select id="pose-type-select" class="custom-select"></select>
                            </div>
                            <div id="benefit-focus" class="focus-content">
                                 <label for="benefit-select" class="block text-sm font-medium text-slate-700 mb-1">Select Desired Benefit</label>
-                                <select id="benefit-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                    <option>Loading...</option>
-                                </select>
+                                <select id="benefit-select" class="custom-select"></select>
                            </div>
-                             <div>
+                           <div id="chakra-focus" class="focus-content">
+                                <label for="chakra-select" class="block text-sm font-medium text-slate-700 mb-1">Select Chakra</label>
+                                <select id="chakra-select" class="custom-select"></select>
+                           </div>
+                           <div id="difficulty-focus" class="focus-content">
+                                <label for="difficulty-select" class="block text-sm font-medium text-slate-700 mb-1">Select Difficulty Level</label>
+                                <select id="difficulty-select" class="custom-select"></select>
+                           </div>
+                           <div id="movement-focus" class="focus-content">
+                                <label for="movement-select" class="block text-sm font-medium text-slate-700 mb-1">Select Anatomical Movement</label>
+                                <select id="movement-select" class="custom-select"></select>
+                           </div>
+                           <div id="props-focus" class="focus-content">
+                                <label for="props-select" class="block text-sm font-medium text-slate-700 mb-1">Select Prop</label>
+                                <select id="props-select" class="custom-select"></select>
+                           </div>
+                           <div id="peak-pose-focus" class="focus-content">
+                                <label for="peak-pose-input" class="block text-sm font-medium text-slate-700 mb-1">Enter a Peak Pose</label>
+                                <input type="text" id="peak-pose-input" class="custom-input" placeholder="e.g., Crow Pose">
+                           </div>
+                            <div id="ailment-focus" class="focus-content">
+                                <label for="ailment-input" class="block text-sm font-medium text-slate-700 mb-1">Enter Ailment for Relief</label>
+                                <input type="text" id="ailment-input" class="custom-input" placeholder="e.g., Lower Back Pain">
+                           </div>
+                           <div>
                                 <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1">Number of Exercises</label>
-                                <select id="exercises-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
-                            </div>
+                                <select id="exercises-select" class="custom-select"></select>
+                           </div>
                         </div>
                         <div class="mt-8">
                             <button id="generate-btn" class="w-full md:w-auto px-10 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all transform hover:scale-105">Generate My Routine</button>
@@ -286,6 +333,7 @@
                     <div class="text-center mb-8 max-w-5xl mx-auto">
                          <h2 id="routine-title" class="text-3xl font-bold text-slate-900"></h2>
                     </div>
+                    <div id="disclaimer-container" class="max-w-5xl mx-auto mb-6"></div>
                     <div id="loader-container" class="flex justify-center items-center h-64" style="display: none;"></div>
                     <div id="routine-list" class="space-y-6 max-w-5xl mx-auto"></div>
                      <div id="results-buttons" class="mt-8 flex flex-col sm:flex-row justify-center gap-4 hidden">
@@ -330,7 +378,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.4</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.6</p>
             </div>
         </footer>
         
@@ -378,11 +426,22 @@
 
         // --- PROMPT TEMPLATES ---
         const PROMPT_TEMPLATES = {
-            muscleGroups: () => `When practicing yoga asanas (poses), what are all of the major and minor muscle groups that people commonly focus on? Return a JSON object with a single key 'muscleGroups'. This key should hold an array of objects. Each object must have two keys: 'displayName' (the common, user-friendly name, e.g., 'Hamstrings') and 'fullName' (the more technical name including specific muscles, e.g., 'Hamstrings - Biceps Femoris, Semitendinosus, Semimembranosus'). Provide an extensive list, ordered alphabetically by displayName.`,
-            organSystems: () => `When practicing yoga asanas (poses), what are all of the major and minor organ systems of the human body that people commonly believe are stimulated, supported, or positively impacted by the practice? Return a JSON object containing a single key 'yogaOrganSystemFocus' which is an array of strings. Each string should represent an organ system, formatted as 'Common Name - Technical Term(s)' if a common name exists, or just the technical term if it's widely recognized. Provide an extensive and exhaustive list, ordered alphabetically.`,
-            poseTypes: () => `List the common categories of yoga asanas based on the physical action or position involved (e.g., 'Standing Poses', 'Backbends', 'Forward Bends', 'Twists', 'Inversions', 'Balancing Poses'). Return a JSON object with a single key 'poseTypes' which holds an array of these category names as strings. Provide a comprehensive list, ordered alphabetically.`,
-            desiredBenefits: () => `What are the common therapeutic benefits or wellness goals that people seek to achieve through a yoga or stretching routine (e.g., 'Stress Relief', 'Improved Flexibility', 'Increased Energy', 'Better Sleep')? Return a JSON object with a single key 'desiredBenefits' which holds an array of these benefit-oriented goals as strings. The list should be comprehensive and ordered alphabetically.`,
+            // Category Population Prompts
+            getMuscleGroups: () => `When practicing yoga asanas (poses), what are all of the major and minor muscle groups that people commonly focus on? Return a JSON object with a single key 'muscleGroups'. This key should hold an array of objects. Each object must have two keys: 'displayName' (the common, user-friendly name, e.g., 'Hamstrings') and 'fullName' (the more technical name including specific muscles, e.g., 'Hamstrings - Biceps Femoris, Semitendinosus, Semimembranosus'). Provide an extensive list, ordered alphabetically by displayName.`,
+            getOrganSystems: () => `When practicing yoga asanas (poses), what are all of the major and minor organ systems of the human body that people commonly believe are stimulated, supported, or positively impacted by the practice? Return a JSON object containing a single key 'organSystems' which is an array of strings. Each string should represent an organ system, formatted as 'Common Name - Technical Term(s)' if a common name exists, or just the technical term if it's widely recognized. Provide an extensive and exhaustive list, ordered alphabetically.`,
+            getPoseTypes: () => `List the common categories of yoga asanas based on the physical action or position involved (e.g., 'Standing Poses', 'Backbends', 'Forward Bends', 'Twists', 'Inversions', 'Balancing Poses'). Return a JSON object with a single key 'poseTypes' which holds an array of these category names as strings. Provide a comprehensive list, ordered alphabetically.`,
+            getDesiredBenefits: () => `What are the common therapeutic benefits or wellness goals that people seek to achieve through a yoga or stretching routine (e.g., 'Stress Relief', 'Improved Flexibility', 'Increased Energy', 'Better Sleep')? Return a JSON object with a single key 'benefits' which holds an array of these benefit-oriented goals as strings. The list should be comprehensive and ordered alphabetically.`,
+            getChakras: () => `List the seven primary chakras in yogic philosophy. Return a JSON object with a key 'chakras' holding an array of strings (e.g., "Root Chakra - Muladhara"), ordered from the first to the seventh chakra.`,
+            getAnatomicalMovements: () => `List common anatomical movements focused on in yoga (e.g., 'Hip Opening', 'Spinal Extension', 'Shoulder Flexion'). Return a JSON object with a key 'movements' holding an array of these strings, ordered alphabetically.`,
+            getProps: () => `List common props used in yoga (e.g., 'Block', 'Strap', 'Bolster', 'Blanket'). Return a JSON object with a key 'props' holding an array of these strings, ordered alphabetically.`,
+            
+            // Routine Generation Prompts
             routine: (numExercises, focusArea) => `Create a balanced routine with exactly ${numExercises} yoga poses or exercises that primarily target or support the '${focusArea}'. For each item, provide a "name", brief step-by-step "instructions", and its single primary "benefit". Keep the instructions and benefit to 1-2 sentences each. The tone should be encouraging and informative.`,
+            routineByProp: (numExercises, propName) => `Generate a routine of ${numExercises} yoga poses that can be effectively modified or supported using a '${propName}'. For each pose, provide a "name", "instructions" on how to use the prop, and the primary "benefit" of using the prop.`,
+            peakPoseSequence: (numExercises, peakPose) => `Create a preparatory yoga sequence with exactly ${numExercises} poses to build towards the peak pose: '${peakPose}'. The sequence should be ordered logically to warm up the body. For each pose, provide a "name", "instructions", and a "preparation_focus" explaining how it prepares the body for the peak pose.`,
+            ailmentRoutine: (ailment) => `Generate a list of yoga asanas commonly recommended for '${ailment}'. The tone must be supportive and cautious. Return a JSON object with two keys: 'disclaimer' and 'recommendedPoses'. The 'disclaimer' key must hold this exact string: "The following yoga poses are for informational purposes only and are not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Stop any exercise that causes you pain or discomfort.". The 'recommendedPoses' key should hold an array of objects, each with 'name', 'how_it_helps' (1-2 sentences), and 'contraindications' (e.g., 'High blood pressure').`,
+
+            // Details Prompt
             details: (exerciseName) => `Provide a detailed guide for the yoga pose or topic "${exerciseName}". Include the following sections with clear headings using markdown ###: "Step-by-Step Instructions", "Key Benefits", and "Modifications and Precautions". Use bullet points for the benefits and modifications sections. The tone should be encouraging and informative, like a professional yoga guide.`,
         };
 
@@ -395,17 +454,26 @@
 
             // Main UI
             focusTabsContainer: document.getElementById('focus-tabs-container'),
-            muscleGroupSelect: document.getElementById('muscle-group-select'),
-            organSystemSelect: document.getElementById('organ-system-select'),
-            poseTypeSelect: document.getElementById('pose-type-select'),
-            benefitSelect: document.getElementById('benefit-select'),
             exercisesSelect: document.getElementById('exercises-select'),
             generateBtn: document.getElementById('generate-btn'),
             routineList: document.getElementById('routine-list'),
             loaderContainer: document.getElementById('loader-container'),
             routineTitle: document.getElementById('routine-title'),
             resultsButtons: document.getElementById('results-buttons'),
+            disclaimerContainer: document.getElementById('disclaimer-container'),
             
+            // Selects & Inputs
+            muscleGroupSelect: document.getElementById('muscle-group-select'),
+            organSystemSelect: document.getElementById('organ-system-select'),
+            poseTypeSelect: document.getElementById('pose-type-select'),
+            benefitSelect: document.getElementById('benefit-select'),
+            chakraSelect: document.getElementById('chakra-select'),
+            difficultySelect: document.getElementById('difficulty-select'),
+            movementSelect: document.getElementById('movement-select'),
+            propsSelect: document.getElementById('props-select'),
+            peakPoseInput: document.getElementById('peak-pose-input'),
+            ailmentInput: document.getElementById('ailment-input'),
+
             // Nav
             homeLink: document.getElementById('home-link'),
             aboutLink: document.getElementById('about-link'),
@@ -473,10 +541,14 @@
             ui.setupModal.style.display = 'none';
 
             populateStaticDropdowns();
-            populateMuscleGroupDropdown();
-            populateOrganSystemDropdown();
-            populatePoseTypeDropdown();
-            populateBenefitDropdown();
+            // Fire off all category population requests
+            populateDropdown('getMuscleGroups', ui.muscleGroupSelect, 'muscleGroups', { valKey: 'fullName', textKey: 'displayName' });
+            populateDropdown('getOrganSystems', ui.organSystemSelect, 'organSystems');
+            populateDropdown('getPoseTypes', ui.poseTypeSelect, 'poseTypes');
+            populateDropdown('getDesiredBenefits', ui.benefitSelect, 'benefits');
+            populateDropdown('getChakras', ui.chakraSelect, 'chakras');
+            populateDropdown('getAnatomicalMovements', ui.movementSelect, 'movements');
+            populateDropdown('getProps', ui.propsSelect, 'props');
         }
 
         function logPrompt(type, prompt, response) {
@@ -488,136 +560,103 @@
         function populateStaticDropdowns() {
             const counts = [3, 5, 7, 10, 12, 15, 20];
             ui.exercisesSelect.innerHTML = counts.map(c => `<option value="${c}">${c} Exercises</option>`).join('');
-        }
-
-        async function populateMuscleGroupDropdown() {
-            ui.muscleGroupSelect.disabled = true;
-            ui.muscleGroupSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
-            try {
-                const prompt = PROMPT_TEMPLATES.muscleGroups();
-                const schema = { type: "OBJECT", properties: { "muscleGroups": { type: "ARRAY", items: { type: "OBJECT", properties: { "displayName": { "type": "STRING" }, "fullName": { "type": "STRING" } }, required: ["displayName", "fullName"] }}}, required: ["muscleGroups"] };
-                const response = await callGeminiAPI("Muscle Groups", prompt, schema);
-                const muscleGroups = response.muscleGroups;
-                ui.muscleGroupSelect.innerHTML = `<option value="">-- Select a Focus Area --</option>`;
-                muscleGroups.forEach(group => {
-                    ui.muscleGroupSelect.add(new Option(group.displayName, group.fullName));
-                });
-                ui.muscleGroupSelect.disabled = false;
-            } catch (error) {
-                console.error("Error populating muscle groups:", error);
-                ui.muscleGroupSelect.innerHTML = `<option>Error loading data</option>`;
-                showAlert(`Could not load muscle groups from the AI. ${error.message}`);
-            }
-        }
-
-        async function populateOrganSystemDropdown() {
-            ui.organSystemSelect.disabled = true;
-            ui.organSystemSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
-            try {
-                const prompt = PROMPT_TEMPLATES.organSystems();
-                const schema = { type: "OBJECT", properties: { "yogaOrganSystemFocus": { type: "ARRAY", items: { type: "STRING" } } }, required: ["yogaOrganSystemFocus"] };
-                const response = await callGeminiAPI("Organ Systems", prompt, schema);
-                const organSystems = response.yogaOrganSystemFocus;
-                ui.organSystemSelect.innerHTML = `<option value="">-- Select a System --</option>`;
-                organSystems.forEach(system => {
-                    ui.organSystemSelect.add(new Option(system, system));
-                });
-                ui.organSystemSelect.disabled = false;
-            } catch (error) {
-                console.error("Error populating organ systems:", error);
-                ui.organSystemSelect.innerHTML = `<option>Error loading data</option>`;
-                showAlert(`Could not load organ systems from the AI. ${error.message}`);
-            }
-        }
-
-        async function populatePoseTypeDropdown() {
-            ui.poseTypeSelect.disabled = true;
-            ui.poseTypeSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
-            try {
-                const prompt = PROMPT_TEMPLATES.poseTypes();
-                const schema = { type: "OBJECT", properties: { "poseTypes": { type: "ARRAY", items: { type: "STRING" } } }, required: ["poseTypes"] };
-                const response = await callGeminiAPI("Pose Types", prompt, schema);
-                const poseTypes = response.poseTypes;
-                ui.poseTypeSelect.innerHTML = `<option value="">-- Select a Pose Type --</option>`;
-                poseTypes.forEach(type => {
-                    ui.poseTypeSelect.add(new Option(type, type));
-                });
-                ui.poseTypeSelect.disabled = false;
-            } catch (error) {
-                console.error("Error populating pose types:", error);
-                ui.poseTypeSelect.innerHTML = `<option>Error loading data</option>`;
-                showAlert(`Could not load pose types from the AI. ${error.message}`);
-            }
-        }
-
-        async function populateBenefitDropdown() {
-            ui.benefitSelect.disabled = true;
-            ui.benefitSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
-            try {
-                const prompt = PROMPT_TEMPLATES.desiredBenefits();
-                const schema = { type: "OBJECT", properties: { "desiredBenefits": { type: "ARRAY", items: { type: "STRING" } } }, required: ["desiredBenefits"] };
-                const response = await callGeminiAPI("Desired Benefits", prompt, schema);
-                const benefits = response.desiredBenefits;
-                ui.benefitSelect.innerHTML = `<option value="">-- Select a Benefit --</option>`;
-                benefits.forEach(benefit => {
-                    ui.benefitSelect.add(new Option(benefit, benefit));
-                });
-                ui.benefitSelect.disabled = false;
-            } catch (error) {
-                console.error("Error populating benefits:", error);
-                ui.benefitSelect.innerHTML = `<option>Error loading data</option>`;
-                showAlert(`Could not load benefits from the AI. ${error.message}`);
-            }
+            
+            const difficulties = ['Beginner', 'Intermediate', 'Advanced'];
+            ui.difficultySelect.innerHTML = `<option value="">-- Select a Level --</option>` + difficulties.map(d => `<option value="${d}">${d}</option>`).join('');
         }
         
+        async function populateDropdown(promptKey, selectElement, responseKey, options = {}) {
+            const { valKey = null, textKey = null } = options;
+            selectElement.disabled = true;
+            selectElement.innerHTML = `<option>🤖 Asking AI...</option>`;
+            try {
+                const prompt = PROMPT_TEMPLATES[promptKey]();
+                const schema = { type: "OBJECT", properties: { [responseKey]: { type: "ARRAY" } }, required: [responseKey] };
+                const response = await callGeminiAPI(promptKey, prompt, schema);
+                const items = response[responseKey];
+                
+                selectElement.innerHTML = `<option value="">-- Select an Option --</option>`;
+                items.forEach(item => {
+                    const value = valKey ? item[valKey] : item;
+                    const text = textKey ? item[textKey] : item;
+                    selectElement.add(new Option(text, value));
+                });
+                selectElement.disabled = false;
+            } catch (error) {
+                console.error(`Error populating ${promptKey}:`, error);
+                selectElement.innerHTML = `<option>Error loading data</option>`;
+                showAlert(`Could not load data for ${promptKey.replace('get', '')}. ${error.message}`);
+            }
+        }
+
         // --- ROUTINE GENERATION & DISPLAY ---
         async function generateRoutine() {
             const activeTab = ui.focusTabsContainer.querySelector('.active');
             const targetId = activeTab.dataset.target;
+            const numExercises = ui.exercisesSelect.value;
             
             let focusArea = '';
             let selectedText = '';
-            
+            let prompt = '';
+            let schema = null;
+            let responseProcessor = null;
+
+            // Determine the focus area and prompt based on the active tab
             switch (targetId) {
-                case 'muscle-focus':
-                    focusArea = ui.muscleGroupSelect.value;
-                    selectedText = ui.muscleGroupSelect.options[ui.muscleGroupSelect.selectedIndex].text;
+                case 'ailment-focus':
+                    focusArea = ui.ailmentInput.value.trim();
+                    selectedText = focusArea;
+                    prompt = PROMPT_TEMPLATES.ailmentRoutine(focusArea);
+                    schema = { type: "OBJECT", properties: { disclaimer: { type: "STRING" }, recommendedPoses: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["disclaimer", "recommendedPoses"] };
+                    responseProcessor = (response) => {
+                        ui.disclaimerContainer.innerHTML = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert"><p class="font-bold">Important Disclaimer</p><p>${response.disclaimer}</p></div>`;
+                        return response.recommendedPoses;
+                    };
                     break;
-                case 'system-focus':
-                    focusArea = ui.organSystemSelect.value;
-                    selectedText = ui.organSystemSelect.options[ui.organSystemSelect.selectedIndex].text;
+                case 'peak-pose-focus':
+                    focusArea = ui.peakPoseInput.value.trim();
+                    selectedText = focusArea;
+                    prompt = PROMPT_TEMPLATES.peakPoseSequence(numExercises, focusArea);
+                    schema = { type: "OBJECT", properties: { peakPoseSequence: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["peakPoseSequence"] };
+                    responseProcessor = (response) => response.peakPoseSequence;
                     break;
-                case 'pose-type-focus':
-                    focusArea = ui.poseTypeSelect.value;
-                    selectedText = ui.poseTypeSelect.options[ui.poseTypeSelect.selectedIndex].text;
+                case 'props-focus':
+                    focusArea = ui.propsSelect.value;
+                    selectedText = ui.propsSelect.options[ui.propsSelect.selectedIndex].text;
+                    prompt = PROMPT_TEMPLATES.routineByProp(numExercises, focusArea);
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["exercises"] };
+                    responseProcessor = (response) => response.exercises;
                     break;
-                case 'benefit-focus':
-                    focusArea = ui.benefitSelect.value;
-                    selectedText = ui.benefitSelect.options[ui.benefitSelect.selectedIndex].text;
-                    break;
+                default:
+                    // Generic handler for simple dropdown-based routines
+                    const selectElement = document.getElementById(targetId.replace('-focus', '-select'));
+                    focusArea = selectElement.value;
+                    selectedText = selectElement.options[selectElement.selectedIndex].text;
+                    let routineType = `poses for a ${focusArea} practitioner`;
+                    if(targetId !== 'difficulty-focus') routineType = focusArea;
+                    prompt = PROMPT_TEMPLATES.routine(numExercises, routineType);
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["exercises"] };
+                    responseProcessor = (response) => response.exercises;
             }
 
-            const numExercises = ui.exercisesSelect.value;
-
             if (!focusArea) {
-                showAlert(`Please select a focus area from the active tab.`);
+                showAlert(`Please select or enter a value for the active tab.`);
                 return;
             }
 
             showView('results-section');
             ui.routineList.innerHTML = '';
+            ui.disclaimerContainer.innerHTML = ''; // Clear previous disclaimers
             ui.loaderContainer.innerHTML = '<div class="loader"></div>';
             ui.loaderContainer.style.display = 'flex';
             ui.resultsButtons.classList.add('hidden');
-            ui.routineTitle.textContent = `Generating Your ${numExercises}-Pose Routine for ${selectedText}...`;
+            ui.routineTitle.textContent = `Generating Your Routine for ${selectedText}...`;
 
             try {
-                const prompt = PROMPT_TEMPLATES.routine(numExercises, focusArea);
-                const schema = { type: "OBJECT", properties: { "exercises": { type: "ARRAY", items: { type: "OBJECT", properties: { "name": { "type": "STRING" }, "instructions": { "type": "STRING" }, "benefit": { "type": "STRING" }}, required: ["name", "instructions", "benefit"] }}}, required: ["exercises"] };
                 const response = await callGeminiAPI("Routine Generation", prompt, schema);
-                currentRoutine = response.exercises;
+                currentRoutine = responseProcessor(response);
                 ui.routineTitle.textContent = `Your Custom Routine for ${selectedText}`;
-                renderRoutine(currentRoutine);
+                renderRoutine(currentRoutine, targetId);
             } catch (error) {
                 console.error("Error generating routine:", error);
                 ui.routineTitle.textContent = "Generation Failed";
@@ -628,7 +667,7 @@
             }
         }
         
-        function renderRoutine(exercises) {
+        function renderRoutine(exercises, routineType) {
             ui.routineList.innerHTML = '';
             if (!exercises || exercises.length === 0) {
                 ui.routineList.innerHTML = `<div class="bg-yellow-100 p-4 rounded-lg text-center text-yellow-700"><p>The AI was unable to generate a routine with the provided criteria. Please try again.</p></div>`;
@@ -638,14 +677,26 @@
                 const exerciseEl = document.createElement('div');
                 exerciseEl.className = 'bg-white border border-slate-200 rounded-xl shadow-sm p-6';
                 
-                const sanitizedInstructions = exercise.instructions.replace(/"/g, '&quot;');
+                const sanitizedInstructions = (exercise.instructions || '').replace(/"/g, '&quot;');
+                
+                let benefitHtml = '';
+                if (routineType === 'ailment-focus') {
+                    benefitHtml = `
+                        <div><h4 class="font-semibold text-slate-800">How it Helps:</h4><p class="mt-1">${exercise.how_it_helps || 'Not specified.'}</p></div>
+                        <div><h4 class="font-semibold text-red-600 mt-2">Contraindications:</h4><p class="mt-1 text-red-600">${exercise.contraindications || 'None specified.'}</p></div>
+                    `;
+                } else {
+                    const benefitLabel = (routineType === 'peak-pose-focus') ? 'Preparation Focus' : 'Benefit';
+                    const benefitText = exercise.benefit || exercise.preparation_focus || 'Not specified.';
+                    benefitHtml = `<div><h4 class="font-semibold text-slate-800">${benefitLabel}:</h4><p class="mt-1">${benefitText}</p></div>`;
+                }
 
                 exerciseEl.innerHTML = `
                     <div>
-                        <h3 class="text-xl font-semibold text-slate-900">${exercise.name}</h3>
+                        <h3 class="text-xl font-semibold text-slate-900">${exercise.name} ${exercise.sanskrit_name ? `(${exercise.sanskrit_name})` : ''}</h3>
                         <div class="mt-4 space-y-4">
-                            <div><h4 class="font-semibold text-slate-800">Instructions:</h4><p class="mt-1 whitespace-pre-line">${exercise.instructions}</p></div>
-                            <div><h4 class="font-semibold text-slate-800">Benefit:</h4><p class="mt-1">${exercise.benefit}</p></div>
+                            <div><h4 class="font-semibold text-slate-800">Instructions:</h4><p class="mt-1 whitespace-pre-line">${exercise.instructions || 'No instructions provided.'}</p></div>
+                            ${benefitHtml}
                         </div>
                         <div class="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-4">
                            <button data-exercise-name="${exercise.name}" class="youtube-search-btn text-sm font-medium text-indigo-600 hover:text-indigo-800">Search Video (Simple) &rarr;</button>
@@ -675,7 +726,7 @@
             ui.detailsTitle.textContent = exercise.name;
             ui.detailsContent.innerHTML = '<div class="flex justify-center items-center h-32"><div class="loader"></div></div>';
             
-            const sanitizedInstructions = exercise.instructions.replace(/"/g, '&quot;');
+            const sanitizedInstructions = (exercise.instructions || '').replace(/"/g, '&quot;');
             ui.detailsYoutubeButtons.innerHTML = `
                 <button data-exercise-name="${exercise.name}" class="youtube-search-btn text-sm font-medium text-indigo-600 hover:text-indigo-800">Search Video (Simple) &rarr;</button>
                 <button data-exercise-name="${exercise.name}" data-exercise-instructions="${sanitizedInstructions}" class="youtube-search-detailed-btn text-sm font-medium text-green-600 hover:text-green-800">Search Video (Detailed) &rarr;</button>
