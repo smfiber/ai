@@ -536,7 +536,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.15</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7.0</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -703,6 +703,29 @@
     * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
     * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
+
+        // *** NEW ***: AI Guide Refinement Prompt
+        const aiReviewPrompt = `
+**Persona:** You are an expert-level technical editor and a senior IT systems architect with decades of experience. You are meticulous, detail-oriented, and an authority on creating professional technical documentation.
+
+**Objective:** Your task is to review, refine, and significantly improve the IT administration guide provided below. The goal is to elevate it from a good draft to an exceptional, professional-grade technical document that is ready for publication.
+
+**Instructions:**
+Analyze the provided guide markdown. Your task is to rewrite the entire document to be more accurate, clearer, and more comprehensive. Implement the following improvements directly into the text:
+
+1. **Enhance Technical Accuracy:** Scrutinize every technical detail. Verify PowerShell/CLI cmdlets, parameter names, object properties (e.g., check if it's \`MemoryGB\` vs. \`Memory\`), API endpoints, and procedural steps. Correct any inaccuracies, no matter how subtle.
+2. **Increase Clarity and Readability:** Rephrase complex or ambiguous sentences for better clarity. Ensure there is a logical, smooth flow between all sections. Where appropriate, add analogies or simpler explanations for difficult concepts before diving into technical specifics.
+3. **Add Depth and Completeness:** Identify any sections that are too superficial or brief. Expand upon them with more detailed explanations, additional practical examples, and more granular step-by-step instructions. The "Key Concepts - In-Depth Application & Management" section is especially important and should be as robust as possible. If any of the 12 core guide sections are missing or weak, you must create or substantially bolster them.
+4. **Enforce Best Practices:** Ensure all recommendations align with modern industry best practices for security, performance, automation, and maintainability. Add warnings, "Pro Tip" callouts, or notes on potential trade-offs where beneficial.
+5. **Improve Practicality:** Enhance all examples to be more useful in real-world, production scenarios. Add context to explain *why* an administrator would perform a certain task in a certain way, beyond just the "how."
+6. **Ensure Consistency:** Maintain consistent terminology and formatting throughout the entire document.
+
+Your final output must be the **complete, rewritten, and improved guide** in markdown format. Do not simply list your suggestions; you must implement them directly into the text. The core structure, including the '###' headers for the 12 main sections, must be preserved.
+
+---
+**[Insert Complete Markdown of Generated Guide Here]**
+---
+`;
         
         // --- Content Generation Categories ---
         const categoriesToGenerate = [
@@ -2142,6 +2165,7 @@ Return only these sections in markdown format. Do not include any other sections
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
             prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
             prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
+            prompts["AI Guide Refinement Prompt"] = aiReviewPrompt; // Add the new prompt
             
             return prompts;
         }
@@ -2327,17 +2351,11 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
+        // *** MODIFIED FUNCTION ***
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
             const cardName = firstModalFooter.dataset.cardName;
-            const initialContentMarkdown = originalGeneratedText.get(fullTitleFromFirstModal); 
-
-            if (!initialContentMarkdown) {
-                console.error("No initial content found to generate detailed steps from.");
-                handleApiError({ message: "Initial guide content missing. Cannot generate detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
-                return;
-            }
             
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
@@ -2357,21 +2375,31 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('inDepthDetailedModal');
 
             try {
-                detailedContentEl.innerHTML = getLoaderHTML('Generating full guide...');
+                // --- STEP 1: Generate the initial draft ---
+                detailedContentEl.innerHTML = getLoaderHTML('Generating initial draft...');
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
                 const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
                 
-                let finalCompleteGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide");
-                finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the full guide.");
+                let initialGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide (Draft)");
+                initialGuideMarkdown = initialGuideMarkdown ? initialGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!initialGuideMarkdown) throw new Error("Failed to generate the initial guide draft.");
 
+                // --- STEP 2: Refine the draft with the AI Review prompt ---
+                detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the draft...');
+                const reviewRequestPrompt = aiReviewPrompt.replace('**[Insert Complete Markdown of Generated Guide Here]**', initialGuideMarkdown);
+                
+                let finalCompleteGuideMarkdown = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Final)");
+                finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the final, refined guide.");
+                
+                // --- STEP 3: Display the final, polished guide ---
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
                 addDetailedModalActionButtons(detailedButtonContainer);
-                document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
+                document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated & refined successfully!';
 
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'full detailed guide');
