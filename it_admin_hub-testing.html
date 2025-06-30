@@ -199,21 +199,24 @@
             color: var(--color-button-text);
         }
 
+        /* MODIFIED: Removed floating action button styles */
         .floating-action-button {
-            position: fixed; background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-button-text); width: 56px; height: 56px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            position: fixed;
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
-            cursor: pointer; transition: all 0.3s ease; z-index: 50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 50;
         }
-        .floating-action-button:hover { transform: translateY(-3px) scale(1.05); }
-        #new-plan-button { bottom: 2rem; right: 2rem; }
-        #settings-button { bottom: 6.5rem; right: 2rem; }
-        #ai-help-button { bottom: 11rem; right: 2rem; }
-        #theme-changer-button { bottom: 15.5rem; right: 2rem; }
-        #prompts-button { bottom: 20rem; right: 2rem; }
-        #firebase-tools-button { bottom: 24.5rem; right: 2rem; }
-        #real-time-log-button { bottom: 29rem; right: 2rem; }
+        .floating-action-button:hover {
+            transform: translateY(-3px) scale(1.05);
+        }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -517,10 +520,48 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.9.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
+            <!-- NEW: Admin Tools Card -->
+            <div id="admin-tools-card" class="card p-6">
+                <h2 class="text-xl font-bold themed-text-primary flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20h4a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H8a2 2 0 0 0-2 2v2"></path><rect x="2" y="10" width="8" height="12" rx="2"></rect></svg>
+                    Admin Tools
+                </h2>
+                <div id="admin-tools-container" class="flex flex-wrap gap-2 mt-4">
+                    <button id="real-time-log-button" class="btn-secondary" title="Real-Time AI Log">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
+                        <span>AI Log</span>
+                    </button>
+                    <button id="firebase-tools-button" class="btn-secondary" title="Manage Sticky Topics">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
+                         <span>Sticky Topics</span>
+                    </button>
+                    <button id="prompts-button" class="btn-secondary" title="View AI Prompts">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+                        <span>View Prompts</span>
+                    </button>
+                    <button id="theme-changer-button" class="btn-secondary" title="Change Visual Theme">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
+                        <span>Change Theme</span>
+                    </button>
+                    <button id="ai-help-button" class="btn-secondary" title="Code Documentation Generation">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
+                        <span>Code Docs</span>
+                    </button>
+                    <button id="settings-button" class="btn-secondary" title="Typography Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                        <span>Display</span>
+                    </button>
+                    <button id="new-plan-button" class="btn-secondary" title="New Session (Reload)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        <span>Reload</span>
+                    </button>
+                </div>
+            </div>
+
             <div id="imported-guides-section" class="hidden">
                  <h2 class="text-3xl font-bold text-center mb-4 themed-text-accent">Imported Guides</h2>
                  <div id="imported-guides-container" class="space-y-8"></div>
@@ -593,28 +634,7 @@
             <div id="dynamic-card-container" class="space-y-8"></div>
         </main>
         
-        <!-- Floating Action Buttons -->
-        <button id="real-time-log-button" class="floating-action-button" title="Real-Time AI Log">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
-        </button>
-        <button id="firebase-tools-button" class="floating-action-button" title="Manage Sticky Topics">
-             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
-        </button>
-        <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
-        </button>
-        <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
-        </button>
-        <button id="ai-help-button" class="floating-action-button" title="Code Documentation Generation">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
-        </button>
-        <button id="settings-button" class="floating-action-button" title="Typography Settings">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-        </button>
-        <button id="new-plan-button" class="floating-action-button" title="New Session (Reload)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
+        <!-- MODIFIED: Removed most floating buttons, only scroll-to-top remains -->
         <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
