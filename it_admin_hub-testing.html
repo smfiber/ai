@@ -317,7 +317,7 @@
         body.apiKeyModal-open #apiKeyModal,
         body.aiLogModal-open #aiLogModal,
         body.loadingStateModal-open #loadingStateModal,
-        body.categoryBrowserModal-open #categoryBrowserModal { /* NEW */
+        body.categoryBrowserModal-open #categoryBrowserModal {
              visibility: visible;
         }
         
@@ -484,9 +484,7 @@
         </div>
     </div>
 
-    <!-- ****************************************************** -->
-    <!-- NEW: Category Browser Modal -->
-    <!-- ****************************************************** -->
+    <!-- Category Browser Modal -->
     <div id="categoryBrowserModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 65;">
         <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -519,7 +517,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.8.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.9.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -570,9 +568,6 @@
                 </div>
             </div>
             
-            <!-- ****************************************************** -->
-            <!-- NEW: Topic Explorer Card -->
-            <!-- ****************************************************** -->
             <div id="topic-explorer-card" class="card">
                 <div class="p-8 card-content text-center">
                     <h2 class="text-2xl font-bold mb-2 themed-text-primary">Topic Explorer</h2>
@@ -902,7 +897,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             });
         }
         
-        // --- MODIFIED FUNCTION ---
         async function initializeAppContent() {
             appIsInitialized = true;
             openModal('loadingStateModal');
@@ -914,7 +908,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             try {
                 await generateAndApplyDefaultTheme();
                 loadingMessageEl.textContent = "Loading application content...";
-                await loadAppContent(); // This no longer generates all cards
+                await loadAppContent();
             } catch (error) {
                 const errorMessage = error ? error.message : "An unknown error occurred.";
                 console.error("A critical error occurred during app initialization:", errorMessage);
@@ -1006,14 +1000,11 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             });
         }
 
-
-        // --- MODIFIED FUNCTION ---
         function setupEventListeners() {
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
             
-            // NEW Listeners for Topic Explorer
             document.getElementById('explore-featured-btn').addEventListener('click', () => openCategoryBrowser('featured'));
             document.getElementById('browse-all-btn').addEventListener('click', () => openCategoryBrowser('all'));
             document.getElementById('closeCategoryBrowserModal').addEventListener('click', () => closeModal('categoryBrowserModal'));
@@ -1529,21 +1520,17 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         
         // --- Core Application Functions ---
         
-        // --- MODIFIED FUNCTION ---
         async function loadAppContent() {
             try {
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
-                // No longer generates all category cards on load. This is now user-driven.
             } catch (error) {
                 console.error("An error occurred while loading app content:", error.message);
                 throw error;
             }
         }
         
-        // --- MODIFIED FUNCTION ---
         async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
-            // This function now creates and returns a card element, instead of appending it to the DOM.
             const card = document.createElement('div');
             card.className = 'card';
             card.id = `${key}-card`;
@@ -1560,19 +1547,16 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 data.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[key] = data;
                 
-                // We pass the actual container element to the selector function now
                 populateCardGridSelector(card.querySelector(`#${selectorId}`), key);
-                return card; // Return the fully formed card element
+                return card;
 
             } catch (error) {
                 handleApiError(error, card.querySelector(`#${selectorId}`), title, card);
-                throw error; // Propagate error to the calling function
+                throw error;
             }
         }
         
-        // --- MODIFIED FUNCTION ---
         function populateCardGridSelector(container, themeType, newItemsIds = new Set()) {
-            // This function now accepts the container element directly
             const data = allThemeData[themeType] || [];
             const stickies = stickyTopics[themeType] || [];
             
@@ -2530,9 +2514,6 @@ Return only these sections in markdown format. Do not include any other sections
             });
         }
         
-        // --- REMOVED FUNCTION ---
-        // handleDiscoverMoreClick is no longer needed with the new UX
-
         async function handleCustomVisualThemeGeneration() {
             const prompt = document.getElementById('theme-prompt').value;
             if(!prompt) return;
@@ -2583,9 +2564,6 @@ Return only these sections in markdown format. Do not include any other sections
             errorContainer.textContent = message;
             errorContainer.classList.remove('hidden');
         }
-
-        // --- REMOVED FUNCTION ---
-        // generateTopicsMenu is no longer needed as there's no top-level dropdown
         
         function populateTypographySettings() {
             const fontSelect = document.getElementById('font-family-select');
@@ -2946,8 +2924,6 @@ Return only these sections in markdown format. Do not include any other sections
 
             if (!categoryKey || !docId || !userId) return;
             
-            // Re-implementing a custom modal confirmation later if needed.
-            // For now, confirm is a simple way to prevent accidental deletion.
             if (window.confirm("Are you sure you want to delete this sticky topic?")) {
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
@@ -2959,22 +2935,67 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
 
-        // --- NEW: Topic Browser Functions ---
+        // --- MODIFIED: Topic Browser Functions ---
 
         /**
          * Opens the Category Browser modal and populates it with categories.
-         * @param {'featured' | 'all'} mode - Determines whether to show top 10 or all.
+         * @param {'featured' | 'all'} mode - Determines whether to show top 10 or all, or dynamically generated featured.
          */
-        function openCategoryBrowser(mode) {
+        async function openCategoryBrowser(mode) {
             const modalTitle = document.getElementById('categoryBrowserModalTitle');
             const modalContent = document.getElementById('categoryBrowserModalContent');
             modalContent.innerHTML = ''; // Clear previous content
+            openModal('categoryBrowserModal');
 
-            const categories = (mode === 'featured') 
-                ? [...categoriesToGenerate].slice(0, 10) 
-                : [...categoriesToGenerate];
+            let categories = [];
 
-            modalTitle.textContent = (mode === 'featured') ? 'Featured Categories' : 'All Categories';
+            if (mode === 'featured') {
+                modalTitle.textContent = 'Featured Categories';
+                modalContent.innerHTML = getLoaderHTML('Calculating your most viewed categories...');
+                
+                try {
+                    // This block contains the new logic for dynamic featured categories
+                    if (!viewedItemsCollectionRef) {
+                        throw new Error("User not authenticated or Firestore not initialized.");
+                    }
+
+                    const snapshot = await getDocs(viewedItemsCollectionRef);
+                    const categoryCounts = new Map();
+
+                    snapshot.docs.forEach(doc => {
+                        const categoryTitle = doc.id.split(' - ')[0];
+                        if (categoryTitle) {
+                            categoryCounts.set(categoryTitle, (categoryCounts.get(categoryTitle) || 0) + 1);
+                        }
+                    });
+
+                    if (categoryCounts.size > 0) {
+                        const sortedTitles = Array.from(categoryCounts.entries())
+                            .sort((a, b) => b[1] - a[1]) // Sort by count, descending
+                            .map(entry => entry[0]) // Get just the title
+                            .slice(0, 10); // Take the top 10
+
+                        // Map sorted titles back to the full category objects
+                        categories = sortedTitles.map(title => 
+                            categoriesToGenerate.find(cat => cat.title === title)
+                        ).filter(Boolean); // Filter out any potential undefined values
+                    }
+
+                    // Fallback for new users or if no items have been viewed
+                    if (categories.length === 0) {
+                        categories = [...categoriesToGenerate].slice(0, 10);
+                    }
+                } catch (error) {
+                    console.error("Error fetching or processing featured categories:", error);
+                    // Fallback to static list on error
+                    categories = [...categoriesToGenerate].slice(0, 10);
+                    modalContent.innerHTML += `<p class="text-xs text-red-500 text-center">Could not load dynamic featured list. Showing default.</p>`;
+                }
+
+            } else { // mode === 'all'
+                modalTitle.textContent = 'All Categories';
+                categories = [...categoriesToGenerate];
+            }
 
             const categoryGrid = document.createElement('div');
             categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
@@ -2986,14 +3007,14 @@ Return only these sections in markdown format. Do not include any other sections
                     <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
                 </div>
             `).join('');
-
+            
+            // Replace loader or append if it was a fallback
+            modalContent.innerHTML = ''; // Clear again to be safe
             modalContent.appendChild(categoryGrid);
             
             modalContent.querySelectorAll('.category-selector-item').forEach(item => {
                 item.addEventListener('click', handleCategorySelection);
             });
-
-            openModal('categoryBrowserModal');
         }
 
         /**
@@ -3012,7 +3033,6 @@ Return only these sections in markdown format. Do not include any other sections
                 return;
             }
             
-            // Check if the card already exists to avoid duplication
             const existingCard = document.getElementById(`${categoryKey}-card`);
             if (existingCard) {
                 existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3025,13 +3045,11 @@ Return only these sections in markdown format. Do not include any other sections
             const cardPlaceholder = document.createElement('div');
             cardPlaceholder.id = `${categoryKey}-placeholder`;
             cardPlaceholder.innerHTML = getLoaderHTML(`Generating guides for ${categoryData.title}...`);
-            // Prepend so new cards appear at the top
             container.prepend(cardPlaceholder);
             
             cardPlaceholder.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             try {
-                // generateAndPopulateAICategory now returns an element
                 const cardElement = await generateAndPopulateAICategory(categoryData);
                 const placeholder = document.getElementById(`${categoryKey}-placeholder`);
                 if (placeholder) {
