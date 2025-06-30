@@ -182,7 +182,7 @@
                     </div>
                      <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
                         <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1.5-restored</span></div>
+                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1.6-final</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help (Ctrl+K)"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -577,9 +577,163 @@
         function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
         function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
         function getTransformHandles(obj) { const bounds = getObjectBounds(obj); if (!bounds || bounds.width <= 1 || bounds.height <= 1) return null; const center = getObjectCenter(obj); const w = bounds.width; const h = bounds.height; const angle = obj.rotation || 0; const corners = { tl: {x: center.x - w/2, y: center.y - h/2}, tr: {x: center.x + w/2, y: center.y - h/2}, bl: {x: center.x - w/2, y: center.y + h/2}, br: {x: center.x + w/2, y: center.y + h/2} }; const rotationHandleOffset = 30; const topMid = { x: center.x, y: center.y - h/2 }; const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset }; const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`; return { tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'}, tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'}, bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'}, br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'}, tm: rotatePoint(topMid, center, angle), rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`} }; }
-        function handleMouseDown(e) { if (state.isTexting || isEyedropperActive) return; if (!userId) { console.warn("Cannot draw: User not authenticated."); return; } const pos = getMousePos(e); state.startPos = pos; state.action = 'none'; if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { state.action = handle.type; state.transformHandle = key; state.originalObjectState = JSON.parse(JSON.stringify(selectedObject)); state.originalObjectState.center = getObjectCenter(selectedObject); return; } } } const clickedObjectId = findClickedObject(pos.x, pos.y); if (clickedObjectId) { state.selectedObjectId = clickedObjectId; state.action = 'moving'; const obj = state.allDrawings.get(clickedObjectId); const center = getObjectCenter(obj); state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y }; state.originalObjectState = JSON.parse(JSON.stringify(obj)); eventCaptureLayer.style.cursor = 'grabbing'; } else { state.selectedObjectId = null; } drawOverlay(); } else if (state.currentTool === 'text') { startTextEntry(snapToGrid(pos)); } else { state.action = 'drawing'; state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } }
-        function handleMouseMove(e) { let pos = getMousePos(e); if (!state.startPos) { updateCursor(pos); return; } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -(state.originalObjectState.rotation || 0); const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); if (!origBounds) return; let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (state.isShiftDown && selectedObject.type !== 'line') { const origAspectRatio = origBounds.width / origBounds.height; if (newWidth / origBounds.width > newHeight / origBounds.height) { newHeight = newWidth / origAspectRatio; } else { newWidth = newHeight * origAspectRatio; } } if (selectedObject.type === 'rectangle') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x - newWidth / 2; selectedObject.y = center.y - newHeight / 2; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) { const scaleX = newWidth / origBounds.width; const scaleY = newHeight / origBounds.height; const originalPoints = state.originalObjectState.points; const originalCenter = getObjectCenter(state.originalObjectState); selectedObject.points = originalPoints.map(p => ({ x: originalCenter.x + (p.x - originalCenter.x) * scaleX, y: originalCenter.y + (p.y - originalCenter.y) * scaleY, })); } drawOverlay(); } else { updateCursor(pos); } }
-        async function handleMouseUp(e) { if (!state.startPos) return; updateCursor(); const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
+        
+        // --- MOUSE EVENT HANDLERS (Restored & Adapted) ---
+        function handleMouseDown(e) {
+            if (state.isTexting || isEyedropperActive) return;
+            if (!userId) { console.warn("Cannot draw: User not authenticated."); return; }
+            
+            const pos = getMousePos(e);
+            state.startPos = pos;
+            state.action = 'none';
+
+            if (state.currentTool === 'select') {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                if (selectedObject) {
+                    const handles = getTransformHandles(selectedObject);
+                    if (handles) {
+                        for (const key in handles) {
+                            const handle = handles[key];
+                            if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
+                                state.action = handle.type; // 'resize' or 'rotate'
+                                state.transformHandle = key;
+                                state.originalObjectState = JSON.parse(JSON.stringify(selectedObject));
+                                state.originalObjectState.center = getObjectCenter(selectedObject);
+                                updateCursor(pos);
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                const clickedObjectId = findClickedObject(pos.x, pos.y);
+                if (clickedObjectId) {
+                    state.selectedObjectId = clickedObjectId;
+                    state.action = 'moving';
+                    const obj = state.allDrawings.get(clickedObjectId);
+                    const center = getObjectCenter(obj);
+                    state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y };
+                    state.originalObjectState = JSON.parse(JSON.stringify(obj));
+                } else {
+                    state.selectedObjectId = null;
+                }
+                drawOverlay();
+            } else if (state.currentTool === 'text') {
+                startTextEntry(snapToGrid(pos));
+            } else {
+                state.action = 'drawing';
+                state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
+            }
+            updateCursor(pos);
+        }
+
+        function handleMouseMove(e) {
+            let pos = getMousePos(e);
+            if (!state.startPos) {
+                updateCursor(pos);
+                return;
+            }
+
+            if (state.action === 'drawing') {
+                if (state.currentTool === 'pen') {
+                    state.tempDrawing.points.push(pos);
+                } else {
+                    state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
+                }
+                drawOverlay();
+            } else if (state.action === 'moving' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y };
+                const snappedCenter = snapToGrid(newCenter);
+                moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y);
+                drawOverlay();
+            } else if (state.action === 'rotating' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const center = state.originalObjectState.center;
+                const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x);
+                const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x);
+                selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle);
+                drawOverlay();
+            } else if (state.action === 'resizing' && state.selectedObjectId) {
+                const selectedObject = state.allDrawings.get(state.selectedObjectId);
+                const center = state.originalObjectState.center;
+                const angle = -(state.originalObjectState.rotation || 0);
+                const localPos = rotatePoint(pos, center, angle);
+                const origBounds = getObjectBounds(state.originalObjectState);
+                if (!origBounds) return;
+
+                let newWidth = Math.abs(localPos.x - center.x) * 2;
+                let newHeight = Math.abs(localPos.y - center.y) * 2;
+
+                if (state.isShiftDown && selectedObject.type !== 'line') {
+                    const origAspectRatio = origBounds.width / origBounds.height;
+                    if (origAspectRatio > 0) {
+                        if (newWidth / origBounds.width > newHeight / origBounds.height) {
+                            newHeight = newWidth / origAspectRatio;
+                        } else {
+                            newWidth = newHeight * origAspectRatio;
+                        }
+                    }
+                }
+
+                if (selectedObject.type === 'rectangle') {
+                    selectedObject.width = newWidth;
+                    selectedObject.height = newHeight;
+                    selectedObject.x = center.x - newWidth / 2;
+                    selectedObject.y = center.y - newHeight / 2;
+                } else if (selectedObject.type === 'circle') {
+                    selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y);
+                    selectedObject.x = center.x;
+                    selectedObject.y = center.y;
+                } else if (selectedObject.type === 'text') {
+                    const localStartPos = rotatePoint(state.startPos, center, angle);
+                    const origFontSize = state.originalObjectState.fontSize;
+                    const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y);
+                    const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y);
+                    if(origDist > 0.1) {
+                       const scale = newDist / origDist;
+                       selectedObject.fontSize = Math.max(5, origFontSize * scale);
+                    }
+                } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) {
+                    const scaleX = origBounds.width > 0 ? newWidth / origBounds.width : 1;
+                    const scaleY = origBounds.height > 0 ? newHeight / origBounds.height : 1;
+                    const originalPoints = state.originalObjectState.points;
+                    const originalCenter = getObjectCenter(state.originalObjectState);
+                    selectedObject.points = originalPoints.map(p => ({
+                        x: originalCenter.x + (p.x - originalCenter.x) * scaleX,
+                        y: originalCenter.y + (p.y - originalCenter.y) * scaleY,
+                    }));
+                }
+                drawOverlay();
+            }
+            updateCursor(pos);
+        }
+
+        async function handleMouseUp(e) {
+            if (!state.startPos) return;
+            const objToUpdate = state.allDrawings.get(state.selectedObjectId);
+
+            if (state.action === 'drawing' && state.tempDrawing) {
+                if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) {
+                    const newDocRef = await addObjectToFirestore(state.tempDrawing);
+                    if (newDocRef) {
+                        pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }});
+                    }
+                }
+            } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) {
+                const {id, ...data} = objToUpdate;
+                updateObjectInFirestore(id, data, state.originalObjectState);
+            }
+            
+            state.action = 'none';
+            state.startPos = null;
+            state.tempDrawing = null;
+            state.transformHandle = null;
+            state.originalObjectState = null;
+            redrawCanvas();
+            updateCursor(getMousePos(e));
+        }
+
         function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; if (state.isShiftDown) { const dx = x2 - x1; const dy = y2 - y1; if (state.currentTool === 'line') { const angle = Math.atan2(dy, dx); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx, dy); x2 = x1 + Math.cos(snappedAngle) * dist; y2 = y1 + Math.sin(snappedAngle) * dist; } else if (['rectangle', 'circle', 'polygon'].includes(state.currentTool) || state.currentTool.endsWith('-gon') || state.currentTool === 'star') { const size = Math.max(Math.abs(dx), Math.abs(dy)); x2 = x1 + Math.sign(dx) * size; y2 = y1 + Math.sign(dy) * size; } } const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; const rx = width / 2; const ry = height / 2; const generatePolygon = (sides) => ({ ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, sides) }); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [{x:x1, y:y1}, {x:x2, y:y2}] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 3, -Math.PI / 2) }; case 'diamond': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 4) }; case 'pentagon': return generatePolygon(5); case 'hexagon': return generatePolygon(6); case 'heptagon': return generatePolygon(7); case 'octagon': return generatePolygon(8); case 'star': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 5) }; case 'star-6': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 6) }; case 'arrow-right': return { ...common, type: 'polygon', points: [ {x: x1, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x2, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x1, y: cy + ry/2} ]}; case 'arrow-left': return { ...common, type: 'polygon', points: [ {x: x2, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x1, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x2, y: cy + ry/2} ]}; case 'cross': return { ...common, type: 'polygon', points: [ {x: cx - rx/3, y: y1}, {x: cx + rx/3, y: y1}, {x: cx + rx/3, y: cy - ry/3}, {x: x2, y: cy - ry/3}, {x: x2, y: cy + ry/3}, {x: cx + rx/3, y: cy + ry/3}, {x: cx + rx/3, y: y2}, {x: cx - rx/3, y: y2}, {x: cx - rx/3, y: cy + ry/3}, {x: x1, y: cy + ry/3}, {x: x1, y: cy - ry/3}, {x: cx - rx/3, y: cy - ry/3} ]}; case 'heart': return { ...common, type: 'polygon', points: generateHeartPoints(cx, cy, width, height) }; default: return null; } }
         function generatePolygonPoints(cx, cy, rx, ry, sides, angleOffset = 0) { const points = []; for (let i = 0; i < sides; i++) { const angle = (i / sides) * 2 * Math.PI + angleOffset; points.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) }); } return points; }
         function generateStarPoints(cx, cy, outerRadius, innerRadius, numPoints) { const points = []; const angleStep = Math.PI / numPoints; for (let i = 0; i < 2 * numPoints; i++) { const radius = i % 2 === 0 ? outerRadius : innerRadius; const angle = i * angleStep - Math.PI / 2; points.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }); } return points; }
@@ -600,7 +754,7 @@
         function hideModal(modal) { modal.classList.remove('visible'); }
         function getMousePos(evt) { const rect = eventCaptureLayer.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
         function snapToGrid(pos) { if (!state.isSnapEnabled) return pos; return { x: Math.round(pos.x / state.gridSize) * state.gridSize, y: Math.round(pos.y / state.gridSize) * state.gridSize, }; }
-        function updateCursor(pos) { let newCursor = ''; switch (state.currentTool) { case 'select': newCursor = 'grab'; break; case 'text': newCursor = 'text'; break; default: newCursor = 'crosshair'; } if (state.currentTool === 'select' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const handles = getTransformHandles(selectedObject); let handleFound = false; if (handles && pos) { for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { newCursor = handle.cursor; handleFound = true; break; } } } } if (isEyedropperActive) { newCursor = 'crosshair'; } eventCaptureLayer.style.cursor = newCursor; }
+        function updateCursor(pos) { let newCursor = ''; if (state.action === 'moving') { newCursor = 'grabbing'; } else if (state.action === 'resizing') { const handles = getTransformHandles(state.allDrawings.get(state.selectedObjectId)); if (handles && handles[state.transformHandle]) { newCursor = handles[state.transformHandle].cursor; } } else if (state.action === 'rotating') { newCursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>') 12 12, auto`; } else if (state.currentTool === 'select') { newCursor = 'default'; const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); let onHandle = false; if (handles && pos) { for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { newCursor = handle.cursor; onHandle = true; break; } } } if (!onHandle && findClickedObject(pos.x, pos.y)) { newCursor = 'grab'; } } else if (pos && findClickedObject(pos.x, pos.y)) { newCursor = 'grab'; } } else { newCursor = state.currentTool === 'text' ? 'text' : 'crosshair'; } if (isEyedropperActive) { newCursor = 'crosshair'; } eventCaptureLayer.style.cursor = newCursor; }
         function showConfirmationModal(title, text, onConfirm) { confirmModalTitle.textContent = title; confirmModalText.textContent = text; confirmCallback = onConfirm; showModal(confirmModalOverlay); }
         async function clearAllDrawings() { const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`; const q = query(collection(db, drawingsCollectionPath)); const querySnapshot = await getDocs(q); if (querySnapshot.empty) return; const batch = writeBatch(db); querySnapshot.forEach((doc) => batch.delete(doc.ref)); await batch.commit(); await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true }); }
         
@@ -632,35 +786,52 @@
                 
                 let messagesHtml = '';
                 for(const msg of messages) {
-                    const avatarUrl = await getOrGenerateAvatar(msg.author);
-                    const displayName = getUserDisplayName(msg.author);
-                    let textHtml = '';
-                    let mediaHtml = '';
+                    try {
+                        const avatarUrl = await getOrGenerateAvatar(msg.author);
+                        const displayName = getUserDisplayName(msg.author);
+                        let textHtml = '';
+                        let mediaHtml = '';
 
-                    if (msg.text) {
-                        const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        textHtml = `<div class="chat-text">${sanitizedText}</div>`;
-                    }
-                    
-                    if (msg.type === 'gif') {
-                        mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
-                    }
-                    
-                    const contentHtml = textHtml + mediaHtml;
-                    const finalAvatarUrl = avatarUrl || 'https://placehold.co/40x40/4b5563/FFFFFF?text=?';
+                        if (msg.text) {
+                            const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                            textHtml = `<div class="chat-text">${sanitizedText}</div>`;
+                        }
+                        
+                        if (msg.type === 'gif') {
+                            mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
+                        }
+                        
+                        const contentHtml = textHtml + mediaHtml;
+                        const finalAvatarUrl = avatarUrl || 'https://placehold.co/40x40/4b5563/FFFFFF?text=?';
 
-                    messagesHtml += `
-                        <div class="chat-message" data-message-id="${msg.id}">
-                            <img src="${finalAvatarUrl}" class="chat-avatar">
-                            <div class="chat-content">
-                                <div class="chat-author">${displayName}</div>
-                                ${contentHtml}
+                        messagesHtml += `
+                            <div class="chat-message" data-message-id="${msg.id}">
+                                <img src="${finalAvatarUrl}" class="chat-avatar">
+                                <div class="chat-content">
+                                    <div class="chat-author">${displayName}</div>
+                                    ${contentHtml}
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    } catch (error) {
+                        console.error("Error processing message:", msg.id, error);
+                        // Add a fallback message display if avatar generation fails
+                        messagesHtml += `
+                            <div class="chat-message" data-message-id="${msg.id}">
+                                <img src="https://placehold.co/40x40/4b5563/FFFFFF?text=!" class="chat-avatar">
+                                <div class="chat-content">
+                                    <div class="chat-author">${getUserDisplayName(msg.author)}</div>
+                                    <div class="chat-text">${msg.text || '[Media content]'}</div>
+                                    <div class="text-red-400 text-xs">Could not load all content.</div>
+                                </div>
+                            </div>
+                        `;
+                    }
                 };
                 chatMessages.innerHTML = messagesHtml;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                if (chatMessages.scrollHeight > chatMessages.clientHeight) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
             }, error => console.error("Chat listener error:", error));
         }
 
