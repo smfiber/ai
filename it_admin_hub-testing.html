@@ -199,7 +199,6 @@
             color: var(--color-button-text);
         }
 
-        /* MODIFIED: Removed floating action button styles */
         .floating-action-button {
             position: fixed;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
@@ -320,8 +319,41 @@
         body.apiKeyModal-open #apiKeyModal,
         body.aiLogModal-open #aiLogModal,
         body.loadingStateModal-open #loadingStateModal,
-        body.categoryBrowserModal-open #categoryBrowserModal {
+        body.categoryBrowserModal-open #categoryBrowserModal,
+        body.hierarchyManagementModal-open #hierarchyManagementModal {
              visibility: visible;
+        }
+
+        /* NEW: Hierarchy Management Modal Styles */
+        .hierarchy-column {
+            border-right: 1px solid var(--color-card-border);
+            padding-right: 1rem;
+            margin-right: 1rem;
+            min-height: 400px;
+        }
+        .hierarchy-column:last-child {
+            border-right: none;
+            padding-right: 0;
+            margin-right: 0;
+        }
+        .hierarchy-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .hierarchy-item {
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+        .hierarchy-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        .hierarchy-item.selected {
+            background-color: var(--color-primary);
+            color: var(--color-button-text);
+            border-color: var(--color-primary-dark);
         }
         
     </style>
@@ -336,13 +368,11 @@
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
-                    <!-- MODIFICATION: Added autocomplete="off" -->
                     <input type="password" id="geminiApiKeyInput" name="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required autocomplete="off">
                 </div>
 
                 <div class="mb-4">
                     <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
-                    <!-- MODIFICATION: Added autocomplete="off" -->
                     <textarea id="firebaseConfigInput" name="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here." autocomplete="off"></textarea>
                      <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. You can paste the entire snippet.</p>
                 </div>
@@ -352,7 +382,6 @@
                 
                 <div class="mb-4">
                     <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted">Google Cloud Client ID</label>
-                    <!-- MODIFICATION: Added autocomplete="off" -->
                     <input type="password" id="googleClientIdInput" name="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation" autocomplete="off">
                 </div>
                 
@@ -497,8 +526,78 @@
                 <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary">Browse Categories</h2>
                 <button id="closeCategoryBrowserModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
+            <div id="categoryBrowserBreadcrumbs" class="p-4 border-b bg-gray-50" style="border-color: var(--color-card-border);"></div>
             <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto">
                 <!-- Categories will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Hierarchy Management Modal -->
+    <div id="hierarchyManagementModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 75;">
+        <div class="card w-full max-w-6xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">Hierarchy Management</h2>
+                <button id="closeHierarchyManagementModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columns for Hierarchy -->
+                <div id="hierarchy-columns-container" class="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Main Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Main Categories</h3>
+                        <div id="main-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-main-category-input" placeholder="New Main Category" class="themed-input w-full p-2 rounded-lg text-sm">
+                            <button id="add-main-category-btn" class="btn-secondary w-full mt-2 text-sm">Add</button>
+                        </div>
+                    </div>
+                    <!-- Sub Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Sub Categories</h3>
+                        <div id="sub-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-sub-category-input" placeholder="New Sub Category" class="themed-input w-full p-2 rounded-lg text-sm" disabled>
+                            <button id="add-sub-category-btn" class="btn-secondary w-full mt-2 text-sm" disabled>Add</button>
+                        </div>
+                    </div>
+                    <!-- Final Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Final Categories</h3>
+                        <div id="final-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-final-category-input" placeholder="New Final Category" class="themed-input w-full p-2 rounded-lg text-sm" disabled>
+                            <button id="add-final-category-btn" class="btn-secondary w-full mt-2 text-sm" disabled>Add</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Editing Form -->
+                <div id="hierarchy-edit-form-container" class="lg:col-span-1 p-4 rounded-lg bg-gray-50">
+                    <h3 class="font-bold themed-text-accent mb-4">Edit Details</h3>
+                    <div id="hierarchy-edit-form" class="hidden space-y-4">
+                        <div>
+                            <label for="edit-title" class="block text-sm font-medium themed-text-muted">Title</label>
+                            <input type="text" id="edit-title" class="themed-input w-full p-2 rounded-lg mt-1">
+                        </div>
+                        <div id="edit-description-container">
+                            <label for="edit-description" class="block text-sm font-medium themed-text-muted">Description</label>
+                            <textarea id="edit-description" rows="3" class="themed-input w-full p-2 rounded-lg mt-1"></textarea>
+                        </div>
+                        <div id="edit-initial-prompt-container">
+                            <label for="edit-initial-prompt" class="block text-sm font-medium themed-text-muted">Initial Prompt (for ~10 topics)</label>
+                            <textarea id="edit-initial-prompt" rows="4" class="themed-input w-full p-2 rounded-lg mt-1 font-mono text-xs"></textarea>
+                        </div>
+                        <div id="edit-full-prompt-container">
+                            <label for="edit-full-prompt" class="block text-sm font-medium themed-text-muted">Full Prompt (for ~50 topics)</label>
+                            <textarea id="edit-full-prompt" rows="4" class="themed-input w-full p-2 rounded-lg mt-1 font-mono text-xs"></textarea>
+                        </div>
+                        <div class="flex justify-between items-center pt-4">
+                           <button id="save-hierarchy-item-btn" class="btn-primary">Save Changes</button>
+                           <button id="delete-hierarchy-item-btn" class="btn-secondary !text-red-600 !border-red-300 hover:!bg-red-100">Delete</button>
+                        </div>
+                    </div>
+                    <p id="hierarchy-form-placeholder" class="themed-text-muted text-center mt-8">Select an item to view its details.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -523,17 +622,21 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v5.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.0</div>
         </header>
 
         <main id="main-content" class="space-y-8">
-            <!-- NEW: Admin Tools Card -->
+            <!-- MODIFIED: Admin Tools Card -->
             <div id="admin-tools-card" class="card p-6">
                 <h2 class="text-xl font-bold themed-text-primary flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20h4a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H8a2 2 0 0 0-2 2v2"></path><rect x="2" y="10" width="8" height="12" rx="2"></rect></svg>
                     Admin Tools
                 </h2>
                 <div id="admin-tools-container" class="flex flex-wrap gap-2 mt-4">
+                    <button id="hierarchy-manager-button" class="btn-secondary" title="Manage Topic Hierarchy">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"></path><polyline points="10 7 15 12 10 17"></polyline><line x1="15" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Hierarchy</span>
+                    </button>
                     <button id="real-time-log-button" class="btn-secondary" title="Real-Time AI Log">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
                         <span>AI Log</span>
@@ -637,7 +740,6 @@
             <div id="dynamic-card-container" class="space-y-8"></div>
         </main>
         
-        <!-- MODIFIED: Removed most floating buttons, only scroll-to-top remains -->
         <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
@@ -658,7 +760,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -716,67 +818,15 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 ---
 `;
         
-        // --- Content Generation Categories ---
-        const categoriesToGenerate = [
-            // ... (All 50+ categories from the original file are preserved here)
-            { key: 'activeDirectory', title: 'Active Directory Management', description: "Tasks for managing users, groups, GPOs, and other AD objects.", initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'aiProgramming', title: 'Artificial Intelligence Programming', description: "Concepts and guides for getting started with AI development and programming.", initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Provide the output as a valid JSON array.` },
-            { key: 'citrixAdmin', title: 'Citrix Administration', description: "Managing Citrix Virtual Apps and Desktops environments.", initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'geminiInfographics', title: 'Create Infographics in Gemini', description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'geminiLinkedIn', title: 'Create LinkedIn Posts using Gemini', description: "Use Gemini to draft engaging and professional posts for LinkedIn.", initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'dataCenterPractices', title: 'Data Center Best Practices', description: "Guides on data center operations, cooling, power, and security.", initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice. Provide the output as a valid JSON array.` },
-            { key: 'webDesignBestPractices', title: 'Designing Web Pages Best Practices', description: "Best practices for UI/UX, accessibility, and performance in web design.", initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice. Provide the output as a valid JSON array.` },
-            { key: 'webDesignGemini', title: 'Designing Web Pages with Gemini AI', description: "Using Gemini AI to assist in the design and development of web pages.", initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method. Provide the output as a valid JSON array.` },
-            { key: 'dosCommands', title: 'DOS Commands for Administrators', description: "A reference for essential DOS and Command Prompt commands for system admins.", initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters. Provide the output as a valid JSON array.` },
-            { key: 'geminiCliGuide', title: 'A Guide to Using the Gemini CLI', description: "Learn how to use the Gemini Command Line Interface for various tasks.", initialPrompt: `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced use cases and commands for the Gemini CLI. For each, give a unique "id", "title", and a detailed "description" of the use case. Provide the output as a valid JSON array.` },
-            { key: 'hpeProLiant', title: 'HPE ProLiant Server Management', description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'javascriptForHtml', title: 'JavaScript for HTML', description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept. Provide the output as a valid JSON array.` },
-            { key: 'linuxCliAdmin', title: 'Linux CLI for Administration', description: "A reference for essential Linux commands for system administrators.", initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration. For each, give a unique "id", "title" (the command), and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Admin', title: 'Microsoft 365 Administration', description: "Administering users, services, and security in Microsoft 365.", initialPrompt: `Generate 10 common administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'm365ConditionalAccess', title: 'M365: Conditional Access Policies', description: "Enforce access controls based on user location, device health, and risk level.", initialPrompt: `Generate 10 common scenarios for using M365 Conditional Access Policies. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 scenarios and configurations for M365 Conditional Access Policies. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Dlp', title: 'M365: Data Loss Prevention (DLP)', description: "Create policies to prevent sensitive information from being shared inappropriately.", initialPrompt: `Generate 10 common Data Loss Prevention (DLP) policy ideas for M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policy ideas and configurations for M365 Data Loss Prevention (DLP). For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365ExchangeAdmin', title: 'M365: Exchange Admin Center', description: "Manage all aspects of your organization's email, including mailboxes, distribution groups, mail flow rules, and anti-spam policies.", initialPrompt: `Generate 10 common tasks for the M365 Exchange Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 tasks and procedures for the M365 Exchange Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365AdminCenter', title: 'M365: Microsoft 365 Admin Center', description: "Your primary portal for managing your Microsoft 365 subscription, serving as a launching point to more specialized admin centers.", initialPrompt: `Generate 10 key tasks and features of the main Microsoft 365 Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 tasks, features, and navigation guides for the main Microsoft 365 Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderEndpoint', title: 'M365: Microsoft Defender for Endpoint', description: "Manage endpoint security, vulnerability assessments, and response actions for devices.", initialPrompt: `Generate 10 common tasks in Microsoft Defender for Endpoint. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and security operations in Microsoft Defender for Endpoint. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderIdentity', title: 'M365: Microsoft Defender for Identity', description: "Monitor and protect against identity-based threats and compromised user accounts.", initialPrompt: `Generate 10 key features of Microsoft Defender for Identity. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features, alerts, and investigation guides for Microsoft Defender for Identity. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderXdr', title: 'M365: Microsoft Defender XDR Portal', description: "A unified portal to manage and respond to security threats across your Microsoft 365 environment.", initialPrompt: `Generate 10 key areas of the Microsoft Defender XDR portal. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features, investigation workflows, and administrative tasks within the Microsoft Defender XDR portal. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Mfa', title: 'M365: Multi-Factor Authentication (MFA)', description: "Configure and manage MFA settings to enhance security.", initialPrompt: `Generate 10 key aspects of configuring MFA in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 aspects of configuring and managing MFA in M365, including policies and user enrollment. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Pim', title: 'M365: Privileged Identity Management (PIM)', description: "Provide just-in-time privileged access to resources.", initialPrompt: `Generate 10 concepts of using Privileged Identity Management (PIM) in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 concepts and procedures for using Privileged Identity Management (PIM) in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365PowerPlatformAdmin', title: 'M365: Power Platform Admin Center', description: "Manage environments, data policies, and integrations for Power Apps, Power Automate, and Power BI.", initialPrompt: `Generate 10 common tasks for the Power Platform Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and governance policies for the Power Platform Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365SharepointAdmin', title: 'M365: SharePoint Admin Center', description: "Control your organization's SharePoint sites and OneDrive settings. Manage site collections, sharing policies, and storage limits.", initialPrompt: `Generate 10 common tasks for the SharePoint Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and settings in the SharePoint Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Sso', title: 'M365: Single Sign-On (SSO)', description: "Manage SSO for thousands of pre-integrated SaaS applications.", initialPrompt: `Generate 10 concepts for configuring SSO in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 concepts and procedures for configuring SSO for apps in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365TeamsAdmin', title: 'M365: Teams Admin Center', description: "Manage all aspects of Microsoft Teams, including user policies, meeting settings, app integrations, and call quality.", initialPrompt: `Generate 10 common tasks for the Teams Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policies, settings, and management tasks for the Teams Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365UserGroupMgmt', title: 'M365: User and Group Management', description: "Advanced management of user accounts, security groups, and distribution lists.", initialPrompt: `Generate 10 advanced user and group management tasks in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 advanced user and group management tasks and scenarios in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'msGraphScripting', title: 'MS Graph scripting', description: "Automating M365 tasks using the Microsoft Graph API.", initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'psForM365AdminCenter', title: 'PowerShell for Microsoft 365 Admin Center', description: "Using PowerShell to manage core M365 settings, licenses, and users.", initialPrompt: `Generate 10 common PowerShell tasks for the main M365 Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for the main M365 Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Entra', title: 'PowerShell for Microsoft Entra', description: "Using PowerShell to manage users, groups, devices, and applications in Microsoft Entra ID.", initialPrompt: `Generate 10 common PowerShell tasks for Microsoft Entra. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Microsoft Entra. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Exchange', title: 'PowerShell for Microsoft Exchange Online', description: "Using PowerShell to manage mailboxes, transport rules, and other Exchange Online features.", initialPrompt: `Generate 10 common PowerShell tasks for Exchange Online. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Exchange Online. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Sharepoint', title: 'PowerShell for Microsoft SharePoint Online', description: "Using PowerShell to manage SharePoint sites, lists, permissions, and settings.", initialPrompt: `Generate 10 common PowerShell tasks for SharePoint Online. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for SharePoint Online. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Teams', title: 'PowerShell for Microsoft Teams', description: "Using PowerShell to manage Teams, channels, policies, and users in Microsoft Teams.", initialPrompt: `Generate 10 common PowerShell tasks for Microsoft Teams. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policies, settings, and management tasks for the Teams Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'powershellWindowsServer', title: 'PowerShell for Windows Server Administration', description: "Automating Windows Server management with PowerShell scripts and cmdlets.", initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'powershellScripts', title: 'PowerShell Scripts', description: "A collection of useful PowerShell scripts for various administrative tasks.", initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose. Provide the output as a valid JSON array.` },
-            { key: 'scomAdmin', title: 'SCOM Administration', description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).', initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'serviceNowAdmin', title: 'ServiceNow Platform Administration', description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.', initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'usefulApis', title: 'Useful APIs for Web Development', description: "A curated list of public APIs that are useful for web development projects.", initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate a list of 40-50 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'vmwareEsxi', title: 'VMware ESXi Administration', description: "Guides and best practices for managing VMware ESXi environments.", initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'vmwarePowerCli', title: 'VMware PowerCLI', description: "Automating VMware vSphere administration using PowerCLI.", initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windows11Admin', title: 'Windows 11 Administration', description: "Key tasks and features for administering Windows 11 in an enterprise.", initialPrompt: `Generate 10 key administrative tasks for Windows 11. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows 11. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windows12Features', title: 'Windows 12 - New Features', description: "Exploring the announced and anticipated new features of Windows 12.", initialPrompt: `Generate 10 anticipated new features for Windows 12. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 anticipated new features and changes for Windows 12. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer', title: 'Windows Server Administration', description: "Essential tasks for managing Windows Server instances.", initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2019', title: 'Windows Server 2019 Administration', description: "Key tasks and features for administering Windows Server 2019.", initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2022', title: 'Windows Server 2022 Administration', description: "Key tasks and new features for administering Windows Server 2022.", initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2025', title: 'Windows Server 2025', description: "Exploring the new features and administration changes in Windows Server 2025.", initialPrompt: `Generate 10 key new features in Windows Server 2025. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 new features and administrative tasks for Windows Server 2025. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2025Azure', title: 'Windows Server 2025 Datacenter: Azure Edition', description: "Exploring features specific to the Azure Edition of Windows Server 2025, like Hotpatching and SMB over QUIC.", initialPrompt: `Generate 10 key features of Windows Server 2025 Azure Edition. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features and management tasks specific to Windows Server 2025 Azure Edition. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` }
-        ];
-        
         // --- Global State & Configuration ---
         let geminiApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
-        const fullPrompts = {}; 
         let originalGeneratedText = new Map();
         let aiLog = []; 
+        let currentHierarchyPath = [];
+        let selectedHierarchyItems = { main: null, sub: null, final: null };
+
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -1032,7 +1082,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             document.getElementById('browse-all-btn').addEventListener('click', () => openCategoryBrowser('all'));
             document.getElementById('closeCategoryBrowserModal').addEventListener('click', () => closeModal('categoryBrowserModal'));
 
-
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
                 const folderId = await getDriveFolderId();
@@ -1121,8 +1170,10 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 
                 const exploreBtn = e.target.closest('.explore-button');
                 if (exploreBtn) {
-                    const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
-                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
+                    const card = exploreBtn.closest('.card');
+                    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+                    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+                    handleExploreInDepth(finalCategory.id, fullHierarchyPath);
                     return;
                 }
                 
@@ -1191,6 +1242,15 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                     scrollTopButton.classList.add('hidden');
                 }
             });
+
+            // MODIFIED: Added listeners for Hierarchy Management
+            document.getElementById('hierarchy-manager-button').addEventListener('click', openHierarchyManagementModal);
+            document.getElementById('add-main-category-btn').addEventListener('click', () => handleAddHierarchyItem('main'));
+            document.getElementById('add-sub-category-btn').addEventListener('click', () => handleAddHierarchyItem('sub'));
+            document.getElementById('add-final-category-btn').addEventListener('click', () => handleAddHierarchyItem('final'));
+            document.getElementById('save-hierarchy-item-btn').addEventListener('click', handleSaveHierarchyItem);
+            document.getElementById('delete-hierarchy-item-btn').addEventListener('click', handleDeleteHierarchyItem);
+
 
             document.getElementById('firebase-tools-button').addEventListener('click', openStickyTopicsModal);
             document.getElementById('sticky-topic-category-select').addEventListener('change', (e) => listenForStickyTopics(e.target.value));
@@ -1403,7 +1463,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
              }
 
              const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
-             // FIX: Corrected variable name from 'content' to 'contentToSave'
              await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
@@ -1546,7 +1605,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         
         async function loadAppContent() {
             try {
-                categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
             } catch (error) {
                 console.error("An error occurred while loading app content:", error.message);
@@ -1554,35 +1612,49 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }
         }
         
-        async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
+        async function generateAndPopulateAICategory(fullHierarchyPath) {
+            const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+            const cardId = `category-card-${finalCategory.id}`;
+            const existingCard = document.getElementById(cardId);
+            if (existingCard) {
+                existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             const card = document.createElement('div');
             card.className = 'card';
-            card.id = `${key}-card`;
-            const selectorId = `${key}-selector-visual`;
-            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-theme-type="${key}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
+            card.id = cardId;
+            card.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
             
-            fullPrompts[key] = fullPrompt;
+            const selectorId = `selector-${finalCategory.id}`;
+            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+            
+            const container = document.getElementById('dynamic-card-container');
+            container.prepend(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             try {
-                const jsonText = await callGeminiAPI(initialPrompt, true, "Initial Category Population");
-                if (!jsonText) throw new Error(`API returned empty content for ${title}.`);
+                const prompt = finalCategory.initialPrompt || `Generate 10 common topics for ${finalCategory.title}.`;
+                const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
+                if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
                 
                 const data = parseJsonWithCorrections(jsonText);
                 data.sort((a, b) => a.title.localeCompare(b.title));
-                allThemeData[key] = data;
+                allThemeData[finalCategory.id] = data;
                 
-                populateCardGridSelector(card.querySelector(`#${selectorId}`), key);
+                populateCardGridSelector(card.querySelector(`#${selectorId}`), finalCategory.id);
                 return card;
 
             } catch (error) {
-                handleApiError(error, card.querySelector(`#${selectorId}`), title, card);
+                handleApiError(error, card.querySelector(`#${selectorId}`), finalCategory.title, card);
                 throw error;
             }
         }
         
-        function populateCardGridSelector(container, themeType, newItemsIds = new Set()) {
-            const data = allThemeData[themeType] || [];
-            const stickies = stickyTopics[themeType] || [];
+        function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
+            const data = allThemeData[categoryId] || [];
+            // MODIFICATION: Sticky topics are now associated with the final category ID
+            const stickies = stickyTopics[categoryId] || [];
             
             if (!container) return;
             if (data.length === 0 && stickies.length === 0) {
@@ -1591,16 +1663,17 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }
 
             const gridClass = 'card-grid-container';
-            const cardTitle = container.closest('.card').querySelector('h2').textContent;
+            const card = container.closest('.card');
+            const cardTitle = card.querySelector('h2').textContent;
 
             const stickyTitles = new Set(stickies.map(s => s.title));
 
             const stickyHtml = stickies.map(item => `
-                <div id="grid-selector-${item.id}" class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.title}">
+                <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
                     <div class="indicator sticky-indicator" title="Sticky Topic">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg>
                     </div>
-                    <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                    <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
                     <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
                 </div>`
             ).join('');
@@ -1616,39 +1689,41 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                     const newClass = isNew ? 'new-item-highlight' : '';
                     
                     return `
-                    <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
+                    <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.description || item.title}">
                         ${viewedIndicatorHtml}
-                        <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                        <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
                         <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
                     </div>`;
             }).join('');
             
-            const topicInputId = `add-topic-input-${themeType}`;
+            const topicInputId = `add-topic-input-${categoryId}`;
             const containerId = container.id;
             const addNewTopicHtml = `
                 <div class="add-topic-container">
                     <input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
-                    <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-theme-type="${themeType}">Add Topic</button>
+                    <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-category-id="${categoryId}">Add Topic</button>
                 </div>
             `;
             
-            const fullPrompt = fullPrompts[themeType];
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+            const fullPrompt = finalCategory.fullPrompt;
+            
             let actionButtonsHtml = '';
-            const card = container.closest('.card');
             const isFullyLoaded = card.dataset.isFullyLoaded === 'true';
 
             if (fullPrompt && data.length > 0) {
                 if (isFullyLoaded) {
-                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 10 More</span></button></div>`;
+                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 10 More</span></button></div>`;
                 } else {
-                     actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">Show All (${data.length} of ~50 shown)</button></div>`;
+                     actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="show-all-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}">Show All (${data.length} of ~50 shown)</button></div>`;
                 }
             }
             container.innerHTML = `<div class="${gridClass}">${stickyHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
         }
         
         async function handleAddNewTopic(button) {
-            const { containerId, themeType } = button.dataset;
+            const { containerId, categoryId } = button.dataset;
             const inputField = button.previousElementSibling;
             const newTitle = inputField.value.trim();
 
@@ -1660,12 +1735,12 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 description: `Custom guide for: ${newTitle}`
             };
 
-            if (!allThemeData[themeType]) { allThemeData[themeType] = []; }
-            allThemeData[themeType].push(newTopic);
-            allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
+            if (!allThemeData[categoryId]) { allThemeData[categoryId] = []; }
+            allThemeData[categoryId].push(newTopic);
+            allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
 
             const container = document.getElementById(containerId);
-            populateCardGridSelector(container, themeType, new Set([newTopic.id]));
+            populateCardGridSelector(container, categoryId, new Set([newTopic.id]));
 
             const newTopicElement = document.getElementById(`grid-selector-${newTopic.id}`);
             if (newTopicElement) {
@@ -1675,16 +1750,17 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         }
 
         async function handleGenerateMoreClick(button) {
-            const { containerId, themeType } = button.dataset;
+            const { containerId, categoryId } = button.dataset;
             const container = document.getElementById(containerId);
-            if (!container || !themeType || !allThemeData[themeType]) return;
+            if (!container || !categoryId || !allThemeData[categoryId]) return;
 
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
 
             const card = container.closest('.card');
-            const categoryTitle = card.querySelector('h2').textContent;
-            const existingTitles = allThemeData[themeType].map(item => item.title);
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
+            const existingTitles = allThemeData[categoryId].map(item => item.title);
             
             const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
             Existing Task List:\n- ${existingTitles.join('\n- ')}\n
@@ -1698,17 +1774,17 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 const newItemIds = new Set(newItems.map(item => item.id));
                 
                 newItems.forEach(newItem => {
-                    if (!allThemeData[themeType].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
-                        allThemeData[themeType].push(newItem);
+                    if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
+                        allThemeData[categoryId].push(newItem);
                     }
                 });
                 
-                allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
-                populateCardGridSelector(container, themeType, newItemIds);
-                document.getElementById(`${themeType}-details`).innerHTML = '';
+                allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
+                populateCardGridSelector(container, categoryId, newItemIds);
+                document.getElementById(`details-${categoryId}`).innerHTML = '';
 
             } catch (error) {
-                console.error(`Error generating more items for ${themeType}:`, error);
+                console.error(`Error generating more items for ${categoryId}:`, error);
                 const originalButtonContent = button.innerHTML;
                 button.disabled = false;
                 button.innerHTML = 'Error. Try Again.';
@@ -1721,9 +1797,13 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         }
         
         async function handleShowAllClick(button) {
-            const { containerId, themeType } = button.dataset;
+            const { containerId, categoryId } = button.dataset;
             const container = document.getElementById(containerId);
-            const fullPrompt = fullPrompts[themeType];
+            
+            const card = container.closest('.card');
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+            const fullPrompt = finalCategory.fullPrompt;
 
             if (!container || !fullPrompt) return;
 
@@ -1732,32 +1812,31 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 
             try {
                 const jsonText = await callGeminiAPI(fullPrompt, true, "Show All Topics");
-                if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
+                if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title} (full list).`);
                 
                 const fullData = parseJsonWithCorrections(jsonText);
                 fullData.sort((a, b) => a.title.localeCompare(b.title));
-                allThemeData[themeType] = fullData;
+                allThemeData[categoryId] = fullData;
 
-                const card = container.closest('.card');
                 card.dataset.isFullyLoaded = 'true';
 
-                populateCardGridSelector(container, themeType);
-                document.getElementById(`${themeType}-details`).innerHTML = '';
+                populateCardGridSelector(container, categoryId);
+                document.getElementById(`details-${categoryId}`).innerHTML = '';
             } catch (error) {
                 button.disabled = false;
                 button.classList.add('bg-red-100', 'text-red-700');
                 button.textContent = "Error. Try again.";
-                console.error(`Error loading full list for ${themeType}:`, error);
+                console.error(`Error loading full list for ${finalCategory.title}:`, error);
             }
         }
 
         async function handleGridSelect(target) {
-            const { themeId, themeType } = target.dataset;
-            let item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) || 
-                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+            const { topicId, categoryId } = target.dataset;
+            let item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || 
+                       stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId));
             
             if (!item) {
-                console.error("Could not find theme item for:", {themeId, themeType});
+                console.error("Could not find theme item for:", {topicId, categoryId});
                 return;
             }
             
@@ -1769,7 +1848,8 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }
 
             const card = target.closest('.card');
-            const cardTitle = card.querySelector('h2').textContent;
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const cardTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
             
             await markItemAsViewed(cardTitle, item.title);
             
@@ -1791,18 +1871,18 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
             `;
             
-            const resultContainer = document.getElementById(`${themeType}-details`);
+            const resultContainer = document.getElementById(`details-${categoryId}`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
                 let resultText = await callGeminiAPI(prompt, false, "Generate Topic Summary");
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                originalGeneratedText.set(themeId, resultText); 
+                originalGeneratedText.set(topicId, resultText); 
                 
                 const resultHtml = marked.parse(resultText || '');
                 resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
 
-                addPostGenerationButtons(resultContainer, themeId, themeType);
+                addPostGenerationButtons(resultContainer, topicId, categoryId);
             } catch (error) {
                 handleApiError(error, resultContainer, `guide for ${item.title}`);
             }
@@ -2075,13 +2155,7 @@ Return only these sections in markdown format. Do not include any other sections
         
         function getAppPrompts() {
             const prompts = {};
-
-            categoriesToGenerate.forEach(cat => {
-                prompts[`${cat.title} (Initial Load)`] = cat.initialPrompt;
-                prompts[`${cat.title} (Full Details)`] = cat.fullPrompt;
-            });
-
-            prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" });
+            prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { hierarchyContext: "{hierarchyContext}" });
             prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
@@ -2130,6 +2204,17 @@ Return only these sections in markdown format. Do not include any other sections
 
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
+            
+            let hierarchyContextString = '';
+            if (context.hierarchyContext) {
+                const path = context.hierarchyContext;
+                hierarchyContextString = `
+- **Main Category:** "${path[0]?.title || 'N/A'}"
+- **Sub-category:** "${path[1]?.title || 'N/A'}"
+- **Final Category:** "${path[2]?.title || 'N/A'}"
+`;
+            }
+
 
             if (originalText) {
                 // This is the prompt for refining existing text
@@ -2151,8 +2236,8 @@ Return only the new, complete, and rewritten markdown text.`;
             // This is the prompt for generating a new guide, with the user's requested changes.
             return `You are an expert senior IT administrator and technical writer AI. Your primary goal is to generate a comprehensive, in-depth, and practical **reference guide** for the topic below.
 The main objective is not just to explain a task, but to create an exhaustive guide on its **underlying key concepts**. Prioritize depth, nuance, and multiple practical implementation methods for each concept. The user must walk away with a deep, applicable understanding of each component technology.
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
+**GUIDE CONTEXT:**
+${hierarchyContextString}
 - **Specific Task:** "${task}"
 **CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
@@ -2202,12 +2287,13 @@ ${powerCLIStandard}
 Return only the complete markdown guide, ensuring each main section has a '###' header.`;
         }
         
-        async function handleExploreInDepth(themeId, themeType, cardName) {
-            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) ||
-                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+        async function handleExploreInDepth(topicId, fullHierarchyPath) {
+            const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
+            const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) ||
+                       stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId));
 
             if (!item) {
-                console.error("Could not find item for in-depth view", { themeId, themeType });
+                console.error("Could not find item for in-depth view", { topicId, categoryId });
                 return;
             }
 
@@ -2222,19 +2308,20 @@ Return only the complete markdown guide, ensuring each main section has a '###' 
             buttonContainer.innerHTML = '';
             document.getElementById('modal-status-message').textContent = '';
 
-            footerEl.dataset.themeId = themeId;
-            footerEl.dataset.themeType = themeType;
+            footerEl.dataset.topicId = topicId;
+            footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
             footerEl.dataset.fullTitle = fullTitle;
-            footerEl.dataset.cardName = cardName;
+            footerEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
 
             openModal('inDepthModal');
-
-            const context = { cardTitle: cardName, cardDescription: item.description };
+            
+            const context = { hierarchyContext: fullHierarchyPath };
 
             const initialPrompt = `You are an expert senior IT administrator and technical writer AI.
 Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following topic:
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
+- **Main Category:** ${context.hierarchyContext[0]?.title}
+- **Sub-category:** ${context.hierarchyContext[1]?.title}
+- **Final Category:** ${context.hierarchyContext[2]?.title}
 - **Specific Task:** "${item.title}"
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
 Return only these sections in markdown format. Do not include any other sections.`;
@@ -2258,7 +2345,7 @@ Return only these sections in markdown format. Do not include any other sections
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
-            const cardName = firstModalFooter.dataset.cardName;
+            const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
             
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
@@ -2273,14 +2360,14 @@ Return only these sections in markdown format. Do not include any other sections
             detailedButtonContainer.innerHTML = '';
             
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
-            detailedFooterEl.dataset.cardName = cardName;
+            detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
             
             openModal('inDepthDetailedModal');
 
             try {
                 detailedContentEl.innerHTML = getLoaderHTML('Generating initial draft...');
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-                const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
+                const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', { hierarchyContext: fullHierarchyPath });
                 
                 let initialGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide (Draft)");
                 initialGuideMarkdown = initialGuideMarkdown ? initialGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
@@ -2519,7 +2606,7 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
 
-        function addPostGenerationButtons(container, themeId, themeType) {
+        function addPostGenerationButtons(container, topicId, categoryId) {
             let buttonBar = container.querySelector('.button-bar');
             if (buttonBar) buttonBar.remove();
 
@@ -2529,7 +2616,7 @@ Return only these sections in markdown format. Do not include any other sections
             buttonBar.innerHTML = `
                 <button class="btn-secondary text-sm refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                <button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>
+                <button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>
             `;
             container.appendChild(buttonBar);
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
@@ -2701,18 +2788,12 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        /**
-         * MODIFIED: Handles the AI Help button click.
-         * This function now generates technical documentation for the application itself.
-         */
         async function handleAIHelpRequest() {
-            // Update modal title to reflect new purpose
             document.getElementById('inDepthModalTitle').textContent = "Code Documentation Generation";
             
             const contentEl = document.getElementById('inDepthModalContent');
             contentEl.innerHTML = getLoaderHTML('AI is generating the technical code documentation...');
             
-            // Clear previous buttons and status messages
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
             
@@ -2739,30 +2820,29 @@ Return only these sections in markdown format. Do not include any other sections
             * **Core APIs:** Google Gemini API (for content generation), Google Drive API (for storage), Google Identity Services (for auth), and the Google AI Platform API (for image generation).
 
         ### 3. Architectural Design
-        * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals (e.g., 'generative-ai-prompt-card', 'topic-explorer-card', various modals for different functions).
+        * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals.
         * **State Management:** Describe how the application state is managed, including API keys in localStorage, user session state via Firebase Auth, and in-memory state for generated content.
         * **Event-Driven Logic:** Explain the role of the central 'setupEventListeners' function and how it delegates tasks based on user interactions.
+        * **Hierarchical Content Model:** Explain the Firestore data structure ('topicHierarchy' collection) for managing content in a nested Main -> Sub -> Final Category structure.
 
         ### 4. Core Features Deep Dive
         * For each key feature below, describe its purpose and implementation:
-            * **Dynamic Category Generation:** How the 'openCategoryBrowser' and 'generateAndPopulateAICategory' functions work together to create UI on demand.
+            * **Dynamic Category Generation:** How 'openCategoryBrowser' and 'generateAndPopulateAICategory' work with Firestore to create UI on demand.
             * **Multi-Stage Guide Generation:** Detail the process that starts with a summary ('handleGridSelect'), moves to an initial guide ('handleExploreInDepth'), and finishes with a complete, AI-reviewed document ('generateFullDetailedGuide').
-            * **AI-Powered Refinement:** Explain how the 'handleRefineRequest' function uses an existing guide as context to provide iterative improvements.
-            * **Cloud Integration (Google Drive):** Detail the process of authentication ('handleAuthClick'), folder creation ('getDriveFolderId'), and file saving ('handleSaveToDriveClick').
+            * **Hierarchy Management:** Describe the purpose and functionality of the 'hierarchyManagementModal' for CRUD operations on the content structure in Firestore.
 
         ### 5. Key Functions & Logic
-        * **\`initializeApplication()\`:** The main entry point that orchestrates setup.
-        * **\`callGeminiAPI()\` / \`callApi()\`:** The centralized functions for all generative AI requests, including error handling and timeout logic.
-        * **Modal Management (\`openModal\`, \`closeModal\`):** The system for controlling the visibility and state of various modals.
+        * **\`initializeApplication()\`:** The main entry point.
+        * **\`callGeminiAPI()\` / \`callApi()\`:** Centralized functions for all generative AI requests.
+        * **\`openHierarchyManagementModal()\` & related functions:** The logic for populating and interacting with the hierarchy management UI.
+        * **\`openCategoryBrowser()\`:** The function that initiates the user-facing topic exploration flow.
 
         Return only the complete markdown documentation.
         `;
 
             try {
-                // Call the Gemini API with the new documentation prompt
                 const documentationResult = await callGeminiAPI(codeDocPrompt, false, "Generate Code Documentation");
                 
-                // Process and render the single response
                 const documentationHtml = documentationResult ? marked.parse(documentationResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load documentation.</p>';
                 
                 contentEl.innerHTML = `<div class="prose max-w-none">${documentationHtml}</div>`;
@@ -2843,14 +2923,17 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        function getIconForTheme(themeType, themeId) { 
+        function getIconForTheme(categoryId, topicId) { 
             const icons = {
                 serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
                 windowsServer: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
                 m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
                 default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
             }
-            return icons[themeType] || icons.default;
+            // Simple logic to pick an icon based on a hash of the categoryId, can be improved.
+            const keys = Object.keys(icons);
+            const hash = categoryId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return icons[keys[hash % keys.length]] || icons.default;
         }
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
@@ -2885,15 +2968,33 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
         // --- Sticky Topics Functions ---
-        function openStickyTopicsModal() {
+        async function openStickyTopicsModal() {
             const select = document.getElementById('sticky-topic-category-select');
             select.innerHTML = '<option value="">Select a category...</option>';
             
-            const sortedCategories = [...categoriesToGenerate].sort((a,b) => a.title.localeCompare(b.title));
+            // Fetch all final categories from Firestore to populate the dropdown
+            try {
+                const finalCategories = [];
+                const mainCatsSnapshot = await getDocs(collection(db, 'topicHierarchy'));
+                for (const mainDoc of mainCatsSnapshot.docs) {
+                    const subCatsSnapshot = await getDocs(collection(db, mainDoc.ref.path, 'subCategories'));
+                    for (const subDoc of subCatsSnapshot.docs) {
+                        const finalCatsSnapshot = await getDocs(collection(db, subDoc.ref.path, 'finalCategories'));
+                        finalCatsSnapshot.forEach(finalDoc => {
+                            finalCategories.push({ id: finalDoc.id, ...finalDoc.data() });
+                        });
+                    }
+                }
+                
+                finalCategories.sort((a, b) => a.title.localeCompare(b.title));
+                finalCategories.forEach(cat => {
+                    select.add(new Option(cat.title, cat.id));
+                });
 
-            sortedCategories.forEach(cat => {
-                select.add(new Option(cat.title, cat.key));
-            });
+            } catch (error) {
+                console.error("Error populating sticky topic categories:", error);
+                select.innerHTML = '<option value="">Error loading categories</option>';
+            }
 
             document.getElementById('sticky-topics-list').innerHTML = '';
             document.getElementById('new-sticky-topic-input').value = '';
@@ -2912,6 +3013,7 @@ Return only these sections in markdown format. Do not include any other sections
             }
             
             const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            // MODIFIED: Sticky topics are now stored under a final category's ID
             const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
             
             stickyTopicsUnsubscribe = onSnapshot(stickyTopicsCollectionRef, (snapshot) => {
@@ -2919,7 +3021,7 @@ Return only these sections in markdown format. Do not include any other sections
                 stickyTopics[categoryKey] = topics;
                 renderStickyTopics(categoryKey);
                 
-                const gridContainer = document.getElementById(`${categoryKey}-selector-visual`);
+                const gridContainer = document.getElementById(`selector-${categoryKey}`);
                 if (gridContainer) {
                     populateCardGridSelector(gridContainer, categoryKey);
                 }
@@ -2996,7 +3098,8 @@ Return only these sections in markdown format. Do not include any other sections
 
             if (!categoryKey || !docId || !userId) return;
             
-            if (window.confirm("Are you sure you want to delete this sticky topic?")) {
+            const userConfirmed = window.confirm("Are you sure you want to delete this sticky topic?");
+            if (userConfirmed) {
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
                 try {
@@ -3008,133 +3111,289 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
         // --- MODIFIED: Topic Browser Functions ---
-
-        /**
-         * Opens the Category Browser modal and populates it with categories.
-         * @param {'featured' | 'all'} mode - Determines whether to show top 10 or all, or dynamically generated featured.
-         */
         async function openCategoryBrowser(mode) {
             const modalTitle = document.getElementById('categoryBrowserModalTitle');
-            const modalContent = document.getElementById('categoryBrowserModalContent');
-            modalContent.innerHTML = ''; // Clear previous content
+            modalTitle.textContent = 'Browse Categories';
+            currentHierarchyPath = [];
+            updateBreadcrumbs();
+            await renderCategoryLevel(collection(db, 'topicHierarchy'));
             openModal('categoryBrowserModal');
+        }
 
-            let categories = [];
-
-            if (mode === 'featured') {
-                modalTitle.textContent = 'Featured Categories';
-                modalContent.innerHTML = getLoaderHTML('Calculating your most viewed categories...');
+        async function renderCategoryLevel(collectionRef) {
+            const modalContent = document.getElementById('categoryBrowserModalContent');
+            modalContent.innerHTML = getLoaderHTML('Loading categories...');
+            try {
+                const snapshot = await getDocs(query(collectionRef, orderBy('title')));
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
                 
-                try {
-                    // This block contains the new logic for dynamic featured categories
-                    if (!viewedItemsCollectionRef) {
-                        throw new Error("User not authenticated or Firestore not initialized.");
-                    }
-
-                    const snapshot = await getDocs(viewedItemsCollectionRef);
-                    const categoryCounts = new Map();
-
-                    snapshot.docs.forEach(doc => {
-                        const categoryTitle = doc.id.split(' - ')[0];
-                        if (categoryTitle) {
-                            categoryCounts.set(categoryTitle, (categoryCounts.get(categoryTitle) || 0) + 1);
-                        }
-                    });
-
-                    if (categoryCounts.size > 0) {
-                        const sortedTitles = Array.from(categoryCounts.entries())
-                            .sort((a, b) => b[1] - a[1]) // Sort by count, descending
-                            .map(entry => entry[0]) // Get just the title
-                            .slice(0, 10); // Take the top 10
-
-                        // Map sorted titles back to the full category objects
-                        categories = sortedTitles.map(title => 
-                            categoriesToGenerate.find(cat => cat.title === title)
-                        ).filter(Boolean); // Filter out any potential undefined values
-                    }
-
-                    // Fallback for new users or if no items have been viewed
-                    if (categories.length === 0) {
-                        categories = [...categoriesToGenerate].slice(0, 10);
-                    }
-                } catch (error) {
-                    console.error("Error fetching or processing featured categories:", error);
-                    // Fallback to static list on error
-                    categories = [...categoriesToGenerate].slice(0, 10);
-                    modalContent.innerHTML += `<p class="text-xs text-red-500 text-center">Could not load dynamic featured list. Showing default.</p>`;
+                if (items.length === 0) {
+                    modalContent.innerHTML = `<p class="themed-text-muted text-center">No categories found at this level.</p>`;
+                    return;
                 }
 
-            } else { // mode === 'all'
-                modalTitle.textContent = 'All Categories';
-                categories = [...categoriesToGenerate];
+                const categoryGrid = document.createElement('div');
+                categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+
+                categoryGrid.innerHTML = items.map(item => `
+                    <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-item='${JSON.stringify(item)}'>
+                        <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
+                        ${item.description ? `<p class="text-sm themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
+                        <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
+                    </div>
+                `).join('');
+                
+                modalContent.innerHTML = '';
+                modalContent.appendChild(categoryGrid);
+                
+                modalContent.querySelectorAll('.category-selector-item').forEach(itemEl => {
+                    itemEl.addEventListener('click', handleCategoryDrillDown);
+                });
+            } catch (error) {
+                console.error("Error rendering category level:", error);
+                modalContent.innerHTML = `<p class="text-red-500 text-center">Error loading categories. Check console.</p>`;
             }
+        }
+        
+        async function handleCategoryDrillDown(e) {
+            const itemData = JSON.parse(e.currentTarget.dataset.item);
+            currentHierarchyPath.push(itemData);
+            updateBreadcrumbs();
 
-            const categoryGrid = document.createElement('div');
-            categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+            let nextCollectionName;
+            if (currentHierarchyPath.length === 1) nextCollectionName = 'subCategories';
+            else if (currentHierarchyPath.length === 2) nextCollectionName = 'finalCategories';
+            else {
+                // This is a final category selection
+                closeModal('categoryBrowserModal');
+                await generateAndPopulateAICategory(currentHierarchyPath);
+                return;
+            }
+            
+            const currentDocRef = doc(db, ...currentHierarchyPath.flatMap(p => [p.ref.parent.id, p.id]));
+            const nextCollectionRef = collection(db, currentDocRef.path, nextCollectionName);
+            await renderCategoryLevel(nextCollectionRef);
+        }
 
-            categoryGrid.innerHTML = categories.map(cat => `
-                <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-category-key="${cat.key}" style="border-color: var(--color-card-border);">
-                    <h3 class="font-semibold text-lg themed-text-accent">${cat.title}</h3>
-                    <p class="text-sm themed-text-muted mt-1 flex-grow">${cat.description}</p>
-                    <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
-                </div>
-            `).join('');
-            
-            // Replace loader or append if it was a fallback
-            modalContent.innerHTML = ''; // Clear again to be safe
-            modalContent.appendChild(categoryGrid);
-            
-            modalContent.querySelectorAll('.category-selector-item').forEach(item => {
-                item.addEventListener('click', handleCategorySelection);
+        function updateBreadcrumbs() {
+            const breadcrumbsContainer = document.getElementById('categoryBrowserBreadcrumbs');
+            if (currentHierarchyPath.length === 0) {
+                breadcrumbsContainer.innerHTML = `<span class="font-semibold themed-text-primary">Top Level</span>`;
+                return;
+            }
+            breadcrumbsContainer.innerHTML = currentHierarchyPath.map((item, index) => 
+                `<span class="breadcrumb-item cursor-pointer hover:underline" data-index="${index}">${item.title}</span>`
+            ).join('<span class="mx-2 themed-text-muted">/</span>');
+
+            breadcrumbsContainer.querySelectorAll('.breadcrumb-item').forEach(crumb => {
+                crumb.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    currentHierarchyPath = currentHierarchyPath.slice(0, index + 1);
+                    updateBreadcrumbs();
+                    const parentRef = doc(db, ...currentHierarchyPath.flatMap(p => [p.ref.parent.id, p.id])).parent;
+                    renderCategoryLevel(parentRef);
+                });
             });
         }
 
-        /**
-         * Handles the click on a category in the browser modal.
-         * It closes the modal and triggers the generation of the selected category card.
-         */
-        async function handleCategorySelection(e) {
-            const categoryKey = e.currentTarget.dataset.categoryKey;
-            if (!categoryKey) return;
 
-            closeModal('categoryBrowserModal');
+        // --- NEW: Hierarchy Management Functions ---
+        function openHierarchyManagementModal() {
+            resetHierarchySelection();
+            loadHierarchyColumn('main');
+            openModal('hierarchyManagementModal');
+        }
 
-            const categoryData = categoriesToGenerate.find(cat => cat.key === categoryKey);
-            if (!categoryData) {
-                console.error("Could not find data for category:", categoryKey);
+        function resetHierarchySelection() {
+            selectedHierarchyItems = { main: null, sub: null, final: null };
+            document.getElementById('main-category-list').innerHTML = '';
+            document.getElementById('sub-category-list').innerHTML = '';
+            document.getElementById('final-category-list').innerHTML = '';
+            document.getElementById('new-sub-category-input').disabled = true;
+            document.getElementById('add-sub-category-btn').disabled = true;
+            document.getElementById('new-final-category-input').disabled = true;
+            document.getElementById('add-final-category-btn').disabled = true;
+            hideHierarchyForm();
+        }
+
+        async function loadHierarchyColumn(level, parentDoc = null) {
+            let collectionRef;
+            let listElementId;
+
+            if (level === 'main') {
+                collectionRef = collection(db, 'topicHierarchy');
+                listElementId = 'main-category-list';
+            } else if (level === 'sub' && parentDoc) {
+                collectionRef = collection(db, parentDoc.ref.path, 'subCategories');
+                listElementId = 'sub-category-list';
+            } else if (level === 'final' && parentDoc) {
+                collectionRef = collection(db, parentDoc.ref.path, 'finalCategories');
+                listElementId = 'final-category-list';
+            } else {
                 return;
             }
-            
-            const existingCard = document.getElementById(`${categoryKey}-card`);
-            if (existingCard) {
-                existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                existingCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
-                setTimeout(() => existingCard.style.boxShadow = '', 2000);
-                return;
-            }
 
-            const container = document.getElementById('dynamic-card-container');
-            const cardPlaceholder = document.createElement('div');
-            cardPlaceholder.id = `${categoryKey}-placeholder`;
-            cardPlaceholder.innerHTML = getLoaderHTML(`Generating guides for ${categoryData.title}...`);
-            container.prepend(cardPlaceholder);
-            
-            cardPlaceholder.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const listElement = document.getElementById(listElementId);
+            listElement.innerHTML = getLoaderHTML('Loading...');
 
             try {
-                const cardElement = await generateAndPopulateAICategory(categoryData);
-                const placeholder = document.getElementById(`${categoryKey}-placeholder`);
-                if (placeholder) {
-                    placeholder.replaceWith(cardElement);
-                } else {
-                    container.prepend(cardElement); // Fallback
-                }
+                const q = query(collectionRef, orderBy("title"));
+                const snapshot = await getDocs(q);
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
+                
+                listElement.innerHTML = items.map(item => `
+                    <div class="hierarchy-item" data-id="${item.id}" data-level="${level}">
+                        ${item.title}
+                    </div>
+                `).join('');
+
+                listElement.querySelectorAll('.hierarchy-item').forEach(itemEl => {
+                    itemEl.addEventListener('click', () => handleHierarchySelection(level, itemEl.dataset.id, items));
+                });
+
             } catch (error) {
-                console.error(`Failed to load category on-demand: ${categoryData.title}`, error);
-                const placeholder = document.getElementById(`${categoryKey}-placeholder`);
-                if(placeholder) {
-                    placeholder.innerHTML = `<div class="card p-8 bg-red-100 border-red-400 text-red-700">Error loading category: ${categoryData.title}. Please try again.</div>`;
-                }
+                console.error(`Error loading ${level} categories:`, error);
+                listElement.innerHTML = `<p class="text-red-500 text-xs">Error loading.</p>`;
+            }
+        }
+
+        function handleHierarchySelection(level, id, items) {
+            const selectedItem = items.find(item => item.id === id);
+            
+            // Update UI selection
+            document.querySelectorAll(`[data-level="${level}"]`).forEach(el => el.classList.remove('selected'));
+            document.querySelector(`[data-level="${level}"][data-id="${id}"]`).classList.add('selected');
+
+            if (level === 'main') {
+                selectedHierarchyItems.main = selectedItem;
+                selectedHierarchyItems.sub = null;
+                selectedHierarchyItems.final = null;
+                document.getElementById('sub-category-list').innerHTML = '';
+                document.getElementById('final-category-list').innerHTML = '';
+                document.getElementById('new-sub-category-input').disabled = false;
+                document.getElementById('add-sub-category-btn').disabled = false;
+                document.getElementById('new-final-category-input').disabled = true;
+                document.getElementById('add-final-category-btn').disabled = true;
+                loadHierarchyColumn('sub', selectedItem);
+                showHierarchyForm(selectedItem, 'main');
+            } else if (level === 'sub') {
+                selectedHierarchyItems.sub = selectedItem;
+                selectedHierarchyItems.final = null;
+                document.getElementById('final-category-list').innerHTML = '';
+                document.getElementById('new-final-category-input').disabled = false;
+                document.getElementById('add-final-category-btn').disabled = false;
+                loadHierarchyColumn('final', selectedItem);
+                showHierarchyForm(selectedItem, 'sub');
+            } else if (level === 'final') {
+                selectedHierarchyItems.final = selectedItem;
+                showHierarchyForm(selectedItem, 'final');
+            }
+        }
+
+        async function handleAddHierarchyItem(level) {
+            let parentItem, collectionName, inputElementId;
+            const data = {};
+
+            if (level === 'main') {
+                collectionName = 'topicHierarchy';
+                inputElementId = 'new-main-category-input';
+            } else if (level === 'sub') {
+                parentItem = selectedHierarchyItems.main;
+                collectionName = 'subCategories';
+                inputElementId = 'new-sub-category-input';
+            } else if (level === 'final') {
+                parentItem = selectedHierarchyItems.sub;
+                collectionName = 'finalCategories';
+                inputElementId = 'new-final-category-input';
+                data.description = "Default description.";
+                data.initialPrompt = "Default initial prompt.";
+                data.fullPrompt = "Default full prompt.";
+            }
+
+            const inputElement = document.getElementById(inputElementId);
+            const title = inputElement.value.trim();
+            if (!title) return;
+
+            data.title = title;
+
+            try {
+                const parentRef = parentItem ? parentItem.ref : db;
+                await addDoc(collection(parentRef, collectionName), data);
+                inputElement.value = '';
+                loadHierarchyColumn(level, parentItem);
+            } catch (error) {
+                console.error(`Error adding ${level} item:`, error);
+                alert(`Failed to add item. Check console.`);
+            }
+        }
+
+        function showHierarchyForm(item, level) {
+            document.getElementById('hierarchy-form-placeholder').classList.add('hidden');
+            const form = document.getElementById('hierarchy-edit-form');
+            form.classList.remove('hidden');
+            form.dataset.item = JSON.stringify(item);
+            form.dataset.level = level;
+
+            document.getElementById('edit-title').value = item.title || '';
+            
+            const finalFields = ['edit-description-container', 'edit-initial-prompt-container', 'edit-full-prompt-container'];
+            if (level === 'final') {
+                finalFields.forEach(id => document.getElementById(id).classList.remove('hidden'));
+                document.getElementById('edit-description').value = item.description || '';
+                document.getElementById('edit-initial-prompt').value = item.initialPrompt || '';
+                document.getElementById('edit-full-prompt').value = item.fullPrompt || '';
+            } else {
+                finalFields.forEach(id => document.getElementById(id).classList.add('hidden'));
+            }
+        }
+
+        function hideHierarchyForm() {
+            document.getElementById('hierarchy-form-placeholder').classList.remove('hidden');
+            document.getElementById('hierarchy-edit-form').classList.add('hidden');
+        }
+
+        async function handleSaveHierarchyItem() {
+            const form = document.getElementById('hierarchy-edit-form');
+            const item = JSON.parse(form.dataset.item);
+            const level = form.dataset.level;
+
+            const data = {
+                title: document.getElementById('edit-title').value.trim()
+            };
+
+            if (level === 'final') {
+                data.description = document.getElementById('edit-description').value.trim();
+                data.initialPrompt = document.getElementById('edit-initial-prompt').value.trim();
+                data.fullPrompt = document.getElementById('edit-full-prompt').value.trim();
+            }
+
+            try {
+                await updateDoc(item.ref, data);
+                alert('Item updated successfully!');
+                loadHierarchyColumn(level, selectedHierarchyItems[level === 'main' ? null : (level === 'sub' ? 'main' : 'sub')]);
+                hideHierarchyForm();
+            } catch (error) {
+                console.error("Error saving item:", error);
+                alert("Failed to save. Check console.");
+            }
+        }
+        
+        async function handleDeleteHierarchyItem() {
+            const form = document.getElementById('hierarchy-edit-form');
+            const item = JSON.parse(form.dataset.item);
+            const level = form.dataset.level;
+
+            const userConfirmed = window.confirm(`Are you sure you want to delete "${item.title}"? This will also delete all of its children.`);
+            if (!userConfirmed) return;
+
+            try {
+                await deleteDoc(item.ref);
+                alert('Item deleted successfully!');
+                resetHierarchySelection();
+                loadHierarchyColumn('main');
+            } catch (error) {
+                console.error("Error deleting item:", error);
+                alert("Failed to delete. Check console.");
             }
         }
 
