@@ -517,7 +517,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.9.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.9.1</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -606,8 +606,8 @@
         <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
         </button>
-        <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
+        <button id="ai-help-button" class="floating-action-button" title="Code Documentation Generation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
         </button>
         <button id="settings-button" class="floating-action-button" title="Typography Settings">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
@@ -2677,32 +2677,74 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
+        /**
+         * MODIFIED: Handles the AI Help button click.
+         * This function now generates technical documentation for the application itself.
+         */
         async function handleAIHelpRequest() {
-            document.getElementById('inDepthModalTitle').textContent = "AI Help & Feedback";
+            // Update modal title to reflect new purpose
+            document.getElementById('inDepthModalTitle').textContent = "Code Documentation Generation";
+            
             const contentEl = document.getElementById('inDepthModalContent');
-            contentEl.innerHTML = getLoaderHTML('Generating help guide and AI feedback...');
+            contentEl.innerHTML = getLoaderHTML('AI is generating the technical code documentation...');
+            
+            // Clear previous buttons and status messages
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
+            
             openModal('inDepthModal');
 
-            const helpPrompt = `Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections using '###' for each title: Main Dashboard, Generative AI Prompt, Cloud Storage, In-Depth Guides, AI Theme Generator, and Floating Action Buttons.`;
-            const feedbackPrompt = `You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. Based on the features, provide constructive feedback on what is intuitive, what could be improved, and what features might be missing for a senior IT administrator. Format your feedback using '###' for titles "Strengths", "Areas for Improvement", and "Suggested Features".`;
-            
-            try {
-                const [helpResult, feedbackResult] = await Promise.all([
-                    callGeminiAPI(helpPrompt, false, "Generate Help Guide"), 
-                    callGeminiAPI(feedbackPrompt, false, "Generate AI Feedback")
-                ]);
+            const codeDocPrompt = `
+        **Persona:** You are an expert technical writer and senior software architect.
 
-                const helpText = helpResult ? marked.parse(helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load help content.</p>';
-                const feedbackText = feedbackResult ? marked.parse(feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load feedback.</p>';
+        **Objective:** Your task is to analyze this application's structure and generate comprehensive code documentation. The application is a sophisticated "IT Administration Hub" built with HTML, CSS, and modern JavaScript (ESM), integrating with Firebase and various Google Cloud APIs.
+
+        **Instructions:**
+        Based on the application's known features and structure, generate a detailed technical documentation guide. The guide must be written in markdown format and use '###' for all main section headers.
+
+        **Required Sections:**
+
+        ### 1. Application Overview
+        * Describe the application's primary purpose as an AI-powered tool for IT professionals.
+        * Explain its core value proposition: generating dynamic, in-depth administrative guides.
+
+        ### 2. Technologies & Languages
+        * List and describe the core technologies used:
+            * **Frontend:** HTML5, Tailwind CSS, Vanilla JavaScript (ECMAScript Modules).
+            * **Backend & Cloud Services:** Firebase (Authentication, Firestore), Google Cloud Platform.
+            * **Core APIs:** Google Gemini API (for content generation), Google Drive API (for storage), Google Identity Services (for auth), and the Google AI Platform API (for image generation).
+
+        ### 3. Architectural Design
+        * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals (e.g., 'generative-ai-prompt-card', 'topic-explorer-card', various modals for different functions).
+        * **State Management:** Describe how the application state is managed, including API keys in localStorage, user session state via Firebase Auth, and in-memory state for generated content.
+        * **Event-Driven Logic:** Explain the role of the central 'setupEventListeners' function and how it delegates tasks based on user interactions.
+
+        ### 4. Core Features Deep Dive
+        * For each key feature below, describe its purpose and implementation:
+            * **Dynamic Category Generation:** How the 'openCategoryBrowser' and 'generateAndPopulateAICategory' functions work together to create UI on demand.
+            * **Multi-Stage Guide Generation:** Detail the process that starts with a summary ('handleGridSelect'), moves to an initial guide ('handleExploreInDepth'), and finishes with a complete, AI-reviewed document ('generateFullDetailedGuide').
+            * **AI-Powered Refinement:** Explain how the 'handleRefineRequest' function uses an existing guide as context to provide iterative improvements.
+            * **Cloud Integration (Google Drive):** Detail the process of authentication ('handleAuthClick'), folder creation ('getDriveFolderId'), and file saving ('handleSaveToDriveClick').
+
+        ### 5. Key Functions & Logic
+        * **\`initializeApplication()\`:** The main entry point that orchestrates setup.
+        * **\`callGeminiAPI()\` / \`callApi()\`:** The centralized functions for all generative AI requests, including error handling and timeout logic.
+        * **Modal Management (\`openModal\`, \`closeModal\`):** The system for controlling the visibility and state of various modals.
+
+        Return only the complete markdown documentation.
+        `;
+
+            try {
+                // Call the Gemini API with the new documentation prompt
+                const documentationResult = await callGeminiAPI(codeDocPrompt, false, "Generate Code Documentation");
                 
-                contentEl.innerHTML = `
-                    <div class="accordion-item"><button type="button" class="accordion-header active"><span class="text-left font-semibold">Application Help Guide</span><svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content open prose max-w-none">${helpText}</div></div>
-                    <div class="accordion-item"><button type="button" class="accordion-header"><span class="text-left font-semibold">AI-Generated Feedback</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content prose max-w-none">${feedbackText}</div></div>
-                `;
+                // Process and render the single response
+                const documentationHtml = documentationResult ? marked.parse(documentationResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load documentation.</p>';
+                
+                contentEl.innerHTML = `<div class="prose max-w-none">${documentationHtml}</div>`;
+
             } catch (error) {
-                handleApiError(error, contentEl, 'AI help content');
+                handleApiError(error, contentEl, 'code documentation');
             }
         }
         
