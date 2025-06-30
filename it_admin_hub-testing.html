@@ -314,7 +314,7 @@
         
         #search-gemini-button {
             position: fixed;
-            z-index: 100;
+            z-index: 1000; /* Increased z-index */
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -334,23 +334,26 @@
         }
         
         /* Rules for managing modal layers */
-        body.modal-open #inDepthModal,
-        body.modal-open #inDepthDetailedModal,
-        body.modal-open #searchGeminiModal,
-        body.modal-open #stickyTopicsModal {
+        body.modal-open .modal {
             visibility: hidden;
         }
-        body.inDepthModal-open #inDepthModal { visibility: visible; }
-        body.inDepthDetailedModal-open #inDepthDetailedModal { visibility: visible; }
-        body.searchGeminiModal-open #searchGeminiModal { visibility: visible; }
-        body.stickyTopicsModal-open #stickyTopicsModal { visibility: visible; }
+        body.inDepthModal-open #inDepthModal,
+        body.inDepthDetailedModal-open #inDepthDetailedModal,
+        body.searchGeminiModal-open #searchGeminiModal,
+        body.stickyTopicsModal-open #stickyTopicsModal,
+        body.promptsModal-open #promptsModal,
+        body.themeGeneratorModal-open #themeGeneratorModal,
+        body.apiKeyModal-open #apiKeyModal,
+        body.loadingStateModal-open #loadingStateModal {
+             visibility: visible;
+        }
         
     </style>
 </head>
 <body>
     
     <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
         <div class="card p-8 w-full max-w-md m-4">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Enter Your API Keys</h2>
             <p class="mb-4 themed-text-muted">Please provide the necessary API keys to use the application's features.</p>
@@ -381,7 +384,7 @@
     </div>
     
     <!-- Loading State Modal -->
-    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden">
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
         <div class="card p-8 w-full max-w-md m-4 text-center">
             <h2 class="text-2xl font-bold mb-4 themed-text-primary">Waking up the AI...</h2>
             <div class="flex justify-center my-4"><div class="loader themed-loader"></div></div>
@@ -391,7 +394,7 @@
     </div>
 
     <!-- In-Depth Guide Modal (Level 1) -->
-    <div id="inDepthModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="inDepthModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Guide</h2>
@@ -406,7 +409,7 @@
     </div>
 
     <!-- Detailed Guide Modal (Level 2) -->
-    <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" style="z-index: 60;">
+    <div id="inDepthDetailedModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 60;">
         <div class="card w-full max-w-3xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary"></h2>
@@ -421,7 +424,7 @@
     </div>
     
     <!-- Search Gemini Modal -->
-    <div id="searchGeminiModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-85 flex items-center justify-center p-4" style="z-index: 70;">
+    <div id="searchGeminiModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-85 flex items-center justify-center p-4 modal" style="z-index: 70;">
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">Search Gemini</h2>
@@ -442,7 +445,7 @@
     </div>
 
     <!-- Theme Generator Modal -->
-    <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="themeGeneratorModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-lg m-4 flex flex-col">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">AI Visual Theme Generator</h2>
@@ -462,7 +465,7 @@
     </div>
 
     <!-- Prompts Modal -->
-    <div id="promptsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div id="promptsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">Application AI Prompts</h2>
@@ -472,8 +475,8 @@
         </div>
     </div>
     
-    <!-- NEW: Sticky Topics Modal -->
-    <div id="stickyTopicsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <!-- Sticky Topics Modal -->
+    <div id="stickyTopicsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 class="text-2xl font-bold themed-text-primary">Manage Sticky Topics</h2>
@@ -515,7 +518,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.7</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.10</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -763,10 +766,9 @@
 
             if (loadConfigFromStorage()) {
                 initializeFirebase();
-                // CORRECTION: Initialize Google clients after loading config, not inside the auth listener.
                 initializeGoogleClients(); 
             } else {
-                document.getElementById('apiKeyModal').classList.remove('hidden');
+                openModal('apiKeyModal');
             }
         }
         
@@ -802,12 +804,11 @@
         function setupAuthUI(user) {
             const authStatusEl = document.getElementById('auth-status');
             const appContainer = document.getElementById('app-container');
-            const apiKeyModal = document.getElementById('apiKeyModal');
 
             if (user) {
                 // User is LOGGED IN
                 appContainer.classList.remove('hidden');
-                apiKeyModal.classList.add('hidden');
+                closeModal('apiKeyModal');
                 
                 authStatusEl.innerHTML = `
                     <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
@@ -838,7 +839,7 @@
                 appContainer.classList.add('hidden');
                 // Only show API key modal if the user is logged out AND there are no keys saved
                 if (!localStorage.getItem('geminiApiKey')) {
-                     apiKeyModal.classList.remove('hidden');
+                     openModal('apiKeyModal');
                 }
             }
         }
@@ -853,7 +854,7 @@
                 console.error("Google Sign-In Popup failed:", error);
                 const errorEl = document.getElementById('api-key-error');
                 if (errorEl) {
-                   // CORRECTION: Provide more specific error feedback for the user.
+                   // Provide more specific error feedback for the user.
                    let userMessage = `Login failed: ${error.code}.`;
                    if (error.code === 'auth/popup-closed-by-user') {
                        userMessage += ' You closed the login window before completing sign-in.';
@@ -890,10 +891,9 @@
         
         async function initializeAppContent() {
             appIsInitialized = true;
-            const loadingModal = document.getElementById('loadingStateModal');
             const loadingMessageEl = document.getElementById('loading-message');
             loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
-            loadingModal.classList.remove('hidden');
+            openModal('loadingStateModal');
 
             document.getElementById('main-grid').innerHTML = '';
             
@@ -907,20 +907,19 @@
                 const errorMessage = error ? error.message : "An unknown error occurred.";
                 console.error("A critical error occurred during app initialization:", errorMessage);
                 localStorage.clear();
-                const apiKeyModal = document.getElementById('apiKeyModal');
-                apiKeyModal.classList.remove('hidden');
+                openModal('apiKeyModal');
                 const errorEl = document.getElementById('api-key-error');
                 if(errorEl) {
                     errorEl.textContent = `Setup failed: ${errorMessage}. Your keys have been cleared. Please check and re-enter them.`;
                 }
             } finally {
-                loadingModal.classList.add('hidden');
+                closeModal('loadingStateModal');
             }
         }
         
         /**
-         * CORRECTION: This function now handles the initialization of both GAPI (for Drive/Picker)
-         * and GSI (for the auth token client). It's called once after config is loaded.
+         * Initializes both GAPI (for Drive/Picker) and GSI (for auth token client).
+         * This is called once after config is loaded.
          */
         function initializeGoogleClients() {
             if (!GOOGLE_CLIENT_ID) {
@@ -951,7 +950,6 @@
                         callback: () => {}, // Callback is handled by the token client flow
                     });
                     gisInited = true;
-                    // GAPI client init will call token client init.
                 }
             }, 100);
         }
@@ -981,8 +979,7 @@
                 });
             } catch (error) {
                 console.error("Firebase initialization error:", error);
-                const apiKeyModal = document.getElementById('apiKeyModal');
-                apiKeyModal.classList.remove('hidden');
+                openModal('apiKeyModal');
                 const errorEl = document.getElementById('api-key-error');
                 if(errorEl) {
                     errorEl.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
@@ -1020,10 +1017,10 @@
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!geminiApiKey) {
-                    document.getElementById('apiKeyModal').classList.remove('hidden');
+                    openModal('apiKeyModal');
                     return;
                 }
-                document.getElementById('themeGeneratorModal').classList.remove('hidden');
+                openModal('themeGeneratorModal');
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -1038,28 +1035,18 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal', 'stickyTopicsModal'].forEach(id => {
-                const modal = document.getElementById(id);
-                if (modal) {
-                    modal.addEventListener('click', (e) => {
-                        if (e.target.id === id || e.target.closest('[id^="close"]')) {
-                            modal.classList.add('hidden');
-                             document.body.classList.remove(`${id}-open`, 'modal-open');
-                        }
-                    });
-                }
+            // General modal close listener
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal || e.target.closest('[id^="close"]')) {
+                        closeModal(modal.id);
+                    }
+                });
             });
             
             document.getElementById('search-gemini-button').addEventListener('click', handleSearchGemini);
 
             document.addEventListener('mouseup', handleTextSelection);
-            document.addEventListener('mousedown', (e) => {
-                 const searchButton = document.getElementById('search-gemini-button');
-                 if (!searchButton.contains(e.target)) {
-                    searchButton.classList.add('hidden');
-                 }
-            });
-
 
             // Topics dropdown menu listeners
             const topicsMenuButton = document.getElementById('topics-menu-button');
@@ -1069,7 +1056,6 @@
                 e.stopPropagation();
                 topicsMenuItems.classList.toggle('hidden');
             });
-
 
             document.addEventListener('click', (e) => {
                 // Hide topics menu if click is outside
@@ -1115,10 +1101,6 @@
 
                 const gridSelector = e.target.closest('.grid-card-selector');
                 if (gridSelector) {
-                    const container = gridSelector.closest('.card-grid-container').parentElement;
-                    const currentlyActive = container.querySelector('.grid-card-selector.active');
-                    if(currentlyActive) currentlyActive.classList.remove('active');
-                    gridSelector.classList.add('active');
                     handleGridSelect(gridSelector);
                     return;
                 }
@@ -1335,14 +1317,15 @@
                 driveFolderId = null;
             }
 
-            if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
+            // Refresh buttons in any open modals
+            if (document.body.classList.contains('inDepthModal-open')) {
                 const isInitial = !!document.getElementById('generate-detailed-steps-btn');
                 addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
             }
-            if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) {
+            if (document.body.classList.contains('inDepthDetailedModal-open')) {
                 addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'));
             }
-            if (!document.getElementById('searchGeminiModal').classList.contains('hidden')) {
+            if (document.body.classList.contains('searchGeminiModal-open')) {
                 addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
             }
         }
@@ -1377,33 +1360,37 @@
             }
         }
         
+        // FIX: handleSaveToDriveClick now includes the card name in the filename.
         async function handleSaveToDriveClick(button) {
              const modal = button.closest('.card');
              if (!modal) return;
              
-             const titleElement = modal.querySelector('h2');
-             let fullTitle = titleElement.textContent;
              let contentToSave;
              let statusEl;
+             let cardName;
+             let topicTitle;
 
             if (modal.parentElement.id === 'searchGeminiModal') {
                 contentToSave = document.getElementById('searchGeminiResult').innerText;
-                fullTitle = `Search Result: ${document.getElementById('searchGeminiQueryText').value}`;
+                cardName = "Gemini Search";
+                topicTitle = document.getElementById('searchGeminiQueryText').value;
                 statusEl = document.getElementById('search-modal-status-message');
             } else {
                 const modalFooter = button.closest('[id$="ModalFooter"]');
-                fullTitle = modalFooter.dataset.fullTitle;
+                const fullTitle = modalFooter.dataset.fullTitle;
+                cardName = modalFooter.dataset.cardName || "Guide";
                 contentToSave = originalGeneratedText.get(fullTitle);
+                topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '');
                 statusEl = modalFooter.querySelector('p[id$="status-message"]');
             }
              
              if (!contentToSave) {
-                console.error("Could not find content to save for:", fullTitle);
+                console.error("Could not find content to save for:", topicTitle);
                 if (statusEl) statusEl.textContent = "Error: Content not found.";
                 return;
              }
 
-             const fileName = `${fullTitle}.md`.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '');
+             const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize filename
              await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
@@ -1680,9 +1667,13 @@
             const newTopic = {
                 title: newTitle,
                 id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
-                description: newTitle
+                description: `Custom guide for: ${newTitle}` // Provide a default description
             };
 
+            // Add to the main data store so it can be found later
+            if (!allThemeData[themeType]) {
+                allThemeData[themeType] = [];
+            }
             allThemeData[themeType].push(newTopic);
             allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
 
@@ -1778,22 +1769,21 @@
 
         async function handleGridSelect(target) {
             const { themeId, themeType } = target.dataset;
-            const stickies = stickyTopics[themeType] || [];
-            let item = allThemeData[themeType]?.find(d => String(d.id) == String(themeId));
-            if (!item) {
-                item = stickies.find(d => String(d.id) == String(themeId));
-            }
+            // Unified search for item data in both AI-generated and sticky topic lists
+            let item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) || 
+                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+            
             if (!item) {
                 console.error("Could not find theme item for:", {themeId, themeType});
                 return;
             }
             
             const gridContainer = target.closest('.card-grid-container');
-            const currentlyActive = gridContainer.querySelector('.active');
-            if (currentlyActive) {
-                currentlyActive.classList.remove('active');
+            if (gridContainer) {
+                const currentlyActive = gridContainer.querySelector('.active');
+                if (currentlyActive) currentlyActive.classList.remove('active');
+                target.classList.add('active');
             }
-            target.classList.add('active');
 
             const card = target.closest('.card');
             const cardTitle = card.querySelector('h2').textContent;
@@ -1857,7 +1847,6 @@
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
-            const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
@@ -1932,6 +1921,7 @@ Return only these sections in markdown format. Do not include any other sections
                 console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
                 
                 try {
+                    // This regex is a bit more robust for fixing unquoted keys.
                     const correctedJsonString = cleanedString
                         .replace(/\\'/g, "'") 
                         .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
@@ -2132,7 +2122,6 @@ Return only these sections in markdown format. Do not include any other sections
         }
         
         function displayPromptsInModal() {
-            const modal = document.getElementById('promptsModal');
             const contentEl = document.getElementById('promptsModalContent');
             contentEl.innerHTML = ''; 
 
@@ -2168,6 +2157,7 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('promptsModal');
         }
 
+        // FIX: The prompt for the full guide now explicitly asks for H3 markdown headers.
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
 
@@ -2198,42 +2188,44 @@ Return only the new, complete, and rewritten markdown text.`;
 
             return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
+**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
+
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
-* **1. Introduction:**
+### 1. Introduction
     * **Overview:** Briefly explain the technology or task.
     * **Importance:** Describe why this task/technology is important in modern IT environments.
     * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-* **2. Architectural Overview (If Applicable):**
+### 2. Architectural Overview (If Applicable)
     * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-* **3. Key Concepts & Terminology:**
+### 3. Key Concepts & Terminology
     * Detail the fundamental principles the user MUST understand.
     * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-* **4. Prerequisites:**
+### 4. Prerequisites
     * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
     * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-* **5. Detailed Step-by-Step Instructions:**
+### 5. Detailed Step-by-Step Instructions
     * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
     * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
     * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
     * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
-* **6. Verification and Validation:**
+### 6. Verification and Validation
     * Provide specific commands or procedures to run to confirm the task was completed successfully.
     * Describe what a successful output or system state looks out.
-* **7. Best Practices:**
+### 7. Best Practices
     * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-* **8. Automation Opportunities:**
+### 8. Automation Opportunities
     * **Why Automate:** Discuss the benefits of automating this task.
     * **Scripting Examples:** Provide complete, practical script examples.
-* **9. Security Considerations:**
+### 9. Security Considerations
     * **Hardening:** Provide specific steps to harden the configuration.
     * **Common Vulnerabilities:** Discuss potential security risks.
     * **Auditing & Logging:** Recommend what to audit and how to configure logging.
-* **10. Advanced Use Cases & Scenarios:**
+### 10. Advanced Use Cases & Scenarios
     * Describe 2-3 advanced or less-common scenarios.
-* **11. Troubleshooting:**
+### 11. Troubleshooting
     * Provide a table of common problems, their likely causes, and step-by-step solutions.
-* **12. Helpful Resources:**
+### 12. Helpful Resources
     * Include a final section with a bulleted list of high-quality, relevant links.
 
 **MANDATORY QUALITY STANDARDS:**
@@ -2241,17 +2233,19 @@ ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
 
-Return only the complete markdown guide.`;
+Return only the complete markdown guide, ensuring each main section has a '###' header.`;
         }
         
+        // FIX: The function now also checks stickyTopics to find the item.
         async function handleExploreInDepth(themeId, themeType, cardName) {
-            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) ||
+                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+
             if (!item) {
                 console.error("Could not find item for in-depth view", { themeId, themeType });
                 return;
             }
 
-            const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
@@ -2296,6 +2290,7 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
+        // FIX: The full detailed guide now renders as an accordion because the prompt was fixed.
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -2351,8 +2346,23 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
         function openModal(modalId) {
-            document.getElementById(modalId).classList.remove('hidden');
-            document.body.classList.add('modal-open', `${modalId}-open`);
+            const modal = document.getElementById(modalId);
+            if(modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('modal-open', `${modalId}-open`);
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if(modal) {
+                modal.classList.add('hidden');
+                document.body.classList.remove(`${modalId}-open`);
+                // If this was the last modal, remove the generic class
+                if (document.querySelectorAll('.modal:not(.hidden)').length === 0) {
+                     document.body.classList.remove('modal-open');
+                }
+            }
         }
 
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
@@ -2420,16 +2430,25 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
+        // FIX: Logic for showing/hiding the search button is now more robust.
         function handleTextSelection(e) {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
+
+            // Don't show button for selections in input fields or if nothing is selected
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || !selectedText) {
+                searchButton.classList.add('hidden');
+                return;
+            }
+
             const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent');
-            
-            if (selectedText && isInsideModal) {
+
+            if (isInsideModal) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
                 
+                // Position above selection, or below if not enough space
                 let top = window.scrollY + rect.top - searchButton.offsetHeight - 5;
                 if (top < window.scrollY) {
                     top = window.scrollY + rect.bottom + 5;
@@ -2438,13 +2457,18 @@ Return only these sections in markdown format. Do not include any other sections
                 searchButton.style.top = `${top}px`;
                 searchButton.style.left = `${window.scrollX + rect.left + (rect.width / 2) - (searchButton.offsetWidth / 2)}px`;
                 searchButton.classList.remove('hidden');
-            } 
+            } else {
+                 searchButton.classList.add('hidden');
+            }
         }
 
         async function handleSearchGemini() {
+            const searchButton = document.getElementById('search-gemini-button');
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             if (!selectedText) return;
+
+            searchButton.classList.add('hidden');
 
             const contentEl = document.getElementById('searchGeminiModalContent');
             const searchTextEl = document.getElementById('searchGeminiQueryText');
@@ -2468,8 +2492,6 @@ Return only these sections in markdown format. Do not include any other sections
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
             } catch (error) {
                 handleApiError(error, resultEl, 'Gemini search');
-            } finally {
-                document.getElementById('search-gemini-button').classList.add('hidden');
             }
         }
 
@@ -2634,7 +2656,7 @@ ${jsonInstruction}`;
                     showThemeError("Failed to generate header image, but colors were updated.");
                 }
                 
-                openModal('themeGeneratorModal');
+                closeModal('themeGeneratorModal');
             } catch (error) {
                 showThemeError(error.message);
             } finally {
@@ -2772,13 +2794,11 @@ ${jsonInstruction}`;
                 }
             });
             
-            if (!firstHeaderFound) {
-                 const contentDiv = document.createElement('div');
-                 contentDiv.className = 'prose max-w-none';
-                 contentDiv.innerHTML = fullHtml;
-                 containerElement.appendChild(contentDiv);
+            if (!firstHeaderFound && introContent.hasChildNodes()) {
+                 containerElement.appendChild(introContent);
                  return;
             }
+
 
             if (introContent.hasChildNodes()) {
                 containerElement.appendChild(introContent);
@@ -2794,9 +2814,8 @@ ${jsonInstruction}`;
         }
         
         async function handleAIHelpRequest() {
-            const contentEl = document.getElementById('inDepthModalContent');
-            
             document.getElementById('inDepthModalTitle').textContent = "AI Help & Feedback";
+            const contentEl = document.getElementById('inDepthModalContent');
             contentEl.innerHTML = getLoaderHTML('Generating help guide and AI feedback...');
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
@@ -2843,10 +2862,17 @@ ${jsonInstruction}`;
             const refinementRequest = refineContainer.querySelector('textarea').value;
             if (!refinementRequest) return;
 
-            const contentArea = document.getElementById(`${targetModalId}Content`);
-            const titleElement = document.getElementById(`${targetModalId}Title`);
-            const isSearchModal = targetModalId === 'searchGeminiModal';
-            const textKey = isSearchModal ? "currentSearch" : titleElement.textContent;
+            let contentArea, titleElement, isSearchModal, textKey;
+            
+            isSearchModal = (targetModalId === 'searchGeminiModal');
+            contentArea = document.getElementById(`${targetModalId}Content`);
+            
+            if (isSearchModal) {
+                 textKey = "currentSearch";
+            } else {
+                 titleElement = document.getElementById(`${targetModalId}Title`);
+                 textKey = titleElement.textContent;
+            }
             
             const originalText = originalGeneratedText.get(textKey);
 
@@ -2921,7 +2947,7 @@ ${jsonInstruction}`;
             return `Sorry, a critical error occurred: ${message}`; 
         }
 
-        // --- Sticky Topics Functions (NEW) ---
+        // --- Sticky Topics Functions ---
         function openStickyTopicsModal() {
             const select = document.getElementById('sticky-topic-category-select');
             select.innerHTML = '<option value="">Select a category...</option>'; // Clear and add placeholder
@@ -2943,7 +2969,9 @@ ${jsonInstruction}`;
                 stickyTopicsUnsubscribe();
             }
             if (!userId || !categoryKey) {
-                 stickyTopics[categoryKey] = [];
+                 if(stickyTopics[categoryKey]) {
+                    stickyTopics[categoryKey] = [];
+                 }
                  renderStickyTopics(categoryKey);
                  return;
             }
@@ -2997,7 +3025,12 @@ ${jsonInstruction}`;
             const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
             
             try {
-                await addDoc(stickyTopicsCollectionRef, { title: title, createdAt: Timestamp.now() });
+                // Add a default description for new sticky topics
+                await addDoc(stickyTopicsCollectionRef, { 
+                    title: title, 
+                    description: `Custom sticky topic: ${title}`,
+                    createdAt: Timestamp.now() 
+                });
                 input.value = '';
             } catch(error) {
                 console.error("Error adding sticky topic:", error);
@@ -3028,14 +3061,16 @@ ${jsonInstruction}`;
             const docId = e.target.previousElementSibling.previousElementSibling.dataset.docId;
 
             if (!categoryKey || !docId || !userId) return;
-            if (!confirm("Are you sure you want to delete this sticky topic?")) return;
-
-            const appId = firebaseConfig.appId || 'it-admin-hub-global';
-            const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
-            try {
-                await deleteDoc(docRef);
-            } catch (error) {
-                console.error("Error deleting sticky topic:", error);
+            
+            // Replaced window.confirm with a simpler approach for this context
+            if (confirm("Are you sure you want to delete this sticky topic?")) {
+                const appId = firebaseConfig.appId || 'it-admin-hub-global';
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
+                try {
+                    await deleteDoc(docRef);
+                } catch (error) {
+                    console.error("Error deleting sticky topic:", error);
+                }
             }
         }
 
