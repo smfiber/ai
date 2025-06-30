@@ -255,7 +255,7 @@
                  <p class="text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 9.1</p>
+                <p class="mt-4 text-xs text-slate-400">Version 9.2</p>
             </div>
         </footer>
         
@@ -306,7 +306,8 @@
 
         // --- CONFIGURATIONS ---
         const FOCUS_CATEGORIES = [
-            { id: 'muscle-group', title: 'Muscle Group', icon: 'torso', type: 'select', promptKey: 'getMuscleGroups', responseKey: 'muscleGroups', options: { valKey: 'fullName', textKey: 'displayName' } },
+            // FIX: Changed icon from 'torso' to 'body' for better compatibility.
+            { id: 'muscle-group', title: 'Muscle Group', icon: 'body', type: 'select', promptKey: 'getMuscleGroups', responseKey: 'muscleGroups', options: { valKey: 'fullName', textKey: 'displayName' } },
             { id: 'system-focus', title: 'Organ System', icon: 'heart-pulse', type: 'select', promptKey: 'getOrganSystems', responseKey: 'organSystems' },
             { id: 'pose-type', title: 'Pose Type', icon: 'person-standing', type: 'select', promptKey: 'getPoseTypes', responseKey: 'poseTypes' },
             { id: 'benefit', title: 'Desired Benefit', icon: 'smile', type: 'select', promptKey: 'getDesiredBenefits', responseKey: 'benefits' },
@@ -481,14 +482,25 @@
         }
 
         // --- EVENT HANDLERS ---
+        // FIX: Rewrote function to correctly handle clicks on controls within cards.
         function handleFocusCardClick(e) {
             const card = e.target.closest('.focus-card');
             if (!card) return;
 
+            // If the user clicks a control (select/input) inside an *already active* card,
+            // do nothing and let the browser handle the event (e.g., open the dropdown).
+            if (card.classList.contains('active') && (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT')) {
+                return;
+            }
+
             const allCards = ui.focusSelectionContainer.querySelectorAll('.focus-card');
             const isActive = card.classList.contains('active');
 
+            // Deactivate all cards.
             allCards.forEach(c => c.classList.remove('active'));
+
+            // If the card was NOT active, activate it.
+            // If it WAS active, it now becomes deactivated (which provides a toggle behavior when clicking the card body).
             if (!isActive) {
                 card.classList.add('active');
             }
@@ -614,7 +626,7 @@
                 } else {
                     const benefitLabel = (routineType === 'peak-pose') ? 'Preparation Focus' : 'Benefit';
                     const benefitText = exercise.benefit || exercise.preparation_focus || 'Not specified.';
-                    benefitHtml = `<div><h4 class="font-semibold text-slate-800">${benefitLabel}:</h4><p class="mt-1 text-slate-600">${benefitText}</p></div>`;
+                    benefitHtml = `<div><h4 class="font-semibold text-slate-800">${benefitLabel}:</h4><p class="mt-1 text-slate-600">${benefitHtml}</p></div>`;
                 }
 
                 exerciseEl.innerHTML = `
