@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Stretch Solution</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         html, body {
             height: 100%;
         }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 18px;
+            line-height: 1.5;
             background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
         }
         .custom-select {
             -webkit-appearance: none;
@@ -93,7 +98,6 @@
             list-style-type: disc;
             padding-left: 1.5rem;
             margin-top: 0.5rem;
-            line-height: 1.6;
         }
         #details-content li {
             margin-bottom: 0.5rem;
@@ -127,15 +131,19 @@
 
         .focus-tab {
             cursor: pointer;
-            padding: 8px 16px;
-            border-bottom: 2px solid transparent;
+            padding: 12px 16px;
+            border-bottom: 3px solid transparent;
             color: #475569;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
         }
         .focus-tab.active {
             color: #4f46e5;
             border-bottom-color: #4f46e5;
-            font-weight: 600;
         }
         .focus-content {
             display: none;
@@ -145,15 +153,44 @@
         }
 
         @media print {
-            body > * { display: none !important; }
-            #exercise-details-modal { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; background-color: white !important; overflow: visible !important; }
-            #exercise-details-modal .modal-content { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border: none !important; padding: 1rem !important; margin: 0 !important; }
-            #details-content { max-height: none !important; overflow: visible !important; }
-            #details-close-btn, #print-details-btn, #details-youtube-buttons { display: none !important; }
+            body.printing * {
+                visibility: hidden;
+            }
+            body.printing #exercise-details-modal,
+            body.printing #exercise-details-modal * {
+                visibility: visible;
+            }
+            body.printing #exercise-details-modal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background-color: white !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+            body.printing .modal-content {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 1rem !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            body.printing #details-content {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            body.printing #details-close-btn,
+            body.printing #print-details-btn,
+            body.printing #details-youtube-buttons {
+                display: none !important;
+            }
         }
     </style>
 </head>
-<body class="text-slate-800">
+<body>
 
     <!-- App Container -->
     <div id="app-container" class="min-h-screen flex flex-col">
@@ -184,15 +221,27 @@
                 <!-- Creation Section -->
                 <div id="creation-section" class="view active w-full mx-auto text-center">
                     <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Intelligent Health Routines, Personalized for You</h2>
-                    <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Select your focus and preferences to begin your custom routine.</p>
+                    <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Select your focus area and preferences, and let our AI create the perfect stretching or yoga routine for you.</p>
                     <div class="mt-10 p-6 md:p-8 bg-white border border-slate-200 rounded-xl shadow-sm max-w-5xl mx-auto">
                         
-                        <div class="border-b border-slate-200 mb-6 overflow-x-auto">
-                            <nav id="focus-tabs-container" class="-mb-px flex justify-start md:justify-center gap-x-6">
-                                <button class="focus-tab active" data-target="muscle-focus">1. By Muscle Group</button>
-                                <button class="focus-tab" data-target="system-focus">1. By Organ System</button>
-                                <button class="focus-tab" data-target="pose-type-focus">1. By Pose Type</button>
-                                <button class="focus-tab" data-target="benefit-focus">1. By Desired Benefit</button>
+                        <div class="border-b border-slate-200 mb-6">
+                            <nav id="focus-tabs-container" class="-mb-px flex flex-wrap justify-center gap-x-2 sm:gap-x-6">
+                                <button class="focus-tab active" data-target="muscle-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                                    <span>By Muscle Group</span>
+                                </button>
+                                <button class="focus-tab" data-target="system-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                    <span>By Organ System</span>
+                                </button>
+                                <button class="focus-tab" data-target="pose-type-focus">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <span>By Pose Type</span>
+                                </button>
+                                <button class="focus-tab" data-target="benefit-focus">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+                                    <span>By Desired Benefit</span>
+                                </button>
                             </nav>
                         </div>
 
@@ -222,7 +271,7 @@
                                 </select>
                            </div>
                              <div>
-                                <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1">2. # of Exercises</label>
+                                <label for="exercises-select" class="block text-sm font-medium text-slate-700 mb-1">Number of Exercises</label>
                                 <select id="exercises-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></select>
                             </div>
                         </div>
@@ -247,7 +296,7 @@
                 <!-- About Section -->
                 <div id="about-section" class="view w-full mx-auto">
                     <h2 class="text-3xl font-bold text-slate-900 mb-6 max-w-5xl mx-auto">About The Stretch Solution</h2>
-                    <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 text-slate-600 max-w-5xl mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 max-w-5xl mx-auto">
                         <p>This application leverages the Google Gemini API to generate dynamic and personalized health and stretching routines. Simply select a focus area—like a muscle group, organ system, pose type, or desired benefit—choose the number of exercises, and the AI will create a custom routine for you.</p>
                         <p>For each exercise, you can now search for a demonstration video on YouTube with a single click. If the initial search isn't perfect, a "Detailed Search" option uses more information from the AI to find a better match.</p>
                         <p>You can also click "More Details" on any exercise to get an in-depth guide, also generated by the AI. This approach ensures that the content is always fresh, relevant, and tailored to your specific needs.</p>
@@ -281,7 +330,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.2</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.4</p>
             </div>
         </footer>
         
@@ -405,7 +454,9 @@
             ui.modalCloseBtn.addEventListener('click', () => ui.customAlertModal.style.display = 'none');
             ui.detailsCloseBtn.addEventListener('click', () => ui.exerciseDetailsModal.style.display = 'none');
             ui.printDetailsBtn.addEventListener('click', () => {
+                document.body.classList.add('printing');
                 window.print();
+                document.body.classList.remove('printing');
             });
         }
         
@@ -592,7 +643,7 @@
                 exerciseEl.innerHTML = `
                     <div>
                         <h3 class="text-xl font-semibold text-slate-900">${exercise.name}</h3>
-                        <div class="mt-4 text-slate-600 space-y-4">
+                        <div class="mt-4 space-y-4">
                             <div><h4 class="font-semibold text-slate-800">Instructions:</h4><p class="mt-1 whitespace-pre-line">${exercise.instructions}</p></div>
                             <div><h4 class="font-semibold text-slate-800">Benefit:</h4><p class="mt-1">${exercise.benefit}</p></div>
                         </div>
@@ -735,11 +786,12 @@
         }
 
         function handleTabClick(e) {
-            if (e.target.matches('.focus-tab')) {
-                const target = e.target.dataset.target;
+            const tabButton = e.target.closest('.focus-tab');
+            if (tabButton) {
+                const target = tabButton.dataset.target;
                 
                 ui.focusTabsContainer.querySelectorAll('.focus-tab').forEach(tab => tab.classList.remove('active'));
-                e.target.classList.add('active');
+                tabButton.classList.add('active');
                 
                 document.querySelectorAll('.focus-content').forEach(content => content.classList.remove('active'));
                 document.getElementById(target).classList.add('active');
