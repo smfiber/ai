@@ -213,7 +213,7 @@
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #prompts-button { bottom: 20rem; right: 2rem; }
         #firebase-tools-button { bottom: 24.5rem; right: 2rem; }
-        #real-time-log-button { bottom: 29rem; right: 2rem; } /* NEW */
+        #real-time-log-button { bottom: 29rem; right: 2rem; }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -265,7 +265,7 @@
             background: rgba(0,0,0,0.02);
         }
         .grid-card-selector {
-            position: relative; /* Positioning context for the checkmark */
+            position: relative; 
             background-color: white; border: 1px solid var(--color-card-border);
             border-radius: 8px; padding: 1rem; text-align: center;
             cursor: pointer; transition: all 0.2s ease; font-size: 0.875rem; font-weight: 500;
@@ -281,66 +281,33 @@
 
         /* Indicator Styles */
         .indicator {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 1.25rem;
-            height: 1.25rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            border: 2px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            z-index: 10;
+            position: absolute; top: 0.5rem; right: 0.5rem; width: 1.25rem; height: 1.25rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); z-index: 10;
         }
         .indicator svg { width: 0.75rem; height: 0.75rem; }
-        .viewed-indicator { background-color: #ef4444; /* red-500 */ }
-        .sticky-indicator { background-color: #3b82f6; /* blue-500 */ } /* NEW */
+        .viewed-indicator { background-color: #ef4444; }
+        .sticky-indicator { background-color: #3b82f6; }
 
-        .new-item-highlight {
-            border: 2px solid var(--color-primary);
-            box-shadow: 0 0 10px var(--color-primary);
-        }
+        .new-item-highlight { border: 2px solid var(--color-primary); box-shadow: 0 0 10px var(--color-primary); }
         
         .add-topic-container {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--color-card-border);
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
+            margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-card-border);
+            display: flex; gap: 0.75rem; align-items: center;
         }
         
-        /* Docked Search Gemini Button */
         #search-gemini-button {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1000;
+            position: fixed; top: 1rem; left: 1rem; z-index: 1000;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-button-text);
-            padding: 8px 12px;
-            border-radius: 6px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            color: var(--color-button-text); padding: 8px 12px; border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; font-size: 0.875rem;
+            font-weight: 500; display: flex; align-items: center; gap: 6px;
             transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
-        #search-gemini-button:hover {
-            filter: brightness(1.1);
-            transform: scale(1.05);
-        }
+        #search-gemini-button:hover { filter: brightness(1.1); transform: scale(1.05); }
         
         /* Rules for managing modal layers */
-        body.modal-open .modal {
-            visibility: hidden;
-        }
+        body.modal-open .modal { visibility: hidden; }
         body.inDepthModal-open #inDepthModal,
         body.inDepthDetailedModal-open #inDepthDetailedModal,
         body.searchGeminiModal-open #searchGeminiModal,
@@ -349,7 +316,8 @@
         body.themeGeneratorModal-open #themeGeneratorModal,
         body.apiKeyModal-open #apiKeyModal,
         body.aiLogModal-open #aiLogModal,
-        body.loadingStateModal-open #loadingStateModal {
+        body.loadingStateModal-open #loadingStateModal,
+        body.categoryBrowserModal-open #categoryBrowserModal { /* NEW */
              visibility: visible;
         }
         
@@ -503,7 +471,7 @@
         </div>
     </div>
 
-    <!-- NEW: AI Log Modal -->
+    <!-- AI Log Modal -->
     <div id="aiLogModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -512,6 +480,21 @@
             </div>
             <div id="aiLogModalContent" class="p-6 overflow-y-auto">
                 <!-- AI log entries will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ****************************************************** -->
+    <!-- NEW: Category Browser Modal -->
+    <!-- ****************************************************** -->
+    <div id="categoryBrowserModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 65;">
+        <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary">Browse Categories</h2>
+                <button id="closeCategoryBrowserModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto">
+                <!-- Categories will be injected here by JavaScript -->
             </div>
         </div>
     </div>
@@ -536,28 +519,8 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.7.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.8.0</div>
         </header>
-        
-        <!-- Topics Dropdown Menu -->
-        <div class="flex justify-center mb-8">
-            <div id="topics-menu-container" class="relative inline-block text-left hidden">
-                <div>
-                    <button type="button" id="topics-menu-button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500" aria-haspopup="true" aria-expanded="true">
-                        Topics Menu
-                        <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                </div>
-                <div id="topics-menu-items" class="origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-30" role="menu" aria-orientation="vertical" aria-labelledby="topics-menu-button">
-                    <div class="py-1" role="none" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Menu items will be injected here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
 
         <main id="main-content" class="space-y-8">
             <div id="imported-guides-section" class="hidden">
@@ -606,19 +569,33 @@
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
-
-            <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            </div>
             
-            <div id="discover-more-container" class="text-center py-8">
-                <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random IT category">
-                    <span class="flex items-center justify-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
-                        Discover More IT Topics
-                    </span>
-                </button>
-                <p id="discover-more-error" class="text-red-500 mt-2"></p>
+            <!-- ****************************************************** -->
+            <!-- NEW: Topic Explorer Card -->
+            <!-- ****************************************************** -->
+            <div id="topic-explorer-card" class="card">
+                <div class="p-8 card-content text-center">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Topic Explorer</h2>
+                    <p class="mb-6 themed-text-muted">Begin your journey by discovering featured topics or browsing the complete catalog of AI-generated guides.</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button id="explore-featured-btn" class="btn-secondary px-6 py-3">
+                             <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                                Explore Featured Categories
+                            </span>
+                        </button>
+                        <button id="browse-all-btn" class="btn-primary">
+                            <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"></path></svg>
+                                Browse All Categories
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            <!-- This container will hold the cards generated by user selection -->
+            <div id="dynamic-card-container" class="space-y-8"></div>
         </main>
         
         <!-- Floating Action Buttons -->
@@ -672,7 +649,7 @@
         let viewedItemsCollectionRef;
         const viewedItemIds = new Set();
         let stickyTopicsUnsubscribe = null;
-        let stickyTopics = {}; // Holds sticky topics per category
+        let stickyTopics = {};
         let firebaseConfig = null;
         let appIsInitialized = false;
 
@@ -704,24 +681,18 @@
     * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
     * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
 
-        // *** NEW ***: AI Guide Refinement Prompt
         const aiReviewPrompt = `
 **Persona:** You are an expert-level technical editor and a senior IT systems architect with decades of experience. You are meticulous, detail-oriented, and an authority on creating professional technical documentation.
-
 **Objective:** Your task is to review, refine, and significantly improve the IT administration guide provided below. The goal is to elevate it from a good draft to an exceptional, professional-grade technical document that is ready for publication.
-
 **Instructions:**
 Analyze the provided guide markdown. Your task is to rewrite the entire document to be more accurate, clearer, and more comprehensive. Implement the following improvements directly into the text:
-
 1. **Enhance Technical Accuracy:** Scrutinize every technical detail. Verify PowerShell/CLI cmdlets, parameter names, object properties (e.g., check if it's \`MemoryGB\` vs. \`Memory\`), API endpoints, and procedural steps. Correct any inaccuracies, no matter how subtle.
 2. **Increase Clarity and Readability:** Rephrase complex or ambiguous sentences for better clarity. Ensure there is a logical, smooth flow between all sections. Where appropriate, add analogies or simpler explanations for difficult concepts before diving into technical specifics.
 3. **Add Depth and Completeness:** Identify any sections that are too superficial or brief. Expand upon them with more detailed explanations, additional practical examples, and more granular step-by-step instructions. The "Key Concepts - In-Depth Application & Management" section is especially important and should be as robust as possible. If any of the 12 core guide sections are missing or weak, you must create or substantially bolster them.
 4. **Enforce Best Practices:** Ensure all recommendations align with modern industry best practices for security, performance, automation, and maintainability. Add warnings, "Pro Tip" callouts, or notes on potential trade-offs where beneficial.
 5. **Improve Practicality:** Enhance all examples to be more useful in real-world, production scenarios. Add context to explain *why* an administrator would perform a certain task in a certain way, beyond just the "how."
 6. **Ensure Consistency:** Maintain consistent terminology and formatting throughout the entire document.
-
 Your final output must be the **complete, rewritten, and improved guide** in markdown format. Do not simply list your suggestions; you must implement them directly into the text. The core structure, including the '###' headers for the 12 main sections, must be preserved.
-
 ---
 **[Insert Complete Markdown of Generated Guide Here]**
 ---
@@ -729,6 +700,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         
         // --- Content Generation Categories ---
         const categoriesToGenerate = [
+            // ... (All 50+ categories from the original file are preserved here)
             { key: 'activeDirectory', title: 'Active Directory Management', description: "Tasks for managing users, groups, GPOs, and other AD objects.", initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
             { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
             { key: 'aiProgramming', title: 'Artificial Intelligence Programming', description: "Concepts and guides for getting started with AI development and programming.", initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Provide the output as a valid JSON array.` },
@@ -786,7 +758,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
-        let aiLog = []; // NEW: For logging AI interactions
+        let aiLog = []; 
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -851,7 +823,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             const appContainer = document.getElementById('app-container');
 
             if (user) {
-                // User is LOGGED IN
                 appContainer.classList.remove('hidden');
                 closeModal('apiKeyModal');
                 
@@ -872,7 +843,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 }
 
             } else {
-                // User is LOGGED OUT
                  authStatusEl.innerHTML = `
                      <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
@@ -882,7 +852,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 document.getElementById('login-button').addEventListener('click', handleLogin);
                 
                 appContainer.classList.add('hidden');
-                // Only show API key modal if the user is logged out AND there are no keys saved
                 if (!localStorage.getItem('geminiApiKey')) {
                      openModal('apiKeyModal');
                 }
@@ -899,7 +868,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 console.error("Google Sign-In Popup failed:", error);
                 const errorEl = document.getElementById('api-key-error');
                 if (errorEl) {
-                   // Provide more specific error feedback for the user.
                    let userMessage = `Login failed: ${error.code}.`;
                    if (error.code === 'auth/popup-closed-by-user') {
                        userMessage += ' You closed the login window before completing sign-in.';
@@ -934,20 +902,19 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             });
         }
         
+        // --- MODIFIED FUNCTION ---
         async function initializeAppContent() {
             appIsInitialized = true;
-            const loadingMessageEl = document.getElementById('loading-message');
-            loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
             openModal('loadingStateModal');
+            const loadingMessageEl = document.getElementById('loading-message');
+            loadingMessageEl.textContent = "Waking up the AI...";
 
-            document.getElementById('main-grid').innerHTML = '';
-            
             document.getElementById('gemini-result-container').innerHTML = '';
-            document.getElementById('discover-more-error').innerHTML = '';
 
             try {
                 await generateAndApplyDefaultTheme();
-                await loadAppContent(loadingMessageEl);
+                loadingMessageEl.textContent = "Loading application content...";
+                await loadAppContent(); // This no longer generates all cards
             } catch (error) {
                 const errorMessage = error ? error.message : "An unknown error occurred.";
                 console.error("A critical error occurred during app initialization:", errorMessage);
@@ -962,10 +929,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }
         }
         
-        /**
-         * Initializes both GAPI (for Drive/Picker) and GSI (for auth token client).
-         * This is called once after config is loaded.
-         */
         function initializeGoogleClients() {
             if (!GOOGLE_CLIENT_ID) {
                 console.warn("Google Client ID is not provided. Cloud features will be disabled.");
@@ -975,7 +938,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             document.getElementById('cloud-storage-card').classList.remove('hidden');
             document.getElementById('google-drive-section').classList.remove('hidden');
             
-            // Wait for the gapi script to load.
             const gapiInterval = setInterval(() => {
                 if (window.gapi && window.gapi.load) {
                     clearInterval(gapiInterval);
@@ -986,13 +948,12 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 }
             }, 100);
 
-            // Wait for the GSI script to load.
             const gsiInterval = setInterval(() => {
                 if (window.google && window.google.accounts) {
                     clearInterval(gsiInterval);
                     google.accounts.id.initialize({
                         client_id: GOOGLE_CLIENT_ID,
-                        callback: () => {}, // Callback is handled by the token client flow
+                        callback: () => {}, 
                     });
                     gisInited = true;
                 }
@@ -1046,11 +1007,17 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         }
 
 
+        // --- MODIFIED FUNCTION ---
         function setupEventListeners() {
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
-            document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
+            
+            // NEW Listeners for Topic Explorer
+            document.getElementById('explore-featured-btn').addEventListener('click', () => openCategoryBrowser('featured'));
+            document.getElementById('browse-all-btn').addEventListener('click', () => openCategoryBrowser('all'));
+            document.getElementById('closeCategoryBrowserModal').addEventListener('click', () => closeModal('categoryBrowserModal'));
+
 
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
@@ -1060,12 +1027,9 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-            document.getElementById('real-time-log-button').addEventListener('click', displayAiLog); // NEW
+            document.getElementById('real-time-log-button').addEventListener('click', displayAiLog);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!geminiApiKey) {
-                    openModal('apiKeyModal');
-                    return;
-                }
+                if(!geminiApiKey) { openModal('apiKeyModal'); return; }
                 openModal('themeGeneratorModal');
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
@@ -1081,7 +1045,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // General modal close listener
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal || e.target.closest('[id^="close"]')) {
@@ -1095,27 +1058,12 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             document.addEventListener('mouseup', handleTextSelection);
             document.addEventListener('mousedown', (e) => {
                  const searchButton = document.getElementById('search-gemini-button');
-                 // Hide search button if clicking anywhere other than on the button itself while it's visible.
                  if (!searchButton.classList.contains('hidden') && !searchButton.contains(e.target)) {
                     searchButton.classList.add('hidden');
                  }
             });
 
-            // Topics dropdown menu listeners
-            const topicsMenuButton = document.getElementById('topics-menu-button');
-            const topicsMenuItems = document.getElementById('topics-menu-items');
-
-            topicsMenuButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                topicsMenuItems.classList.toggle('hidden');
-            });
-
             document.addEventListener('click', (e) => {
-                // Hide topics menu if click is outside
-                if (!topicsMenuButton.contains(e.target) && !topicsMenuItems.contains(e.target)) {
-                    topicsMenuItems.classList.add('hidden');
-                }
-
                 const menuItem = e.target.closest('.topics-menu-item');
                 if (menuItem) {
                     e.preventDefault(); 
@@ -1125,7 +1073,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                         targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
                         setTimeout(() => targetCard.style.boxShadow = '', 2000);
                     }
-                    topicsMenuItems.classList.add('hidden');
                     return;
                 }
 
@@ -1231,7 +1178,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 }
             });
 
-            // Sticky Topics Modal Listeners
             document.getElementById('firebase-tools-button').addEventListener('click', openStickyTopicsModal);
             document.getElementById('sticky-topic-category-select').addEventListener('change', (e) => listenForStickyTopics(e.target.value));
             document.getElementById('add-sticky-topic-button').addEventListener('click', handleAddStickyTopic);
@@ -1370,7 +1316,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 driveFolderId = null;
             }
 
-            // Refresh buttons in any open modals
             if (document.body.classList.contains('inDepthModal-open')) {
                 const isInitial = !!document.getElementById('generate-detailed-steps-btn');
                 addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
@@ -1442,7 +1387,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 return;
              }
 
-             const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize filename
+             const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
              await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
@@ -1460,7 +1405,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }
 
             try {
-                // Check if file already exists
                 const searchResponse = await gapi.client.drive.files.list({
                     q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
                     fields: 'files(id)',
@@ -1560,7 +1504,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             const cardId = `imported-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
             
             const card = document.createElement('div');
-            card.className = 'card md:col-span-2';
+            card.className = 'card';
             card.id = cardId;
             
             const cardContent = document.createElement('div');
@@ -1584,44 +1528,27 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         }
         
         // --- Core Application Functions ---
-
-        async function loadAppContent(loadingMessageEl) {
+        
+        // --- MODIFIED FUNCTION ---
+        async function loadAppContent() {
             try {
                 categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
-
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
-                
-                const generationPromises = categoriesToGenerate.map(cat => {
-                    if (loadingMessageEl) loadingMessageEl.textContent = `Generating guides for: ${cat.title}...`;
-                    return generateAndPopulateAICategory(cat).catch(e => {
-                        console.error(`Failed to load category: ${cat.title}`, e);
-                        return { key: cat.key, error: e };
-                    });
-                });
-
-                const results = await Promise.all(generationPromises);
-                const firstFailure = results.find(r => r && r.error);
-                if(firstFailure){
-                    throw new Error(`One or more AI content categories failed to load, starting with ${firstFailure.key}. The process has been stopped.`);
-                }
-                
-                if (loadingMessageEl) loadingMessageEl.textContent = `Building navigation...`;
-                await generateTopicsMenu();
-
+                // No longer generates all category cards on load. This is now user-driven.
             } catch (error) {
                 console.error("An error occurred while loading app content:", error.message);
                 throw error;
             }
         }
         
+        // --- MODIFIED FUNCTION ---
         async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
-            const mainGrid = document.getElementById('main-grid');
+            // This function now creates and returns a card element, instead of appending it to the DOM.
             const card = document.createElement('div');
-            card.className = 'card md:col-span-2';
+            card.className = 'card';
             card.id = `${key}-card`;
             const selectorId = `${key}-selector-visual`;
             card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-theme-type="${key}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
-            mainGrid.appendChild(card);
             
             fullPrompts[key] = fullPrompt;
 
@@ -1632,15 +1559,20 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 const data = parseJsonWithCorrections(jsonText);
                 data.sort((a, b) => a.title.localeCompare(b.title));
                 allThemeData[key] = data;
-                populateCardGridSelector(selectorId, key);
+                
+                // We pass the actual container element to the selector function now
+                populateCardGridSelector(card.querySelector(`#${selectorId}`), key);
+                return card; // Return the fully formed card element
+
             } catch (error) {
-                handleApiError(error, document.getElementById(selectorId), title, card);
-                throw error;
+                handleApiError(error, card.querySelector(`#${selectorId}`), title, card);
+                throw error; // Propagate error to the calling function
             }
         }
         
-        function populateCardGridSelector(containerId, themeType, newItemsIds = new Set()) {
-            const container = document.getElementById(containerId);
+        // --- MODIFIED FUNCTION ---
+        function populateCardGridSelector(container, themeType, newItemsIds = new Set()) {
+            // This function now accepts the container element directly
             const data = allThemeData[themeType] || [];
             const stickies = stickyTopics[themeType] || [];
             
@@ -1666,7 +1598,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             ).join('');
 
             const regularItemsHtml = data
-                .filter(item => !stickyTitles.has(item.title)) // Don't show AI item if a sticky with same title exists
+                .filter(item => !stickyTitles.has(item.title))
                 .map(item => {
                     const compositeKey = `${cardTitle} - ${item.title}`;
                     const isViewed = viewedItemIds.has(compositeKey);
@@ -1684,6 +1616,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             }).join('');
             
             const topicInputId = `add-topic-input-${themeType}`;
+            const containerId = container.id;
             const addNewTopicHtml = `
                 <div class="add-topic-container">
                     <input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
@@ -1711,25 +1644,20 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             const inputField = button.previousElementSibling;
             const newTitle = inputField.value.trim();
 
-            if (!newTitle) {
-                inputField.focus();
-                return;
-            }
+            if (!newTitle) { inputField.focus(); return; }
 
             const newTopic = {
                 title: newTitle,
                 id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
-                description: `Custom guide for: ${newTitle}` // Provide a default description
+                description: `Custom guide for: ${newTitle}`
             };
 
-            // Add to the main data store so it can be found later
-            if (!allThemeData[themeType]) {
-                allThemeData[themeType] = [];
-            }
+            if (!allThemeData[themeType]) { allThemeData[themeType] = []; }
             allThemeData[themeType].push(newTopic);
             allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
 
-            populateCardGridSelector(containerId, themeType, new Set([newTopic.id]));
+            const container = document.getElementById(containerId);
+            populateCardGridSelector(container, themeType, new Set([newTopic.id]));
 
             const newTopicElement = document.getElementById(`grid-selector-${newTopic.id}`);
             if (newTopicElement) {
@@ -1737,7 +1665,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 await handleGridSelect(newTopicElement);
             }
         }
-
 
         async function handleGenerateMoreClick(button) {
             const { containerId, themeType } = button.dataset;
@@ -1752,10 +1679,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             const existingTitles = allThemeData[themeType].map(item => item.title);
             
             const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
-            
-            Existing Task List:
-            - ${existingTitles.join('\n- ')}
-
+            Existing Task List:\n- ${existingTitles.join('\n- ')}\n
             For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
 
             try {
@@ -1772,18 +1696,18 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 });
                 
                 allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
-                populateCardGridSelector(containerId, themeType, newItemIds);
+                populateCardGridSelector(container, themeType, newItemIds);
                 document.getElementById(`${themeType}-details`).innerHTML = '';
 
             } catch (error) {
                 console.error(`Error generating more items for ${themeType}:`, error);
-                const originalButtonContent = `<span class="flex items-center justify-center gap-2">...</span>`;
+                const originalButtonContent = button.innerHTML;
                 button.disabled = false;
-                button.innerHTML = originalButtonContent.replace('...', 'Error. Try Again.');
+                button.innerHTML = 'Error. Try Again.';
                 button.classList.add('bg-red-100', 'text-red-700');
                  setTimeout(() => {
                     button.classList.remove('bg-red-100', 'text-red-700');
-                    button.innerHTML = originalButtonContent.replace('...', `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Generate 10 More`);
+                    button.innerHTML = originalButtonContent;
                 }, 3000);
             } 
         }
@@ -1809,7 +1733,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 const card = container.closest('.card');
                 card.dataset.isFullyLoaded = 'true';
 
-                populateCardGridSelector(containerId, themeType);
+                populateCardGridSelector(container, themeType);
                 document.getElementById(`${themeType}-details`).innerHTML = '';
             } catch (error) {
                 button.disabled = false;
@@ -1821,7 +1745,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 
         async function handleGridSelect(target) {
             const { themeId, themeType } = target.dataset;
-            // Unified search for item data in both AI-generated and sticky topic lists
             let item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) || 
                        stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
             
@@ -1855,7 +1778,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 The overall category is: "${cardTitle}"
                 The category description is: "${item.description || 'General task'}"
                 The specific topic is: "${item.title}"
-
                 Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
                 For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence.
                 Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
@@ -1880,14 +1802,10 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         
         async function markItemAsViewed(cardTitle, buttonTitle) {
             if (!viewedItemsCollectionRef) return;
-
             const compositeKey = `${cardTitle} - ${buttonTitle}`;
-            
             try {
                 const docRef = doc(viewedItemsCollectionRef, compositeKey);
-                await setDoc(docRef, { 
-                    viewedAt: Timestamp.fromDate(new Date()) 
-                });
+                await setDoc(docRef, { viewedAt: Timestamp.fromDate(new Date()) });
             } catch (error) {
                 console.error("Error marking item as viewed:", error);
             }
@@ -1923,7 +1841,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following custom topic:
 - **Topic:** "${userPrompt}"
 - **Tailoring Options:** ${selectedOptions ? selectedOptions : 'None'}
-
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
 Return only these sections in markdown format. Do not include any other sections.`;
 
@@ -1944,7 +1861,6 @@ Return only these sections in markdown format. Do not include any other sections
                 promptInput.value = '';
             }
         }
-
         
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
@@ -1958,7 +1874,6 @@ Return only these sections in markdown format. Do not include any other sections
                 console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
                 
                 try {
-                    // This regex is a bit more robust for fixing unquoted keys.
                     const correctedJsonString = cleanedString
                         .replace(/\\'/g, "'") 
                         .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
@@ -1972,7 +1887,6 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // --- API CALL FUNCTIONS ---
         function logAiInteraction(prompt, response, type) {
             aiLog.push({
                 timestamp: new Date(),
@@ -2026,7 +1940,7 @@ Return only these sections in markdown format. Do not include any other sections
             }
             const result = await callApi(apiUrl, payload);
             const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-            logAiInteraction(prompt, responseText, logType); // Log the interaction
+            logAiInteraction(prompt, responseText, logType);
             return responseText;
         }
 
@@ -2165,7 +2079,7 @@ Return only these sections in markdown format. Do not include any other sections
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
             prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
             prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
-            prompts["AI Guide Refinement Prompt"] = aiReviewPrompt; // Add the new prompt
+            prompts["AI Guide Refinement Prompt"] = aiReviewPrompt;
             
             return prompts;
         }
@@ -2228,34 +2142,25 @@ Return only the new, complete, and rewritten markdown text.`;
 
             // This is the prompt for generating a new guide, with the user's requested changes.
             return `You are an expert senior IT administrator and technical writer AI. Your primary goal is to generate a comprehensive, in-depth, and practical **reference guide** for the topic below.
-
 The main objective is not just to explain a task, but to create an exhaustive guide on its **underlying key concepts**. Prioritize depth, nuance, and multiple practical implementation methods for each concept. The user must walk away with a deep, applicable understanding of each component technology.
-
 - **Category:** "${context.cardTitle}"
 - **Topic Description:** "${context.cardDescription}"
 - **Specific Task:** "${task}"
-
 **CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
-
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
-
 ### 1. Introduction
     * **Overview:** Briefly explain the technology or task.
     * **Importance:** Describe why this technology and its underlying concepts are important in modern IT environments.
     * **What You'll Learn:** Provide a bulleted list of the key concepts you will master and the various ways you will learn to manage them.
-
 ### 2. Architectural Overview (If Applicable)
     * For complex topics, explain the high-level architecture.
     * Describe the main components and how they interact. Use simple analogies if possible.
-
 ### 3. Key Concepts & Terminology (Definitions)
     * **List and Define:** List and clearly define the fundamental principles, terminology, and acronyms the user MUST understand. This section is for definitions only; the deep-dive application will follow in Section 5.
-
 ### 4. Prerequisites
     * **Permissions:** Detail the specific administrative roles or granular permissions required for the tasks and concepts that will be explored.
     * **Software/Licensing:** List any necessary software, specific versions, and licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites.
-
 ### 5. Key Concepts - In-Depth Application & Management
     * **CRITICAL SECTION:** This is the most important part of the guide. For **each individual concept** listed in Section 3, create a detailed, self-contained mini-guide.
     * **Multiple Implementation Methods:** For each concept, you MUST provide detailed instructions for managing it through as many of the following methods as are relevant:
@@ -2264,37 +2169,28 @@ The main objective is not just to explain a task, but to create an exhaustive gu
         * **API/SDK Usage (If applicable):** Explain how to interact with the concept programmatically, providing examples using relevant APIs (e.g., Microsoft Graph, REST APIs) or SDKs.
         * **Third-Party Tool Integration (If applicable):** Mention and briefly describe how popular third-party applications are used to manage or interact with this concept.
     * **Explain the "Why":** For each instruction set, explain *why* an administrator would choose that method and what the trade-offs are.
-
 ### 6. Verification and Validation
     * Provide specific commands, API calls, or GUI procedures to confirm that each key concept has been configured correctly.
     * Describe what a successful output or system state looks like for each concept.
-
 ### 7. Best Practices
     * Offer expert advice on the most effective, secure, and efficient ways to implement and manage each of the key concepts. Organize the advice by concept.
-
 ### 8. Automation Techniques for Key Concepts
     * **Concept-Specific Automation:** For each concept from Section 3, describe relevant automation opportunities.
     * **Scripting Examples:** Provide complete, practical script examples (e.g., PowerShell, PowerCLI, bash) or explain how to use APIs to automate tasks related to that **specific concept**.
-
 ### 9. Security Considerations
     * **Concept-Specific Hardening:** For each key concept, provide specific steps to harden its configuration.
     * **Common Vulnerabilities:** Discuss potential security risks associated with each concept.
     * **Auditing & Logging:** For each concept, recommend what specific events to audit and how to configure logging.
-
 ### 10. Advanced Use Cases & Scenarios
     * Describe 2-3 advanced scenarios that show how to **combine or extend the key concepts** in sophisticated ways to solve complex problems.
-
 ### 11. Troubleshooting
     * Provide a table of common problems, organized by **Key Concept**. For each problem, list the likely causes, and provide step-by-step solutions that may involve the GUI, CLI, or API.
-
 ### 12. Helpful Resources
     * Include a final section with a bulleted list of high-quality, relevant links to official documentation or authoritative articles for the concepts discussed.
-
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
 ${powershellStandard}
 ${powerCLIStandard}
-
 Return only the complete markdown guide, ensuring each main section has a '###' header.`;
         }
         
@@ -2351,7 +2247,6 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // *** MODIFIED FUNCTION ***
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -2375,7 +2270,6 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('inDepthDetailedModal');
 
             try {
-                // --- STEP 1: Generate the initial draft ---
                 detailedContentEl.innerHTML = getLoaderHTML('Generating initial draft...');
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
                 const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
@@ -2384,7 +2278,6 @@ Return only these sections in markdown format. Do not include any other sections
                 initialGuideMarkdown = initialGuideMarkdown ? initialGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!initialGuideMarkdown) throw new Error("Failed to generate the initial guide draft.");
 
-                // --- STEP 2: Refine the draft with the AI Review prompt ---
                 detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the draft...');
                 const reviewRequestPrompt = aiReviewPrompt.replace('**[Insert Complete Markdown of Generated Guide Here]**', initialGuideMarkdown);
                 
@@ -2392,7 +2285,6 @@ Return only these sections in markdown format. Do not include any other sections
                 finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the final, refined guide.");
                 
-                // --- STEP 3: Display the final, polished guide ---
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
@@ -2422,7 +2314,6 @@ Return only these sections in markdown format. Do not include any other sections
             if(modal) {
                 modal.classList.add('hidden');
                 document.body.classList.remove(`${modalId}-open`);
-                // If this was the last modal, remove the generic class
                 if (document.querySelectorAll('.modal:not(.hidden)').length === 0) {
                      document.body.classList.remove('modal-open');
                 }
@@ -2499,7 +2390,6 @@ Return only these sections in markdown format. Do not include any other sections
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
 
-            // Don't show button for selections in input fields
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 searchButton.classList.add('hidden');
                 return;
@@ -2538,7 +2428,7 @@ Return only these sections in markdown format. Do not include any other sections
                 let resultText = await callGeminiAPI(prompt, false, "Text Selection Search");
                 resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
                 
-                originalGeneratedText.set("currentSearch", resultText); // Store for refinement
+                originalGeneratedText.set("currentSearch", resultText);
                 
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
             } catch (error) {
@@ -2640,37 +2530,9 @@ Return only these sections in markdown format. Do not include any other sections
             });
         }
         
-        async function handleDiscoverMoreClick() {
-            const button = document.getElementById('discover-more-button');
-            const errorP = document.getElementById('discover-more-error');
-            errorP.textContent = '';
-            button.disabled = true;
+        // --- REMOVED FUNCTION ---
+        // handleDiscoverMoreClick is no longer needed with the new UX
 
-            const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent.trim()).filter(Boolean);
-            const titlesString = existingTitles.length > 0 ? `[${existingTitles.map(t => `"${t}"`).join(', ')}]` : 'the default ones';
-            
-            const prompt = `Generate 1 new, useful IT administration category that is NOT in the following list: ${titlesString}.
-Return your response as a single, valid JSON object with the following keys: "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50).
-The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description".
-${jsonInstruction}`;
-
-            try {
-                const jsonText = await callGeminiAPI(prompt, true, "Discover More Topics");
-                if (!jsonText) throw new Error("AI did not return a new category.");
-                const newCategory = parseJsonWithCorrections(jsonText);
-                categoriesToGenerate.push(newCategory);
-                categoriesToGenerate.sort((a,b) => a.title.localeCompare(b.title));
-                await generateAndPopulateAICategory(newCategory);
-                await generateTopicsMenu();
-            } catch (error) {
-                console.error("Failed to discover more topics:", error);
-                errorP.textContent = "Sorry, couldn't generate a new topic right now. Please try again.";
-                 handleApiError(error, null, "discover more");
-            } finally {
-                button.disabled = false;
-            }
-        }
-        
         async function handleCustomVisualThemeGeneration() {
             const prompt = document.getElementById('theme-prompt').value;
             if(!prompt) return;
@@ -2722,36 +2584,9 @@ ${jsonInstruction}`;
             errorContainer.classList.remove('hidden');
         }
 
-        async function generateTopicsMenu() {
-            const menuContainer = document.getElementById('topics-menu-container');
-            const menuItemsContainer = document.getElementById('topics-menu-items').querySelector('div');
-            const cards = Array.from(document.querySelectorAll('#main-grid .card'));
-            
-            if (cards.length <= 1) {
-                menuContainer.classList.add('hidden');
-                return;
-            }
-
-            const cardData = cards.map(card => ({
-                id: card.id,
-                title: card.querySelector('h2')?.textContent
-            })).filter(c => c.id && c.title).sort((a,b) => a.title.localeCompare(b.title));
-            
-            if (cardData.length === 0) {
-                 menuContainer.classList.add('hidden');
-                return;
-            }
-            
-            menuItemsContainer.innerHTML = ''; // Clear previous items
-
-            const menuHtml = cardData.map(card => {
-                return `<a href="#" class="topics-menu-item" role="menuitem" data-target-id="${card.id}">${card.title}</a>`;
-            }).join('');
-
-            menuItemsContainer.innerHTML = menuHtml;
-            menuContainer.classList.remove('hidden');
-        }
-
+        // --- REMOVED FUNCTION ---
+        // generateTopicsMenu is no longer needed as there's no top-level dropdown
+        
         function populateTypographySettings() {
             const fontSelect = document.getElementById('font-family-select');
             const sizeSelect = document.getElementById('font-size-select');
@@ -2976,9 +2811,7 @@ ${jsonInstruction}`;
         }
         
         function truncateText(text, maxLength = 50) {
-            if (typeof text !== 'string' || text.length <= maxLength) {
-                return text;
-            }
+            if (typeof text !== 'string' || text.length <= maxLength) { return text; }
             return text.substring(0, maxLength) + '...';
         }
 
@@ -3004,7 +2837,7 @@ ${jsonInstruction}`;
         // --- Sticky Topics Functions ---
         function openStickyTopicsModal() {
             const select = document.getElementById('sticky-topic-category-select');
-            select.innerHTML = '<option value="">Select a category...</option>'; // Clear and add placeholder
+            select.innerHTML = '<option value="">Select a category...</option>';
             
             const sortedCategories = [...categoriesToGenerate].sort((a,b) => a.title.localeCompare(b.title));
 
@@ -3023,9 +2856,7 @@ ${jsonInstruction}`;
                 stickyTopicsUnsubscribe();
             }
             if (!userId || !categoryKey) {
-                 if(stickyTopics[categoryKey]) {
-                    stickyTopics[categoryKey] = [];
-                 }
+                 if(stickyTopics[categoryKey]) { stickyTopics[categoryKey] = []; }
                  renderStickyTopics(categoryKey);
                  return;
             }
@@ -3037,10 +2868,10 @@ ${jsonInstruction}`;
                 const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 stickyTopics[categoryKey] = topics;
                 renderStickyTopics(categoryKey);
-                // Also refresh the main card grid if it's visible
+                
                 const gridContainer = document.getElementById(`${categoryKey}-selector-visual`);
                 if (gridContainer) {
-                    populateCardGridSelector(`${categoryKey}-selector-visual`, categoryKey);
+                    populateCardGridSelector(gridContainer, categoryKey);
                 }
             }, (error) => {
                 console.error(`Error listening to sticky topics for ${categoryKey}:`, error);
@@ -3079,7 +2910,6 @@ ${jsonInstruction}`;
             const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
             
             try {
-                // Add a default description for new sticky topics
                 await addDoc(stickyTopicsCollectionRef, { 
                     title: title, 
                     description: `Custom sticky topic: ${title}`,
@@ -3116,7 +2946,9 @@ ${jsonInstruction}`;
 
             if (!categoryKey || !docId || !userId) return;
             
-            if (confirm("Are you sure you want to delete this sticky topic?")) {
+            // Re-implementing a custom modal confirmation later if needed.
+            // For now, confirm is a simple way to prevent accidental deletion.
+            if (window.confirm("Are you sure you want to delete this sticky topic?")) {
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
                 try {
@@ -3127,10 +2959,100 @@ ${jsonInstruction}`;
             }
         }
 
-        // --- NEW: AI Log Functions ---
+        // --- NEW: Topic Browser Functions ---
+
+        /**
+         * Opens the Category Browser modal and populates it with categories.
+         * @param {'featured' | 'all'} mode - Determines whether to show top 10 or all.
+         */
+        function openCategoryBrowser(mode) {
+            const modalTitle = document.getElementById('categoryBrowserModalTitle');
+            const modalContent = document.getElementById('categoryBrowserModalContent');
+            modalContent.innerHTML = ''; // Clear previous content
+
+            const categories = (mode === 'featured') 
+                ? [...categoriesToGenerate].slice(0, 10) 
+                : [...categoriesToGenerate];
+
+            modalTitle.textContent = (mode === 'featured') ? 'Featured Categories' : 'All Categories';
+
+            const categoryGrid = document.createElement('div');
+            categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+
+            categoryGrid.innerHTML = categories.map(cat => `
+                <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-category-key="${cat.key}" style="border-color: var(--color-card-border);">
+                    <h3 class="font-semibold text-lg themed-text-accent">${cat.title}</h3>
+                    <p class="text-sm themed-text-muted mt-1 flex-grow">${cat.description}</p>
+                    <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
+                </div>
+            `).join('');
+
+            modalContent.appendChild(categoryGrid);
+            
+            modalContent.querySelectorAll('.category-selector-item').forEach(item => {
+                item.addEventListener('click', handleCategorySelection);
+            });
+
+            openModal('categoryBrowserModal');
+        }
+
+        /**
+         * Handles the click on a category in the browser modal.
+         * It closes the modal and triggers the generation of the selected category card.
+         */
+        async function handleCategorySelection(e) {
+            const categoryKey = e.currentTarget.dataset.categoryKey;
+            if (!categoryKey) return;
+
+            closeModal('categoryBrowserModal');
+
+            const categoryData = categoriesToGenerate.find(cat => cat.key === categoryKey);
+            if (!categoryData) {
+                console.error("Could not find data for category:", categoryKey);
+                return;
+            }
+            
+            // Check if the card already exists to avoid duplication
+            const existingCard = document.getElementById(`${categoryKey}-card`);
+            if (existingCard) {
+                existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                existingCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
+                setTimeout(() => existingCard.style.boxShadow = '', 2000);
+                return;
+            }
+
+            const container = document.getElementById('dynamic-card-container');
+            const cardPlaceholder = document.createElement('div');
+            cardPlaceholder.id = `${categoryKey}-placeholder`;
+            cardPlaceholder.innerHTML = getLoaderHTML(`Generating guides for ${categoryData.title}...`);
+            // Prepend so new cards appear at the top
+            container.prepend(cardPlaceholder);
+            
+            cardPlaceholder.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            try {
+                // generateAndPopulateAICategory now returns an element
+                const cardElement = await generateAndPopulateAICategory(categoryData);
+                const placeholder = document.getElementById(`${categoryKey}-placeholder`);
+                if (placeholder) {
+                    placeholder.replaceWith(cardElement);
+                } else {
+                    container.prepend(cardElement); // Fallback
+                }
+            } catch (error) {
+                console.error(`Failed to load category on-demand: ${categoryData.title}`, error);
+                const placeholder = document.getElementById(`${categoryKey}-placeholder`);
+                if(placeholder) {
+                    placeholder.innerHTML = `<div class="card p-8 bg-red-100 border-red-400 text-red-700">Error loading category: ${categoryData.title}. Please try again.</div>`;
+                }
+            }
+        }
+
+
+        // --- AI Log Functions ---
         function displayAiLog() {
             const contentEl = document.getElementById('aiLogModalContent');
-            contentEl.innerHTML = ''; // Clear previous logs
+            contentEl.innerHTML = '';
             
             if (aiLog.length === 0) {
                 contentEl.innerHTML = `<p class="themed-text-muted text-center">No AI interactions have been logged yet.</p>`;
@@ -3138,7 +3060,6 @@ ${jsonInstruction}`;
                 return;
             }
 
-            // Reverse the log to show the most recent first
             const reversedLog = [...aiLog].reverse();
 
             reversedLog.forEach((log, index) => {
