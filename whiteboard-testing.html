@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Whiteboard 2.0 (Restored)</title>
+    <title>Collaborative Whiteboard 2.0 (Google Auth)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -161,7 +161,7 @@
                 </div>
                 <div id="chat-messages" class="flex-grow px-4"></div>
                 <div id="chat-input-area" class="p-4">
-                    <textarea id="chat-input" placeholder="Connecting to chat..." disabled></textarea>
+                    <textarea id="chat-input" placeholder="Sign in to use the chat." disabled></textarea>
                     <div class="flex justify-between w-full">
                         <button id="gif-search-btn" class="chat-btn" disabled><i class="fa-solid fa-photo-film"></i> &nbsp; GIF</button>
                         <button id="chat-send-btn" class="chat-btn" disabled><i class="fa-solid fa-paper-plane"></i> &nbsp; Send</button>
@@ -180,9 +180,18 @@
                         <h1 id="whiteboard-title" class="text-2xl font-bold text-white rounded px-1"></h1>
                         <p id="whiteboard-description" class="text-sm text-gray-400 rounded px-1"></p>
                     </div>
-                     <div class="flex flex-col items-end mt-2 md:mt-0 text-xs text-gray-500 space-y-2">
-                        <div>User: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Loading...</span></div>
-                        <div>Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1.6-final</span></div>
+                     <div class="flex flex-col items-end mt-2 md:mt-0 space-y-2">
+                        <div id="auth-container" class="flex items-center gap-2">
+                            <span id="user-display-name" class="text-sm text-white font-semibold"></span>
+                            <button id="google-signin-btn" class="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-semibold flex items-center gap-2">
+                                <i class="fa-brands fa-google"></i> Sign In
+                            </button>
+                            <button id="signout-btn" class="hidden p-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold">
+                                Sign Out
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500">User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Not Signed In</span></div>
+                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1.5-google-auth</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help (Ctrl+K)"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -309,7 +318,7 @@
     <script type="module">
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
@@ -368,13 +377,16 @@
         const gifSearchExecuteBtn = document.getElementById('gif-search-execute-btn');
         const gifSearchResults = document.getElementById('gif-search-results');
         const imageViewerOverlay = document.getElementById('image-viewer-overlay');
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const signOutBtn = document.getElementById('signout-btn');
+        const userDisplayNameEl = document.getElementById('user-display-name');
 
         // --- Firebase & State Globals ---
         let db, userId, auth, colorPicker;
         let isEyedropperActive = false;
         let unsubscribeFromDrawings, unsubscribeFromState, unsubscribeFromChat;
         let confirmCallback = null;
-        const userAvatars = new Map();
+        const userProfiles = new Map();
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 5, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
@@ -386,68 +398,32 @@
         let commands = [];
         let activeCommandIndex = 0;
         
-        // --- Content & Nicknames ---
+        // --- Content ---
         const dailyTitles = ["Flow", "Clarity", "Presence", "Intention", "Balance", "Growth", "Stillness", "Awareness", "Release", "Connect"];
         const dailyQuotes = [
             "The body benefits from movement, and the mind benefits from stillness.", "Yoga is the journey of the self, through the self, to the self.", "In the midst of movement and chaos, keep stillness inside of you.", "The longest journey of any person is the journey inward.", "Be where you are, not where you think you should be.", "The nature of yoga is to shine the light of awareness into the darkest corners of the body.", "We are not trying to escape our lives, but to return to them.", "Your task is not to seek for love, but merely to seek and find all the barriers within yourself that you have built against it.", "Let your practice be a celebration of life.", "The goal of yoga is not to be perfect, but to be whole."
         ];
-        const userNicknames = { /* Add known user IDs and nicknames here */ };
-
-        // --- Avatar & Name Generation ---
-        function getUserDisplayName(uid) { return userNicknames[uid] || uid; }
-
-        async function getOrGenerateAvatar(uid) {
-            if (!firebaseApiKey) { // Using firebaseApiKey as the proxy for Gemini key
-                console.warn("Cannot generate avatar: API key not provided.");
-                return null;
+       
+        // --- User Profile Management ---
+        async function getUserProfile(uid) {
+            if (userProfiles.has(uid)) {
+                return userProfiles.get(uid);
             }
-            if (userAvatars.has(uid) && userAvatars.get(uid).url) {
-                return userAvatars.get(uid).url;
-            }
-
-            const avatarDocRef = doc(db, `artifacts/${whiteboardId}/public/data/avatars`, uid);
             try {
-                const avatarDoc = await getDoc(avatarDocRef);
-                const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-
-                if (avatarDoc.exists() && avatarDoc.data().generatedAt?.toMillis() > oneDayAgo) {
-                    const url = avatarDoc.data().imageUrl;
-                    userAvatars.set(uid, { url });
-                    return url;
+                const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    userProfiles.set(uid, userData);
+                    return userData;
                 }
             } catch (error) {
-                console.error("Error fetching avatar from Firestore:", error);
+                console.error("Error fetching user profile:", error);
             }
-
-            const nickname = getUserDisplayName(uid);
-            const prompt = `Create a unique, simple, modern, abstract, and colorful SVG avatar for a user named '${nickname}'. The SVG must be exactly 100x100 pixels. Use clean geometric shapes and interesting color palettes. Do not include any text, raster images, or font dependencies. The background should be a solid color. Return ONLY the raw SVG code, starting with "<svg" and ending with "</svg>".`;
-
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const result = await response.json();
-                
-                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    let svgText = result.candidates[0].content.parts[0].text.replace(/```svg/g, '').replace(/```/g, '').trim();
-                    const svgDataUrl = `data:image/svg+xml;base64,${btoa(svgText)}`;
-                    await setDoc(avatarDocRef, { imageUrl: svgDataUrl, generatedAt: serverTimestamp() });
-                    userAvatars.set(uid, { url: svgDataUrl });
-                    return svgDataUrl;
-                } else {
-                    throw new Error("Invalid content in API response.");
-                }
-            } catch (error) {
-                console.error(`Failed to generate avatar for ${uid}.`, error);
-                return null;
-            }
+            // Fallback if user is not in the database for some reason
+            const fallbackProfile = { name: `User ${uid.substring(0, 6)}...`, avatar: null };
+            userProfiles.set(uid, fallbackProfile);
+            return fallbackProfile;
         }
 
         // --- UI & Feature Setup ---
@@ -577,163 +553,9 @@
         function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
         function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
         function getTransformHandles(obj) { const bounds = getObjectBounds(obj); if (!bounds || bounds.width <= 1 || bounds.height <= 1) return null; const center = getObjectCenter(obj); const w = bounds.width; const h = bounds.height; const angle = obj.rotation || 0; const corners = { tl: {x: center.x - w/2, y: center.y - h/2}, tr: {x: center.x + w/2, y: center.y - h/2}, bl: {x: center.x - w/2, y: center.y + h/2}, br: {x: center.x + w/2, y: center.y + h/2} }; const rotationHandleOffset = 30; const topMid = { x: center.x, y: center.y - h/2 }; const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset }; const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`; return { tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'}, tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'}, bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'}, br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'}, tm: rotatePoint(topMid, center, angle), rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`} }; }
-        
-        // --- MOUSE EVENT HANDLERS (Restored & Adapted) ---
-        function handleMouseDown(e) {
-            if (state.isTexting || isEyedropperActive) return;
-            if (!userId) { console.warn("Cannot draw: User not authenticated."); return; }
-            
-            const pos = getMousePos(e);
-            state.startPos = pos;
-            state.action = 'none';
-
-            if (state.currentTool === 'select') {
-                const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                if (selectedObject) {
-                    const handles = getTransformHandles(selectedObject);
-                    if (handles) {
-                        for (const key in handles) {
-                            const handle = handles[key];
-                            if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
-                                state.action = handle.type; // 'resize' or 'rotate'
-                                state.transformHandle = key;
-                                state.originalObjectState = JSON.parse(JSON.stringify(selectedObject));
-                                state.originalObjectState.center = getObjectCenter(selectedObject);
-                                updateCursor(pos);
-                                return;
-                            }
-                        }
-                    }
-                }
-                
-                const clickedObjectId = findClickedObject(pos.x, pos.y);
-                if (clickedObjectId) {
-                    state.selectedObjectId = clickedObjectId;
-                    state.action = 'moving';
-                    const obj = state.allDrawings.get(clickedObjectId);
-                    const center = getObjectCenter(obj);
-                    state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y };
-                    state.originalObjectState = JSON.parse(JSON.stringify(obj));
-                } else {
-                    state.selectedObjectId = null;
-                }
-                drawOverlay();
-            } else if (state.currentTool === 'text') {
-                startTextEntry(snapToGrid(pos));
-            } else {
-                state.action = 'drawing';
-                state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
-            }
-            updateCursor(pos);
-        }
-
-        function handleMouseMove(e) {
-            let pos = getMousePos(e);
-            if (!state.startPos) {
-                updateCursor(pos);
-                return;
-            }
-
-            if (state.action === 'drawing') {
-                if (state.currentTool === 'pen') {
-                    state.tempDrawing.points.push(pos);
-                } else {
-                    state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
-                }
-                drawOverlay();
-            } else if (state.action === 'moving' && state.selectedObjectId) {
-                const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y };
-                const snappedCenter = snapToGrid(newCenter);
-                moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y);
-                drawOverlay();
-            } else if (state.action === 'rotating' && state.selectedObjectId) {
-                const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                const center = state.originalObjectState.center;
-                const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x);
-                const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x);
-                selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle);
-                drawOverlay();
-            } else if (state.action === 'resizing' && state.selectedObjectId) {
-                const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                const center = state.originalObjectState.center;
-                const angle = -(state.originalObjectState.rotation || 0);
-                const localPos = rotatePoint(pos, center, angle);
-                const origBounds = getObjectBounds(state.originalObjectState);
-                if (!origBounds) return;
-
-                let newWidth = Math.abs(localPos.x - center.x) * 2;
-                let newHeight = Math.abs(localPos.y - center.y) * 2;
-
-                if (state.isShiftDown && selectedObject.type !== 'line') {
-                    const origAspectRatio = origBounds.width / origBounds.height;
-                    if (origAspectRatio > 0) {
-                        if (newWidth / origBounds.width > newHeight / origBounds.height) {
-                            newHeight = newWidth / origAspectRatio;
-                        } else {
-                            newWidth = newHeight * origAspectRatio;
-                        }
-                    }
-                }
-
-                if (selectedObject.type === 'rectangle') {
-                    selectedObject.width = newWidth;
-                    selectedObject.height = newHeight;
-                    selectedObject.x = center.x - newWidth / 2;
-                    selectedObject.y = center.y - newHeight / 2;
-                } else if (selectedObject.type === 'circle') {
-                    selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y);
-                    selectedObject.x = center.x;
-                    selectedObject.y = center.y;
-                } else if (selectedObject.type === 'text') {
-                    const localStartPos = rotatePoint(state.startPos, center, angle);
-                    const origFontSize = state.originalObjectState.fontSize;
-                    const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y);
-                    const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y);
-                    if(origDist > 0.1) {
-                       const scale = newDist / origDist;
-                       selectedObject.fontSize = Math.max(5, origFontSize * scale);
-                    }
-                } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) {
-                    const scaleX = origBounds.width > 0 ? newWidth / origBounds.width : 1;
-                    const scaleY = origBounds.height > 0 ? newHeight / origBounds.height : 1;
-                    const originalPoints = state.originalObjectState.points;
-                    const originalCenter = getObjectCenter(state.originalObjectState);
-                    selectedObject.points = originalPoints.map(p => ({
-                        x: originalCenter.x + (p.x - originalCenter.x) * scaleX,
-                        y: originalCenter.y + (p.y - originalCenter.y) * scaleY,
-                    }));
-                }
-                drawOverlay();
-            }
-            updateCursor(pos);
-        }
-
-        async function handleMouseUp(e) {
-            if (!state.startPos) return;
-            const objToUpdate = state.allDrawings.get(state.selectedObjectId);
-
-            if (state.action === 'drawing' && state.tempDrawing) {
-                if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) {
-                    const newDocRef = await addObjectToFirestore(state.tempDrawing);
-                    if (newDocRef) {
-                        pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }});
-                    }
-                }
-            } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) {
-                const {id, ...data} = objToUpdate;
-                updateObjectInFirestore(id, data, state.originalObjectState);
-            }
-            
-            state.action = 'none';
-            state.startPos = null;
-            state.tempDrawing = null;
-            state.transformHandle = null;
-            state.originalObjectState = null;
-            redrawCanvas();
-            updateCursor(getMousePos(e));
-        }
-
+        function handleMouseDown(e) { if (state.isTexting || isEyedropperActive) return; if (!userId) { console.warn("Cannot draw: User not authenticated."); return; } const pos = getMousePos(e); state.startPos = pos; state.action = 'none'; if (state.currentTool === 'select') { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { state.action = handle.type; state.transformHandle = key; state.originalObjectState = JSON.parse(JSON.stringify(selectedObject)); state.originalObjectState.center = getObjectCenter(selectedObject); return; } } } const clickedObjectId = findClickedObject(pos.x, pos.y); if (clickedObjectId) { state.selectedObjectId = clickedObjectId; state.action = 'moving'; const obj = state.allDrawings.get(clickedObjectId); const center = getObjectCenter(obj); state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y }; state.originalObjectState = JSON.parse(JSON.stringify(obj)); eventCaptureLayer.style.cursor = 'grabbing'; } else { state.selectedObjectId = null; } drawOverlay(); } else if (state.currentTool === 'text') { startTextEntry(snapToGrid(pos)); } else { state.action = 'drawing'; state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } }
+        function handleMouseMove(e) { let pos = getMousePos(e); if (!state.startPos) { updateCursor(pos); return; } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -(state.originalObjectState.rotation || 0); const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); if (!origBounds) return; let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (state.isShiftDown && selectedObject.type !== 'line') { const origAspectRatio = origBounds.width / origBounds.height; if (newWidth / origBounds.width > newHeight / origBounds.height) { newHeight = newWidth / origAspectRatio; } else { newWidth = newHeight * origAspectRatio; } } if (selectedObject.type === 'rectangle') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x - newWidth / 2; selectedObject.y = center.y - newHeight / 2; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) { const scaleX = newWidth / origBounds.width; const scaleY = newHeight / origBounds.height; const originalPoints = state.originalObjectState.points; const originalCenter = getObjectCenter(state.originalObjectState); selectedObject.points = originalPoints.map(p => ({ x: originalCenter.x + (p.x - originalCenter.x) * scaleX, y: originalCenter.y + (p.y - originalCenter.y) * scaleY, })); } drawOverlay(); } else { updateCursor(pos); } }
+        async function handleMouseUp(e) { if (!state.startPos) return; updateCursor(); const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
         function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; if (state.isShiftDown) { const dx = x2 - x1; const dy = y2 - y1; if (state.currentTool === 'line') { const angle = Math.atan2(dy, dx); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx, dy); x2 = x1 + Math.cos(snappedAngle) * dist; y2 = y1 + Math.sin(snappedAngle) * dist; } else if (['rectangle', 'circle', 'polygon'].includes(state.currentTool) || state.currentTool.endsWith('-gon') || state.currentTool === 'star') { const size = Math.max(Math.abs(dx), Math.abs(dy)); x2 = x1 + Math.sign(dx) * size; y2 = y1 + Math.sign(dy) * size; } } const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; const rx = width / 2; const ry = height / 2; const generatePolygon = (sides) => ({ ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, sides) }); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [{x:x1, y:y1}, {x:x2, y:y2}] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 3, -Math.PI / 2) }; case 'diamond': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 4) }; case 'pentagon': return generatePolygon(5); case 'hexagon': return generatePolygon(6); case 'heptagon': return generatePolygon(7); case 'octagon': return generatePolygon(8); case 'star': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 5) }; case 'star-6': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 6) }; case 'arrow-right': return { ...common, type: 'polygon', points: [ {x: x1, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x2, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x1, y: cy + ry/2} ]}; case 'arrow-left': return { ...common, type: 'polygon', points: [ {x: x2, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x1, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x2, y: cy + ry/2} ]}; case 'cross': return { ...common, type: 'polygon', points: [ {x: cx - rx/3, y: y1}, {x: cx + rx/3, y: y1}, {x: cx + rx/3, y: cy - ry/3}, {x: x2, y: cy - ry/3}, {x: x2, y: cy + ry/3}, {x: cx + rx/3, y: cy + ry/3}, {x: cx + rx/3, y: y2}, {x: cx - rx/3, y: y2}, {x: cx - rx/3, y: cy + ry/3}, {x: x1, y: cy + ry/3}, {x: x1, y: cy - ry/3}, {x: cx - rx/3, y: cy - ry/3} ]}; case 'heart': return { ...common, type: 'polygon', points: generateHeartPoints(cx, cy, width, height) }; default: return null; } }
         function generatePolygonPoints(cx, cy, rx, ry, sides, angleOffset = 0) { const points = []; for (let i = 0; i < sides; i++) { const angle = (i / sides) * 2 * Math.PI + angleOffset; points.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) }); } return points; }
         function generateStarPoints(cx, cy, outerRadius, innerRadius, numPoints) { const points = []; const angleStep = Math.PI / numPoints; for (let i = 0; i < 2 * numPoints; i++) { const radius = i % 2 === 0 ? outerRadius : innerRadius; const angle = i * angleStep - Math.PI / 2; points.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }); } return points; }
@@ -754,7 +576,7 @@
         function hideModal(modal) { modal.classList.remove('visible'); }
         function getMousePos(evt) { const rect = eventCaptureLayer.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
         function snapToGrid(pos) { if (!state.isSnapEnabled) return pos; return { x: Math.round(pos.x / state.gridSize) * state.gridSize, y: Math.round(pos.y / state.gridSize) * state.gridSize, }; }
-        function updateCursor(pos) { let newCursor = ''; if (state.action === 'moving') { newCursor = 'grabbing'; } else if (state.action === 'resizing') { const handles = getTransformHandles(state.allDrawings.get(state.selectedObjectId)); if (handles && handles[state.transformHandle]) { newCursor = handles[state.transformHandle].cursor; } } else if (state.action === 'rotating') { newCursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>') 12 12, auto`; } else if (state.currentTool === 'select') { newCursor = 'default'; const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { const handles = getTransformHandles(selectedObject); let onHandle = false; if (handles && pos) { for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { newCursor = handle.cursor; onHandle = true; break; } } } if (!onHandle && findClickedObject(pos.x, pos.y)) { newCursor = 'grab'; } } else if (pos && findClickedObject(pos.x, pos.y)) { newCursor = 'grab'; } } else { newCursor = state.currentTool === 'text' ? 'text' : 'crosshair'; } if (isEyedropperActive) { newCursor = 'crosshair'; } eventCaptureLayer.style.cursor = newCursor; }
+        function updateCursor(pos) { let newCursor = ''; switch (state.currentTool) { case 'select': newCursor = 'grab'; break; case 'text': newCursor = 'text'; break; default: newCursor = 'crosshair'; } if (state.currentTool === 'select' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const handles = getTransformHandles(selectedObject); let handleFound = false; if (handles && pos) { for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { newCursor = handle.cursor; handleFound = true; break; } } } } if (isEyedropperActive) { newCursor = 'crosshair'; } eventCaptureLayer.style.cursor = newCursor; }
         function showConfirmationModal(title, text, onConfirm) { confirmModalTitle.textContent = title; confirmModalText.textContent = text; confirmCallback = onConfirm; showModal(confirmModalOverlay); }
         async function clearAllDrawings() { const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`; const q = query(collection(db, drawingsCollectionPath)); const querySnapshot = await getDocs(q); if (querySnapshot.empty) return; const batch = writeBatch(db); querySnapshot.forEach((doc) => batch.delete(doc.ref)); await batch.commit(); await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true }); }
         
@@ -786,52 +608,36 @@
                 
                 let messagesHtml = '';
                 for(const msg of messages) {
-                    try {
-                        const avatarUrl = await getOrGenerateAvatar(msg.author);
-                        const displayName = getUserDisplayName(msg.author);
-                        let textHtml = '';
-                        let mediaHtml = '';
+                    const profile = await getUserProfile(msg.author);
+                    const displayName = profile?.name || 'Anonymous';
+                    const avatarUrl = profile?.avatar || `https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}`;
+                    
+                    let textHtml = '';
+                    let mediaHtml = '';
 
-                        if (msg.text) {
-                            const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                            textHtml = `<div class="chat-text">${sanitizedText}</div>`;
-                        }
-                        
-                        if (msg.type === 'gif') {
-                            mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
-                        }
-                        
-                        const contentHtml = textHtml + mediaHtml;
-                        const finalAvatarUrl = avatarUrl || 'https://placehold.co/40x40/4b5563/FFFFFF?text=?';
-
-                        messagesHtml += `
-                            <div class="chat-message" data-message-id="${msg.id}">
-                                <img src="${finalAvatarUrl}" class="chat-avatar">
-                                <div class="chat-content">
-                                    <div class="chat-author">${displayName}</div>
-                                    ${contentHtml}
-                                </div>
-                            </div>
-                        `;
-                    } catch (error) {
-                        console.error("Error processing message:", msg.id, error);
-                        // Add a fallback message display if avatar generation fails
-                        messagesHtml += `
-                            <div class="chat-message" data-message-id="${msg.id}">
-                                <img src="https://placehold.co/40x40/4b5563/FFFFFF?text=!" class="chat-avatar">
-                                <div class="chat-content">
-                                    <div class="chat-author">${getUserDisplayName(msg.author)}</div>
-                                    <div class="chat-text">${msg.text || '[Media content]'}</div>
-                                    <div class="text-red-400 text-xs">Could not load all content.</div>
-                                </div>
-                            </div>
-                        `;
+                    if (msg.text) {
+                        const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        textHtml = `<div class="chat-text">${sanitizedText}</div>`;
                     }
+                    
+                    if (msg.type === 'gif') {
+                        mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
+                    }
+                    
+                    const contentHtml = textHtml + mediaHtml;
+
+                    messagesHtml += `
+                        <div class="chat-message" data-message-id="${msg.id}">
+                            <img src="${avatarUrl}" class="chat-avatar" onerror="this.onerror=null;this.src='https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}';">
+                            <div class="chat-content">
+                                <div class="chat-author">${displayName}</div>
+                                ${contentHtml}
+                            </div>
+                        </div>
+                    `;
                 };
                 chatMessages.innerHTML = messagesHtml;
-                if (chatMessages.scrollHeight > chatMessages.clientHeight) {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }, error => console.error("Chat listener error:", error));
         }
 
@@ -890,6 +696,29 @@
                 gifSearchExecuteBtn.disabled = false;
             }
         }
+        
+        // --- Authentication Functions ---
+        const signInWithGoogle = async () => {
+            const googleProvider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error("Google Sign-In failed:", error);
+                userIdEl.textContent = 'Auth Error';
+                alert('Could not sign in with Google. Please check your Firebase project configuration and ensure Google authentication is enabled.');
+            }
+        };
+
+        const signOutUser = async () => {
+            try {
+                await signOut(auth);
+                // Clear local caches on sign out
+                userProfiles.clear();
+                // The onAuthStateChanged listener will handle the UI updates.
+            } catch (error) {
+                console.error("Sign-Out failed:", error);
+            }
+        };
 
         // --- Main App Initialization ---
         function initializeAppLogic(fKey, tKey) {
@@ -898,33 +727,64 @@
             const firebaseConfig = { apiKey: firebaseApiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046", };
             hideModal(apiKeyModalOverlay);
             const app = initializeApp(firebaseConfig);
-            auth = getAuth(app); db = getFirestore(app); setLogLevel('debug');
+            auth = getAuth(app); 
+            db = getFirestore(app); 
+            setLogLevel('debug');
             
             onAuthStateChanged(auth, async (user) => { 
                 if (user) { 
-                    userId = user.uid; 
-                    userIdEl.textContent = getUserDisplayName(userId);
-                    chatInput.disabled = false; 
-                    chatSendBtn.disabled = false; 
+                    // User is signed in.
+                    userId = user.uid;
+                    const displayName = user.displayName || 'Anonymous';
+                    userIdEl.textContent = userId;
+                    userDisplayNameEl.textContent = displayName;
+
+                    // Update UI
+                    googleSignInBtn.classList.add('hidden');
+                    signOutBtn.classList.remove('hidden');
+                    chatInput.disabled = false;
+                    chatSendBtn.disabled = false;
                     gifSearchBtn.disabled = !tenorApiKey;
                     chatInput.placeholder = 'Say something...';
+
+                    // Persist user info for chat display
+                    const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, user.uid);
+                    await setDoc(userDocRef, {
+                        name: displayName,
+                        avatar: user.photoURL
+                    }, { merge: true });
+
+                    // Setup listeners
                     setupStateListener(); 
                     setupDrawingsListener(); 
                     setupChatListener();
                 } else { 
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
-                        else { await signInAnonymously(auth); }
-                    } catch (error) {
-                        console.error("Sign-in failed:", error);
-                        userIdEl.textContent = 'Auth Error'; 
-                        chatInput.placeholder = 'Chat disabled. Check API key.';
-                        showModal(apiKeyModalOverlay);
-                    }
+                    // User is signed out.
+                    userId = null;
+                    userIdEl.textContent = 'Not Signed In';
+                    userDisplayNameEl.textContent = '';
+
+                    // Update UI
+                    googleSignInBtn.classList.remove('hidden');
+                    signOutBtn.classList.add('hidden');
+                    chatInput.disabled = true;
+                    chatSendBtn.disabled = true;
+                    gifSearchBtn.disabled = true;
+                    chatInput.placeholder = 'Sign in to use the chat.';
+
+                    // Clear data and listeners
+                    if(unsubscribeFromDrawings) unsubscribeFromDrawings();
+                    if(unsubscribeFromState) unsubscribeFromState();
+                    if(unsubscribeFromChat) unsubscribeFromChat();
+                    state.allDrawings.clear();
+                    chatMessages.innerHTML = '';
+                    redrawCanvas();
                 } 
             });
 
             // Setup Event Listeners for UI
+            googleSignInBtn.addEventListener('click', signInWithGoogle);
+            signOutBtn.addEventListener('click', signOutUser);
             document.querySelectorAll('#toolbar .tool-btn[data-tool]').forEach(button => button.addEventListener('click', (e) => selectTool(e.currentTarget.dataset.tool)));
             document.querySelectorAll('.dropdown').forEach(dropdown => {
                 const button = dropdown.querySelector('.tool-btn, .size-btn');
