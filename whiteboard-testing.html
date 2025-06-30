@@ -236,7 +236,7 @@
                             </button>
                         </div>
                         <div class="text-xs text-gray-500">User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Not Signed In</span></div>
-                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p2.0-ai</span></div>
+                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p2.1-ai-fix</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help (Ctrl+K)"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -498,6 +498,10 @@
        
         // --- User Profile Management ---
         async function getUserProfile(uid) {
+            // FIX: Add a guard clause to handle cases where uid is undefined or null.
+            if (!uid) {
+                return { name: 'Unknown User', avatar: null };
+            }
             if (userProfiles.has(uid)) {
                 return userProfiles.get(uid);
             }
