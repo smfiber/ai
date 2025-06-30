@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -35,10 +35,11 @@
         }
 
         body {
-            font-family: 'Lexend', sans-serif;
+            font-family: 'Open Sans', sans-serif;
             background-color: var(--background);
             color: var(--foreground);
-            line-height: 1.6;
+            font-size: 18px;
+            line-height: 1.5;
         }
 
         .view { display: none; }
@@ -179,6 +180,23 @@
         @keyframes pulse {
             50% { opacity: .5; }
         }
+
+        /* Markdown Content Styling */
+        #details-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--foreground);
+        }
+        #details-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        #details-content li {
+            margin-bottom: 0.25rem;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -255,7 +273,7 @@
                  <p class="text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 9.4</p>
+                <p class="mt-4 text-xs text-slate-400">Version 9.5</p>
             </div>
         </footer>
         
@@ -647,7 +665,6 @@
             if (!exercise) return;
 
             ui.detailsTitle.textContent = exercise.name;
-            // FIX: Improved loading state for the modal
             ui.detailsContent.innerHTML = `
                 <div class="text-center p-8">
                     <i data-lucide="loader-2" class="mx-auto h-10 w-10 text-teal-500 animate-spin"></i>
