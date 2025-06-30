@@ -183,15 +183,8 @@
             background-color: var(--color-accent); color: var(--color-button-text);
             border-color: var(--color-primary-dark); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
-        .jump-to-button {
-            background-color: var(--color-card-bg); color: var(--color-text-muted);
-            border: 1px solid var(--color-card-border); transition: all 0.2s ease;
-            padding: 8px 16px; border-radius: 9999px; font-size: 0.875rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .jump-to-button:hover { background-color: var(--color-primary); color: var(--color-button-text); border-color: var(--color-primary-dark); transform: translateY(-1px); }
 
-        /* NEW: Styles for the topics dropdown menu */
+        /* Dropdown Menu Styles */
         .topics-menu-item {
             color: var(--color-text);
             display: block;
@@ -219,6 +212,7 @@
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #prompts-button { bottom: 20rem; right: 2rem; }
+        #firebase-tools-button { bottom: 24.5rem; right: 2rem; } /* NEW */
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -284,13 +278,13 @@
         .grid-card-selector svg { width: 2.5rem; height: 2.5rem; margin: 0 auto; display: block; }
         .grid-card-selector.active small { color: rgba(255, 255, 255, 0.8); }
 
-        .viewed-indicator {
+        /* Indicator Styles */
+        .indicator {
             position: absolute;
             top: 0.5rem;
             right: 0.5rem;
             width: 1.25rem;
             height: 1.25rem;
-            background-color: #ef4444; /* red-500 */
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -300,10 +294,9 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             z-index: 10;
         }
-        .viewed-indicator svg {
-            width: 0.75rem;
-            height: 0.75rem;
-        }
+        .indicator svg { width: 0.75rem; height: 0.75rem; }
+        .viewed-indicator { background-color: #ef4444; /* red-500 */ }
+        .sticky-indicator { background-color: #3b82f6; /* blue-500 */ } /* NEW */
 
         .new-item-highlight {
             border: 2px solid var(--color-primary);
@@ -321,7 +314,7 @@
         
         #search-gemini-button {
             position: fixed;
-            z-index: 100; /* Ensure it's on top of content */
+            z-index: 100;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -340,15 +333,18 @@
             transform: translateY(-2px);
         }
         
-        /* Rules to manage visibility when modals are layered */
-        body.detailed-modal-open #inDepthModal {
+        /* Rules for managing modal layers */
+        body.modal-open #inDepthModal,
+        body.modal-open #inDepthDetailedModal,
+        body.modal-open #searchGeminiModal,
+        body.modal-open #stickyTopicsModal {
             visibility: hidden;
         }
-        body.search-modal-open #inDepthModal,
-        body.search-modal-open #inDepthDetailedModal {
-            visibility: hidden;
-        }
-
+        body.inDepthModal-open #inDepthModal { visibility: visible; }
+        body.inDepthDetailedModal-open #inDepthDetailedModal { visibility: visible; }
+        body.searchGeminiModal-open #searchGeminiModal { visibility: visible; }
+        body.stickyTopicsModal-open #stickyTopicsModal { visibility: visible; }
+        
     </style>
 </head>
 <body>
@@ -431,12 +427,16 @@
                 <h2 class="text-2xl font-bold themed-text-primary">Search Gemini</h2>
                 <button id="closeSearchGeminiModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto">
+            <div id="searchGeminiModalContent" class="p-6 overflow-y-auto">
                 <div class="mb-4">
                     <label for="searchGeminiQueryText" class="block text-sm font-medium themed-text-muted mb-2">You asked about:</label>
                     <textarea id="searchGeminiQueryText" name="searchGeminiQueryText" readonly class="w-full p-3 themed-input bg-gray-100 border rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto"></textarea>
                 </div>
                 <div id="searchGeminiResult" class="prose max-w-none"></div>
+            </div>
+            <div id="searchGeminiModalFooter" class="p-4 border-t" style="border-color: var(--color-card-border);">
+                 <div id="searchGeminiModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="search-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
         </div>
     </div>
@@ -472,6 +472,29 @@
         </div>
     </div>
     
+    <!-- NEW: Sticky Topics Modal -->
+    <div id="stickyTopicsModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">Manage Sticky Topics</h2>
+                <button id="closeStickyTopicsModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="mb-4">
+                    <label for="sticky-topic-category-select" class="block text-sm font-medium themed-text-muted mb-1">Select a Category to Manage</label>
+                    <select id="sticky-topic-category-select" name="sticky-topic-category-select" class="w-full p-2 themed-input border rounded-lg"></select>
+                </div>
+                <div id="sticky-topics-list" class="space-y-2 mb-4">
+                    <!-- Sticky topics will be listed here -->
+                </div>
+                <div class="add-topic-container !border-t-0 !pt-0">
+                    <input type="text" id="new-sticky-topic-input" placeholder="Enter a new sticky topic..." class="themed-input w-full p-2 rounded-lg text-sm">
+                    <button id="add-sticky-topic-button" class="btn-secondary !px-4 !py-2">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Floating button for Search Gemini -->
     <button id="search-gemini-button" class="hidden">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
@@ -492,10 +515,10 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.6</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.7</div>
         </header>
         
-        <!-- NEW: Topics Dropdown Menu -->
+        <!-- Topics Dropdown Menu -->
         <div class="flex justify-center mb-8">
             <div id="topics-menu-container" class="relative inline-block text-left hidden">
                 <div>
@@ -578,6 +601,9 @@
         </main>
         
         <!-- Floating Action Buttons -->
+        <button id="firebase-tools-button" class="floating-action-button" title="Manage Sticky Topics">
+             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
+        </button>
         <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
         </button>
@@ -613,7 +639,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -621,6 +647,8 @@
         let userId;
         let viewedItemsCollectionRef;
         const viewedItemIds = new Set();
+        let stickyTopicsUnsubscribe = null;
+        let stickyTopics = {}; // Holds sticky topics per category
         let firebaseConfig = null;
         let appIsInitialized = false;
 
@@ -654,8 +682,8 @@
         
         // --- Content Generation Categories ---
         const categoriesToGenerate = [
-            // This large array of category objects remains unchanged...
             { key: 'activeDirectory', title: 'Active Directory Management', description: "Tasks for managing users, groups, GPOs, and other AD objects.", initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
+            { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
             { key: 'aiProgramming', title: 'Artificial Intelligence Programming', description: "Concepts and guides for getting started with AI development and programming.", initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Provide the output as a valid JSON array.` },
             { key: 'citrixAdmin', title: 'Citrix Administration', description: "Managing Citrix Virtual Apps and Desktops environments.", initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
             { key: 'geminiInfographics', title: 'Create Infographics in Gemini', description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
@@ -1010,19 +1038,13 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'promptsModal', 'loadingStateModal', 'inDepthDetailedModal', 'searchGeminiModal', 'stickyTopicsModal'].forEach(id => {
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.addEventListener('click', (e) => {
                         if (e.target.id === id || e.target.closest('[id^="close"]')) {
                             modal.classList.add('hidden');
-                            
-                            if (id === 'inDepthDetailedModal') {
-                                document.body.classList.remove('detailed-modal-open');
-                            }
-                            if (id === 'searchGeminiModal') {
-                                document.body.classList.remove('search-modal-open');
-                            }
+                             document.body.classList.remove(`${id}-open`, 'modal-open');
                         }
                     });
                 }
@@ -1039,7 +1061,7 @@
             });
 
 
-            // NEW: Event listeners for the topics dropdown menu
+            // Topics dropdown menu listeners
             const topicsMenuButton = document.getElementById('topics-menu-button');
             const topicsMenuItems = document.getElementById('topics-menu-items');
 
@@ -1116,27 +1138,17 @@
 
                 const modalRefineBtn = e.target.closest('.modal-refine-button');
                 if (modalRefineBtn) {
-                    const inDepthModal = document.getElementById('inDepthModal');
-                    const detailedModal = document.getElementById('inDepthDetailedModal');
-                    let targetModalId;
-
-                    if (!inDepthModal.classList.contains('hidden')) {
-                        targetModalId = 'inDepthModal';
-                    } else if (!detailedModal.classList.contains('hidden')) {
-                        targetModalId = 'inDepthDetailedModal';
-                    }
-
-                    if (targetModalId) {
-                        toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
-                    } else {
-                        console.error("Could not determine the active modal for refinement.");
+                    const modal = e.target.closest('.card');
+                    const targetModalId = modal.parentElement.id;
+                    if(targetModalId) {
+                         toggleRefineUI(modalRefineBtn.parentElement, true, targetModalId);
                     }
                     return;
                 }
                 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) {
-                    const targetModalId = submitRefineBtn.closest('#inDepthModalFooter') ? 'inDepthModal' : 'inDepthDetailedModal';
+                    const targetModalId = submitRefineBtn.dataset.targetModalId;
                     handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
                     return;
                 }
@@ -1183,6 +1195,11 @@
                     scrollTopButton.classList.add('hidden');
                 }
             });
+
+            // Sticky Topics Modal Listeners
+            document.getElementById('firebase-tools-button').addEventListener('click', openStickyTopicsModal);
+            document.getElementById('sticky-topic-category-select').addEventListener('change', (e) => listenForStickyTopics(e.target.value));
+            document.getElementById('add-sticky-topic-button').addEventListener('click', handleAddStickyTopic);
         }
         
         async function handleApiKeySubmit(e) {
@@ -1201,14 +1218,12 @@
             }
             
             try {
-                // More robust parsing to find the JSON object within the pasted snippet.
                 const match = tempFirebaseConfigText.match(/\{[\s\S]*\}/);
                 if (!match) {
                     throw new Error("Could not find a config object starting with '{' and ending with '}'.");
                 }
                 const configString = match[0];
                 
-                // Use a Function constructor for safer parsing of object literals than eval().
                 const configFactory = new Function(`return ${configString}`);
                 tempFirebaseConfig = configFactory();
 
@@ -1224,7 +1239,6 @@
             localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
             localStorage.setItem('googleClientId', tempGoogleClientId);
             
-            // Reload config, re-initialize services, and prompt for login.
             if (loadConfigFromStorage()) {
                 initializeFirebase();
                 initializeGoogleClients();
@@ -1275,7 +1289,6 @@
                         }
                     }
                 });
-                // Attempt to get a token silently if the user has previously authorized the app.
                 tokenClient.requestAccessToken({prompt: 'none'});
             } catch(err) {
                  console.error("Failed to initialize Google token client:", err);
@@ -1291,10 +1304,8 @@
 
             if (gapi.client.getToken() === null) {
                 document.getElementById('drive-status').textContent = 'Connecting to Google Drive...';
-                // This prompts the user for consent if they haven't given it before.
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
-                // If a token exists, the button acts as a disconnect.
                 const token = gapi.client.getToken();
                 if (token) {
                     google.accounts.oauth2.revoke(token.access_token, () => {
@@ -1309,7 +1320,6 @@
             const authButton = document.getElementById('auth-button');
             const loadBtn = document.getElementById('load-from-drive-btn');
             const statusEl = document.getElementById('drive-status');
-            const modalButtons = document.getElementById('inDepthModalButtons');
             
             if (isSignedIn) {
                 authButton.textContent = 'Disconnect';
@@ -1325,13 +1335,15 @@
                 driveFolderId = null;
             }
 
-            // Refresh buttons in any open modals to reflect the new auth state
             if (!document.getElementById('inDepthModal').classList.contains('hidden')) {
                 const isInitial = !!document.getElementById('generate-detailed-steps-btn');
                 addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
             }
             if (!document.getElementById('inDepthDetailedModal').classList.contains('hidden')) {
                 addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'));
+            }
+            if (!document.getElementById('searchGeminiModal').classList.contains('hidden')) {
+                addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
             }
         }
 
@@ -1366,23 +1378,33 @@
         }
         
         async function handleSaveToDriveClick(button) {
-             const modalFooter = button.closest('#inDepthModalFooter') || button.closest('#inDepthDetailedModalFooter');
-             if (!modalFooter) return;
+             const modal = button.closest('.card');
+             if (!modal) return;
+             
+             const titleElement = modal.querySelector('h2');
+             let fullTitle = titleElement.textContent;
+             let contentToSave;
+             let statusEl;
 
-             const titleElement = modalFooter.closest('.card').querySelector('h2');
-             const fullTitle = titleElement.textContent;
-
-             const rawMarkdown = originalGeneratedText.get(fullTitle);
-             if (!rawMarkdown) {
-                console.error("Could not find markdown to save for:", fullTitle);
+            if (modal.parentElement.id === 'searchGeminiModal') {
+                contentToSave = document.getElementById('searchGeminiResult').innerText;
+                fullTitle = `Search Result: ${document.getElementById('searchGeminiQueryText').value}`;
+                statusEl = document.getElementById('search-modal-status-message');
+            } else {
+                const modalFooter = button.closest('[id$="ModalFooter"]');
+                fullTitle = modalFooter.dataset.fullTitle;
+                contentToSave = originalGeneratedText.get(fullTitle);
+                statusEl = modalFooter.querySelector('p[id$="status-message"]');
+            }
+             
+             if (!contentToSave) {
+                console.error("Could not find content to save for:", fullTitle);
+                if (statusEl) statusEl.textContent = "Error: Content not found.";
                 return;
              }
 
-             const cardName = modalFooter.dataset.cardName || "Custom Task";
-             const fileName = `${cardName} - ${fullTitle}.md`.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '');
-             const statusEl = modalFooter.querySelector('p[id$="status-message"]');
-             
-             await saveContentToDrive(rawMarkdown, fileName, statusEl);
+             const fileName = `${fullTitle}.md`.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '');
+             await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
         async function saveContentToDrive(content, fileName, statusElement) {
@@ -1397,23 +1419,43 @@
                 statusElement.textContent = 'Could not find or create the app folder in Drive.';
                 return;
             }
-           
-            const fileMetadata = { name: fileName, parents: [folderId] };
-            const boundary = '-------314159265358979323846';
-            const delimiter = "\r\n--" + boundary + "\r\n";
-            const close_delim = "\r\n--" + boundary + "--";
-            const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(fileMetadata) + delimiter + 'Content-Type: text/markdown\r\n\r\n' + content + close_delim;
-            
+
             try {
-                await gapi.client.request({
-                    'path': '/upload/drive/v3/files',
-                    'method': 'POST',
-                    'params': {'uploadType': 'multipart'},
-                    'headers': {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
-                    'body': multipartRequestBody
+                // Check if file already exists
+                const searchResponse = await gapi.client.drive.files.list({
+                    q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
+                    fields: 'files(id)',
+                    spaces: 'drive'
                 });
-                statusElement.textContent = `File '${fileName}' saved to Drive!`;
-                 setTimeout(()=> statusElement.textContent = '', 4000);
+
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+
+                const contentType = 'text/markdown';
+                const metadata = { name: fileName };
+                if (!searchResponse.result.files || searchResponse.result.files.length === 0) {
+                     metadata.parents = [folderId];
+                }
+                
+                const multipartRequestBody =
+                    delimiter + `Content-Type: application/json; charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) +
+                    delimiter + `Content-Type: ${contentType}\r\n\r\n` + content +
+                    close_delim;
+                
+                const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
+                const fileId = fileExists ? searchResponse.result.files[0].id : null;
+                
+                await gapi.client.request({
+                    path: `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`,
+                    method: fileExists ? 'PATCH' : 'POST',
+                    params: { uploadType: 'multipart' },
+                    headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
+                    body: multipartRequestBody
+                });
+
+                statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
+                setTimeout(()=> statusElement.textContent = '', 4000);
             } catch (error) {
                 console.error('Error saving file to Drive:', error);
                 statusElement.textContent = 'Error saving file. Check console.';
@@ -1435,7 +1477,7 @@
              }
              const builder = new google.picker.PickerBuilder()
                 .setOAuthToken(token)
-                .setDeveloperKey(geminiApiKey); // Note: Developer key is often the same as API key for picker
+                .setDeveloperKey(geminiApiKey);
 
              if (mode === 'open') {
                 const view = new google.picker.View(google.picker.ViewId.DOCS);
@@ -1560,40 +1602,46 @@
         
         function populateCardGridSelector(containerId, themeType, newItemsIds = new Set()) {
             const container = document.getElementById(containerId);
-            const data = allThemeData[themeType];
-            if (!container || !data || !Array.isArray(data)) {
-                if (container) container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
+            const data = allThemeData[themeType] || [];
+            const stickies = stickyTopics[themeType] || [];
+            
+            if (!container) return;
+            if (data.length === 0 && stickies.length === 0) {
+                 container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
                 return;
             }
 
             const gridClass = 'card-grid-container';
             const cardTitle = container.closest('.card').querySelector('h2').textContent;
 
-            const itemsHtml = data.map(item => {
-                const compositeKey = `${cardTitle} - ${item.title}`;
-                const cleanTitle = sanitizeTitle(item.title);
-                const isViewed = viewedItemIds.has(compositeKey);
-                const isNew = newItemsIds.has(item.id);
-                
-                const viewedIndicatorHtml = isViewed ? `
-                    <div class="viewed-indicator" title="Viewed">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
+            const stickyTitles = new Set(stickies.map(s => s.title));
+
+            const stickyHtml = stickies.map(item => `
+                <div id="grid-selector-${item.id}" class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.title}">
+                    <div class="indicator sticky-indicator" title="Sticky Topic">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg>
                     </div>
-                ` : '';
-
-                const newClass = isNew ? 'new-item-highlight' : '';
-                const truncatedTitle = truncateText(cleanTitle, 50);
-
-                return `
-                <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || cleanTitle}">
-                    ${viewedIndicatorHtml}
                     <div class="icon">${getIconForTheme(themeType, item.id)}</div>
-                    <div class="mt-2 overflow-hidden">
-                        <div class="text-sm font-normal leading-tight block">${truncatedTitle}</div>
-                    </div>
-                </div>`;
+                    <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
+                </div>`
+            ).join('');
+
+            const regularItemsHtml = data
+                .filter(item => !stickyTitles.has(item.title)) // Don't show AI item if a sticky with same title exists
+                .map(item => {
+                    const compositeKey = `${cardTitle} - ${item.title}`;
+                    const isViewed = viewedItemIds.has(compositeKey);
+                    const isNew = newItemsIds.has(item.id);
+                    
+                    const viewedIndicatorHtml = isViewed ? `<div class="indicator viewed-indicator" title="Viewed"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></div>` : '';
+                    const newClass = isNew ? 'new-item-highlight' : '';
+                    
+                    return `
+                    <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
+                        ${viewedIndicatorHtml}
+                        <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                        <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
+                    </div>`;
             }).join('');
             
             const topicInputId = `add-topic-input-${themeType}`;
@@ -1611,25 +1659,12 @@
 
             if (fullPrompt && data.length > 0) {
                 if (isFullyLoaded) {
-                    actionButtonsHtml = `
-                        <div class="col-span-full text-center mt-4">
-                            <button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category">
-                                <span class="flex items-center justify-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    Generate 10 More
-                                </span>
-                            </button>
-                        </div>`;
+                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 10 More</span></button></div>`;
                 } else {
-                     actionButtonsHtml = `
-                        <div class="col-span-full text-center mt-4">
-                            <button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">
-                                Show All (${data.length} of ~50 shown)
-                            </button>
-                        </div>`;
+                     actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">Show All (${data.length} of ~50 shown)</button></div>`;
                 }
             }
-            container.innerHTML = `<div class="${gridClass}">${itemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
+            container.innerHTML = `<div class="${gridClass}">${stickyHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
         }
         
         async function handleAddNewTopic(button) {
@@ -1743,7 +1778,11 @@
 
         async function handleGridSelect(target) {
             const { themeId, themeType } = target.dataset;
-            const item = allThemeData[themeType]?.find(d => String(d.id) == String(themeId));
+            const stickies = stickyTopics[themeType] || [];
+            let item = allThemeData[themeType]?.find(d => String(d.id) == String(themeId));
+            if (!item) {
+                item = stickies.find(d => String(d.id) == String(themeId));
+            }
             if (!item) {
                 console.error("Could not find theme item for:", {themeId, themeType});
                 return;
@@ -1756,26 +1795,23 @@
             }
             target.classList.add('active');
 
-
             const card = target.closest('.card');
             const cardTitle = card.querySelector('h2').textContent;
-            const cardDescription = card.querySelector('p').textContent;
-
+            
             await markItemAsViewed(cardTitle, item.title);
             
-            if (!target.querySelector('.viewed-indicator')) {
+            if (!target.querySelector('.viewed-indicator') && !target.querySelector('.sticky-indicator')) {
                 const indicator = document.createElement('div');
-                indicator.className = 'viewed-indicator';
+                indicator.className = 'indicator viewed-indicator';
                 indicator.title = 'Viewed';
                 indicator.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
                 target.prepend(indicator);
             }
 
-
             const prompt = `
                 You are creating a summary for an IT administration guide.
                 The overall category is: "${cardTitle}"
-                The category description is: "${cardDescription}"
+                The category description is: "${item.description || 'General task'}"
                 The specific topic is: "${item.title}"
 
                 Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
@@ -1836,7 +1872,7 @@
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = "Custom Task"; 
             
-            modal.classList.remove('hidden');
+            openModal('inDepthModal');
             
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                         .map(btn => btn.textContent.trim())
@@ -1850,24 +1886,19 @@ Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
 
 **REQUIRED SECTIONS & CONTENT:**
-
 * **1. Introduction:**
     * **Overview:** Briefly explain the technology or task.
     * **Importance:** Describe why this task/technology is important in modern IT environments.
     * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
 * **2. Architectural Overview (If Applicable):**
     * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-
 * **3. Key Concepts & Terminology:**
     * Detail the fundamental principles the user MUST understand.
     * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-
 * **4. Prerequisites:**
     * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
     * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
@@ -1901,11 +1932,9 @@ Return only these sections in markdown format. Do not include any other sections
                 console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
                 
                 try {
-                    // This is a more aggressive cleaning step that should be used cautiously.
-                    // It can sometimes fix malformed JSON from the LLM.
                     const correctedJsonString = cleanedString
                         .replace(/\\'/g, "'") 
-                        .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3'); // Add quotes to keys
+                        .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
                     return JSON.parse(correctedJsonString);
                 } catch (finalError) {
                      console.error("Failed to parse JSON even after cleaning:", finalError);
@@ -2136,7 +2165,7 @@ Return only these sections in markdown format. Do not include any other sections
                 contentEl.appendChild(promptContainer);
             }
 
-            modal.classList.remove('hidden');
+            openModal('promptsModal');
         }
 
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
@@ -2144,28 +2173,19 @@ Return only these sections in markdown format. Do not include any other sections
 
             if (originalText) {
                 // This is the prompt for refining existing text
-                return `You are an expert senior IT administrator AI. A user has provided an IT guide and a request to refine it. Your task is to rewrite the entire guide to incorporate the user's request, structuring the new guide into the most logical sections possible.
-
-**ORIGINAL IT GUIDE:**
+                return `You are an expert senior IT administrator AI. A user has provided the following content and a request to refine it. Your task is to rewrite the entire text to incorporate the user's request.
+**ORIGINAL TEXT:**
 ---
 ${originalText}
 ---
-
 **USER'S REFINEMENT REQUEST:**
 "${task}"
 
 **Instructions for rewriting:**
-1.  **Structure:** Do not use the old section headers unless they are still the most logical choice. Instead, create new, clear, and descriptive section headers using '###' markdown syntax based on the refined content.
-2.  **Integrate:** Seamlessly integrate the user's request into the guide.
-3.  **Quality Standards:** The entire rewritten guide must still meet these requirements for the specific technology being discussed:
-    * **Code Blocks:** When providing code examples, wrap them in markdown code fences with the language specified (e.g., \`\`\`powershell\`).
-    * **Practicality:** Ensure all advice, steps, and examples are practical and reflect real-world scenarios.
-    * **Helpful Resources:** Ensure there is a final section with a bulleted list of high-quality, relevant links.
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
-
-Return only the new, complete, and rewritten markdown guide.`;
+1.  **Integrate:** Seamlessly integrate the user's request into the text.
+2.  **Quality Standards:** The rewritten text must be clear, accurate, and practical.
+3.  **Format:** Maintain the original markdown format unless the refinement request implies a structural change.
+Return only the new, complete, and rewritten markdown text.`;
             }
 
             let contextText = `for the task: "${task}"`;
@@ -2179,51 +2199,40 @@ Return only the new, complete, and rewritten markdown guide.`;
             return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
-
 * **1. Introduction:**
     * **Overview:** Briefly explain the technology or task.
     * **Importance:** Describe why this task/technology is important in modern IT environments.
     * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
 * **2. Architectural Overview (If Applicable):**
     * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-
 * **3. Key Concepts & Terminology:**
     * Detail the fundamental principles the user MUST understand.
     * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-
 * **4. Prerequisites:**
     * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
     * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-
 * **5. Detailed Step-by-Step Instructions:**
     * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
     * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
     * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
     * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
-
 * **6. Verification and Validation:**
     * Provide specific commands or procedures to run to confirm the task was completed successfully.
     * Describe what a successful output or system state looks out.
-
 * **7. Best Practices:**
     * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-
 * **8. Automation Opportunities:**
     * **Why Automate:** Discuss the benefits of automating this task.
     * **Scripting Examples:** Provide complete, practical script examples.
-
 * **9. Security Considerations:**
     * **Hardening:** Provide specific steps to harden the configuration.
     * **Common Vulnerabilities:** Discuss potential security risks.
     * **Auditing & Logging:** Recommend what to audit and how to configure logging.
-
 * **10. Advanced Use Cases & Scenarios:**
     * Describe 2-3 advanced or less-common scenarios.
 * **11. Troubleshooting:**
     * Provide a table of common problems, their likely causes, and step-by-step solutions.
-
 * **12. Helpful Resources:**
     * Include a final section with a bulleted list of high-quality, relevant links.
 
@@ -2259,7 +2268,7 @@ Return only the complete markdown guide.`;
             footerEl.dataset.fullTitle = fullTitle;
             footerEl.dataset.cardName = cardName;
 
-            modal.classList.remove('hidden');
+            openModal('inDepthModal');
 
             const context = { cardTitle: cardName, cardDescription: item.description };
 
@@ -2268,28 +2277,7 @@ Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key
 - **Category:** "${context.cardTitle}"
 - **Topic Description:** "${context.cardDescription}"
 - **Specific Task:** "${item.title}"
-
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-
-**REQUIRED SECTIONS & CONTENT:**
-
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact.
-
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly.
-
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required.
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites.
-
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
@@ -2323,13 +2311,10 @@ Return only these sections in markdown format. Do not include any other sections
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
 
-            // Setup the second modal immediately.
-            const detailedModal = document.getElementById('inDepthDetailedModal');
             const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
             const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
             const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
             const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
-            const detailedStatusMessage = document.getElementById('detailed-modal-status-message');
 
             const detailedModalTitle = `Complete Guide: ${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}`;
             detailedTitleEl.textContent = detailedModalTitle;
@@ -2338,70 +2323,36 @@ Return only these sections in markdown format. Do not include any other sections
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
             detailedFooterEl.dataset.cardName = cardName;
             
-            document.body.classList.add('detailed-modal-open');
-            detailedModal.classList.remove('hidden');
+            openModal('inDepthDetailedModal');
 
             try {
-                // --- Part 1: Generate Detailed Steps ---
-                detailedContentEl.innerHTML = getLoaderHTML('Generating detailed steps (Part 1 of 2)...');
+                detailedContentEl.innerHTML = getLoaderHTML('Generating full guide...');
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+                const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
                 
-                const detailedStepsPrompt = `You are an expert senior IT administrator. Based on the provided context for a guide on "${topicName}", generate ONLY the "Detailed Step-by-Step Instructions" section.
-                
-                **CONTEXT (DO NOT REGENERATE):**
-                ---
-                ${initialContentMarkdown}
-                ---
+                let finalCompleteGuideMarkdown = await callGeminiAPI(fullGuidePrompt);
+                finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the full guide.");
 
-                **SECTION TO GENERATE:**
-                * **5. Detailed Step-by-Step Instructions:** This section MUST be extremely detailed, practical, and directly expand on the concepts from the context. Include specific GUI actions and exact CLI commands.
-
-                Return ONLY the "5. Detailed Step-by-Step Instructions" section in markdown format.`;
-
-                let detailedStepsText = await callGeminiAPI(detailedStepsPrompt);
-                detailedStepsText = detailedStepsText ? detailedStepsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!detailedStepsText) throw new Error("Failed to generate detailed steps.");
-                
-                const guideSoFar = `${initialContentMarkdown}\n\n${detailedStepsText}`;
-
-                // --- Part 2: Generate Remaining Sections ---
-                detailedContentEl.innerHTML = getLoaderHTML('Generating final sections (Part 2 of 2)...');
-                const remainingSectionsPrompt = `You are an expert senior IT administrator completing a guide on "${topicName}".
-                
-                **GUIDE SO FAR (FOR CONTEXT, DO NOT REGENERATE):**
-                ---
-                ${guideSoFar}
-                ---
-
-                Your task is to generate ONLY the remaining sections to complete this guide: "6. Verification and Validation", "7. Best Practices", "8. Automation Opportunities", "9. Security Considerations", "10. Advanced Use Cases & Scenarios", "11. Troubleshooting", and "12. Helpful Resources".
-                
-                Adhere to the following quality standards:
-                ${linkVerificationAndGenerationMandate}
-                ${powershellStandard}
-                ${powerCLIStandard}
-
-                Return ONLY these new sections (6 through 12) in markdown format.`;
-
-                let remainingSectionsText = await callGeminiAPI(remainingSectionsPrompt);
-                remainingSectionsText = remainingSectionsText ? remainingSectionsText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!remainingSectionsText) throw new Error("Failed to generate remaining sections.");
-
-                // --- Final Assembly ---
-                const finalCompleteGuideMarkdown = `${guideSoFar}\n\n${remainingSectionsText}`;
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
                 addDetailedModalActionButtons(detailedButtonContainer);
-                detailedStatusMessage.textContent = 'Full guide generated successfully!';
+                document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
 
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'full detailed guide');
             } finally {
                  button.disabled = false;
-                 button.innerHTML = `Generate Detailed Steps`;
+                 button.innerHTML = `Generate Full Detailed Guide`;
             }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            document.body.classList.add('modal-open', `${modalId}-open`);
         }
 
         function addModalActionButtons(buttonContainer, isInitialPhase = false) {
@@ -2432,13 +2383,6 @@ Return only these sections in markdown format. Do not include any other sections
                     copyElementTextToClipboard(contentToCopy, e.target);
                 });
             }
-
-            const saveDriveButton = buttonContainer.querySelector('#save-to-drive-btn');
-            if (saveDriveButton) {
-                saveDriveButton.addEventListener('click', e => {
-                    handleSaveToDriveClick(e.target);
-                });
-            }
         }
 
         function addDetailedModalActionButtons(buttonContainer) {
@@ -2458,11 +2402,20 @@ Return only these sections in markdown format. Do not include any other sections
                     copyElementTextToClipboard(contentToCopy, e.target);
                 });
             }
-
-            const saveDriveButton = buttonContainer.querySelector('#save-to-drive-btn');
-            if (saveDriveButton) {
-                saveDriveButton.addEventListener('click', e => {
-                    handleSaveToDriveClick(e.target);
+        }
+        
+        function addSearchModalActionButtons(buttonContainer) {
+             const saveDriveBtnHtml = gapi.client.getToken() !== null ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+             buttonContainer.innerHTML = `
+                <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
+                <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                ${saveDriveBtnHtml}
+            `;
+             const copyButton = buttonContainer.querySelector('.copy-button');
+            if (copyButton) {
+                copyButton.addEventListener('click', e => {
+                    const contentToCopy = document.getElementById('searchGeminiResult');
+                    copyElementTextToClipboard(contentToCopy, e.target);
                 });
             }
         }
@@ -2493,21 +2446,25 @@ Return only these sections in markdown format. Do not include any other sections
             const selectedText = selection.toString().trim();
             if (!selectedText) return;
 
-            const modal = document.getElementById('searchGeminiModal');
+            const contentEl = document.getElementById('searchGeminiModalContent');
             const searchTextEl = document.getElementById('searchGeminiQueryText');
             const resultEl = document.getElementById('searchGeminiResult');
             
             searchTextEl.value = selectedText; 
             resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
             
-            document.body.classList.add('search-modal-open');
-            modal.classList.remove('hidden');
-
+            addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
+            
+            openModal('searchGeminiModal');
+            
             const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
 
             try {
                 let resultText = await callGeminiAPI(prompt);
                 resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
+                
+                originalGeneratedText.set("currentSearch", resultText); // Store for refinement
+                
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
             } catch (error) {
                 handleApiError(error, resultEl, 'Gemini search');
@@ -2620,14 +2577,16 @@ Return only these sections in markdown format. Do not include any other sections
             const titlesString = existingTitles.length > 0 ? `[${existingTitles.map(t => `"${t}"`).join(', ')}]` : 'the default ones';
             
             const prompt = `Generate 1 new, useful IT administration category that is NOT in the following list: ${titlesString}.
-Return your response as a single, valid JSON object with the following keys: "key" (string, camelCase, unique), "title" (string), "description" (string), "initialPrompt" (string), and "fullPrompt" (string).
-The "initialPrompt" and "fullPrompt" values should be prompts for an AI to generate a JSON array of objects, where each object has an "id", "title", and "description".
+Return your response as a single, valid JSON object with the following keys: "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50).
+The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description".
 ${jsonInstruction}`;
 
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 if (!jsonText) throw new Error("AI did not return a new category.");
                 const newCategory = parseJsonWithCorrections(jsonText);
+                categoriesToGenerate.push(newCategory);
+                categoriesToGenerate.sort((a,b) => a.title.localeCompare(b.title));
                 await generateAndPopulateAICategory(newCategory);
                 await generateTopicsMenu();
             } catch (error) {
@@ -2672,10 +2631,10 @@ ${jsonInstruction}`;
                 if (imageResult && imageResult.status === 'fulfilled' && imageResult.value) {
                     applyHeaderImage(imageResult.value);
                 } else if (imageResult) {
-                    throw imageResult.reason || new Error("Failed to header image.");
+                    showThemeError("Failed to generate header image, but colors were updated.");
                 }
                 
-                document.getElementById('themeGeneratorModal').classList.add('hidden');
+                openModal('themeGeneratorModal');
             } catch (error) {
                 showThemeError(error.message);
             } finally {
@@ -2835,88 +2794,27 @@ ${jsonInstruction}`;
         }
         
         async function handleAIHelpRequest() {
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             
-            titleEl.textContent = "AI Help & Feedback";
+            document.getElementById('inDepthModalTitle').textContent = "AI Help & Feedback";
             contentEl.innerHTML = getLoaderHTML('Generating help guide and AI feedback...');
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
-            modal.classList.remove('hidden');
+            openModal('inDepthModal');
 
-            const helpPrompt = `
-                Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections.
-                The features are: 
-                1.  **Cloud Storage Integration**: A dedicated card on the main screen allows you to connect to Google Drive. Once connected, you can save guides and import markdown files.
-                2.  **Saving Guides**: Inside the guide modal, buttons will appear to save the guide to your connected cloud service. The file is saved to an "IT Administration Hub" folder with a descriptive name.
-                3.  **Custom Task Generator**: User enters any IT task, and the AI creates a detailed, step-by-step guide inside a pop-up modal.
-                4.  **Tailoring Options**: Buttons to refine the custom guide (e.g., 'for Security', 'for Beginners').
-                5.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc., for quick access to common subjects.
-                6.  **Visual Theme Generator**: A floating button allows you to describe a mood (e.g., 'ocean sunset'), and the AI creates a new color theme and header image for the application.
-                7.  **In-Depth Exploration & Refinement**: You can expand a summary to see a full guide or ask the AI to rewrite and refine any generated content with further instructions.
-                Format the output as a clean markdown document using '###' for each section title.`;
-
-            const feedbackPrompt = `
-                You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. 
-                Based on the feature descriptions below, provide constructive feedback. What is intuitive? What could be improved? What features might be missing for a senior IT administrator?
-
-                **Application Features:**
-                1.  **Cloud Storage Integration**: Connect to Google Drive to save/load guides and enable AI image generation.
-                2.  **Custom Task Generator**: Enter any IT task for a step-by-step AI-generated guide.
-                3.  **Tailoring Options**: Buttons to refine guides (e.g., 'for Security', 'for Beginners').
-                4.  **Pre-Built Categories**: AI-generated topics like VMware, Windows Server, etc.
-                5.  **Visual Theme Generator**: A floating button to generate a new color theme and header image from a text prompt.
-                6.  **In-Depth Exploration & Refinement**: Expand summaries to full guides or ask AI to rewrite content.
-
-                Format your feedback as a clean markdown document. Use '###' for section titles like "Strengths", "Areas for Improvement", and "Suggested Features".`;
+            const helpPrompt = `Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections using '###' for each title: Main Dashboard, Generative AI Prompt, Cloud Storage, In-Depth Guides, AI Theme Generator, and Floating Action Buttons.`;
+            const feedbackPrompt = `You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. Based on the features, provide constructive feedback on what is intuitive, what could be improved, and what features might be missing for a senior IT administrator. Format your feedback using '###' for titles "Strengths", "Areas for Improvement", and "Suggested Features".`;
             
             try {
-                const [helpResult, feedbackResult] = await Promise.all([
-                    callGeminiAPI(helpPrompt),
-                    callGeminiAPI(feedbackPrompt)
-                ]);
+                const [helpResult, feedbackResult] = await Promise.all([callGeminiAPI(helpPrompt), callGeminiAPI(feedbackPrompt)]);
 
-                const helpText = helpResult ? helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                const feedbackText = feedbackResult ? feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                const helpText = helpResult ? marked.parse(helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load help content.</p>';
+                const feedbackText = feedbackResult ? marked.parse(feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load feedback.</p>';
                 
                 contentEl.innerHTML = `
-                    <div class="accordion-item">
-                        <button type="button" class="accordion-header active">
-                            <span class="text-left font-semibold">Application Help Guide</span>
-                            <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content open prose max-w-none">
-                            ${marked.parse(helpText || '<p class="themed-text-muted">Could not load help content.</p>')}
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <button type="button" class="accordion-header">
-                            <span class="text-left font-semibold">AI-Generated Feedback</span>
-                            <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content prose max-w-none">
-                            ${marked.parse(feedbackText || '<p class="themed-text-muted">Could not load feedback.</p>')}
-                        </div>
-                    </div>
+                    <div class="accordion-item"><button type="button" class="accordion-header active"><span class="text-left font-semibold">Application Help Guide</span><svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content open prose max-w-none">${helpText}</div></div>
+                    <div class="accordion-item"><button type="button" class="accordion-header"><span class="text-left font-semibold">AI-Generated Feedback</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content prose max-w-none">${feedbackText}</div></div>
                 `;
-
-                contentEl.querySelectorAll('pre:not(code-block-container pre)').forEach(preBlock => {
-                    const codeBlock = preBlock.querySelector('code');
-                    const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
-                    
-                    const container = document.createElement('div');
-                    container.className = 'code-block-container';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'code-block-header';
-                    header.innerHTML = `<span>${lang}</span><button class="copy-code-button">Copy</button>`;
-
-                    container.appendChild(header);
-                    preBlock.parentNode.insertBefore(container, preBlock);
-                    container.appendChild(preBlock);
-                });
-
             } catch (error) {
                 handleApiError(error, contentEl, 'AI help content');
             }
@@ -2936,10 +2834,7 @@ ${jsonInstruction}`;
             refineContainer.className = 'refine-container w-full';
             
             const textareaId = `refine-textarea-${targetModalId}`;
-            refineContainer.innerHTML = `
-                <textarea id="${textareaId}" name="${textareaId}" class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea>
-                <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}" data-target-modal-id="${targetModalId}">Submit Refinement</button>
-            `;
+            refineContainer.innerHTML = `<textarea id="${textareaId}" name="${textareaId}" class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it for a junior admin' or 'Add PowerShell examples'"></textarea><button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}" data-target-modal-id="${targetModalId}">Submit Refinement</button>`;
             buttonContainer.insertAdjacentElement('afterend', refineContainer);
             refineContainer.querySelector('textarea').focus();
         }
@@ -2950,16 +2845,18 @@ ${jsonInstruction}`;
 
             const contentArea = document.getElementById(`${targetModalId}Content`);
             const titleElement = document.getElementById(`${targetModalId}Title`);
-            const textKey = titleElement.textContent;
-
+            const isSearchModal = targetModalId === 'searchGeminiModal';
+            const textKey = isSearchModal ? "currentSearch" : titleElement.textContent;
+            
             const originalText = originalGeneratedText.get(textKey);
 
             if (!originalText) {
-                handleApiError({message: "Could not find the original text to refine. Please generate the content again first."}, contentArea, "refinement");
+                handleApiError({message: "Could not find the original text to refine."}, contentArea, "refinement");
                 return;
             }
             
-            contentArea.innerHTML = getLoaderHTML(`Refining guide based on your request...`);
+            const renderTarget = isSearchModal ? document.getElementById('searchGeminiResult') : contentArea;
+            renderTarget.innerHTML = getLoaderHTML(`Refining content based on your request...`);
             
             const prompt = getEnhancedPrompt(refinementRequest, '', originalText);
             
@@ -2969,18 +2866,15 @@ ${jsonInstruction}`;
                 
                 originalGeneratedText.set(textKey, newText);
                 
-                contentArea.innerHTML = '';
-                renderAccordionFromMarkdown(newText, contentArea, false);
-                
-                const currentButtonContainer = document.getElementById(`${targetModalId}Buttons`);
-                if (targetModalId === 'inDepthModal') {
-                    addModalActionButtons(currentButtonContainer, false); 
+                if (isSearchModal) {
+                    renderTarget.innerHTML = marked.parse(newText || '');
                 } else {
-                    addDetailedModalActionButtons(currentButtonContainer);
+                    renderTarget.innerHTML = '';
+                    renderAccordionFromMarkdown(newText, renderTarget, false);
                 }
-
+                
             } catch(error) {
-                handleApiError(error, contentArea, 'refinement');
+                handleApiError(error, renderTarget, 'refinement');
             }
         }
         
@@ -3025,6 +2919,124 @@ ${jsonInstruction}`;
                 message = `Image generation requires you to connect your Google Account. Please use the 'Connect' button in the Cloud Storage card.`
             }
             return `Sorry, a critical error occurred: ${message}`; 
+        }
+
+        // --- Sticky Topics Functions (NEW) ---
+        function openStickyTopicsModal() {
+            const select = document.getElementById('sticky-topic-category-select');
+            select.innerHTML = '<option value="">Select a category...</option>'; // Clear and add placeholder
+            
+            const sortedCategories = [...categoriesToGenerate].sort((a,b) => a.title.localeCompare(b.title));
+
+            sortedCategories.forEach(cat => {
+                select.add(new Option(cat.title, cat.key));
+            });
+
+            document.getElementById('sticky-topics-list').innerHTML = '';
+            document.getElementById('new-sticky-topic-input').value = '';
+
+            openModal('stickyTopicsModal');
+        }
+
+        function listenForStickyTopics(categoryKey) {
+            if (stickyTopicsUnsubscribe) {
+                stickyTopicsUnsubscribe();
+            }
+            if (!userId || !categoryKey) {
+                 stickyTopics[categoryKey] = [];
+                 renderStickyTopics(categoryKey);
+                 return;
+            }
+            
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
+            
+            stickyTopicsUnsubscribe = onSnapshot(stickyTopicsCollectionRef, (snapshot) => {
+                const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                stickyTopics[categoryKey] = topics;
+                renderStickyTopics(categoryKey);
+                // Also refresh the main card grid if it's visible
+                const gridContainer = document.getElementById(`${categoryKey}-selector-visual`);
+                if (gridContainer) {
+                    populateCardGridSelector(`${categoryKey}-selector-visual`, categoryKey);
+                }
+            }, (error) => {
+                console.error(`Error listening to sticky topics for ${categoryKey}:`, error);
+            });
+        }
+
+        function renderStickyTopics(categoryKey) {
+            const listEl = document.getElementById('sticky-topics-list');
+            const topics = stickyTopics[categoryKey] || [];
+            if(topics.length === 0) {
+                listEl.innerHTML = `<p class="text-sm themed-text-muted text-center">No sticky topics for this category yet.</p>`;
+                return;
+            }
+            listEl.innerHTML = topics.map(topic => `
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+                    <input type="text" value="${topic.title}" class="themed-input w-full p-1 rounded text-sm sticky-topic-title-input" data-doc-id="${topic.id}">
+                    <button class="p-1 text-green-600 hover:text-green-800 update-sticky-topic-btn" title="Save Changes">&#10004;</button>
+                    <button class="p-1 text-red-600 hover:text-red-800 delete-sticky-topic-btn" title="Delete Topic">&times;</button>
+                </div>
+            `).join('');
+
+            listEl.querySelectorAll('.update-sticky-topic-btn').forEach(btn => btn.onclick = (e) => handleUpdateStickyTopic(e));
+            listEl.querySelectorAll('.delete-sticky-topic-btn').forEach(btn => btn.onclick = (e) => handleDeleteStickyTopic(e));
+        }
+
+        async function handleAddStickyTopic() {
+            const categoryKey = document.getElementById('sticky-topic-category-select').value;
+            const input = document.getElementById('new-sticky-topic-input');
+            const title = input.value.trim();
+
+            if (!categoryKey || !title || !userId) {
+                alert("Please select a category and enter a title.");
+                return;
+            }
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
+            
+            try {
+                await addDoc(stickyTopicsCollectionRef, { title: title, createdAt: Timestamp.now() });
+                input.value = '';
+            } catch(error) {
+                console.error("Error adding sticky topic:", error);
+            }
+        }
+
+        async function handleUpdateStickyTopic(e) {
+            const categoryKey = document.getElementById('sticky-topic-category-select').value;
+            const input = e.target.previousElementSibling;
+            const docId = input.dataset.docId;
+            const newTitle = input.value.trim();
+
+            if (!categoryKey || !docId || !newTitle || !userId) return;
+
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
+            try {
+                await updateDoc(docRef, { title: newTitle });
+                e.target.textContent = '✓';
+                setTimeout(() => e.target.innerHTML = '&#10004;', 2000);
+            } catch (error) {
+                console.error("Error updating sticky topic:", error);
+            }
+        }
+
+        async function handleDeleteStickyTopic(e) {
+            const categoryKey = document.getElementById('sticky-topic-category-select').value;
+            const docId = e.target.previousElementSibling.previousElementSibling.dataset.docId;
+
+            if (!categoryKey || !docId || !userId) return;
+            if (!confirm("Are you sure you want to delete this sticky topic?")) return;
+
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
+            try {
+                await deleteDoc(docRef);
+            } catch (error) {
+                console.error("Error deleting sticky topic:", error);
+            }
         }
 
     </script>
