@@ -274,7 +274,7 @@
             </div>
         </div>
     </div>
-    <div id="api-key-modal-overlay" class="modal-overlay visible">
+    <div id="api-key-modal-overlay" class="modal-overlay">
         <div id="api-key-modal" class="modal glass-ui p-6">
             <h2 class="text-2xl font-bold mb-4">Enter API Keys</h2>
             <p class="text-gray-300 mb-6">This app requires API keys for full functionality. Keys are stored only in your browser.</p>
@@ -725,11 +725,23 @@
             firebaseApiKey = fKey; 
             tenorApiKey = tKey;
             const firebaseConfig = { apiKey: firebaseApiKey, authDomain: "whiteboard-00.firebaseapp.com", projectId: "whiteboard-00", storageBucket: "whiteboard-00.appspot.com", messagingSenderId: "34696279859", appId: "1:34696279859:web:a01addc7e57a8d06947046", };
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app); 
+                db = getFirestore(app); 
+                setLogLevel('debug');
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                alert("Firebase initialization failed, likely due to an invalid API key. Please re-enter your key.");
+                localStorage.removeItem('firebaseApiKey');
+                if(localStorage.getItem('tenorApiKey')) localStorage.removeItem('tenorApiKey');
+                showModal(apiKeyModalOverlay);
+                return; // Stop execution if initialization fails
+            }
+
+            // If we reach here, initialization was successful.
             hideModal(apiKeyModalOverlay);
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app); 
-            db = getFirestore(app); 
-            setLogLevel('debug');
             
             onAuthStateChanged(auth, async (user) => { 
                 if (user) { 
