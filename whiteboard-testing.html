@@ -319,7 +319,7 @@
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'whiteboard-00-default';
@@ -601,45 +601,67 @@
         async function setupChatListener() {
             const chatCollectionPath = `artifacts/${whiteboardId}/public/data/chat`;
             if (unsubscribeFromChat) unsubscribeFromChat();
-            const q = query(collection(db, chatCollectionPath));
+
+            // Clear existing messages before attaching the new listener.
+            chatMessages.innerHTML = '';
+
+            const q = query(collection(db, chatCollectionPath), orderBy("timestamp"));
+            
             unsubscribeFromChat = onSnapshot(q, async (snapshot) => {
-                const messages = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                messages.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                
-                let messagesHtml = '';
-                for(const msg of messages) {
-                    const profile = await getUserProfile(msg.author);
-                    const displayName = profile?.name || 'Anonymous';
-                    const avatarUrl = profile?.avatar || `https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}`;
-                    
-                    let textHtml = '';
-                    let mediaHtml = '';
+                for (const change of snapshot.docChanges()) {
+                    if (change.type === "added") {
+                        const msg = { id: change.doc.id, ...change.doc.data() };
+                        
+                        // Prevent re-adding a message if it's already in the DOM
+                        if (document.querySelector(`[data-message-id="${msg.id}"]`)) {
+                            continue;
+                        }
 
-                    if (msg.text) {
-                        const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        textHtml = `<div class="chat-text">${sanitizedText}</div>`;
-                    }
-                    
-                    if (msg.type === 'gif') {
-                        mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
-                    }
-                    
-                    const contentHtml = textHtml + mediaHtml;
+                        const profile = await getUserProfile(msg.author);
+                        const displayName = profile?.name || 'Anonymous';
+                        const avatarUrl = profile?.avatar || `https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}`;
 
-                    messagesHtml += `
-                        <div class="chat-message" data-message-id="${msg.id}">
+                        const messageEl = document.createElement('div');
+                        messageEl.className = 'chat-message';
+                        messageEl.dataset.messageId = msg.id;
+
+                        let textHtml = '';
+                        let mediaHtml = '';
+
+                        if (msg.text) {
+                            const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                            textHtml = `<div class="chat-text">${sanitizedText}</div>`;
+                        }
+                        
+                        if (msg.type === 'gif') {
+                            mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
+                        }
+                        
+                        const contentHtml = textHtml + mediaHtml;
+
+                        messageEl.innerHTML = `
                             <img src="${avatarUrl}" class="chat-avatar" onerror="this.onerror=null;this.src='https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}';">
                             <div class="chat-content">
                                 <div class="chat-author">${displayName}</div>
                                 ${contentHtml}
                             </div>
-                        </div>
-                    `;
-                };
-                chatMessages.innerHTML = messagesHtml;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, error => console.error("Chat listener error:", error));
+                        `;
+                        chatMessages.appendChild(messageEl);
+                    }
+                }
+
+                // Scroll to the bottom if there were changes
+                if (snapshot.docChanges().length > 0) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }, error => {
+                console.error("Chat listener error:", error);
+                if (error.code === 'failed-precondition') {
+                    console.error("Firestore error suggests a missing index for the chat. Please create an index for the 'chat' collection on the 'timestamp' field (ascending).");
+                }
+            });
         }
+
 
         function setDailyContent() { 
             const today = new Date(); 
