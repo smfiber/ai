@@ -536,7 +536,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.14</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.15</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -707,7 +707,7 @@
         // --- Content Generation Categories ---
         const categoriesToGenerate = [
             { key: 'activeDirectory', title: 'Active Directory Management', description: "Tasks for managing users, groups, GPOs, and other AD objects.", initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
+            { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
             { key: 'aiProgramming', title: 'Artificial Intelligence Programming', description: "Concepts and guides for getting started with AI development and programming.", initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Provide the output as a valid JSON array.` },
             { key: 'citrixAdmin', title: 'Citrix Administration', description: "Managing Citrix Virtual Apps and Desktops environments.", initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
             { key: 'geminiInfographics', title: 'Create Infographics in Gemini', description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
@@ -2202,53 +2202,69 @@ ${originalText}
 Return only the new, complete, and rewritten markdown text.`;
             }
 
-            let contextText = `for the task: "${task}"`;
-            if (context.cardTitle) {
-                contextText = `for the following topic.
+            // This is the prompt for generating a new guide, with the user's requested changes.
+            return `You are an expert senior IT administrator and technical writer AI. Your primary goal is to generate a comprehensive, in-depth, and practical **reference guide** for the topic below.
+
+The main objective is not just to explain a task, but to create an exhaustive guide on its **underlying key concepts**. Prioritize depth, nuance, and multiple practical implementation methods for each concept. The user must walk away with a deep, applicable understanding of each component technology.
+
 - **Category:** "${context.cardTitle}"
 - **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${task}"`;
-            }
+- **Specific Task:** "${task}"
 
-            // REVISED PROMPT STRUCTURE
-            return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
-
-**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
+**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
 
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
+
 ### 1. Introduction
     * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
+    * **Importance:** Describe why this technology and its underlying concepts are important in modern IT environments.
+    * **What You'll Learn:** Provide a bulleted list of the key concepts you will master and the various ways you will learn to manage them.
+
 ### 2. Architectural Overview (If Applicable)
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-### 3. Key Concepts & Terminology
-    * **List and Define:** List and clearly define the fundamental principles, terminology, and acronyms the user MUST understand to perform the main task.
+    * For complex topics, explain the high-level architecture.
+    * Describe the main components and how they interact. Use simple analogies if possible.
+
+### 3. Key Concepts & Terminology (Definitions)
+    * **List and Define:** List and clearly define the fundamental principles, terminology, and acronyms the user MUST understand. This section is for definitions only; the deep-dive application will follow in Section 5.
+
 ### 4. Prerequisites
-    * **Permissions:** Detail the specific administrative roles or granular permissions required.
+    * **Permissions:** Detail the specific administrative roles or granular permissions required for the tasks and concepts that will be explored.
     * **Software/Licensing:** List any necessary software, specific versions, and licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites.
-### 5. Key Concepts and Terminology - Explained
-    * **Practical Application:** This is a critical section. For each item you listed in "Key Concepts & Terminology", provide a detailed practical guide on how to perform, configure, or manage it. 
-    * **Detailed Instructions:** Use either GUI-based step-by-step instructions (describing exact clicks and navigation) or provide clear, descriptive "how-to" text for more conceptual items. Treat this as a collection of mini-guides that bring the concepts to life.
+
+### 5. Key Concepts - In-Depth Application & Management
+    * **CRITICAL SECTION:** This is the most important part of the guide. For **each individual concept** listed in Section 3, create a detailed, self-contained mini-guide.
+    * **Multiple Implementation Methods:** For each concept, you MUST provide detailed instructions for managing it through as many of the following methods as are relevant:
+        * **GUI-Based Management:** Provide granular, step-by-step instructions with exact click-by-click navigation.
+        * **PowerShell/CLI Management:** Provide complete, practical, and runnable code snippets and commands.
+        * **API/SDK Usage (If applicable):** Explain how to interact with the concept programmatically, providing examples using relevant APIs (e.g., Microsoft Graph, REST APIs) or SDKs.
+        * **Third-Party Tool Integration (If applicable):** Mention and briefly describe how popular third-party applications are used to manage or interact with this concept.
+    * **Explain the "Why":** For each instruction set, explain *why* an administrator would choose that method and what the trade-offs are.
+
 ### 6. Verification and Validation
-    * Provide specific commands or procedures to run to confirm the overall task was completed successfully.
-    * Describe what a successful output or system state looks like.
+    * Provide specific commands, API calls, or GUI procedures to confirm that each key concept has been configured correctly.
+    * Describe what a successful output or system state looks like for each concept.
+
 ### 7. Best Practices
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task and manage the related concepts.
+    * Offer expert advice on the most effective, secure, and efficient ways to implement and manage each of the key concepts. Organize the advice by concept.
+
 ### 8. Automation Techniques for Key Concepts
-    * **Concept-Specific Automation:** For each concept from 'Key Concepts & Terminology,' describe relevant automation opportunities.
-    * **Scripting Examples:** Provide complete, practical script examples (e.g., PowerShell, PowerCLI, bash) or explain how to use APIs (like Microsoft Graph) to automate tasks related to that specific concept.
+    * **Concept-Specific Automation:** For each concept from Section 3, describe relevant automation opportunities.
+    * **Scripting Examples:** Provide complete, practical script examples (e.g., PowerShell, PowerCLI, bash) or explain how to use APIs to automate tasks related to that **specific concept**.
+
 ### 9. Security Considerations
-    * **Hardening:** Provide specific steps to harden the configuration related to the main task and concepts.
-    * **Common Vulnerabilities:** Discuss potential security risks.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging.
+    * **Concept-Specific Hardening:** For each key concept, provide specific steps to harden its configuration.
+    * **Common Vulnerabilities:** Discuss potential security risks associated with each concept.
+    * **Auditing & Logging:** For each concept, recommend what specific events to audit and how to configure logging.
+
 ### 10. Advanced Use Cases & Scenarios
-    * Describe 2-3 advanced or less-common scenarios related to the topic.
+    * Describe 2-3 advanced scenarios that show how to **combine or extend the key concepts** in sophisticated ways to solve complex problems.
+
 ### 11. Troubleshooting
-    * Provide a table of common problems, their likely causes, and step-by-step solutions.
+    * Provide a table of common problems, organized by **Key Concept**. For each problem, list the likely causes, and provide step-by-step solutions that may involve the GUI, CLI, or API.
+
 ### 12. Helpful Resources
-    * Include a final section with a bulleted list of high-quality, relevant links.
+    * Include a final section with a bulleted list of high-quality, relevant links to official documentation or authoritative articles for the concepts discussed.
 
 **MANDATORY QUALITY STANDARDS:**
 ${linkVerificationAndGenerationMandate}
