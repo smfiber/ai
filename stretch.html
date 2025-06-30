@@ -130,6 +130,7 @@
             padding: 8px 16px;
             border-bottom: 2px solid transparent;
             color: #475569;
+            white-space: nowrap;
         }
         .focus-tab.active {
             color: #4f46e5;
@@ -144,47 +145,11 @@
         }
 
         @media print {
-            /* Hide everything in the body by default for printing */
-            body > * {
-                display: none !important;
-            }
-
-            /* Make only the modal and its contents visible */
-            #exercise-details-modal {
-                display: block !important;
-            }
-            
-            /* Style the modal container for printing */
-            #exercise-details-modal {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                background-color: white !important;
-                overflow: visible !important;
-            }
-
-            /* Style the modal content area */
-            #exercise-details-modal .modal-content {
-                width: 100% !important;
-                max-width: 100% !important;
-                box-shadow: none !important;
-                border: none !important;
-                padding: 1rem !important;
-                margin: 0 !important;
-            }
-
-            /* Ensure the actual content is visible and flows */
-            #details-content {
-                max-height: none !important;
-                overflow: visible !important;
-            }
-
-            /* Hide buttons and other non-printable elements inside the modal */
-            #details-close-btn, #print-details-btn, #details-youtube-buttons {
-                display: none !important;
-            }
+            body > * { display: none !important; }
+            #exercise-details-modal { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; background-color: white !important; overflow: visible !important; }
+            #exercise-details-modal .modal-content { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border: none !important; padding: 1rem !important; margin: 0 !important; }
+            #details-content { max-height: none !important; overflow: visible !important; }
+            #details-close-btn, #print-details-btn, #details-youtube-buttons { display: none !important; }
         }
     </style>
 </head>
@@ -222,10 +187,12 @@
                     <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Select your focus and preferences to begin your custom routine.</p>
                     <div class="mt-10 p-6 md:p-8 bg-white border border-slate-200 rounded-xl shadow-sm max-w-5xl mx-auto">
                         
-                        <div class="border-b border-slate-200 mb-6">
-                            <nav id="focus-tabs-container" class="-mb-px flex justify-center gap-x-6">
+                        <div class="border-b border-slate-200 mb-6 overflow-x-auto">
+                            <nav id="focus-tabs-container" class="-mb-px flex justify-start md:justify-center gap-x-6">
                                 <button class="focus-tab active" data-target="muscle-focus">1. By Muscle Group</button>
                                 <button class="focus-tab" data-target="system-focus">1. By Organ System</button>
+                                <button class="focus-tab" data-target="pose-type-focus">1. By Pose Type</button>
+                                <button class="focus-tab" data-target="benefit-focus">1. By Desired Benefit</button>
                             </nav>
                         </div>
 
@@ -239,6 +206,18 @@
                            <div id="system-focus" class="focus-content">
                                 <label for="organ-system-select" class="block text-sm font-medium text-slate-700 mb-1">Select Organ System</label>
                                 <select id="organ-system-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                    <option>Loading...</option>
+                                </select>
+                           </div>
+                           <div id="pose-type-focus" class="focus-content">
+                                <label for="pose-type-select" class="block text-sm font-medium text-slate-700 mb-1">Select Pose Type</label>
+                                <select id="pose-type-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                    <option>Loading...</option>
+                                </select>
+                           </div>
+                           <div id="benefit-focus" class="focus-content">
+                                <label for="benefit-select" class="block text-sm font-medium text-slate-700 mb-1">Select Desired Benefit</label>
+                                <select id="benefit-select" class="custom-select w-full p-3 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                                     <option>Loading...</option>
                                 </select>
                            </div>
@@ -269,7 +248,7 @@
                 <div id="about-section" class="view w-full mx-auto">
                     <h2 class="text-3xl font-bold text-slate-900 mb-6 max-w-5xl mx-auto">About The Stretch Solution</h2>
                     <div class="bg-white p-8 rounded-lg shadow-sm space-y-4 text-slate-600 max-w-5xl mx-auto">
-                        <p>This application leverages the Google Gemini API to generate dynamic and personalized health and stretching routines. Simply select a muscle group you'd like to focus on, choose the number of exercises, and the AI will create a custom routine for you.</p>
+                        <p>This application leverages the Google Gemini API to generate dynamic and personalized health and stretching routines. Simply select a focus area—like a muscle group, organ system, pose type, or desired benefit—choose the number of exercises, and the AI will create a custom routine for you.</p>
                         <p>For each exercise, you can now search for a demonstration video on YouTube with a single click. If the initial search isn't perfect, a "Detailed Search" option uses more information from the AI to find a better match.</p>
                         <p>You can also click "More Details" on any exercise to get an in-depth guide, also generated by the AI. This approach ensures that the content is always fresh, relevant, and tailored to your specific needs.</p>
                     </div>
@@ -302,7 +281,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.1</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.2</p>
             </div>
         </footer>
         
@@ -352,6 +331,8 @@
         const PROMPT_TEMPLATES = {
             muscleGroups: () => `When practicing yoga asanas (poses), what are all of the major and minor muscle groups that people commonly focus on? Return a JSON object with a single key 'muscleGroups'. This key should hold an array of objects. Each object must have two keys: 'displayName' (the common, user-friendly name, e.g., 'Hamstrings') and 'fullName' (the more technical name including specific muscles, e.g., 'Hamstrings - Biceps Femoris, Semitendinosus, Semimembranosus'). Provide an extensive list, ordered alphabetically by displayName.`,
             organSystems: () => `When practicing yoga asanas (poses), what are all of the major and minor organ systems of the human body that people commonly believe are stimulated, supported, or positively impacted by the practice? Return a JSON object containing a single key 'yogaOrganSystemFocus' which is an array of strings. Each string should represent an organ system, formatted as 'Common Name - Technical Term(s)' if a common name exists, or just the technical term if it's widely recognized. Provide an extensive and exhaustive list, ordered alphabetically.`,
+            poseTypes: () => `List the common categories of yoga asanas based on the physical action or position involved (e.g., 'Standing Poses', 'Backbends', 'Forward Bends', 'Twists', 'Inversions', 'Balancing Poses'). Return a JSON object with a single key 'poseTypes' which holds an array of these category names as strings. Provide a comprehensive list, ordered alphabetically.`,
+            desiredBenefits: () => `What are the common therapeutic benefits or wellness goals that people seek to achieve through a yoga or stretching routine (e.g., 'Stress Relief', 'Improved Flexibility', 'Increased Energy', 'Better Sleep')? Return a JSON object with a single key 'desiredBenefits' which holds an array of these benefit-oriented goals as strings. The list should be comprehensive and ordered alphabetically.`,
             routine: (numExercises, focusArea) => `Create a balanced routine with exactly ${numExercises} yoga poses or exercises that primarily target or support the '${focusArea}'. For each item, provide a "name", brief step-by-step "instructions", and its single primary "benefit". Keep the instructions and benefit to 1-2 sentences each. The tone should be encouraging and informative.`,
             details: (exerciseName) => `Provide a detailed guide for the yoga pose or topic "${exerciseName}". Include the following sections with clear headings using markdown ###: "Step-by-Step Instructions", "Key Benefits", and "Modifications and Precautions". Use bullet points for the benefits and modifications sections. The tone should be encouraging and informative, like a professional yoga guide.`,
         };
@@ -367,6 +348,8 @@
             focusTabsContainer: document.getElementById('focus-tabs-container'),
             muscleGroupSelect: document.getElementById('muscle-group-select'),
             organSystemSelect: document.getElementById('organ-system-select'),
+            poseTypeSelect: document.getElementById('pose-type-select'),
+            benefitSelect: document.getElementById('benefit-select'),
             exercisesSelect: document.getElementById('exercises-select'),
             generateBtn: document.getElementById('generate-btn'),
             routineList: document.getElementById('routine-list'),
@@ -441,6 +424,8 @@
             populateStaticDropdowns();
             populateMuscleGroupDropdown();
             populateOrganSystemDropdown();
+            populatePoseTypeDropdown();
+            populateBenefitDropdown();
         }
 
         function logPrompt(type, prompt, response) {
@@ -493,6 +478,46 @@
                 showAlert(`Could not load organ systems from the AI. ${error.message}`);
             }
         }
+
+        async function populatePoseTypeDropdown() {
+            ui.poseTypeSelect.disabled = true;
+            ui.poseTypeSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
+            try {
+                const prompt = PROMPT_TEMPLATES.poseTypes();
+                const schema = { type: "OBJECT", properties: { "poseTypes": { type: "ARRAY", items: { type: "STRING" } } }, required: ["poseTypes"] };
+                const response = await callGeminiAPI("Pose Types", prompt, schema);
+                const poseTypes = response.poseTypes;
+                ui.poseTypeSelect.innerHTML = `<option value="">-- Select a Pose Type --</option>`;
+                poseTypes.forEach(type => {
+                    ui.poseTypeSelect.add(new Option(type, type));
+                });
+                ui.poseTypeSelect.disabled = false;
+            } catch (error) {
+                console.error("Error populating pose types:", error);
+                ui.poseTypeSelect.innerHTML = `<option>Error loading data</option>`;
+                showAlert(`Could not load pose types from the AI. ${error.message}`);
+            }
+        }
+
+        async function populateBenefitDropdown() {
+            ui.benefitSelect.disabled = true;
+            ui.benefitSelect.innerHTML = `<option>🤖 Asking AI...</option>`;
+            try {
+                const prompt = PROMPT_TEMPLATES.desiredBenefits();
+                const schema = { type: "OBJECT", properties: { "desiredBenefits": { type: "ARRAY", items: { type: "STRING" } } }, required: ["desiredBenefits"] };
+                const response = await callGeminiAPI("Desired Benefits", prompt, schema);
+                const benefits = response.desiredBenefits;
+                ui.benefitSelect.innerHTML = `<option value="">-- Select a Benefit --</option>`;
+                benefits.forEach(benefit => {
+                    ui.benefitSelect.add(new Option(benefit, benefit));
+                });
+                ui.benefitSelect.disabled = false;
+            } catch (error) {
+                console.error("Error populating benefits:", error);
+                ui.benefitSelect.innerHTML = `<option>Error loading data</option>`;
+                showAlert(`Could not load benefits from the AI. ${error.message}`);
+            }
+        }
         
         // --- ROUTINE GENERATION & DISPLAY ---
         async function generateRoutine() {
@@ -502,12 +527,23 @@
             let focusArea = '';
             let selectedText = '';
             
-            if (targetId === 'muscle-focus') {
-                focusArea = ui.muscleGroupSelect.value;
-                selectedText = ui.muscleGroupSelect.options[ui.muscleGroupSelect.selectedIndex].text;
-            } else {
-                focusArea = ui.organSystemSelect.value;
-                selectedText = ui.organSystemSelect.options[ui.organSystemSelect.selectedIndex].text;
+            switch (targetId) {
+                case 'muscle-focus':
+                    focusArea = ui.muscleGroupSelect.value;
+                    selectedText = ui.muscleGroupSelect.options[ui.muscleGroupSelect.selectedIndex].text;
+                    break;
+                case 'system-focus':
+                    focusArea = ui.organSystemSelect.value;
+                    selectedText = ui.organSystemSelect.options[ui.organSystemSelect.selectedIndex].text;
+                    break;
+                case 'pose-type-focus':
+                    focusArea = ui.poseTypeSelect.value;
+                    selectedText = ui.poseTypeSelect.options[ui.poseTypeSelect.selectedIndex].text;
+                    break;
+                case 'benefit-focus':
+                    focusArea = ui.benefitSelect.value;
+                    selectedText = ui.benefitSelect.options[ui.benefitSelect.selectedIndex].text;
+                    break;
             }
 
             const numExercises = ui.exercisesSelect.value;
@@ -551,7 +587,6 @@
                 const exerciseEl = document.createElement('div');
                 exerciseEl.className = 'bg-white border border-slate-200 rounded-xl shadow-sm p-6';
                 
-                // Sanitize instructions for the data attribute
                 const sanitizedInstructions = exercise.instructions.replace(/"/g, '&quot;');
 
                 exerciseEl.innerHTML = `
@@ -571,7 +606,6 @@
                 ui.routineList.appendChild(exerciseEl);
             });
             
-            // Add event listeners for all new buttons
             document.querySelectorAll('.details-btn').forEach(btn => {
                 btn.addEventListener('click', () => showExerciseDetails(btn.dataset.index));
             });
@@ -590,13 +624,11 @@
             ui.detailsTitle.textContent = exercise.name;
             ui.detailsContent.innerHTML = '<div class="flex justify-center items-center h-32"><div class="loader"></div></div>';
             
-            // Add YouTube search buttons to the modal
             const sanitizedInstructions = exercise.instructions.replace(/"/g, '&quot;');
             ui.detailsYoutubeButtons.innerHTML = `
                 <button data-exercise-name="${exercise.name}" class="youtube-search-btn text-sm font-medium text-indigo-600 hover:text-indigo-800">Search Video (Simple) &rarr;</button>
                 <button data-exercise-name="${exercise.name}" data-exercise-instructions="${sanitizedInstructions}" class="youtube-search-detailed-btn text-sm font-medium text-green-600 hover:text-green-800">Search Video (Detailed) &rarr;</button>
             `;
-            // Re-attach event listeners for the buttons inside the modal
             ui.detailsYoutubeButtons.querySelector('.youtube-search-btn').addEventListener('click', (e) => searchYouTubeSimple(e.target.dataset.exerciseName));
             ui.detailsYoutubeButtons.querySelector('.youtube-search-detailed-btn').addEventListener('click', (e) => searchYouTubeDetailed(e.target.dataset.exerciseName, e.target.dataset.exerciseInstructions));
 
