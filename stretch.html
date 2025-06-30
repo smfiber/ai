@@ -143,33 +143,46 @@
             display: block;
         }
 
-
-         @media print {
-            body.is-printing > *:not(#exercise-details-modal) {
+        @media print {
+            /* Hide everything in the body by default for printing */
+            body > * {
                 display: none !important;
             }
-            body.is-printing #exercise-details-modal {
-                display: flex !important;
+
+            /* Make only the modal and its contents visible */
+            #exercise-details-modal {
+                display: block !important;
+            }
+            
+            /* Style the modal container for printing */
+            #exercise-details-modal {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                background: white !important;
+                background-color: white !important;
+                overflow: visible !important;
             }
-            body.is-printing .modal-content {
-                box-shadow: none !important;
-                border: none !important;
+
+            /* Style the modal content area */
+            #exercise-details-modal .modal-content {
                 width: 100% !important;
                 max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
                 padding: 1rem !important;
                 margin: 0 !important;
             }
-            body.is-printing #details-content {
+
+            /* Ensure the actual content is visible and flows */
+            #details-content {
                 max-height: none !important;
                 overflow: visible !important;
             }
-            body.is-printing #details-close-btn, body.is-printing #print-details-btn, body.is-printing #details-youtube-buttons {
+
+            /* Hide buttons and other non-printable elements inside the modal */
+            #details-close-btn, #print-details-btn, #details-youtube-buttons {
                 display: none !important;
             }
         }
@@ -289,7 +302,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.0</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.1</p>
             </div>
         </footer>
         
@@ -409,11 +422,7 @@
             ui.modalCloseBtn.addEventListener('click', () => ui.customAlertModal.style.display = 'none');
             ui.detailsCloseBtn.addEventListener('click', () => ui.exerciseDetailsModal.style.display = 'none');
             ui.printDetailsBtn.addEventListener('click', () => {
-                document.body.classList.add('is-printing');
-                setTimeout(() => {
-                    window.print();
-                    document.body.classList.remove('is-printing');
-                }, 100);
+                window.print();
             });
         }
         
@@ -441,7 +450,7 @@
 
         // --- DYNAMIC UI POPULATION ---
         function populateStaticDropdowns() {
-            const counts = [3, 5, 7, 10];
+            const counts = [3, 5, 7, 10, 12, 15, 20];
             ui.exercisesSelect.innerHTML = counts.map(c => `<option value="${c}">${c} Exercises</option>`).join('');
         }
 
