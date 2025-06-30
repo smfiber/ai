@@ -2975,7 +2975,7 @@ Return only these sections in markdown format. Do not include any other sections
             // Fetch all final categories from Firestore to populate the dropdown
             try {
                 const finalCategories = [];
-                const mainCatsSnapshot = await getDocs(collection(db, 'topicHierarchy'));
+                const mainCatsSnapshot = await getDocs(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
                 for (const mainDoc of mainCatsSnapshot.docs) {
                     const subCatsSnapshot = await getDocs(collection(db, mainDoc.ref.path, 'subCategories'));
                     for (const subDoc of subCatsSnapshot.docs) {
@@ -3111,12 +3111,14 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
         // --- MODIFIED: Topic Browser Functions ---
+        const getHierarchyBasePath = () => `artifacts/${firebaseConfig.appId || 'it-admin-hub-global'}/public/data`;
+
         async function openCategoryBrowser(mode) {
             const modalTitle = document.getElementById('categoryBrowserModalTitle');
             modalTitle.textContent = 'Browse Categories';
             currentHierarchyPath = [];
             updateBreadcrumbs();
-            await renderCategoryLevel(collection(db, 'topicHierarchy'));
+            await renderCategoryLevel(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
             openModal('categoryBrowserModal');
         }
 
@@ -3125,7 +3127,7 @@ Return only these sections in markdown format. Do not include any other sections
             modalContent.innerHTML = getLoaderHTML('Loading categories...');
             try {
                 const snapshot = await getDocs(query(collectionRef));
-                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), path: doc.ref.path }));
                 items.sort((a, b) => a.title.localeCompare(b.title));
                 
                 if (items.length === 0) {
@@ -3152,7 +3154,7 @@ Return only these sections in markdown format. Do not include any other sections
                 });
             } catch (error) {
                 console.error("Error rendering category level:", error);
-                modalContent.innerHTML = `<p class="text-red-500 text-center">Error loading categories. Check console.</p>`;
+                modalContent.innerHTML = `<p class="text-red-500 text-center">Error loading categories. Check console for details.</p>`;
             }
         }
         
@@ -3171,28 +3173,36 @@ Return only these sections in markdown format. Do not include any other sections
                 return;
             }
             
-            const currentDocRef = doc(db, ...currentHierarchyPath.flatMap(p => [p.ref.parent.id, p.id]));
-            const nextCollectionRef = collection(db, currentDocRef.path, nextCollectionName);
+            const currentDocRef = doc(db, itemData.path);
+            const nextCollectionRef = collection(currentDocRef, nextCollectionName);
             await renderCategoryLevel(nextCollectionRef);
         }
 
         function updateBreadcrumbs() {
             const breadcrumbsContainer = document.getElementById('categoryBrowserBreadcrumbs');
             if (currentHierarchyPath.length === 0) {
-                breadcrumbsContainer.innerHTML = `<span class="font-semibold themed-text-primary">Top Level</span>`;
-                return;
+                breadcrumbsContainer.innerHTML = `<span class="font-semibold themed-text-primary cursor-pointer" data-index="-1">Top Level</span>`;
+            } else {
+                 breadcrumbsContainer.innerHTML = `<span class="breadcrumb-item cursor-pointer hover:underline" data-index="-1">Top Level</span>` + 
+                 currentHierarchyPath.map((item, index) => 
+                    `<span class="mx-2 themed-text-muted">/</span><span class="breadcrumb-item cursor-pointer hover:underline" data-index="${index}">${item.title}</span>`
+                ).join('');
             }
-            breadcrumbsContainer.innerHTML = currentHierarchyPath.map((item, index) => 
-                `<span class="breadcrumb-item cursor-pointer hover:underline" data-index="${index}">${item.title}</span>`
-            ).join('<span class="mx-2 themed-text-muted">/</span>');
+            
 
             breadcrumbsContainer.querySelectorAll('.breadcrumb-item').forEach(crumb => {
                 crumb.addEventListener('click', (e) => {
                     const index = parseInt(e.target.dataset.index, 10);
-                    currentHierarchyPath = currentHierarchyPath.slice(0, index + 1);
+                    if (index === -1) {
+                        currentHierarchyPath = [];
+                        renderCategoryLevel(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
+                    } else {
+                        currentHierarchyPath = currentHierarchyPath.slice(0, index + 1);
+                        const parentPath = currentHierarchyPath[currentHierarchyPath.length - 1].path;
+                        const parentRef = doc(db, parentPath);
+                        renderCategoryLevel(collection(parentRef, index === 0 ? 'subCategories' : 'finalCategories'));
+                    }
                     updateBreadcrumbs();
-                    const parentRef = doc(db, ...currentHierarchyPath.flatMap(p => [p.ref.parent.id, p.id])).parent;
-                    renderCategoryLevel(parentRef);
                 });
             });
         }
@@ -3217,18 +3227,18 @@ Return only these sections in markdown format. Do not include any other sections
             hideHierarchyForm();
         }
 
-        async function loadHierarchyColumn(level, parentDoc = null) {
+        async function loadHierarchyColumn(level, parentDocData = null) {
             let collectionRef;
             let listElementId;
 
             if (level === 'main') {
-                collectionRef = collection(db, 'topicHierarchy');
+                collectionRef = collection(db, getHierarchyBasePath(), 'topicHierarchy');
                 listElementId = 'main-category-list';
-            } else if (level === 'sub' && parentDoc) {
-                collectionRef = collection(db, parentDoc.ref.path, 'subCategories');
+            } else if (level === 'sub' && parentDocData) {
+                collectionRef = collection(db, parentDocData.path, 'subCategories');
                 listElementId = 'sub-category-list';
-            } else if (level === 'final' && parentDoc) {
-                collectionRef = collection(db, parentDoc.ref.path, 'finalCategories');
+            } else if (level === 'final' && parentDocData) {
+                collectionRef = collection(db, parentDocData.path, 'finalCategories');
                 listElementId = 'final-category-list';
             } else {
                 return;
@@ -3240,7 +3250,7 @@ Return only these sections in markdown format. Do not include any other sections
             try {
                 const q = query(collectionRef);
                 const snapshot = await getDocs(q);
-                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), path: doc.ref.path }));
                 items.sort((a, b) => a.title.localeCompare(b.title));
                 
                 listElement.innerHTML = items.map(item => `
@@ -3255,14 +3265,13 @@ Return only these sections in markdown format. Do not include any other sections
 
             } catch (error) {
                 console.error(`Error loading ${level} categories:`, error);
-                listElement.innerHTML = `<p class="text-red-500 text-xs">Error loading.</p>`;
+                listElement.innerHTML = `<p class="text-red-500 text-xs">Error loading. Check console for details.</p>`;
             }
         }
 
         function handleHierarchySelection(level, id, items) {
             const selectedItem = items.find(item => item.id === id);
             
-            // Update UI selection
             document.querySelectorAll(`[data-level="${level}"]`).forEach(el => el.classList.remove('selected'));
             document.querySelector(`[data-level="${level}"][data-id="${id}"]`).classList.add('selected');
 
@@ -3293,18 +3302,20 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
         async function handleAddHierarchyItem(level) {
-            let parentItem, collectionName, inputElementId;
+            let parentData, collectionName, inputElementId;
             const data = {};
 
             if (level === 'main') {
                 collectionName = 'topicHierarchy';
                 inputElementId = 'new-main-category-input';
             } else if (level === 'sub') {
-                parentItem = selectedHierarchyItems.main;
+                parentData = selectedHierarchyItems.main;
+                if (!parentData) { alert("Please select a Main Category first."); return; }
                 collectionName = 'subCategories';
                 inputElementId = 'new-sub-category-input';
             } else if (level === 'final') {
-                parentItem = selectedHierarchyItems.sub;
+                parentData = selectedHierarchyItems.sub;
+                if (!parentData) { alert("Please select a Sub Category first."); return; }
                 collectionName = 'finalCategories';
                 inputElementId = 'new-final-category-input';
                 data.description = "Default description.";
@@ -3319,10 +3330,13 @@ Return only these sections in markdown format. Do not include any other sections
             data.title = title;
 
             try {
-                const parentRef = parentItem ? parentItem.ref.parent.collection(parentItem.ref.id) : db;
-                await addDoc(collection(parentRef, collectionName), data);
+                const collectionRef = parentData ? 
+                    collection(db, parentData.path, collectionName) : 
+                    collection(db, getHierarchyBasePath(), collectionName);
+                
+                await addDoc(collectionRef, data);
                 inputElement.value = '';
-                loadHierarchyColumn(level, parentItem);
+                loadHierarchyColumn(level, parentData);
             } catch (error) {
                 console.error(`Error adding ${level} item:`, error);
                 alert(`Failed to add item. Check console.`);
@@ -3333,7 +3347,7 @@ Return only these sections in markdown format. Do not include any other sections
             document.getElementById('hierarchy-form-placeholder').classList.add('hidden');
             const form = document.getElementById('hierarchy-edit-form');
             form.classList.remove('hidden');
-            form.dataset.item = JSON.stringify(item);
+            form.dataset.itemPath = item.path;
             form.dataset.level = level;
 
             document.getElementById('edit-title').value = item.title || '';
@@ -3356,8 +3370,9 @@ Return only these sections in markdown format. Do not include any other sections
 
         async function handleSaveHierarchyItem() {
             const form = document.getElementById('hierarchy-edit-form');
-            const item = JSON.parse(form.dataset.item);
+            const itemPath = form.dataset.itemPath;
             const level = form.dataset.level;
+            if (!itemPath) return;
 
             const data = {
                 title: document.getElementById('edit-title').value.trim()
@@ -3370,15 +3385,15 @@ Return only these sections in markdown format. Do not include any other sections
             }
 
             try {
-                const docRef = doc(db, item.ref.path);
+                const docRef = doc(db, itemPath);
                 await updateDoc(docRef, data);
                 alert('Item updated successfully!');
                 
-                let parentItem = null;
-                if (level === 'sub') parentItem = selectedHierarchyItems.main;
-                if (level === 'final') parentItem = selectedHierarchyItems.sub;
+                let parentData = null;
+                if (level === 'sub') parentData = selectedHierarchyItems.main;
+                if (level === 'final') parentData = selectedHierarchyItems.sub;
 
-                loadHierarchyColumn(level, parentItem);
+                loadHierarchyColumn(level, parentData);
                 hideHierarchyForm();
             } catch (error) {
                 console.error("Error saving item:", error);
@@ -3388,14 +3403,15 @@ Return only these sections in markdown format. Do not include any other sections
         
         async function handleDeleteHierarchyItem() {
             const form = document.getElementById('hierarchy-edit-form');
-            const item = JSON.parse(form.dataset.item);
-            const level = form.dataset.level;
+            const itemPath = form.dataset.itemPath;
+            const title = document.getElementById('edit-title').value;
+            if (!itemPath) return;
 
-            const userConfirmed = window.confirm(`Are you sure you want to delete "${item.title}"? This will also delete all of its children.`);
+            const userConfirmed = window.confirm(`Are you sure you want to delete "${title}"? This will also delete all of its children.`);
             if (!userConfirmed) return;
 
             try {
-                const docRef = doc(db, item.ref.path);
+                const docRef = doc(db, itemPath);
                 await deleteDoc(docRef);
                 alert('Item deleted successfully!');
                 resetHierarchySelection();
