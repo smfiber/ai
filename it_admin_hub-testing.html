@@ -191,6 +191,21 @@
         }
         .jump-to-button:hover { background-color: var(--color-primary); color: var(--color-button-text); border-color: var(--color-primary-dark); transform: translateY(-1px); }
 
+        /* NEW: Styles for the topics dropdown menu */
+        .topics-menu-item {
+            color: var(--color-text);
+            display: block;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .topics-menu-item:hover {
+            background-color: var(--color-primary);
+            color: var(--color-button-text);
+        }
+
         .floating-action-button {
             position: fixed; background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
             color: var(--color-button-text); width: 56px; height: 56px;
@@ -477,10 +492,28 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.5</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.6</div>
         </header>
+        
+        <!-- NEW: Topics Dropdown Menu -->
+        <div class="flex justify-center mb-8">
+            <div id="topics-menu-container" class="relative inline-block text-left hidden">
+                <div>
+                    <button type="button" id="topics-menu-button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500" aria-haspopup="true" aria-expanded="true">
+                        Topics Menu
+                        <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="topics-menu-items" class="origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-30" role="menu" aria-orientation="vertical" aria-labelledby="topics-menu-button">
+                    <div class="py-1" role="none" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Menu items will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
 
         <main id="main-content" class="space-y-8">
             <div id="imported-guides-section" class="hidden">
@@ -835,7 +868,7 @@
             loadingModal.classList.remove('hidden');
 
             document.getElementById('main-grid').innerHTML = '';
-            document.getElementById('jump-to-nav-container').innerHTML = '';
+            
             document.getElementById('gemini-result-container').innerHTML = '';
             document.getElementById('discover-more-error').innerHTML = '';
 
@@ -1006,7 +1039,35 @@
             });
 
 
+            // NEW: Event listeners for the topics dropdown menu
+            const topicsMenuButton = document.getElementById('topics-menu-button');
+            const topicsMenuItems = document.getElementById('topics-menu-items');
+
+            topicsMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                topicsMenuItems.classList.toggle('hidden');
+            });
+
+
             document.addEventListener('click', (e) => {
+                // Hide topics menu if click is outside
+                if (!topicsMenuButton.contains(e.target) && !topicsMenuItems.contains(e.target)) {
+                    topicsMenuItems.classList.add('hidden');
+                }
+
+                const menuItem = e.target.closest('.topics-menu-item');
+                if (menuItem) {
+                    e.preventDefault(); 
+                    const targetCard = document.getElementById(menuItem.dataset.targetId);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
+                        targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
+                        setTimeout(() => targetCard.style.boxShadow = '', 2000);
+                    }
+                    topicsMenuItems.classList.add('hidden');
+                    return;
+                }
+
                 if (e.target.classList.contains('copy-code-button')) {
                     const codeBlock = e.target.closest('.code-block-container').querySelector('code, pre');
                     copyElementTextToClipboard(codeBlock, e.target);
@@ -1100,17 +1161,6 @@
                        icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
                     }
                     accordionHeader.nextElementSibling.classList.toggle('open'); 
-                    return;
-                }
-                
-                const jumpToBtn = e.target.closest('.jump-to-button');
-                if (jumpToBtn) {
-                    const targetCard = document.getElementById(jumpToBtn.dataset.targetId);
-                    if (targetCard) {
-                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start'});
-                        targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
-                        setTimeout(() => targetCard.style.boxShadow = '', 2000);
-                    }
                     return;
                 }
 
@@ -1475,7 +1525,7 @@
                 }
                 
                 if (loadingMessageEl) loadingMessageEl.textContent = `Building navigation...`;
-                await generateJumpToButtons();
+                await generateTopicsMenu();
 
             } catch (error) {
                 console.error("An error occurred while loading app content:", error.message);
@@ -2579,7 +2629,7 @@ ${jsonInstruction}`;
                 if (!jsonText) throw new Error("AI did not return a new category.");
                 const newCategory = parseJsonWithCorrections(jsonText);
                 await generateAndPopulateAICategory(newCategory);
-                await generateJumpToButtons();
+                await generateTopicsMenu();
             } catch (error) {
                 console.error("Failed to discover more topics:", error);
                 errorP.textContent = "Sorry, couldn't generate a new topic right now. Please try again.";
@@ -2640,37 +2690,34 @@ ${jsonInstruction}`;
             errorContainer.classList.remove('hidden');
         }
 
-        async function generateJumpToButtons() {
-            const container = document.getElementById('jump-to-nav-container');
-            const cards = Array.from(document.querySelectorAll('#custom-plan-card, #main-grid .card'));
-            if (cards.length <= 1) return;
+        async function generateTopicsMenu() {
+            const menuContainer = document.getElementById('topics-menu-container');
+            const menuItemsContainer = document.getElementById('topics-menu-items').querySelector('div');
+            const cards = Array.from(document.querySelectorAll('#main-grid .card'));
+            
+            if (cards.length <= 1) {
+                menuContainer.classList.add('hidden');
+                return;
+            }
 
             const cardData = cards.map(card => ({
                 id: card.id,
                 title: card.querySelector('h2')?.textContent
-            })).filter(c => c.id && c.title);
+            })).filter(c => c.id && c.title).sort((a,b) => a.title.localeCompare(b.title));
             
-            if (cardData.length === 0) return;
-        
-            const prompt = `For the following IT category titles, generate a very short, engaging label (1-2 words). Return a valid JSON object where keys are the original titles and values are the short labels. Titles: ${JSON.stringify(cardData.map(c => c.title))}. ${jsonInstruction}`;
-            
-            try {
-                const jsonText = await callGeminiAPI(prompt, true);
-                if (!jsonText) throw new Error("AI returned empty data for jump-to buttons.");
-                
-                const labels = parseJsonWithCorrections(jsonText);
-                const buttonsHtml = cardData.map(card => {
-                    const label = labels[card.title] || card.title.split(' ')[0];
-                    return `<button class="jump-to-button" data-target-id="${card.id}">${label}</button>`;
-                }).join('');
-
-                container.innerHTML = `<div class="flex flex-wrap gap-2 justify-center">${buttonsHtml}</div>`;
-                container.classList.remove('hidden');
-            } catch (error) {
-                console.error("Failed to generate jump-to buttons:", error);
-                container.innerHTML = '';
-                container.classList.add('hidden'); 
+            if (cardData.length === 0) {
+                 menuContainer.classList.add('hidden');
+                return;
             }
+            
+            menuItemsContainer.innerHTML = ''; // Clear previous items
+
+            const menuHtml = cardData.map(card => {
+                return `<a href="#" class="topics-menu-item" role="menuitem" data-target-id="${card.id}">${card.title}</a>`;
+            }).join('');
+
+            menuItemsContainer.innerHTML = menuHtml;
+            menuContainer.classList.remove('hidden');
         }
 
         function populateTypographySettings() {
