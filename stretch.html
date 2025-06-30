@@ -82,6 +82,7 @@
             margin-top: 1.5rem;
             padding-top: 1.5rem;
             border-top: 1px solid var(--border);
+            animation: fadeIn 0.3s ease-in-out;
         }
         .focus-card.active .focus-card-content {
             display: block;
@@ -126,6 +127,7 @@
             backdrop-filter: blur(4px);
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.3s ease;
         }
         .modal-content {
             background-color: var(--card);
@@ -241,7 +243,7 @@
                     </div>
                 </div>
                 
-                <!-- About & Prompt Inspector Sections (simplified for brevity) -->
+                <!-- About & Prompt Inspector Sections -->
                 <div id="about-section" class="view max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-sm"></div>
                 <div id="prompt-inspector-section" class="view max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-sm"></div>
             </div>
@@ -253,7 +255,7 @@
                  <p class="text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 9.0</p>
+                <p class="mt-4 text-xs text-slate-400">Version 9.1</p>
             </div>
         </footer>
         
@@ -297,26 +299,438 @@
     </div>
     
     <script type="module">
-        // --- SCRIPT WILL BE UPDATED IN THE NEXT STEP ---
-        // This is a placeholder to show the HTML structure.
-        // The full JavaScript logic will be provided once the UI is finalized.
-        
-        lucide.createIcons(); // Initialize Lucide icons
+        let geminiApiKey = null; 
+        let isInitialized = false;
+        let currentRoutine = [];
+        let promptHistory = []; 
 
-        // Basic setup logic to show the app
-        const startAppBtn = document.getElementById('start-app-btn');
-        const apiKeyInput = document.getElementById('api-key-input');
-        const setupModal = document.getElementById('setup-modal');
-        const appContent = document.getElementById('app-content');
+        // --- CONFIGURATIONS ---
+        const FOCUS_CATEGORIES = [
+            { id: 'muscle-group', title: 'Muscle Group', icon: 'torso', type: 'select', promptKey: 'getMuscleGroups', responseKey: 'muscleGroups', options: { valKey: 'fullName', textKey: 'displayName' } },
+            { id: 'system-focus', title: 'Organ System', icon: 'heart-pulse', type: 'select', promptKey: 'getOrganSystems', responseKey: 'organSystems' },
+            { id: 'pose-type', title: 'Pose Type', icon: 'person-standing', type: 'select', promptKey: 'getPoseTypes', responseKey: 'poseTypes' },
+            { id: 'benefit', title: 'Desired Benefit', icon: 'smile', type: 'select', promptKey: 'getDesiredBenefits', responseKey: 'benefits' },
+            { id: 'chakra', title: 'Chakra System', icon: 'aperture', type: 'select', promptKey: 'getChakras', responseKey: 'chakras' },
+            { id: 'difficulty', title: 'Difficulty Level', icon: 'bar-chart-3', type: 'select', staticOptions: ['Beginner', 'Intermediate', 'Advanced'] },
+            { id: 'movement', title: 'Anatomical Movement', icon: 'move', type: 'select', promptKey: 'getAnatomicalMovements', responseKey: 'movements' },
+            { id: 'props', title: 'Props', icon: 'box', type: 'select', promptKey: 'getProps', responseKey: 'props' },
+            { id: 'peak-pose', title: 'Peak Pose Sequence', icon: 'mountain', type: 'input', placeholder: 'e.g., Crow Pose' },
+            { id: 'ailment', title: 'Ailment Relief', icon: 'plus-circle', type: 'input', placeholder: 'e.g., Lower Back Pain' }
+        ];
+
+        const PROMPT_TEMPLATES = {
+            getMuscleGroups: () => `When practicing yoga asanas (poses), what are all of the major and minor muscle groups that people commonly focus on? Return a JSON object with a single key 'muscleGroups'. This key should hold an array of objects. Each object must have two keys: 'displayName' (the common, user-friendly name, e.g., 'Hamstrings') and 'fullName' (the more technical name including specific muscles, e.g., 'Hamstrings - Biceps Femoris, Semitendinosus, Semimembranosus'). Provide an extensive list, ordered alphabetically by displayName.`,
+            getOrganSystems: () => `When practicing yoga asanas (poses), what are all of the major and minor organ systems of the human body that people commonly believe are stimulated, supported, or positively impacted by the practice? Return a JSON object containing a single key 'organSystems' which is an array of strings. Each string should represent an organ system, formatted as 'Common Name - Technical Term(s)' if a common name exists, or just the technical term if it's widely recognized. Provide an extensive and exhaustive list, ordered alphabetically.`,
+            getPoseTypes: () => `List the common categories of yoga asanas based on the physical action or position involved (e.g., 'Standing Poses', 'Backbends', 'Forward Bends', 'Twists', 'Inversions', 'Balancing Poses'). Return a JSON object with a single key 'poseTypes' which holds an array of these category names as strings. Provide a comprehensive list, ordered alphabetically.`,
+            getDesiredBenefits: () => `What are the common therapeutic benefits or wellness goals that people seek to achieve through a yoga or stretching routine (e.g., 'Stress Relief', 'Improved Flexibility', 'Increased Energy', 'Better Sleep')? Return a JSON object with a single key 'benefits' which holds an array of these benefit-oriented goals as strings. The list should be comprehensive and ordered alphabetically.`,
+            getChakras: () => `List the seven primary chakras in yogic philosophy. Return a JSON object with a key 'chakras' holding an array of strings (e.g., "Root Chakra - Muladhara"), ordered from the first to the seventh chakra.`,
+            getAnatomicalMovements: () => `List common anatomical movements focused on in yoga (e.g., 'Hip Opening', 'Spinal Extension', 'Shoulder Flexion'). Return a JSON object with a key 'movements' holding an array of these strings, ordered alphabetically.`,
+            getProps: () => `List common props used in yoga (e.g., 'Block', 'Strap', 'Bolster', 'Blanket'). Return a JSON object with a key 'props' holding an array of these strings, ordered alphabetically.`,
+            routine: (numExercises, focusArea) => `Create a balanced routine with exactly ${numExercises} yoga poses or exercises that primarily target or support the '${focusArea}'. For each item, provide a "name", brief step-by-step "instructions", and its single primary "benefit". Keep the instructions and benefit to 1-2 sentences each. The tone should be encouraging and informative.`,
+            routineByProp: (numExercises, propName) => `Generate a routine of ${numExercises} yoga poses that can be effectively modified or supported using a '${propName}'. For each pose, provide a "name", "instructions" on how to use the prop, and the primary "benefit" of using the prop.`,
+            peakPoseSequence: (numExercises, peakPose) => `Create a preparatory yoga sequence with exactly ${numExercises} poses to build towards the peak pose: '${peakPose}'. The sequence should be ordered logically to warm up the body. For each pose, provide a "name", "instructions", and a "preparation_focus" explaining how it prepares the body for the peak pose.`,
+            ailmentRoutine: (ailment) => `Generate a list of yoga asanas commonly recommended for '${ailment}'. The tone must be supportive and cautious. Return a JSON object with two keys: 'disclaimer' and 'recommendedPoses'. The 'disclaimer' key must hold this exact string: "The following yoga poses are for informational purposes only and are not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Stop any exercise that causes you pain or discomfort.". The 'recommendedPoses' key should hold an array of objects, each with 'name', brief step-by-step 'instructions', 'how_it_helps' (1-2 sentences), and 'contraindications' (e.g., 'High blood pressure').`,
+            details: (exerciseName) => `Provide a detailed guide for the yoga pose or topic "${exerciseName}". Include the following sections with clear headings using markdown ###: "Step-by-Step Instructions", "Key Benefits", and "Modifications and Precautions". Use bullet points for the benefits and modifications sections. The tone should be encouraging and informative, like a professional yoga guide.`,
+        };
+
+        // --- UI ELEMENTS MAPPING ---
+        const ui = {
+            appContent: document.getElementById('app-content'),
+            setupModal: document.getElementById('setup-modal'),
+            startAppBtn: document.getElementById('start-app-btn'),
+            apiKeyInput: document.getElementById('api-key-input'),
+            focusSelectionContainer: document.getElementById('focus-selection-container'),
+            exercisesSelect: document.getElementById('exercises-select'),
+            generateBtn: document.getElementById('generate-btn'),
+            routineList: document.getElementById('routine-list'),
+            loaderContainer: document.getElementById('loader-container'),
+            routineTitle: document.getElementById('routine-title'),
+            resultsButtons: document.getElementById('results-buttons'),
+            disclaimerContainer: document.getElementById('disclaimer-container'),
+            homeLink: document.getElementById('home-link'),
+            aboutLink: document.getElementById('about-link'),
+            promptInspectorLink: document.getElementById('prompt-inspector-link'),
+            startOverBtn: document.getElementById('start-over-btn'),
+            aboutSection: document.getElementById('about-section'),
+            promptInspectorSection: document.getElementById('prompt-inspector-section'),
+            customAlertModal: document.getElementById('custom-alert-modal'),
+            modalText: document.getElementById('modal-text'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            exerciseDetailsModal: document.getElementById('exercise-details-modal'),
+            detailsTitle: document.getElementById('details-title'),
+            detailsYoutubeButtons: document.getElementById('details-youtube-buttons'),
+            detailsContent: document.getElementById('details-content'),
+            detailsCloseBtn: document.getElementById('details-close-btn'),
+            printDetailsBtn: document.getElementById('print-details-btn'),
+        };
         
-        startAppBtn.addEventListener('click', () => {
-            if (apiKeyInput.value.trim() !== '') {
-                setupModal.style.display = 'none';
-                appContent.style.display = 'block';
-                appContent.classList.add('active');
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            lucide.createIcons();
+            setupEventListeners();
+        };
+        
+        function setupEventListeners() {
+            ui.startAppBtn.addEventListener('click', initializeApp);
+            ui.generateBtn.addEventListener('click', generateRoutine);
+            ui.focusSelectionContainer.addEventListener('click', handleFocusCardClick);
+            ui.homeLink.addEventListener('click', (e) => { e.preventDefault(); showView('creation-section'); });
+            ui.aboutLink.addEventListener('click', (e) => { e.preventDefault(); showView('about-section'); });
+            ui.promptInspectorLink.addEventListener('click', (e) => { e.preventDefault(); showView('prompt-inspector-section'); });
+            ui.startOverBtn.addEventListener('click', () => showView('creation-section'));
+            ui.modalCloseBtn.addEventListener('click', () => ui.customAlertModal.style.display = 'none');
+            ui.detailsCloseBtn.addEventListener('click', () => ui.exerciseDetailsModal.style.display = 'none');
+            ui.printDetailsBtn.addEventListener('click', () => {
+                document.body.classList.add('printing');
+                window.print();
+                document.body.classList.remove('printing');
+            });
+        }
+        
+        async function initializeApp() {
+            if (isInitialized) return;
+            geminiApiKey = ui.apiKeyInput.value.trim();
+            if (!geminiApiKey) {
+                showAlert("Please provide a Gemini API Key.");
+                return;
             }
-        });
+            
+            isInitialized = true;
+            ui.setupModal.style.display = 'none';
+            ui.appContent.style.display = 'block';
+            ui.appContent.classList.add('active');
 
+            populateStaticDropdowns();
+            buildFocusCards();
+        }
+
+        // --- DYNAMIC UI BUILDERS ---
+        function buildFocusCards() {
+            FOCUS_CATEGORIES.forEach(cat => {
+                const card = document.createElement('div');
+                card.className = 'focus-card';
+                card.dataset.id = cat.id;
+
+                let contentHtml = '';
+                if (cat.type === 'select') {
+                    contentHtml = `<select id="${cat.id}-select" class="custom-select" disabled><option>Loading...</option></select>`;
+                } else if (cat.type === 'input') {
+                    contentHtml = `<input type="text" id="${cat.id}-input" class="custom-input" placeholder="${cat.placeholder}">`;
+                }
+
+                card.innerHTML = `
+                    <i data-lucide="${cat.icon}" class="icon h-8 w-8"></i>
+                    <p class="title">${cat.title}</p>
+                    <div class="focus-card-content text-left">
+                        <label for="${cat.id}-${cat.type}" class="block text-sm font-medium text-slate-700 mb-1">${cat.title}</label>
+                        ${contentHtml}
+                    </div>
+                `;
+                ui.focusSelectionContainer.appendChild(card);
+
+                // Populate dropdowns
+                if (cat.type === 'select') {
+                    const selectElement = document.getElementById(`${cat.id}-select`);
+                    if (cat.staticOptions) {
+                        populateStaticSelect(selectElement, cat.staticOptions);
+                    } else {
+                        populateApiSelect(cat, selectElement);
+                    }
+                }
+            });
+            lucide.createIcons();
+        }
+
+        function populateStaticDropdowns() {
+            const counts = [3, 5, 7, 10, 12, 15];
+            ui.exercisesSelect.innerHTML = counts.map(c => `<option value="${c}">${c} Exercises</option>`).join('');
+        }
+
+        function populateStaticSelect(selectElement, options) {
+            selectElement.innerHTML = `<option value="">-- Select an Option --</option>` + options.map(o => `<option value="${o}">${o}</option>`).join('');
+            selectElement.disabled = false;
+        }
+
+        async function populateApiSelect(categoryConfig, selectElement) {
+            const { promptKey, responseKey, options = {} } = categoryConfig;
+            const { valKey = null, textKey = null } = options;
+            try {
+                const prompt = PROMPT_TEMPLATES[promptKey]();
+                let itemsSchema;
+                if (promptKey === 'getMuscleGroups') {
+                    itemsSchema = { type: "OBJECT", properties: { displayName: { type: "STRING" }, fullName: { type: "STRING" }}, required: ["displayName", "fullName"] };
+                } else {
+                    itemsSchema = { type: "STRING" };
+                }
+                const schema = { type: "OBJECT", properties: { [responseKey]: { type: "ARRAY", items: itemsSchema }}, required: [responseKey] };
+
+                const response = await callGeminiAPI(promptKey, prompt, schema);
+                const items = response[responseKey];
+                
+                selectElement.innerHTML = `<option value="">-- Select an Option --</option>`;
+                items.forEach(item => {
+                    const value = valKey ? item[valKey] : item;
+                    const text = textKey ? item[textKey] : item;
+                    selectElement.add(new Option(text, value));
+                });
+                selectElement.disabled = false;
+            } catch (error) {
+                console.error(`Error populating ${promptKey}:`, error);
+                selectElement.innerHTML = `<option>Error loading</option>`;
+            }
+        }
+
+        // --- EVENT HANDLERS ---
+        function handleFocusCardClick(e) {
+            const card = e.target.closest('.focus-card');
+            if (!card) return;
+
+            const allCards = ui.focusSelectionContainer.querySelectorAll('.focus-card');
+            const isActive = card.classList.contains('active');
+
+            allCards.forEach(c => c.classList.remove('active'));
+            if (!isActive) {
+                card.classList.add('active');
+            }
+        }
+        
+        async function generateRoutine() {
+            const activeCard = ui.focusSelectionContainer.querySelector('.focus-card.active');
+            if (!activeCard) {
+                showAlert('Please select a focus area by clicking on a card.');
+                return;
+            }
+            
+            const categoryId = activeCard.dataset.id;
+            const categoryConfig = FOCUS_CATEGORIES.find(c => c.id === categoryId);
+            const numExercises = ui.exercisesSelect.value;
+            
+            let focusArea = '';
+            let selectedText = '';
+            
+            if (categoryConfig.type === 'select') {
+                const select = document.getElementById(`${categoryId}-select`);
+                focusArea = select.value;
+                selectedText = select.options[select.selectedIndex].text;
+            } else {
+                const input = document.getElementById(`${categoryId}-input`);
+                focusArea = input.value.trim();
+                selectedText = focusArea;
+            }
+
+            if (!focusArea) {
+                showAlert(`Please select or enter a value for ${categoryConfig.title}.`);
+                return;
+            }
+
+            showView('results-section');
+            renderSkeletonLoader(numExercises);
+            ui.routineList.innerHTML = '';
+            ui.disclaimerContainer.innerHTML = '';
+            ui.resultsButtons.classList.add('hidden');
+            ui.routineTitle.textContent = `Generating Your Routine for ${selectedText}...`;
+
+            // Determine prompt and schema
+            let prompt, schema, responseProcessor;
+            const baseExerciseSchema = { type: "OBJECT", properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, benefit: { type: "STRING" } }, required: ["name", "instructions", "benefit"] };
+            
+            switch(categoryId) {
+                case 'ailment':
+                    prompt = PROMPT_TEMPLATES.ailmentRoutine(focusArea);
+                    schema = { type: "OBJECT", properties: { disclaimer: { type: "STRING" }, recommendedPoses: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, how_it_helps: { type: "STRING" }, contraindications: { type: "STRING" } }, required: ["name", "instructions", "how_it_helps", "contraindications"] }}}, required: ["disclaimer", "recommendedPoses"] };
+                    responseProcessor = res => {
+                        ui.disclaimerContainer.innerHTML = `<div class="bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 rounded-r-lg" role="alert"><p class="font-bold">Important Disclaimer</p><p>${res.disclaimer}</p></div>`;
+                        return res.recommendedPoses;
+                    };
+                    break;
+                case 'peak-pose':
+                    prompt = PROMPT_TEMPLATES.peakPoseSequence(numExercises, focusArea);
+                    schema = { type: "OBJECT", properties: { peakPoseSequence: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, preparation_focus: { type: "STRING" } }, required: ["name", "instructions", "preparation_focus"] }}}, required: ["peakPoseSequence"] };
+                    responseProcessor = res => res.peakPoseSequence;
+                    break;
+                case 'props':
+                    prompt = PROMPT_TEMPLATES.routineByProp(numExercises, focusArea);
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: baseExerciseSchema }}, required: ["exercises"] };
+                    responseProcessor = res => res.exercises;
+                    break;
+                default:
+                    let routineType = (categoryId === 'difficulty') ? `poses for a ${focusArea} practitioner` : focusArea;
+                    prompt = PROMPT_TEMPLATES.routine(numExercises, routineType);
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: baseExerciseSchema }}, required: ["exercises"] };
+                    responseProcessor = res => res.exercises;
+            }
+
+            try {
+                const response = await callGeminiAPI("Routine Generation", prompt, schema);
+                currentRoutine = responseProcessor(response);
+                ui.routineTitle.textContent = `Your Custom Routine for ${selectedText}`;
+                renderRoutine(currentRoutine, categoryId);
+            } catch (error) {
+                console.error("Error generating routine:", error);
+                ui.routineTitle.textContent = "Generation Failed";
+                ui.routineList.innerHTML = `<div class="bg-red-100 border border-red-200 p-4 rounded-lg text-center text-red-700"><p><strong>Oops!</strong> ${error.message}</p><p class="mt-2 text-sm">The AI could not generate a routine. Please try different selections.</p></div>`;
+            } finally {
+                ui.loaderContainer.innerHTML = '';
+                ui.resultsButtons.classList.remove('hidden');
+            }
+        }
+
+        // --- RENDERERS ---
+        function renderSkeletonLoader(count) {
+            ui.loaderContainer.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const skeletonEl = document.createElement('div');
+                skeletonEl.className = 'skeleton-card';
+                skeletonEl.innerHTML = `
+                    <div class="skeleton h-6 w-3/4 mb-4"></div>
+                    <div class="skeleton h-4 w-1/4 mb-2"></div>
+                    <div class="skeleton h-4 w-full mb-1"></div>
+                    <div class="skeleton h-4 w-full mb-4"></div>
+                    <div class="skeleton h-4 w-1/4 mb-2"></div>
+                    <div class="skeleton h-4 w-5/6"></div>
+                `;
+                ui.loaderContainer.appendChild(skeletonEl);
+            }
+        }
+
+        function renderRoutine(exercises, routineType) {
+            ui.routineList.innerHTML = '';
+            if (!exercises || exercises.length === 0) {
+                ui.routineList.innerHTML = `<div class="bg-yellow-100 p-4 rounded-lg text-center text-yellow-700"><p>The AI was unable to generate a routine with the provided criteria. Please try again.</p></div>`;
+                return;
+            }
+            exercises.forEach((exercise, index) => {
+                const exerciseEl = document.createElement('div');
+                exerciseEl.className = 'bg-white border border-slate-200 rounded-xl shadow-sm p-6 transition-all hover:shadow-md';
+                
+                const sanitizedInstructions = (exercise.instructions || '').replace(/"/g, '&quot;');
+                
+                let benefitHtml = '';
+                if (routineType === 'ailment') {
+                    benefitHtml = `
+                        <div><h4 class="font-semibold text-slate-800">How it Helps:</h4><p class="mt-1 text-slate-600">${exercise.how_it_helps || 'Not specified.'}</p></div>
+                        <div><h4 class="font-semibold text-red-600 mt-3">Contraindications:</h4><p class="mt-1 text-red-600">${exercise.contraindications || 'None specified.'}</p></div>
+                    `;
+                } else {
+                    const benefitLabel = (routineType === 'peak-pose') ? 'Preparation Focus' : 'Benefit';
+                    const benefitText = exercise.benefit || exercise.preparation_focus || 'Not specified.';
+                    benefitHtml = `<div><h4 class="font-semibold text-slate-800">${benefitLabel}:</h4><p class="mt-1 text-slate-600">${benefitText}</p></div>`;
+                }
+
+                exerciseEl.innerHTML = `
+                    <div>
+                        <h3 class="text-xl font-semibold text-slate-900">${exercise.name}</h3>
+                        <div class="mt-4 space-y-4">
+                            <div><h4 class="font-semibold text-slate-800">Instructions:</h4><p class="mt-1 whitespace-pre-line text-slate-600">${exercise.instructions || 'No instructions provided.'}</p></div>
+                            ${benefitHtml}
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-4">
+                           <button data-index="${index}" class="details-btn text-sm font-medium text-teal-600 hover:text-teal-800 transition-colors">More Details &rarr;</button>
+                        </div>
+                    </div>
+                `;
+                ui.routineList.appendChild(exerciseEl);
+            });
+            
+            document.querySelectorAll('.details-btn').forEach(btn => {
+                btn.addEventListener('click', () => showExerciseDetails(btn.dataset.index));
+            });
+        }
+                
+        async function showExerciseDetails(index) {
+            const exercise = currentRoutine[index];
+            if (!exercise) return;
+
+            ui.detailsTitle.textContent = exercise.name;
+            ui.detailsContent.innerHTML = '<div class="flex justify-center items-center h-48"><div class="skeleton h-32 w-full"></div></div>';
+            
+            const sanitizedInstructions = (exercise.instructions || '').replace(/"/g, '&quot;');
+            ui.detailsYoutubeButtons.innerHTML = `
+                <button data-exercise-name="${exercise.name}" class="youtube-search-btn modal-button secondary-btn text-sm">Search Video (Simple)</button>
+                <button data-exercise-name="${exercise.name}" data-exercise-instructions="${sanitizedInstructions}" class="youtube-search-detailed-btn modal-button secondary-btn text-sm">Search Video (Detailed)</button>
+            `;
+            ui.detailsYoutubeButtons.querySelector('.youtube-search-btn').addEventListener('click', (e) => searchYouTubeSimple(e.target.dataset.exerciseName));
+            ui.detailsYoutubeButtons.querySelector('.youtube-search-detailed-btn').addEventListener('click', (e) => searchYouTubeDetailed(e.target.dataset.exerciseName, e.target.dataset.exerciseInstructions));
+
+            ui.exerciseDetailsModal.style.display = 'flex';
+            lucide.createIcons();
+
+            try {
+                 const prompt = PROMPT_TEMPLATES.details(exercise.name);
+                 const detailedContent = await callGeminiAPI("Detailed View", prompt, null, false);
+                 ui.detailsContent.innerHTML = marked.parse(detailedContent);
+            } catch (error) {
+                 ui.detailsContent.innerHTML = `<p class="text-red-600">Could not load details. ${error.message}</p>`;
+            }
+        }
+
+        // --- CORE API CALLER ---
+        async function callGeminiAPI(type, prompt, schema = null, expectJson = true) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+            };
+
+            if (schema) {
+                payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
+            }
+
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const result = await response.json();
+
+            if (!response.ok) {
+                const errorText = result.error ? result.error.message : JSON.stringify(result);
+                throw new Error(`AI processing failed: ${errorText}`);
+            }
+            
+            if (!result.candidates?.[0]?.content?.parts) {
+                throw new Error("Invalid response structure from AI.");
+            }
+
+            const responseText = result.candidates[0].content.parts[0].text;
+            
+            if (expectJson) {
+                try {
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    console.error("Failed to parse AI JSON response:", responseText, e);
+                    throw new Error("AI returned invalid JSON format.");
+                }
+            }
+            return responseText;
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        function searchYouTubeSimple(exerciseName) {
+            const cleanExerciseName = exerciseName.replace(/\s*\(.*\)\s*/, '').trim();
+            const query = `How to do ${cleanExerciseName} yoga pose`;
+            const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            window.open(youtubeSearchUrl, '_blank');
+        }
+
+        function searchYouTubeDetailed(name, instructions) {
+            const cleanName = name.replace(/\s*\(.*\)\s*/, '').trim();
+            const detailedQuery = `${cleanName} yoga pose tutorial ${instructions}`;
+            const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(detailedQuery)}`;
+            window.open(youtubeSearchUrl, '_blank');
+        }
+
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+                view.style.display = 'none';
+            });
+            const targetView = document.getElementById(viewId);
+            targetView.style.display = 'block';
+            // A small delay to allow the display property to apply before adding the class for the animation
+            setTimeout(() => targetView.classList.add('active'), 10);
+            window.scrollTo(0,0);
+        }
+        
+        function showAlert(message) {
+            ui.modalText.textContent = message;
+            ui.customAlertModal.style.display = 'flex';
+        }
     </script>
 </body>
 </html>
