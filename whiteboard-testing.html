@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Whiteboard 2.0 (Fixed)</title>
+    <title>Collaborative Whiteboard 2.0 (AI Update)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -148,6 +148,50 @@
         .command-item { padding: 0.75rem 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .command-item:hover, .command-item.selected { background-color: var(--accent-color); }
         .command-item kbd { background-color: #4b5563; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+
+        /* --- AI Features --- */
+        #beautify-suggestion {
+            position: absolute;
+            display: none;
+            z-index: 200;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        #ai-icon-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+        .ai-icon-result-item {
+            cursor: pointer;
+            border-radius: 0.5rem;
+            background-color: #374151;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .ai-icon-result-item:hover {
+            transform: scale(1.05);
+            background-color: var(--accent-color);
+        }
+        .ai-icon-result-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 0.25rem;
+        }
+        .ai-icon-result-item .loader, #chat-summary-modal .loader {
+            width: 2rem; height: 2rem; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-white antialiased">
@@ -158,6 +202,7 @@
                 <button id="toggle-chat-btn"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="flex justify-between items-center mb-4 p-4">
                     <h2 id="chat-header" class="flex-grow text-center">Live Chat</h2>
+                    <button id="summarize-chat-btn" class="chat-btn !p-2" title="Summarize Chat"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                 </div>
                 <div id="chat-messages" class="flex-grow px-4"></div>
                 <div id="chat-input-area" class="p-4">
@@ -191,7 +236,7 @@
                             </button>
                         </div>
                         <div class="text-xs text-gray-500">User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Not Signed In</span></div>
-                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p1.5.1-fixed</span></div>
+                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p2.0-ai</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help (Ctrl+K)"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -207,6 +252,7 @@
                              </div>
                         </div>
                         <button data-tool="text" class="tool-btn p-2" title="Text (T)"><i class="fa-solid fa-font"></i></button>
+                        <button data-tool="ai-icon" class="tool-btn p-2 text-purple-400" title="Generate Icon with AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                     </div>
                     <div class="divider"></div>
                     <div class="toolbar-group">
@@ -247,6 +293,12 @@
                     <canvas id="overlay-canvas"></canvas>
                     <div id="event-capture-layer"></div>
                     <div id="text-input-container"><input type="text" id="text-input" /></div>
+                    <div id="beautify-suggestion" class="glass-ui">
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+                        <span>Beautify Shape?</span>
+                        <button id="beautify-confirm-btn" class="bg-indigo-600 rounded-md px-2 py-1 text-xs">Yes</button>
+                        <button id="beautify-cancel-btn" class="bg-gray-600 rounded-md px-2 py-1 text-xs">No</button>
+                    </div>
                 </main>
             </div>
         </div>
@@ -312,6 +364,31 @@
     </div>
      <div id="image-viewer-overlay" class="modal-overlay">
         <img id="image-viewer-content" src="" alt="Full size image" />
+    </div>
+    <!-- AI Icon Generation Modal -->
+    <div id="ai-icon-modal-overlay" class="modal-overlay">
+        <div id="ai-icon-modal" class="modal glass-ui p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Generate an Icon with AI</h2>
+                <button id="close-ai-icon-btn" class="text-2xl">&times;</button>
+            </div>
+            <p class="text-gray-400 mb-4">Describe the icon you want to create. Keep it simple for best results (e.g., "a database", "a smiling user", "a rocket ship").</p>
+            <div class="flex gap-2">
+                <input type="text" id="ai-icon-prompt-input" class="w-full bg-gray-800 p-2 rounded border border-gray-600" placeholder="e.g., a simple cloud icon">
+                <button id="ai-icon-generate-btn" class="chat-btn">Generate</button>
+            </div>
+            <div id="ai-icon-results" class="mt-4"></div>
+        </div>
+    </div>
+    <!-- Chat Summary Modal -->
+    <div id="chat-summary-modal-overlay" class="modal-overlay">
+        <div id="chat-summary-modal" class="modal glass-ui p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Chat Summary</h2>
+                <button id="close-chat-summary-btn" class="text-2xl">&times;</button>
+            </div>
+            <div id="chat-summary-content" class="prose prose-invert max-w-none max-h-[70vh] overflow-y-auto"></div>
+        </div>
     </div>
 
 
@@ -380,6 +457,20 @@
         const googleSignInBtn = document.getElementById('google-signin-btn');
         const signOutBtn = document.getElementById('signout-btn');
         const userDisplayNameEl = document.getElementById('user-display-name');
+        // AI Feature DOM Elements
+        const summarizeChatBtn = document.getElementById('summarize-chat-btn');
+        const chatSummaryModalOverlay = document.getElementById('chat-summary-modal-overlay');
+        const closeChatSummaryBtn = document.getElementById('close-chat-summary-btn');
+        const chatSummaryContent = document.getElementById('chat-summary-content');
+        const aiIconModalOverlay = document.getElementById('ai-icon-modal-overlay');
+        const closeAiIconBtn = document.getElementById('close-ai-icon-btn');
+        const aiIconPromptInput = document.getElementById('ai-icon-prompt-input');
+        const aiIconGenerateBtn = document.getElementById('ai-icon-generate-btn');
+        const aiIconResults = document.getElementById('ai-icon-results');
+        const beautifySuggestion = document.getElementById('beautify-suggestion');
+        const beautifyConfirmBtn = document.getElementById('beautify-confirm-btn');
+        const beautifyCancelBtn = document.getElementById('beautify-cancel-btn');
+
 
         // --- Firebase & State Globals ---
         let db, userId, auth, colorPicker;
@@ -393,7 +484,8 @@
             tempDrawing: null, transformHandle: null, isTexting: false, isShiftDown: false,
             undoStack: [], redoStack: [],
             isGridVisible: true, isSnapEnabled: true, gridSize: 20,
-            originalObjectState: null, hoveredHandle: null
+            originalObjectState: null, hoveredHandle: null,
+            beautifyCandidate: null // Store info for a potential shape beautification
         };
         let commands = [];
         let activeCommandIndex = 0;
@@ -508,6 +600,7 @@
                 { name: 'Select Tool: Select/Move', action: () => selectTool('select'), shortcut: 'V' },
                 { name: 'Select Tool: Text', action: () => selectTool('text'), shortcut: 'T' },
                 { name: 'Activate Eyedropper', action: () => eyedropperBtn.click(), shortcut: 'I' },
+                { name: 'Generate AI Icon', action: () => selectTool('ai-icon'), shortcut: 'A' },
             ];
             renderCommandList(commands);
             commandInput.addEventListener('input', () => { const query = commandInput.value.toLowerCase(); const filteredCommands = commands.filter(cmd => cmd.name.toLowerCase().includes(query)); renderCommandList(filteredCommands); });
@@ -531,6 +624,13 @@
         function selectTool(tool) {
             if (!tool) return;
             if(isEyedropperActive) deactivateEyedropper();
+            
+            if (tool === 'ai-icon') {
+                showModal(aiIconModalOverlay);
+                aiIconPromptInput.focus();
+                return; // Don't change the active drawing tool
+            }
+
             state.currentTool = tool;
             updateCursor();
             document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('selected'));
@@ -547,9 +647,9 @@
         function drawGrid(rect) { if (!state.isGridVisible) return; ctx.save(); ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'; ctx.lineWidth = 1 / (window.devicePixelRatio || 1); for (let x = 0; x < rect.width; x += state.gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke(); } for (let y = 0; y < rect.height; y += state.gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke(); } ctx.restore(); }
         function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = main_content.getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { const targetWidth = rect.width * dpr; const targetHeight = rect.height * dpr; if (c.width !== targetWidth || c.height !== targetHeight) { c.width = targetWidth; c.height = targetHeight; c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, rect.width, rect.height); drawGrid(rect); state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
         function drawOverlay() { const rect = main_content.getBoundingClientRect(); overlayCtx.clearRect(0, 0, rect.width, rect.height); if (state.tempDrawing) { drawObject(overlayCtx, state.tempDrawing); } const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { drawSelectionBox(selectedObject); deleteBtn.disabled = false; frontBtn.disabled = false; duplicateBtn.disabled = false; } else { deleteBtn.disabled = true; frontBtn.disabled = true; duplicateBtn.disabled = true; } }
-        function drawObject(context, data) { if (!data) return; context.save(); const center = getObjectCenter(data); context.translate(center.x, center.y); context.rotate(data.rotation || 0); context.strokeStyle = data.color; context.fillStyle = data.color; context.lineWidth = data.lineWidth || 2; context.lineCap = 'round'; context.lineJoin = 'round'; switch(data.type) { case 'path': if (!data.points || data.points.length < 1) break; const pathCenter = getObjectCenter({type:'path', points: data.points}); context.translate(-pathCenter.x, -pathCenter.y); context.beginPath(); if (data.points.length < 3) { context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y); } else { context.moveTo(data.points[0].x, data.points[0].y); for (var i = 1; i < data.points.length - 2; i++) { var c = (data.points[i].x + data.points[i + 1].x) / 2; var d = (data.points[i].y + data.points[i + 1].y) / 2; context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d); } context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y); } context.stroke(); break; case 'line': if (!data.points || data.points.length < 2) break; const halfWidth = (data.points[1].x - data.points[0].x) / 2; const halfHeight = (data.points[1].y - data.points[0].y) / 2; context.beginPath(); context.moveTo(-halfWidth, -halfHeight); context.lineTo(halfWidth, halfHeight); context.stroke(); break; case 'rectangle': context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height); break; case 'circle': context.beginPath(); context.arc(0, 0, data.radius, 0, 2 * Math.PI); context.stroke(); break; case 'polygon': case 'triangle': if (!data.points || data.points.length < 2) break; const polyCenter = getObjectCenter({ type: 'polygon', points: data.points }); context.translate(-polyCenter.x, -polyCenter.y); context.beginPath(); context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) { context.lineTo(data.points[i].x, data.points[i].y); } context.closePath(); context.stroke(); break; case 'text': context.font = `${data.fontSize}px Inter`; context.textBaseline = 'middle'; context.textAlign = 'center'; context.fillText(data.text, 0, 0); break; } context.restore(); }
+        function drawObject(context, data) { if (!data) return; context.save(); const center = getObjectCenter(data); context.translate(center.x, center.y); context.rotate(data.rotation || 0); context.strokeStyle = data.color; context.fillStyle = data.color; context.lineWidth = data.lineWidth || 2; context.lineCap = 'round'; context.lineJoin = 'round'; switch(data.type) { case 'path': if (!data.points || data.points.length < 1) break; const pathCenter = getObjectCenter({type:'path', points: data.points}); context.translate(-pathCenter.x, -pathCenter.y); context.beginPath(); if (data.points.length < 3) { context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y); } else { context.moveTo(data.points[0].x, data.points[0].y); for (var i = 1; i < data.points.length - 2; i++) { var c = (data.points[i].x + data.points[i + 1].x) / 2; var d = (data.points[i].y + data.points[i + 1].y) / 2; context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d); } context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y); } context.stroke(); break; case 'line': if (!data.points || data.points.length < 2) break; const halfWidth = (data.points[1].x - data.points[0].x) / 2; const halfHeight = (data.points[1].y - data.points[0].y) / 2; context.beginPath(); context.moveTo(-halfWidth, -halfHeight); context.lineTo(halfWidth, halfHeight); context.stroke(); break; case 'rectangle': context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height); break; case 'circle': context.beginPath(); context.arc(0, 0, data.radius, 0, 2 * Math.PI); context.stroke(); break; case 'polygon': case 'triangle': if (!data.points || data.points.length < 2) break; const polyCenter = getObjectCenter({ type: 'polygon', points: data.points }); context.translate(-polyCenter.x, -polyCenter.y); context.beginPath(); context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) { context.lineTo(data.points[i].x, data.points[i].y); } context.closePath(); context.stroke(); break; case 'text': context.font = `${data.fontSize}px Inter`; context.textBaseline = 'middle'; context.textAlign = 'center'; context.fillText(data.text, 0, 0); break; case 'image': const img = new Image(); img.src = data.url; if (img.complete) { context.drawImage(img, -data.width / 2, -data.height / 2, data.width, data.height); } else { img.onload = redrawCanvas; } break; } context.restore(); }
         function drawSelectionBox(obj) { const handles = getTransformHandles(obj); if (!handles) return; overlayCtx.save(); overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 1; overlayCtx.setLineDash([4, 4]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tl.x, handles.tl.y); overlayCtx.lineTo(handles.tr.x, handles.tr.y); overlayCtx.lineTo(handles.br.x, handles.br.y); overlayCtx.lineTo(handles.bl.x, handles.bl.y); overlayCtx.closePath(); overlayCtx.stroke(); overlayCtx.setLineDash([]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tm.x, handles.tm.y); overlayCtx.lineTo(handles.rot.x, handles.rot.y); overlayCtx.stroke(); overlayCtx.fillStyle = '#4f46e5'; overlayCtx.beginPath(); overlayCtx.arc(handles.rot.x, handles.rot.y, 6, 0, 2*Math.PI); overlayCtx.fill(); Object.values(handles).forEach(handle => { if(handle.type === 'resize'){ overlayCtx.fillStyle = 'white'; overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 2; overlayCtx.fillRect(handle.x - 5, handle.y - 5, 10, 10); overlayCtx.strokeRect(handle.x - 5, handle.y - 5, 10, 10); } }); overlayCtx.restore(); }
-        function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.x - obj.radius, y: obj.y - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x - metrics.width / 2, y: obj.y - height / 2, width: metrics.width, height: height || obj.fontSize }; case 'path': case 'line': case 'triangle': case 'polygon': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }; default: return null; } }
+        function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.x - obj.radius, y: obj.y - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x - metrics.width / 2, y: obj.y - height / 2, width: metrics.width, height: height || obj.fontSize }; case 'image': return { x: obj.x - obj.width / 2, y: obj.y - obj.height / 2, width: obj.width, height: obj.height }; case 'path': case 'line': case 'triangle': case 'polygon': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }; default: return null; } }
         function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
         function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
         function getTransformHandles(obj) { const bounds = getObjectBounds(obj); if (!bounds || bounds.width <= 1 || bounds.height <= 1) return null; const center = getObjectCenter(obj); const w = bounds.width; const h = bounds.height; const angle = obj.rotation || 0; const corners = { tl: {x: center.x - w/2, y: center.y - h/2}, tr: {x: center.x + w/2, y: center.y - h/2}, bl: {x: center.x - w/2, y: center.y + h/2}, br: {x: center.x + w/2, y: center.y + h/2} }; const rotationHandleOffset = 30; const topMid = { x: center.x, y: center.y - h/2 }; const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset }; const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`; return { tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'}, tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'}, bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'}, br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'}, tm: rotatePoint(topMid, center, angle), rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`} }; }
@@ -562,6 +662,7 @@
             const pos = getMousePos(e);
             state.startPos = pos;
             state.action = 'none';
+            hideBeautifySuggestion();
 
             if (state.currentTool === 'select') {
                 // First, check if the click is on a handle of the *currently* selected object
@@ -608,8 +709,8 @@
             }
         }
 
-        function handleMouseMove(e) { let pos = getMousePos(e); if (!state.startPos) { updateCursor(pos); return; } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -(state.originalObjectState.rotation || 0); const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); if (!origBounds) return; let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (state.isShiftDown && selectedObject.type !== 'line') { const origAspectRatio = origBounds.width / origBounds.height; if (newWidth / origBounds.width > newHeight / origBounds.height) { newHeight = newWidth / origAspectRatio; } else { newWidth = newHeight * origAspectRatio; } } if (selectedObject.type === 'rectangle') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x - newWidth / 2; selectedObject.y = center.y - newHeight / 2; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) { const scaleX = newWidth / origBounds.width; const scaleY = newHeight / origBounds.height; const originalPoints = state.originalObjectState.points; const originalCenter = getObjectCenter(state.originalObjectState); selectedObject.points = originalPoints.map(p => ({ x: originalCenter.x + (p.x - originalCenter.x) * scaleX, y: originalCenter.y + (p.y - originalCenter.y) * scaleY, })); } drawOverlay(); } else { updateCursor(pos); } }
-        async function handleMouseUp(e) { if (!state.startPos) return; updateCursor(); const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
+        function handleMouseMove(e) { let pos = getMousePos(e); if (!state.startPos) { updateCursor(pos); return; } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -(state.originalObjectState.rotation || 0); const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); if (!origBounds) return; let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (state.isShiftDown && selectedObject.type !== 'line') { const origAspectRatio = origBounds.width / origBounds.height; if (newWidth / origBounds.width > newHeight / origBounds.height) { newHeight = newWidth / origAspectRatio; } else { newWidth = newHeight * origAspectRatio; } } if (selectedObject.type === 'rectangle' || selectedObject.type === 'image') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) { const scaleX = newWidth / origBounds.width; const scaleY = newHeight / origBounds.height; const originalPoints = state.originalObjectState.points; const originalCenter = getObjectCenter(state.originalObjectState); selectedObject.points = originalPoints.map(p => ({ x: originalCenter.x + (p.x - originalCenter.x) * scaleX, y: originalCenter.y + (p.y - originalCenter.y) * scaleY, })); } drawOverlay(); } else { updateCursor(pos); } }
+        async function handleMouseUp(e) { if (!state.startPos) return; updateCursor(); const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); if (state.currentTool === 'pen') { checkForBeautify(newDocRef.id, state.tempDrawing); } } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
         
         function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; if (state.isShiftDown) { const dx = x2 - x1; const dy = y2 - y1; if (state.currentTool === 'line') { const angle = Math.atan2(dy, dx); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx, dy); x2 = x1 + Math.cos(snappedAngle) * dist; y2 = y1 + Math.sin(snappedAngle) * dist; } else if (['rectangle', 'circle', 'polygon'].includes(state.currentTool) || state.currentTool.endsWith('-gon') || state.currentTool === 'star') { const size = Math.max(Math.abs(dx), Math.abs(dy)); x2 = x1 + Math.sign(dx) * size; y2 = y1 + Math.sign(dy) * size; } } const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; const rx = width / 2; const ry = height / 2; const generatePolygon = (sides) => ({ ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, sides) }); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [{x:x1, y:y1}, {x:x2, y:y2}] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 3, -Math.PI / 2) }; case 'diamond': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 4) }; case 'pentagon': return generatePolygon(5); case 'hexagon': return generatePolygon(6); case 'heptagon': return generatePolygon(7); case 'octagon': return generatePolygon(8); case 'star': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 5) }; case 'star-6': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 6) }; case 'arrow-right': return { ...common, type: 'polygon', points: [ {x: x1, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x2, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x1, y: cy + ry/2} ]}; case 'arrow-left': return { ...common, type: 'polygon', points: [ {x: x2, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x1, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x2, y: cy + ry/2} ]}; case 'cross': return { ...common, type: 'polygon', points: [ {x: cx - rx/3, y: y1}, {x: cx + rx/3, y: y1}, {x: cx + rx/3, y: cy - ry/3}, {x: x2, y: cy - ry/3}, {x: x2, y: cy + ry/3}, {x: cx + rx/3, y: cy + ry/3}, {x: cx + rx/3, y: y2}, {x: cx - rx/3, y: y2}, {x: cx - rx/3, y: cy + ry/3}, {x: x1, y: cy + ry/3}, {x: x1, y: cy - ry/3}, {x: cx - rx/3, y: cy - ry/3} ]}; case 'heart': return { ...common, type: 'polygon', points: generateHeartPoints(cx, cy, width, height) }; default: return null; } }
         function generatePolygonPoints(cx, cy, rx, ry, sides, angleOffset = 0) { const points = []; for (let i = 0; i < sides; i++) { const angle = (i / sides) * 2 * Math.PI + angleOffset; points.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) }); } return points; }
@@ -849,6 +950,255 @@
             }
         };
 
+        // --- AI Feature Functions ---
+        
+        /**
+         * Summarizes the current chat conversation using the Gemini API.
+         */
+        async function summarizeChat() {
+            if (!firebaseApiKey) {
+                alert("Google AI API key is not configured.");
+                return;
+            }
+            showModal(chatSummaryModalOverlay);
+            chatSummaryContent.innerHTML = '<div class="flex justify-center items-center"><div class="loader"></div></div>';
+
+            try {
+                const chatCollection = collection(db, `artifacts/${whiteboardId}/public/data/chat`);
+                const q = query(chatCollection, orderBy("timestamp"));
+                const chatSnapshot = await getDocs(q);
+                
+                if (chatSnapshot.empty) {
+                    chatSummaryContent.innerHTML = '<p>The chat is empty. Nothing to summarize!</p>';
+                    return;
+                }
+
+                let chatHistory = [];
+                for (const doc of chatSnapshot.docs) {
+                    const msg = doc.data();
+                    const profile = await getUserProfile(msg.author);
+                    const authorName = profile?.name || 'Anonymous';
+                    if (msg.text) {
+                         chatHistory.push({ role: "user", parts: [{ text: `${authorName}: ${msg.text}` }] });
+                    }
+                }
+                
+                const prompt = "Please provide a concise summary of the following chat conversation. Identify key decisions, action items, and any unresolved questions. Format the output using Markdown headings for each section (e.g., ## Key Decisions).";
+                chatHistory.unshift({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = { contents: chatHistory };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    // Basic Markdown to HTML conversion
+                    let html = text
+                        .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
+                        .replace(/\* \*(.*)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\* (.*)/g, '<li class="ml-4 list-disc">$1</li>')
+                        .replace(/\n/g, '<br>');
+                    chatSummaryContent.innerHTML = html;
+                } else {
+                    throw new Error("No content returned from the AI.");
+                }
+
+            } catch (error) {
+                console.error("Error summarizing chat:", error);
+                chatSummaryContent.innerHTML = `<p class="text-red-400">Failed to generate summary. ${error.message}</p>`;
+            }
+        }
+
+        /**
+         * Generates an icon using the Imagen API based on a user prompt.
+         */
+        async function generateAiIcon() {
+            const prompt = aiIconPromptInput.value.trim();
+            if (!prompt) {
+                alert("Please enter a description for the icon.");
+                return;
+            }
+            if (!firebaseApiKey) {
+                alert("Google AI API key is not configured.");
+                return;
+            }
+
+            aiIconGenerateBtn.disabled = true;
+            aiIconResults.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
+
+            const fullPrompt = `A simple, modern, vector-style, flat, monochrome icon of ${prompt}. The icon should be on a transparent background, using only white lines or shapes. It should be easily recognizable and suitable for a whiteboard application.`;
+            
+            try {
+                const payload = { instances: [{ prompt: fullPrompt }], parameters: { "sampleCount": 4 } };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${firebaseApiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`);
+                }
+                
+                const result = await response.json();
+                aiIconResults.innerHTML = '';
+
+                if (result.predictions && result.predictions.length > 0) {
+                    result.predictions.forEach(prediction => {
+                        if (prediction.bytesBase64Encoded) {
+                            const imageUrl = `data:image/png;base64,${prediction.bytesBase64Encoded}`;
+                            const item = document.createElement('div');
+                            item.className = 'ai-icon-result-item';
+                            item.innerHTML = `<img src="${imageUrl}" alt="AI generated icon for '${prompt}'">`;
+                            item.addEventListener('click', () => {
+                                addImageToCanvas(imageUrl, 100, 100);
+                                hideModal(aiIconModalOverlay);
+                            });
+                            aiIconResults.appendChild(item);
+                        }
+                    });
+                } else {
+                    throw new Error("No images were generated by the AI.");
+                }
+
+            } catch (error) {
+                console.error("Error generating AI icon:", error);
+                aiIconResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to generate icon. ${error.message}</p>`;
+            } finally {
+                aiIconGenerateBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Adds a generated image to the center of the canvas.
+         */
+        async function addImageToCanvas(url, width, height) {
+            const rect = main_content.getBoundingClientRect();
+            const centerPos = { x: rect.width / 2, y: rect.height / 2 };
+            const imageData = {
+                type: 'image',
+                url: url,
+                x: centerPos.x,
+                y: centerPos.y,
+                width: width,
+                height: height,
+                author: userId,
+                epoch: state.currentEpoch,
+                rotation: 0
+            };
+            const newDocRef = await addObjectToFirestore(imageData);
+            if (newDocRef) {
+                pushToUndoStack({ type: 'add', payload: { id: newDocRef.id, data: imageData } });
+                state.selectedObjectId = newDocRef.id;
+                redrawCanvas();
+            }
+        }
+        
+        /**
+         * Checks if a newly drawn path can be beautified into a simple shape.
+         */
+        async function checkForBeautify(docId, drawingData) {
+            if (!firebaseApiKey || drawingData.points.length < 10) return;
+
+            const prompt = `Analyze the following sequence of 2D points and determine if it represents a simple geometric shape (like a circle, rectangle, line, or triangle). The points are: ${JSON.stringify(drawingData.points)}. If it is one of these shapes, respond with a JSON object describing the shape. For a 'circle', provide 'centerX', 'centerY', and 'radius'. For a 'rectangle', provide 'x', 'y', 'width', and 'height'. For a 'line', provide 'startX', 'startY', 'endX', 'endY'. For a 'triangle', provide the three corner points 'p1', 'p2', 'p3'. If it's not a clear shape, respond with {\"shape\": \"none\"}.`;
+            
+            try {
+                const payload = { 
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) return;
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    const shapeInfo = JSON.parse(jsonText);
+                    
+                    if (shapeInfo.shape && shapeInfo.shape !== 'none') {
+                        state.beautifyCandidate = {
+                            originalId: docId,
+                            originalData: drawingData,
+                            newShapeInfo: shapeInfo
+                        };
+                        showBeautifySuggestion(drawingData);
+                    }
+                }
+            } catch (error) {
+                console.error("Error during shape beautification check:", error);
+            }
+        }
+
+        function showBeautifySuggestion(originalDrawing) {
+            const bounds = getObjectBounds(originalDrawing);
+            if (!bounds) return;
+            beautifySuggestion.style.left = `${bounds.x + bounds.width + 10}px`;
+            beautifySuggestion.style.top = `${bounds.y}px`;
+            beautifySuggestion.style.display = 'flex';
+        }
+
+        function hideBeautifySuggestion() {
+            beautifySuggestion.style.display = 'none';
+            state.beautifyCandidate = null;
+        }
+
+        async function applyBeautification() {
+            if (!state.beautifyCandidate) return;
+            
+            const { originalId, originalData, newShapeInfo } = state.beautifyCandidate;
+            let newObjectData;
+
+            const common = {
+                color: originalData.color,
+                lineWidth: originalData.lineWidth,
+                author: originalData.author,
+                epoch: originalData.epoch,
+                rotation: 0
+            };
+
+            switch (newShapeInfo.shape) {
+                case 'circle':
+                    newObjectData = { ...common, type: 'circle', x: newShapeInfo.centerX, y: newShapeInfo.centerY, radius: newShapeInfo.radius };
+                    break;
+                case 'rectangle':
+                    newObjectData = { ...common, type: 'rectangle', x: newShapeInfo.x, y: newShapeInfo.y, width: newShapeInfo.width, height: newShapeInfo.height };
+                    break;
+                case 'line':
+                     newObjectData = { ...common, type: 'line', points: [{x: newShapeInfo.startX, y: newShapeInfo.startY}, {x: newShapeInfo.endX, y: newShapeInfo.endY}] };
+                    break;
+                case 'triangle':
+                    newObjectData = { ...common, type: 'triangle', points: [newShapeInfo.p1, newShapeInfo.p2, newShapeInfo.p3] };
+                    break;
+                default:
+                    hideBeautifySuggestion();
+                    return;
+            }
+
+            // To make this undoable, we treat it as an update.
+            await updateObjectInFirestore(originalId, newObjectData, originalData);
+            hideBeautifySuggestion();
+        }
+
         // --- Main App Initialization ---
         function initializeAppLogic(fKey, tKey) {
             firebaseApiKey = fKey; 
@@ -885,6 +1235,7 @@
                     signOutBtn.classList.remove('hidden');
                     chatInput.disabled = false;
                     chatSendBtn.disabled = false;
+                    summarizeChatBtn.disabled = false;
                     gifSearchBtn.disabled = !tenorApiKey;
                     chatInput.placeholder = 'Say something...';
 
@@ -910,6 +1261,7 @@
                     signOutBtn.classList.add('hidden');
                     chatInput.disabled = true;
                     chatSendBtn.disabled = true;
+                    summarizeChatBtn.disabled = true;
                     gifSearchBtn.disabled = true;
                     chatInput.placeholder = 'Sign in to use the chat.';
 
@@ -964,6 +1316,15 @@
             gifSearchInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') searchTenorGifs(); });
             imageViewerOverlay.addEventListener('click', () => hideModal(imageViewerOverlay));
             chatMessages.addEventListener('click', (e) => { if(e.target.classList.contains('chat-image')) { document.getElementById('image-viewer-content').src = e.target.dataset.fullSrc; showModal(imageViewerOverlay); } });
+
+            // AI Feature Listeners
+            summarizeChatBtn.addEventListener('click', summarizeChat);
+            closeChatSummaryBtn.addEventListener('click', () => hideModal(chatSummaryModalOverlay));
+            closeAiIconBtn.addEventListener('click', () => hideModal(aiIconModalOverlay));
+            aiIconGenerateBtn.addEventListener('click', generateAiIcon);
+            aiIconPromptInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') generateAiIcon(); });
+            beautifyConfirmBtn.addEventListener('click', applyBeautification);
+            beautifyCancelBtn.addEventListener('click', hideBeautifySuggestion);
 
             eventCaptureLayer.addEventListener('mousedown', handleMouseDown); 
             window.addEventListener('mousemove', handleMouseMove); 
