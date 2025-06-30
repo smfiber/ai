@@ -72,7 +72,7 @@
             padding: 24px;
             border: 1px solid #888;
             width: 90%;
-            max-width: 650px;
+            max-width: 850px; /* Increased modal width */
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
@@ -378,7 +378,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.7</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.8</p>
             </div>
         </footer>
         
@@ -439,7 +439,7 @@
             routine: (numExercises, focusArea) => `Create a balanced routine with exactly ${numExercises} yoga poses or exercises that primarily target or support the '${focusArea}'. For each item, provide a "name", brief step-by-step "instructions", and its single primary "benefit". Keep the instructions and benefit to 1-2 sentences each. The tone should be encouraging and informative.`,
             routineByProp: (numExercises, propName) => `Generate a routine of ${numExercises} yoga poses that can be effectively modified or supported using a '${propName}'. For each pose, provide a "name", "instructions" on how to use the prop, and the primary "benefit" of using the prop.`,
             peakPoseSequence: (numExercises, peakPose) => `Create a preparatory yoga sequence with exactly ${numExercises} poses to build towards the peak pose: '${peakPose}'. The sequence should be ordered logically to warm up the body. For each pose, provide a "name", "instructions", and a "preparation_focus" explaining how it prepares the body for the peak pose.`,
-            ailmentRoutine: (ailment) => `Generate a list of yoga asanas commonly recommended for '${ailment}'. The tone must be supportive and cautious. Return a JSON object with two keys: 'disclaimer' and 'recommendedPoses'. The 'disclaimer' key must hold this exact string: "The following yoga poses are for informational purposes only and are not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Stop any exercise that causes you pain or discomfort.". The 'recommendedPoses' key should hold an array of objects, each with 'name', 'how_it_helps' (1-2 sentences), and 'contraindications' (e.g., 'High blood pressure').`,
+            ailmentRoutine: (ailment) => `Generate a list of yoga asanas commonly recommended for '${ailment}'. The tone must be supportive and cautious. Return a JSON object with two keys: 'disclaimer' and 'recommendedPoses'. The 'disclaimer' key must hold this exact string: "The following yoga poses are for informational purposes only and are not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Stop any exercise that causes you pain or discomfort.". The 'recommendedPoses' key should hold an array of objects, each with 'name', brief step-by-step 'instructions', 'how_it_helps' (1-2 sentences), and 'contraindications' (e.g., 'High blood pressure').`,
 
             // Details Prompt
             details: (exerciseName) => `Provide a detailed guide for the yoga pose or topic "${exerciseName}". Include the following sections with clear headings using markdown ###: "Step-by-Step Instructions", "Key Benefits", and "Modifications and Precautions". Use bullet points for the benefits and modifications sections. The tone should be encouraging and informative, like a professional yoga guide.`,
@@ -642,8 +642,8 @@
             };
             const ailmentExerciseSchema = {
                 type: "OBJECT",
-                properties: { name: { type: "STRING" }, how_it_helps: { type: "STRING" }, contraindications: { type: "STRING" } },
-                required: ["name", "how_it_helps", "contraindications"]
+                properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, how_it_helps: { type: "STRING" }, contraindications: { type: "STRING" } },
+                required: ["name", "instructions", "how_it_helps", "contraindications"]
             };
 
             // Determine the focus area and prompt based on the active tab
