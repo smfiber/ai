@@ -378,7 +378,7 @@
                  <p class="mt-4 text-xs text-slate-500 max-w-3xl mx-auto">
                     **Disclaimer:** The content provided by this application is for informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Use this application at your own risk.
                  </p>
-                <p class="mt-4 text-xs text-slate-400">Version 8.6</p>
+                <p class="mt-4 text-xs text-slate-400">Version 8.7</p>
             </div>
         </footer>
         
@@ -571,7 +571,35 @@
             selectElement.innerHTML = `<option>🤖 Asking AI...</option>`;
             try {
                 const prompt = PROMPT_TEMPLATES[promptKey]();
-                const schema = { type: "OBJECT", properties: { [responseKey]: { type: "ARRAY" } }, required: [responseKey] };
+                
+                // Define the schema based on the prompt type to ensure correct API request
+                let itemsSchema;
+                if (promptKey === 'getMuscleGroups') {
+                    // This prompt returns an array of objects
+                    itemsSchema = {
+                        type: "OBJECT",
+                        properties: {
+                            displayName: { type: "STRING" },
+                            fullName: { type: "STRING" }
+                        },
+                        required: ["displayName", "fullName"]
+                    };
+                } else {
+                    // All other dropdowns expect a simple array of strings
+                    itemsSchema = { type: "STRING" };
+                }
+
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        [responseKey]: {
+                            type: "ARRAY",
+                            items: itemsSchema
+                        }
+                    },
+                    required: [responseKey]
+                };
+
                 const response = await callGeminiAPI(promptKey, prompt, schema);
                 const items = response[responseKey];
                 
@@ -599,7 +627,24 @@
             let selectedText = '';
             let prompt = '';
             let schema = null;
-            let responseProcessor = null;
+            let responseProcessor = (response) => response.exercises || response.peakPoseSequence || response.recommendedPoses;
+
+            // Define reusable schemas for exercise objects
+            const baseExerciseSchema = {
+                type: "OBJECT",
+                properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, benefit: { type: "STRING" } },
+                required: ["name", "instructions", "benefit"]
+            };
+            const peakPoseExerciseSchema = {
+                type: "OBJECT",
+                properties: { name: { type: "STRING" }, instructions: { type: "STRING" }, preparation_focus: { type: "STRING" } },
+                required: ["name", "instructions", "preparation_focus"]
+            };
+            const ailmentExerciseSchema = {
+                type: "OBJECT",
+                properties: { name: { type: "STRING" }, how_it_helps: { type: "STRING" }, contraindications: { type: "STRING" } },
+                required: ["name", "how_it_helps", "contraindications"]
+            };
 
             // Determine the focus area and prompt based on the active tab
             switch (targetId) {
@@ -607,7 +652,7 @@
                     focusArea = ui.ailmentInput.value.trim();
                     selectedText = focusArea;
                     prompt = PROMPT_TEMPLATES.ailmentRoutine(focusArea);
-                    schema = { type: "OBJECT", properties: { disclaimer: { type: "STRING" }, recommendedPoses: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["disclaimer", "recommendedPoses"] };
+                    schema = { type: "OBJECT", properties: { disclaimer: { type: "STRING" }, recommendedPoses: { type: "ARRAY", items: ailmentExerciseSchema }}, required: ["disclaimer", "recommendedPoses"] };
                     responseProcessor = (response) => {
                         ui.disclaimerContainer.innerHTML = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert"><p class="font-bold">Important Disclaimer</p><p>${response.disclaimer}</p></div>`;
                         return response.recommendedPoses;
@@ -617,26 +662,23 @@
                     focusArea = ui.peakPoseInput.value.trim();
                     selectedText = focusArea;
                     prompt = PROMPT_TEMPLATES.peakPoseSequence(numExercises, focusArea);
-                    schema = { type: "OBJECT", properties: { peakPoseSequence: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["peakPoseSequence"] };
+                    schema = { type: "OBJECT", properties: { peakPoseSequence: { type: "ARRAY", items: peakPoseExerciseSchema }}, required: ["peakPoseSequence"] };
                     responseProcessor = (response) => response.peakPoseSequence;
                     break;
                 case 'props-focus':
                     focusArea = ui.propsSelect.value;
                     selectedText = ui.propsSelect.options[ui.propsSelect.selectedIndex].text;
                     prompt = PROMPT_TEMPLATES.routineByProp(numExercises, focusArea);
-                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["exercises"] };
-                    responseProcessor = (response) => response.exercises;
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: baseExerciseSchema }}, required: ["exercises"] };
                     break;
                 default:
                     // Generic handler for simple dropdown-based routines
                     const selectElement = document.getElementById(targetId.replace('-focus', '-select'));
                     focusArea = selectElement.value;
                     selectedText = selectElement.options[selectElement.selectedIndex].text;
-                    let routineType = `poses for a ${focusArea} practitioner`;
-                    if(targetId !== 'difficulty-focus') routineType = focusArea;
+                    let routineType = (targetId === 'difficulty-focus') ? `poses for a ${focusArea} practitioner` : focusArea;
                     prompt = PROMPT_TEMPLATES.routine(numExercises, routineType);
-                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: { type: "OBJECT" }}}, required: ["exercises"] };
-                    responseProcessor = (response) => response.exercises;
+                    schema = { type: "OBJECT", properties: { exercises: { type: "ARRAY", items: baseExerciseSchema }}, required: ["exercises"] };
             }
 
             if (!focusArea) {
