@@ -212,7 +212,8 @@
         #ai-help-button { bottom: 11rem; right: 2rem; }
         #theme-changer-button { bottom: 15.5rem; right: 2rem; }
         #prompts-button { bottom: 20rem; right: 2rem; }
-        #firebase-tools-button { bottom: 24.5rem; right: 2rem; } /* NEW */
+        #firebase-tools-button { bottom: 24.5rem; right: 2rem; }
+        #real-time-log-button { bottom: 29rem; right: 2rem; } /* NEW */
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -312,9 +313,12 @@
             align-items: center;
         }
         
+        /* Docked Search Gemini Button */
         #search-gemini-button {
             position: fixed;
-            z-index: 1000; /* Increased z-index */
+            top: 1rem;
+            left: 1rem;
+            z-index: 1000;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -330,7 +334,7 @@
         }
         #search-gemini-button:hover {
             filter: brightness(1.1);
-            transform: translateY(-2px);
+            transform: scale(1.05);
         }
         
         /* Rules for managing modal layers */
@@ -344,6 +348,7 @@
         body.promptsModal-open #promptsModal,
         body.themeGeneratorModal-open #themeGeneratorModal,
         body.apiKeyModal-open #apiKeyModal,
+        body.aiLogModal-open #aiLogModal,
         body.loadingStateModal-open #loadingStateModal {
              visibility: visible;
         }
@@ -497,11 +502,24 @@
             </div>
         </div>
     </div>
+
+    <!-- NEW: AI Log Modal -->
+    <div id="aiLogModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+        <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">Real-Time AI Log</h2>
+                <button id="closeAiLogModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="aiLogModalContent" class="p-6 overflow-y-auto">
+                <!-- AI log entries will be injected here -->
+            </div>
+        </div>
+    </div>
     
     <!-- Floating button for Search Gemini -->
     <button id="search-gemini-button" class="hidden">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
-      <span>Search Gemini</span>
+      <span>Search Selection</span>
     </button>
 
     <!-- Main Application Container -->
@@ -518,7 +536,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.10</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.11</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -604,6 +622,9 @@
         </main>
         
         <!-- Floating Action Buttons -->
+        <button id="real-time-log-button" class="floating-action-button" title="Real-Time AI Log">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
+        </button>
         <button id="firebase-tools-button" class="floating-action-button" title="Manage Sticky Topics">
              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
         </button>
@@ -741,7 +762,8 @@
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
-        let originalGeneratedText = new Map(); 
+        let originalGeneratedText = new Map();
+        let aiLog = []; // NEW: For logging AI interactions
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -1015,6 +1037,7 @@
 
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
+            document.getElementById('real-time-log-button').addEventListener('click', displayAiLog); // NEW
             document.getElementById('theme-changer-button').addEventListener('click', () => {
                 if(!geminiApiKey) {
                     openModal('apiKeyModal');
@@ -1047,6 +1070,13 @@
             document.getElementById('search-gemini-button').addEventListener('click', handleSearchGemini);
 
             document.addEventListener('mouseup', handleTextSelection);
+            document.addEventListener('mousedown', (e) => {
+                 const searchButton = document.getElementById('search-gemini-button');
+                 // Hide search button if clicking anywhere other than on the button itself while it's visible.
+                 if (!searchButton.classList.contains('hidden') && !searchButton.contains(e.target)) {
+                    searchButton.classList.add('hidden');
+                 }
+            });
 
             // Topics dropdown menu listeners
             const topicsMenuButton = document.getElementById('topics-menu-button');
@@ -1360,7 +1390,6 @@
             }
         }
         
-        // FIX: handleSaveToDriveClick now includes the card name in the filename.
         async function handleSaveToDriveClick(button) {
              const modal = button.closest('.card');
              if (!modal) return;
@@ -1574,7 +1603,7 @@
             fullPrompts[key] = fullPrompt;
 
             try {
-                const jsonText = await callGeminiAPI(initialPrompt, true);
+                const jsonText = await callGeminiAPI(initialPrompt, true, "Initial Category Population");
                 if (!jsonText) throw new Error(`API returned empty content for ${title}.`);
                 
                 const data = parseJsonWithCorrections(jsonText);
@@ -1707,7 +1736,7 @@
             For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
 
             try {
-                const jsonText = await callGeminiAPI(prompt, true);
+                const jsonText = await callGeminiAPI(prompt, true, "Generate More Topics");
                 if (!jsonText) throw new Error("AI did not return any new items.");
 
                 const newItems = parseJsonWithCorrections(jsonText);
@@ -1747,7 +1776,7 @@
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Loading all...</span>`;
 
             try {
-                const jsonText = await callGeminiAPI(fullPrompt, true);
+                const jsonText = await callGeminiAPI(fullPrompt, true, "Show All Topics");
                 if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
                 
                 const fullData = parseJsonWithCorrections(jsonText);
@@ -1813,7 +1842,7 @@
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
-                let resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt, false, "Generate Topic Summary");
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 originalGeneratedText.set(themeId, resultText); 
                 
@@ -1873,25 +1902,10 @@ Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key
 - **Tailoring Options:** ${selectedOptions ? selectedOptions : 'None'}
 
 Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-
-**REQUIRED SECTIONS & CONTENT:**
-* **1. Introduction:**
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-* **2. Architectural Overview (If Applicable):**
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-* **3. Key Concepts & Terminology:**
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-* **4. Prerequisites:**
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
-                let initialResultText = await callGeminiAPI(initialCustomPrompt);
+                let initialResultText = await callGeminiAPI(initialCustomPrompt, false, "Generate Custom Guide (Initial)");
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
                 originalGeneratedText.set(fullTitle, initialResultText);
@@ -1936,6 +1950,15 @@ Return only these sections in markdown format. Do not include any other sections
         }
         
         // --- API CALL FUNCTIONS ---
+        function logAiInteraction(prompt, response, type) {
+            aiLog.push({
+                timestamp: new Date(),
+                type: type,
+                prompt: prompt,
+                response: response
+            });
+        }
+
         async function callApi(apiUrl, payload, authorization = null) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 90000);
@@ -1969,7 +1992,7 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
 
-        async function callGeminiAPI(prompt, isJson = false) {
+        async function callGeminiAPI(prompt, isJson = false, logType = "General") {
             if (!geminiApiKey) {
                 throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
             }
@@ -1979,7 +2002,9 @@ Return only these sections in markdown format. Do not include any other sections
                 payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
             }
             const result = await callApi(apiUrl, payload);
-            return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            logAiInteraction(prompt, responseText, logType); // Log the interaction
+            return responseText;
         }
 
         async function callImageGenAPI(prompt) {
@@ -2002,7 +2027,7 @@ Return only these sections in markdown format. Do not include any other sections
         
         async function callColorGenAPI(prompt) {
             const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            const jsonText = await callGeminiAPI(fullPrompt, true);
+            const jsonText = await callGeminiAPI(fullPrompt, true, "Generate Color Theme");
             if (jsonText) return parseJsonWithCorrections(jsonText);
             throw new Error("Could not parse a valid color theme from API response.");
         }
@@ -2043,7 +2068,7 @@ Return only these sections in markdown format. Do not include any other sections
             container.innerHTML = getLoaderHTML('Loading AI options...');
             try {
                 const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
-                const jsonText = await callGeminiAPI(prompt, true);
+                const jsonText = await callGeminiAPI(prompt, true, "Load Tailoring Options");
                 if (!jsonText) {
                     throw new Error("AI did not return any tailoring options.");
                 }
@@ -2068,7 +2093,7 @@ Return only these sections in markdown format. Do not include any other sections
             const promptInput = document.getElementById('gemini-prompt');
             const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings, ensuring any double quotes inside the strings are properly escaped (e.g., \\"like this\\").`;
             try {
-                const jsonText = await callGeminiAPI(prompt, true);
+                const jsonText = await callGeminiAPI(prompt, true, "Load Placeholders");
                 if(!jsonText) return;
                 const placeholders = parseJsonWithCorrections(jsonText);
                 if (placeholders && placeholders.length > 0) {
@@ -2116,7 +2141,7 @@ Return only these sections in markdown format. Do not include any other sections
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
             prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has "id", "title", and "description". ${jsonInstruction}`;
+            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
             
             return prompts;
         }
@@ -2157,7 +2182,6 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('promptsModal');
         }
 
-        // FIX: The prompt for the full guide now explicitly asks for H3 markdown headers.
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
 
@@ -2236,7 +2260,6 @@ ${powerCLIStandard}
 Return only the complete markdown guide, ensuring each main section has a '###' header.`;
         }
         
-        // FIX: The function now also checks stickyTopics to find the item.
         async function handleExploreInDepth(themeId, themeType, cardName) {
             const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) ||
                        stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
@@ -2275,7 +2298,7 @@ Structure these sections logically using '###' markdown syntax for headers. The 
 Return only these sections in markdown format. Do not include any other sections.`;
 
             try {
-                let initialResultText = await callGeminiAPI(initialPrompt);
+                let initialResultText = await callGeminiAPI(initialPrompt, false, "Explore In-Depth (Initial)");
                 initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
                 originalGeneratedText.set(fullTitle, initialResultText);
@@ -2290,7 +2313,6 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // FIX: The full detailed guide now renders as an accordion because the prompt was fixed.
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -2325,7 +2347,7 @@ Return only these sections in markdown format. Do not include any other sections
                 const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
                 const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
                 
-                let finalCompleteGuideMarkdown = await callGeminiAPI(fullGuidePrompt);
+                let finalCompleteGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide");
                 finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the full guide.");
 
@@ -2430,32 +2452,20 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // FIX: Logic for showing/hiding the search button is now more robust.
         function handleTextSelection(e) {
             const selection = window.getSelection();
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
 
-            // Don't show button for selections in input fields or if nothing is selected
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || !selectedText) {
+            // Don't show button for selections in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 searchButton.classList.add('hidden');
                 return;
             }
-
+            
             const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent');
 
-            if (isInsideModal) {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                
-                // Position above selection, or below if not enough space
-                let top = window.scrollY + rect.top - searchButton.offsetHeight - 5;
-                if (top < window.scrollY) {
-                    top = window.scrollY + rect.bottom + 5;
-                }
-                
-                searchButton.style.top = `${top}px`;
-                searchButton.style.left = `${window.scrollX + rect.left + (rect.width / 2) - (searchButton.offsetWidth / 2)}px`;
+            if (selectedText && isInsideModal) {
                 searchButton.classList.remove('hidden');
             } else {
                  searchButton.classList.add('hidden');
@@ -2470,7 +2480,6 @@ Return only these sections in markdown format. Do not include any other sections
 
             searchButton.classList.add('hidden');
 
-            const contentEl = document.getElementById('searchGeminiModalContent');
             const searchTextEl = document.getElementById('searchGeminiQueryText');
             const resultEl = document.getElementById('searchGeminiResult');
             
@@ -2484,7 +2493,7 @@ Return only these sections in markdown format. Do not include any other sections
             const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
 
             try {
-                let resultText = await callGeminiAPI(prompt);
+                let resultText = await callGeminiAPI(prompt, false, "Text Selection Search");
                 resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
                 
                 originalGeneratedText.set("currentSearch", resultText); // Store for refinement
@@ -2604,7 +2613,7 @@ The prompts you generate should instruct an AI to create a JSON array of objects
 ${jsonInstruction}`;
 
             try {
-                const jsonText = await callGeminiAPI(prompt, true);
+                const jsonText = await callGeminiAPI(prompt, true, "Discover More Topics");
                 if (!jsonText) throw new Error("AI did not return a new category.");
                 const newCategory = parseJsonWithCorrections(jsonText);
                 categoriesToGenerate.push(newCategory);
@@ -2825,7 +2834,10 @@ ${jsonInstruction}`;
             const feedbackPrompt = `You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. Based on the features, provide constructive feedback on what is intuitive, what could be improved, and what features might be missing for a senior IT administrator. Format your feedback using '###' for titles "Strengths", "Areas for Improvement", and "Suggested Features".`;
             
             try {
-                const [helpResult, feedbackResult] = await Promise.all([callGeminiAPI(helpPrompt), callGeminiAPI(feedbackPrompt)]);
+                const [helpResult, feedbackResult] = await Promise.all([
+                    callGeminiAPI(helpPrompt, false, "Generate Help Guide"), 
+                    callGeminiAPI(feedbackPrompt, false, "Generate AI Feedback")
+                ]);
 
                 const helpText = helpResult ? marked.parse(helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load help content.</p>';
                 const feedbackText = feedbackResult ? marked.parse(feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load feedback.</p>';
@@ -2887,7 +2899,7 @@ ${jsonInstruction}`;
             const prompt = getEnhancedPrompt(refinementRequest, '', originalText);
             
             try {
-                let newText = await callGeminiAPI(prompt);
+                let newText = await callGeminiAPI(prompt, false, "Refine Content");
                 newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
                 originalGeneratedText.set(textKey, newText);
@@ -3062,7 +3074,6 @@ ${jsonInstruction}`;
 
             if (!categoryKey || !docId || !userId) return;
             
-            // Replaced window.confirm with a simpler approach for this context
             if (confirm("Are you sure you want to delete this sticky topic?")) {
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
@@ -3072,6 +3083,55 @@ ${jsonInstruction}`;
                     console.error("Error deleting sticky topic:", error);
                 }
             }
+        }
+
+        // --- NEW: AI Log Functions ---
+        function displayAiLog() {
+            const contentEl = document.getElementById('aiLogModalContent');
+            contentEl.innerHTML = ''; // Clear previous logs
+            
+            if (aiLog.length === 0) {
+                contentEl.innerHTML = `<p class="themed-text-muted text-center">No AI interactions have been logged yet.</p>`;
+                openModal('aiLogModal');
+                return;
+            }
+
+            // Reverse the log to show the most recent first
+            const reversedLog = [...aiLog].reverse();
+
+            reversedLog.forEach((log, index) => {
+                const logItem = document.createElement('div');
+                logItem.className = 'accordion-item';
+
+                const promptBlockId = `prompt-block-${index}`;
+                const responseBlockId = `response-block-${index}`;
+
+                logItem.innerHTML = `
+                    <button type="button" class="accordion-header">
+                        <span class="text-left font-semibold">${log.timestamp.toLocaleTimeString()} - ${log.type}</span>
+                        <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="accordion-content">
+                        <div class="mb-4">
+                            <h4 class="font-semibold themed-text-accent mb-2">Prompt:</h4>
+                            <div id="${promptBlockId}" class="code-block-container !mt-0">
+                                <div class="code-block-header"><span>Prompt</span><button class="copy-code-button">Copy</button></div>
+                                <pre class="text-sm">${log.prompt}</pre>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold themed-text-accent mb-2">Response:</h4>
+                             <div id="${responseBlockId}" class="code-block-container !mt-0">
+                                <div class="code-block-header"><span>Response</span><button class="copy-code-button">Copy</button></div>
+                                <pre class="text-sm">${log.response || "No response text received."}</pre>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                contentEl.appendChild(logItem);
+            });
+
+            openModal('aiLogModal');
         }
 
     </script>
