@@ -536,7 +536,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.11</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.13</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -2222,14 +2222,14 @@ Return only the new, complete, and rewritten markdown text.`;
 ### 2. Architectural Overview (If Applicable)
     * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
 ### 3. Key Concepts & Terminology
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
+    * **Explain in Detail:** Do not just define terms. For each key concept or piece of terminology, provide a detailed explanation of what it is, why it's important for this task, and a practical mini-guide or example of how it is configured or used in a real-world scenario. Treat this section as a set of foundational mini-guides.
 ### 4. Prerequisites
     * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
     * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
     * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
 ### 5. Detailed Step-by-Step Instructions
     * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
+    * **Integrate Key Concepts:** As you detail the steps, you MUST explicitly refer back to the terms defined in the "Key Concepts & Terminology" section. For each step, explain *how* that action relates to or implements one of those key concepts. For example, when describing a command, explain which concept it is putting into practice.
     * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
     * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
     * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
