@@ -1172,8 +1172,8 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 if (exploreBtn) {
                     const card = exploreBtn.closest('.card');
                     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-                    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
-                    handleExploreInDepth(finalCategory.id, fullHierarchyPath);
+                    const topicId = exploreBtn.dataset.topicId;
+                    handleExploreInDepth(topicId, fullHierarchyPath);
                     return;
                 }
                 
@@ -3124,8 +3124,9 @@ Return only these sections in markdown format. Do not include any other sections
             const modalContent = document.getElementById('categoryBrowserModalContent');
             modalContent.innerHTML = getLoaderHTML('Loading categories...');
             try {
-                const snapshot = await getDocs(query(collectionRef, orderBy('title')));
+                const snapshot = await getDocs(query(collectionRef));
                 const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
+                items.sort((a, b) => a.title.localeCompare(b.title));
                 
                 if (items.length === 0) {
                     modalContent.innerHTML = `<p class="themed-text-muted text-center">No categories found at this level.</p>`;
@@ -3237,9 +3238,10 @@ Return only these sections in markdown format. Do not include any other sections
             listElement.innerHTML = getLoaderHTML('Loading...');
 
             try {
-                const q = query(collectionRef, orderBy("title"));
+                const q = query(collectionRef);
                 const snapshot = await getDocs(q);
                 const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref }));
+                items.sort((a, b) => a.title.localeCompare(b.title));
                 
                 listElement.innerHTML = items.map(item => `
                     <div class="hierarchy-item" data-id="${item.id}" data-level="${level}">
@@ -3317,7 +3319,7 @@ Return only these sections in markdown format. Do not include any other sections
             data.title = title;
 
             try {
-                const parentRef = parentItem ? parentItem.ref : db;
+                const parentRef = parentItem ? parentItem.ref.parent.collection(parentItem.ref.id) : db;
                 await addDoc(collection(parentRef, collectionName), data);
                 inputElement.value = '';
                 loadHierarchyColumn(level, parentItem);
@@ -3368,9 +3370,15 @@ Return only these sections in markdown format. Do not include any other sections
             }
 
             try {
-                await updateDoc(item.ref, data);
+                const docRef = doc(db, item.ref.path);
+                await updateDoc(docRef, data);
                 alert('Item updated successfully!');
-                loadHierarchyColumn(level, selectedHierarchyItems[level === 'main' ? null : (level === 'sub' ? 'main' : 'sub')]);
+                
+                let parentItem = null;
+                if (level === 'sub') parentItem = selectedHierarchyItems.main;
+                if (level === 'final') parentItem = selectedHierarchyItems.sub;
+
+                loadHierarchyColumn(level, parentItem);
                 hideHierarchyForm();
             } catch (error) {
                 console.error("Error saving item:", error);
@@ -3387,7 +3395,8 @@ Return only these sections in markdown format. Do not include any other sections
             if (!userConfirmed) return;
 
             try {
-                await deleteDoc(item.ref);
+                const docRef = doc(db, item.ref.path);
+                await deleteDoc(docRef);
                 alert('Item deleted successfully!');
                 resetHierarchySelection();
                 loadHierarchyColumn('main');
