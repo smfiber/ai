@@ -536,7 +536,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.13</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.14</div>
         </header>
         
         <!-- Topics Dropdown Menu -->
@@ -2210,9 +2210,10 @@ Return only the new, complete, and rewritten markdown text.`;
 - **Specific Task:** "${task}"`;
             }
 
+            // REVISED PROMPT STRUCTURE
             return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
 
-**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
+**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
 
 **REQUIRED GUIDE STRUCTURE & CONTENT:**
 ### 1. Introduction
@@ -2222,31 +2223,28 @@ Return only the new, complete, and rewritten markdown text.`;
 ### 2. Architectural Overview (If Applicable)
     * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
 ### 3. Key Concepts & Terminology
-    * **Explain in Detail:** Do not just define terms. For each key concept or piece of terminology, provide a detailed explanation of what it is, why it's important for this task, and a practical mini-guide or example of how it is configured or used in a real-world scenario. Treat this section as a set of foundational mini-guides.
+    * **List and Define:** List and clearly define the fundamental principles, terminology, and acronyms the user MUST understand to perform the main task.
 ### 4. Prerequisites
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-### 5. Detailed Step-by-Step Instructions
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
-    * **Integrate Key Concepts:** As you detail the steps, you MUST explicitly refer back to the terms defined in the "Key Concepts & Terminology" section. For each step, explain *how* that action relates to or implements one of those key concepts. For example, when describing a command, explain which concept it is putting into practice.
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
+    * **Permissions:** Detail the specific administrative roles or granular permissions required.
+    * **Software/Licensing:** List any necessary software, specific versions, and licensing requirements.
+    * **System Requirements:** Specify any hardware or network prerequisites.
+### 5. Key Concepts and Terminology - Explained
+    * **Practical Application:** This is a critical section. For each item you listed in "Key Concepts & Terminology", provide a detailed practical guide on how to perform, configure, or manage it. 
+    * **Detailed Instructions:** Use either GUI-based step-by-step instructions (describing exact clicks and navigation) or provide clear, descriptive "how-to" text for more conceptual items. Treat this as a collection of mini-guides that bring the concepts to life.
 ### 6. Verification and Validation
-    * Provide specific commands or procedures to run to confirm the task was completed successfully.
-    * Describe what a successful output or system state looks out.
+    * Provide specific commands or procedures to run to confirm the overall task was completed successfully.
+    * Describe what a successful output or system state looks like.
 ### 7. Best Practices
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-### 8. Automation Opportunities
-    * **Why Automate:** Discuss the benefits of automating this task.
-    * **Scripting Examples:** Provide complete, practical script examples.
+    * Offer expert advice on the most effective, secure, and efficient ways to perform the task and manage the related concepts.
+### 8. Automation Techniques for Key Concepts
+    * **Concept-Specific Automation:** For each concept from 'Key Concepts & Terminology,' describe relevant automation opportunities.
+    * **Scripting Examples:** Provide complete, practical script examples (e.g., PowerShell, PowerCLI, bash) or explain how to use APIs (like Microsoft Graph) to automate tasks related to that specific concept.
 ### 9. Security Considerations
-    * **Hardening:** Provide specific steps to harden the configuration.
+    * **Hardening:** Provide specific steps to harden the configuration related to the main task and concepts.
     * **Common Vulnerabilities:** Discuss potential security risks.
     * **Auditing & Logging:** Recommend what to audit and how to configure logging.
 ### 10. Advanced Use Cases & Scenarios
-    * Describe 2-3 advanced or less-common scenarios.
+    * Describe 2-3 advanced or less-common scenarios related to the topic.
 ### 11. Troubleshooting
     * Provide a table of common problems, their likely causes, and step-by-step solutions.
 ### 12. Helpful Resources
