@@ -622,7 +622,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.2</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.3</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -778,17 +778,17 @@
         // --- Prompt Engineering Constants ---
         // ** UPDATED PROMPT (Final Review Prompt) **
         const finalReviewPrompt = `
-Persona: You are a Lead Technical Editor and a Senior IT Systems Architect at a major technology firm. Your role is final quality assurance. You are meticulous, authoritative, and possess an exceptional command of technical detail and professional documentation standards.
-Objective: Your sole mission is to audit the DRAFT GUIDE provided below against its ORIGINAL BLUEPRINT. You will then rewrite and enhance the draft to produce a final, publishable-grade technical document. You must directly implement all corrections and improvements into the text.
+Persona: You are a Lead Technical Editor and a Senior IT Systems Architect. Your role is final quality assurance.
+Objective: Your mission is to audit the DRAFT CONTENT provided below against its ORIGINAL BLUEPRINT. You will then rewrite and enhance the draft to produce final, publishable-grade technical documentation. You must directly implement all corrections and improvements into the text.
 
-//-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (FOR CONTEXT) --//
+//-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (SECTIONS 1-4) --//
 {blueprint_from_step_1}
 
-//-- INPUT 2: DRAFT GUIDE MARKDOWN --//
-{draft_guide_from_step_2}
+//-- INPUT 2: DRAFT CONTENT TO REVIEW (SECTIONS 5-12) --//
+{draft_content_to_review}
 
 //-- SYSTEMATIC REVIEW PROTOCOL --//
-(AI: Execute the following review protocol. Your output will be the rewritten guide itself, not a list of your actions.)
+(AI: Execute the following review protocol on the DRAFT CONTENT. Your output will be the rewritten content itself, not a list of your actions.)
 
 1.  **Blueprint Adherence Audit:**
     * Scrutinize the draft against the ORIGINAL BLUEPRINT.
@@ -805,11 +805,11 @@ Objective: Your sole mission is to audit the DRAFT GUIDE provided below against 
 3.  **Clarity and Professionalism Polish:**
     * Rephrase awkward or ambiguous sentences to be direct and clear.
     * **Eliminate all meta-commentary, asides, and notes from the AI (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Integrate advice naturally into the narrative.**
-    * Enforce consistent terminology (e.g., always "Conditional Access policy," not "CA rule").
+    * Enforce consistent terminology.
     * Ensure all formatting is clean and consistent, preserving the '###' header structure.
 
 **Final Output Instruction:**
-Return ONLY the complete, final, rewritten guide in a single markdown block. Do not provide a preamble, a list of your changes, or any text other than the final, revised document. Your response must begin directly with ### 1. Introduction.
+Return ONLY the complete, final, rewritten markdown for the sections you were asked to review. Do not provide a preamble, a list of your changes, or any text other than the final, revised document. Your response must begin directly with the first header of the content you are reviewing (e.g., ### 5. Key Concepts - In-Depth Application & Management).
 `;
         
         // --- Global State & Configuration ---
@@ -1924,7 +1924,6 @@ Return ONLY the complete, final, rewritten guide in a single markdown block. Do 
                                         .map(btn => btn.textContent.trim())
                                         .join(', ');
 
-            // ** UPDATED PROMPT (Initial Blueprint Prompt) **
             const initialCustomPrompt = `
 Persona: You are an expert senior IT administrator and technical writer AI.
 Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide.
@@ -1956,7 +1955,6 @@ Return only the markdown for these four sections. Do not include any other conte
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false); 
                 
-                // Set a dummy hierarchy path for custom guides so the next step has context
                 const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${userPrompt}`}];
                 footerEl.dataset.fullHierarchyPath = JSON.stringify(dummyHierarchy);
 
@@ -2216,7 +2214,6 @@ Return only the markdown for these four sections. Do not include any other conte
             openModal('promptsModal');
         }
 
-        // ** UPDATED PROMPT FUNCTION **
         function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
             return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality.
 
@@ -2238,7 +2235,7 @@ Final Output Instruction
 Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
         }
         
-        // ** UPDATED PROMPT FUNCTION **
+        // ** ENHANCED PROMPT FUNCTION **
         function getFullGuideGenerationPrompt(context = {}) {
             const hierarchy = context.hierarchyContext || [];
             const task = context.task || '{task}';
@@ -2271,7 +2268,7 @@ B. Required Guide Content (Generate all 12 sections):
 2. Architectural Overview: Components and interactions.
 3. Key Concepts & Terminology: Definitions only.
 4. Prerequisites: Permissions, Software/Licensing, System Requirements.
-5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management, explaining the "why" for each.
+5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.**
 6. Verification and Validation: Specific commands/procedures to confirm correct configuration.
 7. Best Practices: Expert advice for implementation and management.
 8. Automation Techniques for Key Concepts: Concept-specific automation opportunities with full scripts.
@@ -2317,7 +2314,6 @@ B. Required Guide Content (Generate all 12 sections):
             
             const contextString = fullHierarchyPath.map(p => p.title).join(' -> ');
 
-            // ** UPDATED PROMPT (Initial Blueprint Prompt) **
             const initialPrompt = `
 Persona: You are an expert senior IT administrator and technical writer AI.
 Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide.
@@ -2356,6 +2352,7 @@ Return only the markdown for these four sections. Do not include any other conte
             }
         }
         
+        // ** REFACTORED FUNCTION FOR EFFICIENCY **
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -2385,31 +2382,41 @@ Return only the markdown for these four sections. Do not include any other conte
             openModal('inDepthDetailedModal');
 
             try {
-                detailedContentEl.innerHTML = getLoaderHTML('Generating initial draft...');
-                const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+                detailedContentEl.innerHTML = getLoaderHTML('Generating detailed sections (5-12)...');
                 
-                // ** UPDATED PROMPT (Full Guide Generation Prompt) **
-                const fullGuidePrompt = getFullGuideGenerationPrompt({
-                    hierarchyContext: fullHierarchyPath,
-                    task: topicName,
-                    options: ''
-                });
-                
-                let initialGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide (Draft)");
-                initialGuideMarkdown = initialGuideMarkdown ? initialGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!initialGuideMarkdown) throw new Error("Failed to generate the initial guide draft.");
+                // New prompt to generate only the remaining sections
+                const remainingSectionsPrompt = `
+Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer.
+Mission: Based on the provided GUIDE BLUEPRINT, generate the remaining detailed sections (5 through 12) for the guide.
 
-                detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the draft...');
+//-- GUIDE BLUEPRINT (SECTIONS 1-4 for Context) --//
+${blueprintMarkdown}
 
-                // ** UPDATED PROMPT (Final Review Prompt) **
+//-- INSTRUCTIONS --//
+1.  **Generate Sections 5-12 ONLY:** Your output must start with "### 5. Key Concepts - In-Depth Application & Management" and end with "### 12. Helpful Resources".
+2.  **Adhere to Blueprint:** All content you generate must strictly adhere to the scope and details defined in the provided blueprint.
+3.  **Provide Concrete Examples:** For section 5, for each technique discussed (e.g., Few-Shot Learning), you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts.
+4.  **Uphold Quality Standards:** Ensure all information is factually accurate, contains no placeholders, and is written in a professional tone.
+
+Your response must be ONLY the markdown for sections 5 through 12.`;
+
+                let draftSections5to12 = await callGeminiAPI(remainingSectionsPrompt, false, "Generate Full Guide (Sections 5-12 Draft)");
+                draftSections5to12 = draftSections5to12 ? draftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!draftSections5to12) throw new Error("Failed to generate the detailed sections of the guide.");
+
+                detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the new sections...');
+
+                // Use the final review prompt on the new sections
                 let reviewRequestPrompt = finalReviewPrompt
                     .replace('{blueprint_from_step_1}', blueprintMarkdown)
-                    .replace('{draft_guide_from_step_2}', initialGuideMarkdown);
+                    .replace('{draft_content_to_review}', draftSections5to12);
 
-                let finalCompleteGuideMarkdown = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Final)");
-                finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the final, refined guide.");
+                let finalSections5to12 = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Sections 5-12 Final)");
+                finalSections5to12 = finalSections5to12 ? finalSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!finalSections5to12) throw new Error("Failed to generate the final, refined guide sections.");
                 
+                // Concatenate the final guide
+                const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
