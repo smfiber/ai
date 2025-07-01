@@ -1634,7 +1634,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             try {
-                const prompt = finalCategory.initialPrompt || `Generate 10 common topics for ${finalCategory.title}.`;
+                const prompt = finalCategory.initialPrompt || `Generate 8 common topics for ${finalCategory.title}.`;
                 const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
                 if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
                 
@@ -1722,7 +1722,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
 
             if (fullPrompt && data.length > 0) {
                 if (isFullyLoaded) {
-                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 10 More</span></button></div>`;
+                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 8 More</span></button></div>`;
                 } else {
                      actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="show-all-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}">Show All (${data.length} of ~50 shown)</button></div>`;
                 }
@@ -1770,7 +1770,7 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
             const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
             const existingTitles = allThemeData[categoryId].map(item => item.title);
             
-            const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
+            const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
             Existing Task List:\n- ${existingTitles.join('\n- ')}\n
             For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
 
@@ -2100,7 +2100,7 @@ Return only these sections in markdown format. Do not include any other sections
             const container = document.getElementById('tailoring-buttons-container');
             container.innerHTML = getLoaderHTML('Loading AI options...');
             try {
-                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
+                const prompt = `Generate a comprehensive list of 16 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
                 const jsonText = await callGeminiAPI(prompt, true, "Load Tailoring Options");
                 if (!jsonText) {
                     throw new Error("AI did not return any tailoring options.");
@@ -2168,7 +2168,7 @@ Return only these sections in markdown format. Do not include any other sections
             prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
             prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
             prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
+            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 16). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
             prompts["AI Guide Refinement Prompt"] = aiReviewPrompt;
             
             return prompts;
