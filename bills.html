@@ -21,8 +21,7 @@
         .sortable-header:hover { color: #ffffff; }
         .sort-icon { opacity: 0.5; margin-left: 8px; transition: opacity 0.2s; }
         .sortable-header.active .sort-icon { opacity: 1; }
-        /* Ensure modals are on top of the loading overlay if needed */
-        #api-key-modal, #error-modal { z-index: 10001; }
+        #login-modal, #error-modal { z-index: 10001; }
         #loading-overlay { z-index: 10000; }
         .modal-base { transition: opacity 0.3s ease; }
         .top-nav-link { border-bottom: 2px solid transparent; }
@@ -35,6 +34,12 @@
         .bill-pill { padding: 2px 8px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
         .spinner { border: 4px solid rgba(255, 255, 255, 0.2); border-left-color: #34d399; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* Styles for user profile dropdown */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: #1f2937; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; border-radius: 8px; }
+        .dropdown-content a, .dropdown-content button { color: #d1d5db; padding: 12px 16px; text-decoration: none; display: block; text-align: left; width: 100%; border: none; background: none; cursor: pointer; }
+        .dropdown-content a:hover, .dropdown-content button:hover { background-color: #374151; }
+        .show { display: block; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-300">
@@ -46,7 +51,7 @@
     </div>
 
     <!-- Main Content Wrapper -->
-    <div class="p-6 lg:p-10">
+    <div id="main-content" class="p-6 lg:p-10 hidden">
         <!-- Header & Navigation -->
         <header class="bg-gray-800 rounded-2xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between">
             <div class="flex items-center space-x-2 md:space-x-4">
@@ -75,6 +80,16 @@
                 <button id="help-btn" class="text-gray-400 hover:text-white transition-colors" title="Help & Instructions">
                     <i class="fas fa-question-circle text-2xl"></i>
                 </button>
+                 <!-- User Profile Dropdown -->
+                <div id="user-profile" class="dropdown hidden">
+                    <button id="user-profile-btn" class="flex items-center space-x-2 text-white font-semibold bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg">
+                        <span id="user-name"></span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="user-dropdown" class="dropdown-content">
+                        <button id="sign-out-btn">Sign Out</button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -189,24 +204,59 @@
 
     <div id="import-confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4">Confirm Import</h2><p class="text-gray-300 mb-6">This will overwrite all currently saved data in this browser with the data from the selected file. This action cannot be undone. Are you sure you wish to proceed?</p><div class="flex justify-center space-x-4 mt-8"><button id="cancel-import-btn" class="py-2 px-6 text-sm font-medium text-gray-400 hover:text-white">Cancel</button><button id="confirm-import-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">Yes, Overwrite Data</button></div></div></div>
 
-    <!-- New Modals for API Key and Errors -->
-    <div id="api-key-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"><h2 class="text-2xl font-bold text-white mb-6">Enter Firebase API Key</h2><p class="text-gray-400 mb-4">Please enter your Firebase Web API Key to connect to your database. This is stored locally and is only needed once per browser.</p><form id="api-key-form"><div class="space-y-4"><div><label for="firebase-api-key" class="block mb-2 text-sm font-medium">Firebase API Key</label><input type="password" id="firebase-api-key" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required></div></div><div class="flex justify-end mt-8"><button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save and Connect</button></div></form></div></div>
-    <div id="error-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4 text-red-500">Connection Failed</h2><p id="error-message" class="text-gray-300 mb-6">Please check your API key and try again.</p><div class="flex justify-center mt-8"><button id="close-error-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">OK</button></div></div></div>
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center modal-base">
+        <div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            <h2 class="text-2xl font-bold text-white mb-2">Welcome to Your Finance Dashboard</h2>
+            <p class="text-gray-400 mb-6">Connect to your database to get started.</p>
+            
+            <!-- Step 1: API Key Form -->
+            <div id="api-key-step">
+                <form id="api-key-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="firebase-api-key" class="block mb-2 text-sm font-medium text-left">Firebase API Key</label>
+                            <input type="password" id="firebase-api-key" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5" required>
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Save and Connect</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Auth Options -->
+            <div id="auth-step" class="hidden">
+                 <p class="text-green-400 mb-6"><i class="fas fa-check-circle mr-2"></i>Successfully connected to database.</p>
+                 <div class="space-y-4">
+                     <button id="google-signin-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <i class="fab fa-google mr-3"></i> Sign in with Google
+                     </button>
+                     <button id="anon-signin-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Continue Anonymously
+                     </button>
+                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="error-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden opacity-0 modal-base"><div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center"><h2 class="text-2xl font-bold text-white mb-4 text-red-500">Error</h2><p id="error-message" class="text-gray-300 mb-6">An error occurred.</p><div class="flex justify-center mt-8"><button id="close-error-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">OK</button></div></div></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, writeBatch, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State & Constants ---
-        const APP_VERSION = "1.39";
+        const APP_VERSION = "1.40";
         let upcomingBills = [], paidBillsHistory = [], recurringBillTemplates = [], incomeHistory = [], savings = [], investments = [], debts = [], assets = [], checking = [];
         let sortState = { key: 'dueDate', direction: 'asc' };
         let activeScreen = 'dashboard-screen', calendarDate = new Date();
-        let db, auth, userId, upcomingBillsRef, paidBillsHistoryRef, recurringTemplatesRef, incomeRef, savingsRef, investmentsRef, debtsRef, assetsRef, checkingRef;
+        let db, auth, userId, unsubscribeListeners = [];
         let fileToImport = null;
 
         // --- DOM Element Cache ---
+        const mainContent = document.getElementById('main-content');
         const loadingOverlay = document.getElementById('loading-overlay');
         const billsTableBody = document.getElementById('bills-table-body');
         const incomeTableBody = document.getElementById('income-table-body');
@@ -235,7 +285,19 @@
         const closeHelpBtn = document.getElementById('close-help-btn'), helpBtn = document.getElementById('help-btn');
         const exportDataBtn = document.getElementById('export-data-btn'), importDataBtn = document.getElementById('import-data-btn'), importFileInput = document.getElementById('import-file-input');
         const cancelImportBtn = document.getElementById('cancel-import-btn'), confirmImportBtn = document.getElementById('confirm-import-btn');
+        
+        const loginModal = document.getElementById('login-modal');
+        const apiKeyStep = document.getElementById('api-key-step');
+        const authStep = document.getElementById('auth-step');
         const apiKeyForm = document.getElementById('api-key-form'), firebaseApiKeyInput = document.getElementById('firebase-api-key');
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const anonSigninBtn = document.getElementById('anon-signin-btn');
+        const signOutBtn = document.getElementById('sign-out-btn');
+        const userProfile = document.getElementById('user-profile');
+        const userNameEl = document.getElementById('user-name');
+        const userProfileBtn = document.getElementById('user-profile-btn');
+        const userDropdown = document.getElementById('user-dropdown');
+
         const closeErrorBtn = document.getElementById('close-error-btn');
 
         const addBillForm = document.getElementById('add-bill-form'), editBillForm = document.getElementById('edit-bill-form'), addIncomeForm = document.getElementById('add-income-form'), editIncomeForm = document.getElementById('edit-income-form'), addAssetForm = document.getElementById('add-asset-form'), editAssetForm = document.getElementById('edit-asset-form'), addSavingsForm = document.getElementById('add-savings-form'), editSavingsForm = document.getElementById('edit-savings-form'), addInvestmentForm = document.getElementById('add-investment-form'), editInvestmentForm = document.getElementById('edit-investment-form'), addDebtForm = document.getElementById('add-debt-form'), editDebtForm = document.getElementById('edit-debt-form'), addCheckingForm = document.getElementById('add-checking-form'), editCheckingForm = document.getElementById('edit-checking-form');
@@ -380,11 +442,14 @@
             if(!billToPay) return; 
             
             const batch = writeBatch(db);
-            batch.delete(doc(db, upcomingBillsRef.path, id));
+            const upcomingBillsRef = collection(db, `users/${userId}/upcoming_bills`);
+            const paidBillsHistoryRef = collection(db, `users/${userId}/paid_bills_history`);
+            
+            batch.delete(doc(upcomingBillsRef, id));
             
             const paidBillData = {...billToPay, paidDate: new Date().toISOString()}; 
             delete paidBillData.id; 
-            batch.set(doc(paidBillsHistoryRef, paidBillData.name + " - " + paidBillData.paidDate), paidBillData);
+            batch.set(doc(paidBillsHistoryRef), paidBillData);
             
             if(billToPay.recurringTemplateId){ 
                 const template = recurringBillTemplates.find(t => t.id === billToPay.recurringTemplateId); 
@@ -393,64 +458,89 @@
                     dueDate.setMonth(dueDate.getMonth() + 1); 
                     const nextBill = { ...template, dueDate: dueDate.toISOString().split('T')[0], recurringTemplateId: template.id }; 
                     delete nextBill.id; 
-                    batch.set(doc(collection(db, upcomingBillsRef.path)), nextBill);
+                    batch.set(doc(upcomingBillsRef), nextBill);
                 }
             } 
-            try { await batch.commit(); } catch(err) { console.error("Error paying bill:", err); }
+            try { await batch.commit(); } catch(err) { console.error("Error paying bill:", err); showErrorModal("Failed to pay bill."); }
         }
-        async function handleAddBill(e) { e.preventDefault(); const f=new FormData(addBillForm); const isRec=f.get('billRecurring')==='on'; const amount=parseFloat(f.get('billAmount')); const name=f.get('billName'); const dueDate=f.get('billDueDate'); try{if(isRec){const tData={name,amount}; const tRef=await addDoc(recurringTemplatesRef,tData); const bData={name,amount,dueDate,recurringTemplateId:tRef.id}; await addDoc(upcomingBillsRef,bData);}else{const bData={name,amount,dueDate}; await addDoc(upcomingBillsRef,bData);} addBillForm.reset();closeModal('add-bill-modal');}catch(err){console.error("Error adding bill:",err);}}
-        async function handleAddIncome(e) { e.preventDefault(); const f = new FormData(addIncomeForm); const iData = { name: f.get('incomeName'), date: f.get('incomeDate'), amount: parseFloat(f.get('incomeAmount'))}; try { await addDoc(incomeRef, iData); addIncomeForm.reset(); closeModal('add-income-modal'); } catch (err) { console.error("Error adding income:", err); } }
-        async function handleAddAsset(e) { e.preventDefault(); const f = new FormData(addAssetForm); const aData = { description: f.get('assetDescription'), amount: parseFloat(f.get('assetAmount'))}; try { await addDoc(assetsRef, aData); addAssetForm.reset(); closeModal('add-asset-modal'); } catch (err) { console.error("Error adding asset:", err); } }
-        async function handleAddSavings(e) { e.preventDefault(); const f = new FormData(addSavingsForm); const sData = { name: f.get('savingsName'), amount: parseFloat(f.get('savingsAmount'))}; try { await addDoc(savingsRef, sData); addSavingsForm.reset(); closeModal('add-savings-modal'); } catch (err) { console.error("Error adding savings:", err); } }
-        async function handleAddInvestment(e) { e.preventDefault(); const f = new FormData(addInvestmentForm); const iData = { description: f.get('investmentDescription'), amount: parseFloat(f.get('investmentAmount'))}; try { await addDoc(investmentsRef, iData); addInvestmentForm.reset(); closeModal('add-investment-modal'); } catch (err) { console.error("Error adding investment:", err); } }
-        async function handleAddDebt(e) { e.preventDefault(); const f = new FormData(addDebtForm); const dData = { description: f.get('debtDescription'), amount: parseFloat(f.get('debtAmount'))}; try { await addDoc(debtsRef, dData); addDebtForm.reset(); closeModal('add-debt-modal'); } catch (err) { console.error("Error adding debt:", err); } }
-        async function handleAddChecking(e) { e.preventDefault(); const f = new FormData(addCheckingForm); const cData = { name: f.get('checkingName'), amount: parseFloat(f.get('checkingAmount'))}; try { await addDoc(checkingRef, cData); addCheckingForm.reset(); closeModal('add-checking-modal'); } catch (err) { console.error("Error adding checking entry:", err); } }
+        async function addFirestoreDoc(collectionName, data) {
+            try {
+                await addDoc(collection(db, `users/${userId}/${collectionName}`), data);
+            } catch (err) {
+                console.error(`Error adding to ${collectionName}:`, err);
+                showErrorModal(`Failed to add item to ${collectionName}.`);
+            }
+        }
+        async function deleteFirestoreDoc(collectionName, id) {
+             try {
+                await deleteDoc(doc(db, `users/${userId}/${collectionName}`, id));
+            } catch (err) {
+                console.error(`Error deleting from ${collectionName}:`, err);
+                showErrorModal(`Failed to delete item from ${collectionName}.`);
+            }
+        }
+        async function updateFirestoreDoc(collectionName, id, data) {
+             try {
+                await updateDoc(doc(db, `users/${userId}/${collectionName}`, id), data);
+            } catch (err) {
+                console.error(`Error updating ${collectionName}:`, err);
+                showErrorModal(`Failed to update item in ${collectionName}.`);
+            }
+        }
+
+        async function handleAddBill(e) { e.preventDefault(); const f=new FormData(addBillForm); const isRec=f.get('billRecurring')==='on'; const amount=parseFloat(f.get('billAmount')); const name=f.get('billName'); const dueDate=f.get('billDueDate'); try{if(isRec){const tData={name,amount}; const tRef=await addDoc(collection(db, `users/${userId}/recurring_templates`),tData); const bData={name,amount,dueDate,recurringTemplateId:tRef.id}; await addFirestoreDoc('upcoming_bills', bData);}else{const bData={name,amount,dueDate}; await addFirestoreDoc('upcoming_bills', bData);} addBillForm.reset();closeModal('add-bill-modal');}catch(err){console.error("Error adding bill:",err); showErrorModal("Failed to add bill.");}}
+        async function handleAddIncome(e) { e.preventDefault(); const f = new FormData(addIncomeForm); const iData = { name: f.get('incomeName'), date: f.get('incomeDate'), amount: parseFloat(f.get('incomeAmount'))}; await addFirestoreDoc('income', iData); addIncomeForm.reset(); closeModal('add-income-modal'); }
+        async function handleAddAsset(e) { e.preventDefault(); const f = new FormData(addAssetForm); const aData = { description: f.get('assetDescription'), amount: parseFloat(f.get('assetAmount'))}; await addFirestoreDoc('assets', aData); addAssetForm.reset(); closeModal('add-asset-modal'); }
+        async function handleAddSavings(e) { e.preventDefault(); const f = new FormData(addSavingsForm); const sData = { name: f.get('savingsName'), amount: parseFloat(f.get('savingsAmount'))}; await addFirestoreDoc('savings', sData); addSavingsForm.reset(); closeModal('add-savings-modal'); }
+        async function handleAddInvestment(e) { e.preventDefault(); const f = new FormData(addInvestmentForm); const iData = { description: f.get('investmentDescription'), amount: parseFloat(f.get('investmentAmount'))}; await addFirestoreDoc('investments', iData); addInvestmentForm.reset(); closeModal('add-investment-modal'); }
+        async function handleAddDebt(e) { e.preventDefault(); const f = new FormData(addDebtForm); const dData = { description: f.get('debtDescription'), amount: parseFloat(f.get('debtAmount'))}; await addFirestoreDoc('debts', dData); addDebtForm.reset(); closeModal('add-debt-modal'); }
+        async function handleAddChecking(e) { e.preventDefault(); const f = new FormData(addCheckingForm); const cData = { name: f.get('checkingName'), amount: parseFloat(f.get('checkingAmount'))}; await addFirestoreDoc('checking', cData); addCheckingForm.reset(); closeModal('add-checking-modal'); }
         
-        async function handleDeleteTemplate(e){ const id=e.target.dataset.templateId; try{ await deleteDoc(doc(db, recurringTemplatesRef.path, id)); } catch(err){ console.error("Error deleting template:",err); } }
+        async function handleDeleteTemplate(e){ await deleteFirestoreDoc('recurring_templates', e.target.dataset.templateId); }
         function handleEditTemplate(e){ const id=e.target.dataset.templateId; const t=recurringBillTemplates.find(tmp=>tmp.id===id); if(t){document.getElementById('edit-bill-id').value=t.id; document.getElementById('edit-bill-name').value=t.name; document.getElementById('edit-bill-amount').value=t.amount;} openModal('edit-bill-modal');}
-        async function handleUpdateBill(e){ e.preventDefault(); const id=document.getElementById('edit-bill-id').value; const data={name:document.getElementById('edit-bill-name').value,amount:parseFloat(document.getElementById('edit-bill-amount').value)}; try { await updateDoc(doc(db, recurringTemplatesRef.path, id), data); closeModal('edit-bill-modal'); } catch(err){console.error("Error updating template:",err);}}
+        async function handleUpdateBill(e){ e.preventDefault(); const id=document.getElementById('edit-bill-id').value; const data={name:document.getElementById('edit-bill-name').value,amount:parseFloat(document.getElementById('edit-bill-amount').value)}; await updateFirestoreDoc('recurring_templates', id, data); closeModal('edit-bill-modal');}
         
-        async function handleDeleteIncome(e){ const id = e.target.dataset.incomeId; try { await deleteDoc(doc(db, incomeRef.path, id)); } catch(err) { console.error("Error deleting income:", err); } }
+        async function handleDeleteIncome(e){ await deleteFirestoreDoc('income', e.target.dataset.incomeId); }
         function handleEditIncome(e){ const id = e.target.dataset.incomeId; const i = incomeHistory.find(item => item.id === id); if(i){document.getElementById('edit-income-id').value = i.id; document.getElementById('edit-income-name').value = i.name; document.getElementById('edit-income-date').value = i.date; document.getElementById('edit-income-amount').value = i.amount;} openModal('edit-income-modal'); }
-        async function handleUpdateIncome(e){ e.preventDefault(); const id = document.getElementById('edit-income-id').value; const data = { name: document.getElementById('edit-income-name').value, date: document.getElementById('edit-income-date').value, amount: parseFloat(document.getElementById('edit-income-amount').value) }; try { await updateDoc(doc(db, incomeRef.path, id), data); closeModal('edit-income-modal'); } catch(err) { console.error("Error updating income:", err); } }
+        async function handleUpdateIncome(e){ e.preventDefault(); const id = document.getElementById('edit-income-id').value; const data = { name: document.getElementById('edit-income-name').value, date: document.getElementById('edit-income-date').value, amount: parseFloat(document.getElementById('edit-income-amount').value) }; await updateFirestoreDoc('income', id, data); closeModal('edit-income-modal'); }
 
         async function handleEditAsset(e){ const id = e.target.dataset.assetId; const a = assets.find(item => item.id === id); if(a) { document.getElementById('edit-asset-id').value = a.id; document.getElementById('edit-asset-description').value = a.description; document.getElementById('edit-asset-amount').value = a.amount; } openModal('edit-asset-modal'); }
-        async function handleUpdateAsset(e){ e.preventDefault(); const id = document.getElementById('edit-asset-id').value; const data = { description: document.getElementById('edit-asset-description').value, amount: parseFloat(document.getElementById('edit-asset-amount').value) }; try { await updateDoc(doc(db, assetsRef.path, id), data); closeModal('edit-asset-modal'); } catch(err) { console.error("Error updating asset:", err); } }
-        async function handleDeleteAsset(e){ const id = e.target.dataset.assetId; try { await deleteDoc(doc(db, assetsRef.path, id)); } catch(err) { console.error("Error deleting asset:", err); } }
+        async function handleUpdateAsset(e){ e.preventDefault(); const id = document.getElementById('edit-asset-id').value; const data = { description: document.getElementById('edit-asset-description').value, amount: parseFloat(document.getElementById('edit-asset-amount').value) }; await updateFirestoreDoc('assets', id, data); closeModal('edit-asset-modal'); }
+        async function handleDeleteAsset(e){ await deleteFirestoreDoc('assets', e.target.dataset.assetId); }
 
-        async function handleDeleteSavings(e){ const id=e.target.dataset.savingsId; try { await deleteDoc(doc(db, savingsRef.path, id)); } catch(err) { console.error("Error deleting savings:",err); } }
+        async function handleDeleteSavings(e){ await deleteFirestoreDoc('savings', e.target.dataset.savingsId); }
         function handleEditSavings(e){ const id=e.target.dataset.savingsId; const s=savings.find(item=>item.id===id); if(s){document.getElementById('edit-savings-id').value=s.id; document.getElementById('edit-savings-name').value=s.name; document.getElementById('edit-savings-amount').value=s.amount;} openModal('edit-savings-modal');}
-        async function handleUpdateSavings(e){ e.preventDefault(); const id=document.getElementById('edit-savings-id').value; const data={name:document.getElementById('edit-savings-name').value,amount:parseFloat(document.getElementById('edit-savings-amount').value)}; try { await updateDoc(doc(db, savingsRef.path, id), data); closeModal('edit-savings-modal'); } catch(err) { console.error("Error updating savings:",err); } }
+        async function handleUpdateSavings(e){ e.preventDefault(); const id=document.getElementById('edit-savings-id').value; const data={name:document.getElementById('edit-savings-name').value,amount:parseFloat(document.getElementById('edit-savings-amount').value)}; await updateFirestoreDoc('savings', id, data); closeModal('edit-savings-modal'); }
         
-        async function handleDeleteInvestment(e){ const id=e.target.dataset.investmentId; try { await deleteDoc(doc(db, investmentsRef.path, id)); } catch(err) { console.error("Error deleting investment:",err); } }
+        async function handleDeleteInvestment(e){ await deleteFirestoreDoc('investments', e.target.dataset.investmentId); }
         function handleEditInvestment(e){ const id=e.target.dataset.investmentId; const i=investments.find(item=>item.id===id); if(i){document.getElementById('edit-investment-id').value=i.id; document.getElementById('edit-investment-description').value=i.description; document.getElementById('edit-investment-amount').value=i.amount;} openModal('edit-investment-modal');}
-        async function handleUpdateInvestment(e){ e.preventDefault(); const id=document.getElementById('edit-investment-id').value; const data={description:document.getElementById('edit-investment-description').value,amount:parseFloat(document.getElementById('edit-investment-amount').value)}; try { await updateDoc(doc(db, investmentsRef.path, id), data); closeModal('edit-investment-modal'); } catch(err) { console.error("Error updating investment:",err); } }
+        async function handleUpdateInvestment(e){ e.preventDefault(); const id=document.getElementById('edit-investment-id').value; const data={description:document.getElementById('edit-investment-description').value,amount:parseFloat(document.getElementById('edit-investment-amount').value)}; await updateFirestoreDoc('investments', id, data); closeModal('edit-investment-modal'); }
 
-        async function handleDeleteDebt(e){ const id=e.target.dataset.debtId; try { await deleteDoc(doc(db, debtsRef.path, id)); } catch(err) { console.error("Error deleting debt:",err); } }
+        async function handleDeleteDebt(e){ await deleteFirestoreDoc('debts', e.target.dataset.debtId); }
         function handleEditDebt(e){ const id=e.target.dataset.debtId; const d=debts.find(item=>item.id===id); if(d){document.getElementById('edit-debt-id').value=d.id; document.getElementById('edit-debt-description').value=d.description; document.getElementById('edit-debt-amount').value=d.amount;} openModal('edit-debt-modal');}
-        async function handleUpdateDebt(e){ e.preventDefault(); const id=document.getElementById('edit-debt-id').value; const data={description:document.getElementById('edit-debt-description').value,amount:parseFloat(document.getElementById('edit-debt-amount').value)}; try { await updateDoc(doc(db, debtsRef.path, id), data); closeModal('edit-debt-modal'); } catch(err) { console.error("Error updating debt:",err); } }
+        async function handleUpdateDebt(e){ e.preventDefault(); const id=document.getElementById('edit-debt-id').value; const data={description:document.getElementById('edit-debt-description').value,amount:parseFloat(document.getElementById('edit-debt-amount').value)}; await updateFirestoreDoc('debts', id, data); closeModal('edit-debt-modal'); }
         
-        async function handleDeleteChecking(e){ const id = e.target.dataset.checkingId; try { await deleteDoc(doc(db, checkingRef.path, id)); } catch(err) { console.error("Error deleting checking entry:", err); } }
+        async function handleDeleteChecking(e){ await deleteFirestoreDoc('checking', e.target.dataset.checkingId); }
         function handleEditChecking(e){ const id=e.target.dataset.checkingId; const c=checking.find(item=>item.id===id); if(c){document.getElementById('edit-checking-id').value=c.id; document.getElementById('edit-checking-name').value=c.name; document.getElementById('edit-checking-amount').value=c.amount;} openModal('edit-checking-modal'); }
-        async function handleUpdateChecking(e){ e.preventDefault(); const id=document.getElementById('edit-checking-id').value; const data={name:document.getElementById('edit-checking-name').value,amount:parseFloat(document.getElementById('edit-checking-amount').value)}; try { await updateDoc(doc(db, checkingRef.path, id), data); closeModal('edit-checking-modal'); } catch(err) { console.error("Error updating checking entry:", err); } }
+        async function handleUpdateChecking(e){ e.preventDefault(); const id=document.getElementById('edit-checking-id').value; const data={name:document.getElementById('edit-checking-name').value,amount:parseFloat(document.getElementById('edit-checking-amount').value)}; await updateFirestoreDoc('checking', id, data); closeModal('edit-checking-modal'); }
 
         // --- Modals & Event Listeners ---
         function openModal(modalId) { const modal = allModals[modalId]; modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'),10);}
         function closeModal(modalId) { const modal = allModals[modalId]; modal.classList.add('opacity-0'); setTimeout(()=>modal.classList.add('hidden'),300);}
+        function showErrorModal(message) { document.getElementById('error-message').textContent = message; openModal('error-modal'); }
         function handleSort(e) { const k=e.currentTarget.dataset.sort; if(sortState.key===k)sortState.direction=sortState.direction==='asc'?'desc':'asc';else{sortState.key=k;sortState.direction='asc';} renderDashboard();}
         
         // --- Import / Export ---
         function handleExportData() {
             if(!auth || !auth.currentUser) {
-                openModal('error-modal');
-                document.getElementById('error-message').textContent = 'Please connect to the database before exporting data.';
+                showErrorModal('Please log in before exporting data.');
                 return;
             }
             const dataToExport = {
                 recurringBillTemplates: recurringBillTemplates.map(t => ({...t})),
                 upcomingBills: upcomingBills.map(b => ({...b})), paidBillsHistory: paidBillsHistory.map(p => ({...p})), incomeHistory: incomeHistory.map(i => ({...i})), assets: assets.map(a => ({...a})), savings: savings.map(s => ({...s})), investments: investments.map(i => ({...i})), debts: debts.map(d => ({...d})), checking: checking.map(c => ({...c})),
             };
-            Object.keys(dataToExport).forEach(key => { if (key !== 'recurringBillTemplates') { dataToExport[key].forEach(item => delete item.id); } });
+            Object.keys(dataToExport).forEach(key => { dataToExport[key].forEach(item => delete item.id); });
             const dataStr = JSON.stringify(dataToExport, null, 2);
             const dataBlob = new Blob([dataStr], {type: "application/json"});
             const url = URL.createObjectURL(dataBlob);
@@ -470,8 +560,7 @@
                 openModal('import-confirm-modal');
             } else {
                 fileToImport = null;
-                document.getElementById('error-message').textContent = 'Please select a valid .json backup file.';
-                openModal('error-modal');
+                showErrorModal('Please select a valid .json backup file.');
             }
             importFileInput.value = '';
         }
@@ -488,9 +577,9 @@
                 loadingOverlay.querySelector('p').textContent = "Importing data...";
 
                 try {
-                    const collections = [upcomingBillsRef, paidBillsHistoryRef, recurringTemplatesRef, incomeRef, assetsRef, savingsRef, investmentsRef, debtsRef, checkingRef];
-                    for (const ref of collections) {
-                        const snapshot = await getDocs(ref);
+                    const collectionNames = ['upcoming_bills', 'paid_bills_history', 'recurring_templates', 'income', 'assets', 'savings', 'investments', 'debts', 'checking'];
+                    for (const name of collectionNames) {
+                        const snapshot = await getDocs(collection(db, `users/${userId}/${name}`));
                         const deleteBatch = writeBatch(db);
                         snapshot.docs.forEach(d => deleteBatch.delete(d.ref));
                         await deleteBatch.commit();
@@ -502,7 +591,7 @@
                         for (const template of data.recurringBillTemplates) {
                             const oldId = template.id;
                             delete template.id;
-                            const newDocRef = doc(recurringTemplatesRef);
+                            const newDocRef = doc(collection(db, `users/${userId}/recurring_templates`));
                             importBatch.set(newDocRef, template);
                             templateIdMap[oldId] = newDocRef.id;
                         }
@@ -510,11 +599,10 @@
                     await importBatch.commit();
 
                     const finalBatch = writeBatch(db);
-                    const dataEntries = [
-                        {ref: upcomingBillsRef, items: data.upcomingBills}, {ref: paidBillsHistoryRef, items: data.paidBillsHistory}, {ref: incomeRef, items: data.incomeHistory}, {ref: assetsRef, items: data.assets}, {ref: savingsRef, items: data.savings}, {ref: investmentsRef, items: data.investments}, {ref: debtsRef, items: data.debts}, {ref: checkingRef, items: data.checking}
-                    ];
-                    for (const entry of dataEntries) {
-                        if(entry.items) { entry.items.forEach(item => { if(item.recurringTemplateId && templateIdMap[item.recurringTemplateId]) { item.recurringTemplateId = templateIdMap[item.recurringTemplateId]; } finalBatch.set(doc(entry.ref), item); }); }
+                    const dataMap = { upcoming_bills: data.upcomingBills, paid_bills_history: data.paidBillsHistory, income: data.incomeHistory, assets: data.assets, savings: data.savings, investments: data.investments, debts: data.debts, checking: data.checking };
+                    
+                    for (const [name, items] of Object.entries(dataMap)) {
+                        if(items) { items.forEach(item => { if(item.recurringTemplateId && templateIdMap[item.recurringTemplateId]) { item.recurringTemplateId = templateIdMap[item.recurringTemplateId]; } finalBatch.set(doc(collection(db, `users/${userId}/${name}`)), item); }); }
                     }
                     await finalBatch.commit();
                     document.getElementById('import-status').textContent = "Import successful!";
@@ -569,7 +657,7 @@
             cancelImportBtn.addEventListener('click', () => closeModal('import-confirm-modal'));
             confirmImportBtn.addEventListener('click', processImport);
             
-            Object.values(allModals).forEach(modal => modal.addEventListener('click', e => { if(e.target === modal) closeModal(modal.id);}));
+            Object.values(allModals).forEach(modal => modal.addEventListener('click', e => { if(e.target === modal && modal.id !== 'login-modal') closeModal(modal.id);}));
 
             addBillForm.addEventListener('submit',handleAddBill);
             editBillForm.addEventListener('submit',handleUpdateBill);
@@ -590,66 +678,103 @@
             
             prevMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar();});
             nextMonthBtn.addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar();});
+
+            // Auth listeners
+            googleSigninBtn.addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()).catch(err => { console.error("Google Sign-In Error", err); showErrorModal("Could not sign in with Google."); }));
+            anonSigninBtn.addEventListener('click', () => signInAnonymously(auth).catch(err => { console.error("Anonymous Sign-In Error", err); showErrorModal("Could not sign in anonymously."); }));
+            signOutBtn.addEventListener('click', () => signOut(auth));
+            userProfileBtn.addEventListener('click', () => userDropdown.classList.toggle('show'));
+            window.addEventListener('click', (e) => { if (!userProfile.contains(e.target)) { userDropdown.classList.remove('show'); } });
         }
         
+        function clearAllData() {
+            unsubscribeListeners.forEach(unsub => unsub());
+            unsubscribeListeners = [];
+            upcomingBills = []; paidBillsHistory = []; recurringBillTemplates = []; incomeHistory = []; savings = []; investments = []; debts = []; assets = []; checking = [];
+        }
+
         // --- App Initialization ---
         async function initializeFirebase(apiKey) {
-            const firebaseConfig = {
-              apiKey: apiKey,
-              authDomain: "bills-fa2ff.firebaseapp.com",
-              projectId: "bills-fa2ff",
-              storageBucket: "bills-fa2ff.appspot.com",
-              messagingSenderId: "755394451867",
-              appId: "1:755394451867:web:fd9553426e87542207a93e",
-              measurementId: "G-5RNYN6CFRJ"
-            };
-            
-            const app = initializeApp(firebaseConfig); 
-            db = getFirestore(app); 
-            auth = getAuth(app);
-            
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    userId = user.uid;
-                    userIdDisplay.textContent=`ID: ${userId.substring(0,12)}...`; 
-                    userIdDisplay.title=`User ID: ${userId}`;
-                    
-                    const collectionsPaths = {
-                        upcomingBillsRef: `users/${userId}/upcoming_bills`, paidBillsHistoryRef: `users/${userId}/paid_bills_history`, recurringTemplatesRef: `users/${userId}/recurring_templates`, incomeRef: `users/${userId}/income`, assetsRef: `users/${userId}/assets`, savingsRef: `users/${userId}/savings`, investmentsRef: `users/${userId}/investments`, debtsRef: `users/${userId}/debts`, checkingRef: `users/${userId}/checking`
-                    };
+            try {
+                const firebaseConfig = {
+                  apiKey: apiKey,
+                  authDomain: "bills-fa2ff.firebaseapp.com",
+                  projectId: "bills-fa2ff",
+                  storageBucket: "bills-fa2ff.appspot.com",
+                  messagingSenderId: "755394451867",
+                  appId: "1:755394451867:web:fd9553426e87542207a93e",
+                  measurementId: "G-5RNYN6CFRJ"
+                };
+                
+                const app = initializeApp(firebaseConfig); 
+                db = getFirestore(app); 
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, user => {
+                    clearAllData();
+                    if (user) {
+                        userId = user.uid;
+                        
+                        // Update UI for logged-in user
+                        if (user.isAnonymous) {
+                            userNameEl.textContent = "Anonymous";
+                            userIdDisplay.textContent = `ID: ${userId.substring(0,12)}...`;
+                            userIdDisplay.title = `Anonymous User ID: ${userId}`;
+                        } else {
+                            userNameEl.textContent = user.displayName || "User";
+                            userIdDisplay.textContent = user.email;
+                            userIdDisplay.title = `User ID: ${userId}`;
+                        }
+                        userProfile.classList.remove('hidden');
+                        
+                        // Setup Firestore listeners
+                        const collectionsToWatch = {
+                            upcoming_bills: (data) => { upcomingBills = data; if(activeScreen==='dashboard-screen')renderDashboard(); if(activeScreen==='calendar-screen')renderCalendar(); },
+                            paid_bills_history: (data) => { paidBillsHistory = data; if(activeScreen==='dashboard-screen')renderDashboard(); if(activeScreen==='calendar-screen')renderCalendar(); if(activeScreen==='paid-bills-screen')renderFullPaidHistoryPage(); },
+                            recurring_templates: (data) => { recurringBillTemplates = data; if(activeScreen==='recurring-bills-screen')renderRecurringBillsPage(); },
+                            income: (data) => { incomeHistory = data; if(activeScreen === 'income-screen') renderIncomePage(); if(activeScreen === 'dashboard-screen') renderDashboard(); if(activeScreen==='calendar-screen')renderCalendar(); },
+                            assets: (data) => { assets = data; if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'assets-screen') renderAssetsPage(); },
+                            savings: (data) => { savings = data; if(activeScreen==='dashboard-screen')renderDashboard(); if(activeScreen === 'savings-screen') renderSavingsPage(); },
+                            investments: (data) => { investments = data; if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'investments-screen') renderInvestmentsPage(); },
+                            debts: (data) => { debts = data; if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'debts-screen') renderDebtsPage(); },
+                            checking: (data) => { checking = data; if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'checking-screen') renderCheckingPage(); }
+                        };
 
-                    upcomingBillsRef = collection(db, collectionsPaths.upcomingBillsRef);
-                    paidBillsHistoryRef = collection(db, collectionsPaths.paidBillsHistoryRef);
-                    recurringTemplatesRef = collection(db, collectionsPaths.recurringTemplatesRef);
-                    incomeRef = collection(db, collectionsPaths.incomeRef);
-                    assetsRef = collection(db, collectionsPaths.assetsRef);
-                    savingsRef = collection(db, collectionsPaths.savingsRef);
-                    investmentsRef = collection(db, collectionsPaths.investmentsRef);
-                    debtsRef = collection(db, collectionsPaths.debtsRef);
-                    checkingRef = collection(db, collectionsPaths.checkingRef);
-                    
-                    onSnapshot(upcomingBillsRef,s=>{upcomingBills=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='dashboard-screen')renderDashboard();if(activeScreen==='calendar-screen')renderCalendar();});
-                    onSnapshot(paidBillsHistoryRef,s=>{paidBillsHistory=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='dashboard-screen')renderDashboard();if(activeScreen==='calendar-screen')renderCalendar();if(activeScreen==='paid-bills-screen')renderFullPaidHistoryPage();});
-                    onSnapshot(recurringTemplatesRef,s=>{recurringBillTemplates=s.docs.map(d=>({id:d.id,...d.data()}));if(activeScreen==='recurring-bills-screen')renderRecurringBillsPage();});
-                    onSnapshot(incomeRef, s => { incomeHistory = s.docs.map(d => ({ id: d.id, ...d.data() })); if(activeScreen === 'income-screen') renderIncomePage(); if(activeScreen === 'dashboard-screen') renderDashboard(); if(activeScreen==='calendar-screen')renderCalendar(); });
-                    onSnapshot(assetsRef, s => { assets = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'assets-screen') renderAssetsPage(); });
-                    onSnapshot(savingsRef, s => { savings = s.docs.map(d => ({ id: d.id, ...d.data() })); if(activeScreen==='dashboard-screen')renderDashboard(); if(activeScreen === 'savings-screen') renderSavingsPage(); });
-                    onSnapshot(investmentsRef, s => { investments = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'investments-screen') renderInvestmentsPage(); });
-                    onSnapshot(debtsRef, s => { debts = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'debts-screen') renderDebtsPage(); });
-                    onSnapshot(checkingRef, s => { checking = s.docs.map(d => ({ id: d.id, ...d.data()})); if (activeScreen === 'dashboard-screen') renderDashboard(); if (activeScreen === 'checking-screen') renderCheckingPage(); });
+                        for (const [name, callback] of Object.entries(collectionsToWatch)) {
+                            const unsub = onSnapshot(collection(db, `users/${userId}/${name}`), snapshot => {
+                                const data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                                callback(data);
+                            }, err => {
+                                console.error(`Snapshot error on ${name}:`, err);
+                                showErrorModal(`Error fetching data for ${name}. Please check console.`);
+                            });
+                            unsubscribeListeners.push(unsub);
+                        }
 
-                    loadingOverlay.classList.add('hidden');
-                    showScreen('dashboard-screen');
-
-                } else {
-                    signInAnonymously(auth).catch(error => {
-                        console.error("Anonymous auth failed:", error);
+                        // Show the main app
                         loadingOverlay.classList.add('hidden');
-                        document.getElementById('error-message').textContent = 'Authentication Failed. Please check your network and API Key.';
-                        openModal('error-modal');
-                    });
-                }
-            });
+                        loginModal.classList.add('hidden');
+                        mainContent.classList.remove('hidden');
+                        showScreen('dashboard-screen');
+
+                    } else {
+                        // User is signed out
+                        userId = null;
+                        userProfile.classList.add('hidden');
+                        mainContent.classList.add('hidden');
+                        apiKeyStep.classList.add('hidden');
+                        authStep.classList.remove('hidden');
+                        loginModal.classList.remove('hidden');
+                        loadingOverlay.classList.add('hidden');
+                    }
+                });
+                
+                return true; // Indicate success
+
+            } catch (err) {
+                console.error("Firebase Initialization Failed", err);
+                throw err; // Propagate error
+            }
         }
 
         function startApp() {
@@ -659,34 +784,36 @@
 
             if (savedApiKey) {
                 loadingOverlay.classList.remove('hidden');
-                initializeFirebase(savedApiKey).catch(err => {
-                    console.error("Firebase initialization failed with saved key:", err);
+                initializeFirebase(savedApiKey).catch(() => {
                     localStorage.removeItem('firebaseApiKey');
                     loadingOverlay.classList.add('hidden');
-                    document.getElementById('error-message').textContent = 'Connection failed with your saved API Key. Please enter it again.';
-                    openModal('error-modal');
-                    openModal('api-key-modal');
+                    showErrorModal('Connection failed with your saved API Key. Please enter it again.');
+                    apiKeyStep.classList.remove('hidden');
+                    authStep.classList.add('hidden');
+                    loginModal.classList.remove('hidden');
                 });
             } else {
-                openModal('api-key-modal');
+                apiKeyStep.classList.remove('hidden');
+                authStep.classList.add('hidden');
+                loginModal.classList.remove('hidden');
             }
 
             apiKeyForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const enteredKey = firebaseApiKeyInput.value.trim();
                 if (enteredKey) {
-                    closeModal('api-key-modal');
                     loadingOverlay.classList.remove('hidden');
-                    initializeFirebase(enteredKey).then(() => {
-                        localStorage.setItem('firebaseApiKey', enteredKey);
-                    }).catch(err => {
-                        console.error("Firebase initialization failed with new key:", err);
+                    initializeFirebase(enteredKey).then((success) => {
+                        if (success) {
+                            localStorage.setItem('firebaseApiKey', enteredKey);
+                            apiKeyStep.classList.add('hidden');
+                            authStep.classList.remove('hidden');
+                        }
+                    }).catch(() => {
                         localStorage.removeItem('firebaseApiKey');
                         loadingOverlay.classList.add('hidden');
                         firebaseApiKeyInput.value = '';
-                        document.getElementById('error-message').textContent = 'Connection failed. Please double-check your API key.';
-                        openModal('error-modal');
-                        openModal('api-key-modal');
+                        showErrorModal('Connection failed. Please double-check your API key and project setup.');
                     });
                 }
             });
