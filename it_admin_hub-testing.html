@@ -147,7 +147,7 @@
             background-color: var(--color-card-bg);
             backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
             border-radius: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4みをpx 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, background-color 0.5s ease, border-color 0.5s ease, opacity 0.3s ease;
             border: 1px solid var(--color-card-border);
             display: flex; flex-direction: column;
@@ -622,7 +622,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.1</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -776,47 +776,65 @@
         const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
         
         // --- Prompt Engineering Constants ---
-        const linkVerificationAndGenerationMandate = `
-* **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
-    1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
-    2.  **Identify Search Topics:** From the list of helpful resources you just generated, identify the specific, core topics that need a URL. For example, from "Official Kubernetes Documentation", the topic is "Kubernetes official documentation".
-    3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
-    4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
-    5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
-            
-        const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
-    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
-    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
-    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
-    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
-        
-        const powerCLIStandard = `
-* **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
-    * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
-    * **Use Correct Cmdlets and Properties:** Always use current, official PowerCLI cmdlets. Critically, verify the property names from the objects returned by cmdlets (e.g., the memory size for a VM from \`Get-VM\` is \`MemoryGB\`, not \`Memory\`).
-    * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
-    * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
+        // ** UPDATED PROMPT **
+        const aiReviewPrompt = `Persona: You are a Lead Technical Editor and a Senior IT Systems Architect at a major technology firm. Your role is final quality assurance. You are meticulous, authoritative, and possess an exceptional command of technical detail and professional documentation standards.
 
-        const aiReviewPrompt = `
-**Persona:** You are an expert-level technical editor and a senior IT systems architect with decades of experience. You are meticulous, detail-oriented, and an authority on creating professional technical documentation.
-**Objective:** Your task is to review, refine, and significantly improve the IT administration guide provided below. The goal is to elevate it from a good draft to an exceptional, professional-grade technical document that is ready for publication.
-**Instructions:**
-Analyze the provided guide markdown. Your task is to rewrite the entire document to be more accurate, clearer, and more comprehensive. Implement the following improvements directly into the text:
-1. **Enhance Technical Accuracy:** Scrutinize every technical detail. Verify PowerShell/CLI cmdlets, parameter names, object properties (e.g., check if it's \`MemoryGB\` vs. \`Memory\`), API endpoints, and procedural steps. Correct any inaccuracies, no matter how subtle.
-2. **Increase Clarity and Readability:** Rephrase complex or ambiguous sentences for better clarity. Ensure there is a logical, smooth flow between all sections. Where appropriate, add analogies or simpler explanations for difficult concepts before diving into technical specifics.
-3. **Add Depth and Completeness:** Identify any sections that are too superficial or brief. Expand upon them with more detailed explanations, additional practical examples, and more granular step-by-step instructions. The "Key Concepts - In-Depth Application & Management" section is especially important and should be as robust as possible. If any of the 12 core guide sections are missing or weak, you must create or substantially bolster them.
-4. **Enforce Best Practices:** Ensure all recommendations align with modern industry best practices for security, performance, automation, and maintainability. Add warnings, "Pro Tip" callouts, or notes on potential trade-offs where beneficial.
-5. **Improve Practicality:** Enhance all examples to be more useful in real-world, production scenarios. Add context to explain *why* an administrator would perform a certain task in a certain way, beyond just the "how."
-6. **Ensure Consistency:** Maintain consistent terminology and formatting throughout the entire document.
-Your final output must be the **complete, rewritten, and improved guide** in markdown format. Do not simply list your suggestions; you must implement them directly into the text. The core structure, including the '###' headers for the 12 main sections, must be preserved.
----
-**[Insert Complete Markdown of Generated Guide Here]**
----
-`;
+Objective: Your sole mission is to audit the DRAFT GUIDE provided below against its ORIGINAL BLUEPRINT. You will then rewrite and enhance the draft to produce a final, publishable-grade technical document. You must directly implement all corrections and improvements into the text.
+
+//-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (FOR CONTEXT) --//
+(User: Paste the completed "GUIDE BLUEPRINT & SCOPE" section from the first prompt here. This gives the editor AI the ground truth for what the guide was supposed to contain.)
+
+Topic Technology: {topic_technology}
+
+Specific Goal: {specific_goal}
+
+Target Audience: {target_audience}
+
+IN-SCOPE (Must be included):
+{in_scope}
+
+OUT-OF-SCOPE (Must be excluded):
+{out_of_scope}
+
+//-- INPUT 2: DRAFT GUIDE MARKDOWN --//
+(User: Paste the complete markdown of the guide generated by the first AI here.)
+
+Markdown
+[Insert Complete Markdown of Generated Guide Here]
+
+//-- SYSTEMATIC REVIEW PROTOCOL --//
+(AI: Execute the following review protocol. Your output will be the rewritten guide itself, not a list of your actions.)
+
+Blueprint Adherence Audit: First, scrutinize the draft against the ORIGINAL BLUEPRINT.
+- Remove any information that violates the OUT-OF-SCOPE rules.
+- Ensure all IN-SCOPE topics are present and are the primary focus.
+- Verify the content's depth and tone are appropriate for the defined TARGET_AUDIENCE.
+
+Technical Accuracy Validation: Scrutinize every technical statement.
+- Verify and correct all PowerShell/CLI cmdlets, parameters, and object properties (e.g., confirm Get-VM returns MemoryGB, not Memory or TotalMemory).
+- Validate API endpoints, request bodies, and expected response codes.
+- Fact-check procedural steps against current product interfaces and documentation patterns.
+
+Depth and Completeness Enhancement:
+- Identify and expand any superficial sections. The "Key Concepts - In-Depth Application & Management" section is critical; ensure it is exceptionally detailed.
+- Add more granular steps, code examples, and practical context.
+- Elaborate on the "why" behind a step, not just the "how."
+
+Clarity and Flow Refinement:
+- Rephrase awkward or ambiguous sentences to be direct and clear.
+- Add analogies or simpler high-level explanations for dense topics before the technical deep-dive.
+- Ensure a logical and smooth transition between all sections.
+
+Best Practices Enforcement:
+- Integrate modern industry best practices for security, performance, and automation.
+- Where appropriate, embed explicit callouts like > **Pro Tip:** ... or > **Security Warning:** ... to highlight critical information.
+
+Final Polish:
+- Enforce consistent terminology (e.g., always "Conditional Access policy," not "CA rule").
+- Ensure all formatting is clean and consistent, preserving the ### header structure for the 12 core sections.
+
+Final Output Instruction
+Return ONLY the complete, final, rewritten guide in a single markdown block. Do not provide a preamble or a list of changes. Your response should begin directly with ### 1. Introduction.`;
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
@@ -1640,8 +1658,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
                 
                 const data = parseJsonWithCorrections(jsonText);
 
-                // FIX: Ensure 'data' is an array before attempting to sort it.
-                // The 'TypeError: data.sort is not a function' occurs here if 'data' is not an array.
                 if (!Array.isArray(data)) {
                     console.error("API response for category topics is not an array:", data);
                     throw new Error("Invalid API response format: Expected an array of topics for the category.");
@@ -1661,7 +1677,6 @@ Your final output must be the **complete, rewritten, and improved guide** in mar
         
         function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
             const data = allThemeData[categoryId] || [];
-            // MODIFICATION: Sticky topics are now associated with the final category ID
             const stickies = stickyTopics[categoryId] || [];
             
             if (!container) return;
@@ -2163,13 +2178,48 @@ Return only these sections in markdown format. Do not include any other sections
         
         function getAppPrompts() {
             const prompts = {};
-            prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { hierarchyContext: "{hierarchyContext}" });
-            prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
-            prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
-            prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
-            prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 16). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
-            prompts["AI Guide Refinement Prompt"] = aiReviewPrompt;
+            // This function now just returns the master prompts. The getEnhancedPrompt function handles the logic.
+            prompts["Generate Detailed Guide (Generic Task)"] = `You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Your mission is to produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below.
+
+Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management.
+
+//-- GUIDE BLUEPRINT & SCOPE --//
+(User: Fill out this section to define the guide's content and boundaries.)
+
+1. Topic Technology: {topic_technology}
+2. Specific Goal: {specific_goal}
+3. Target Audience: {target_audience}
+4. IN-SCOPE (Must be included):
+{in_scope}
+5. OUT-OF-SCOPE (Must be excluded):
+{out_of_scope}
+
+//-- CRITICAL STRUCTURE & FORMATTING RULES --//
+(AI: Adhere strictly to the following structure and quality standards.)
+
+A. Markdown Formatting:
+You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction.
+
+B. Required Guide Content (Generate all 12 sections):
+... [Content from Generate Detailed Guide (Generic Task).txt] ...
+
+//-- MANDATORY QUALITY STANDARDS --//
+... [Content from Generate Detailed Guide (Generic Task).txt] ...
+`;
+            prompts["Refine Existing Guide"] = `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality.
+
+Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text.
+
+//-- INPUT 1: ORIGINAL TEXT --//
+{original_text}
+
+//-- INPUT 2: USER'S REVISION DIRECTIVE --//
+{refinement_request}
+
+//-- GUIDING PRINCIPLES FOR REVISION --//
+... [Content from Refine Existing Guide.txt] ...
+`;
+            prompts["AI Guide Refinement Prompt"] = aiReviewPrompt; // This remains for the final review step
             
             return prompts;
         }
@@ -2210,89 +2260,138 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('promptsModal');
         }
 
+        // ** UPDATED FUNCTION **
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
             
-            let hierarchyContextString = '';
-            if (context.hierarchyContext) {
-                const path = context.hierarchyContext;
-                hierarchyContextString = `
-- **Main Category:** "${path[0]?.title || 'N/A'}"
-- **Sub-category:** "${path[1]?.title || 'N/A'}"
-- **Final Category:** "${path[2]?.title || 'N/A'}"
-`;
-            }
-
-
+            // This is the prompt for refining existing text
             if (originalText) {
-                // This is the prompt for refining existing text
-                return `You are an expert senior IT administrator AI. A user has provided the following content and a request to refine it. Your task is to rewrite the entire text to incorporate the user's request.
-**ORIGINAL TEXT:**
----
-${originalText}
----
-**USER'S REFINEMENT REQUEST:**
-"${task}"
+                return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality.
 
-**Instructions for rewriting:**
-1.  **Integrate:** Seamlessly integrate the user's request into the text.
-2.  **Quality Standards:** The rewritten text must be clear, accurate, and practical.
-3.  **Format:** Maintain the original markdown format unless the refinement request implies a structural change.
-Return only the new, complete, and rewritten markdown text.`;
+Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text.
+
+//-- INPUT 1: ORIGINAL TEXT --//
+(User: Paste the original markdown text you want to modify here.)
+
+Markdown
+
+${originalText}
+//-- INPUT 2: USER'S REVISION DIRECTIVE --//
+(User: Clearly state your refinement request here. Be as simple or as detailed as you need to be.)
+
+Plaintext
+
+${task}
+//-- GUIDING PRINCIPLES FOR REVISION --//
+(AI: You must adhere to these principles while performing the rewrite.)
+
+Interpret Intent, Not Just Words: Your primary goal is to understand the objective behind the user's directive. If the user asks to "make it simpler," you must analyze the content and simplify terminology, rephrase complex sentences, and perhaps add analogies—whatever is needed to achieve the goal of simplicity.
+
+Seamless Integration: The new or modified content must flow naturally with the original text. The final output should feel like a single, cohesive piece, not like a document with a section bolted on. Ensure the tone, style, and terminology are consistent throughout.
+
+Maintain Structural Integrity: Preserve the original markdown formatting (headers, lists, etc.) unless the revision directive explicitly or logically requires a structural change (e.g., "turn this list into a table," "add a new major section").
+
+Uphold Technical Accuracy: Ensure that any changes or additions are technically accurate, practical, and align with modern best practices. Do not introduce errors while fulfilling the user's request.
+
+Final Output Instruction
+Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
             }
 
-            // This is the prompt for generating a new guide, with the user's requested changes.
-            return `You are an expert senior IT administrator and technical writer AI. Your primary goal is to generate a comprehensive, in-depth, and practical **reference guide** for the topic below.
-The main objective is not just to explain a task, but to create an exhaustive guide on its **underlying key concepts**. Prioritize depth, nuance, and multiple practical implementation methods for each concept. The user must walk away with a deep, applicable understanding of each component technology.
-**GUIDE CONTEXT:**
-${hierarchyContextString}
-- **Specific Task:** "${task}"
-**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
-**REQUIRED GUIDE STRUCTURE & CONTENT:**
-### 1. Introduction
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this technology and its underlying concepts are important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of the key concepts you will master and the various ways you will learn to manage them.
-### 2. Architectural Overview (If Applicable)
-    * For complex topics, explain the high-level architecture.
-    * Describe the main components and how they interact. Use simple analogies if possible.
-### 3. Key Concepts & Terminology (Definitions)
-    * **List and Define:** List and clearly define the fundamental principles, terminology, and acronyms the user MUST understand. This section is for definitions only; the deep-dive application will follow in Section 5.
-### 4. Prerequisites
-    * **Permissions:** Detail the specific administrative roles or granular permissions required for the tasks and concepts that will be explored.
-    * **Software/Licensing:** List any necessary software, specific versions, and licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites.
-### 5. Key Concepts - In-Depth Application & Management
-    * **CRITICAL SECTION:** This is the most important part of the guide. For **each individual concept** listed in Section 3, create a detailed, self-contained mini-guide.
-    * **Multiple Implementation Methods:** For each concept, you MUST provide detailed instructions for managing it through as many of the following methods as are relevant:
-        * **GUI-Based Management:** Provide granular, step-by-step instructions with exact click-by-click navigation.
-        * **PowerShell/CLI Management:** Provide complete, practical, and runnable code snippets and commands.
-        * **API/SDK Usage (If applicable):** Explain how to interact with the concept programmatically, providing examples using relevant APIs (e.g., Microsoft Graph, REST APIs) or SDKs.
-        * **Third-Party Tool Integration (If applicable):** Mention and briefly describe how popular third-party applications are used to manage or interact with this concept.
-    * **Explain the "Why":** For each instruction set, explain *why* an administrator would choose that method and what the trade-offs are.
-### 6. Verification and Validation
-    * Provide specific commands, API calls, or GUI procedures to confirm that each key concept has been configured correctly.
-    * Describe what a successful output or system state looks like for each concept.
-### 7. Best Practices
-    * Offer expert advice on the most effective, secure, and efficient ways to implement and manage each of the key concepts. Organize the advice by concept.
-### 8. Automation Techniques for Key Concepts
-    * **Concept-Specific Automation:** For each concept from Section 3, describe relevant automation opportunities.
-    * **Scripting Examples:** Provide complete, practical script examples (e.g., PowerShell, PowerCLI, bash) or explain how to use APIs to automate tasks related to that **specific concept**.
-### 9. Security Considerations
-    * **Concept-Specific Hardening:** For each key concept, provide specific steps to harden its configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks associated with each concept.
-    * **Auditing & Logging:** For each concept, recommend what specific events to audit and how to configure logging.
-### 10. Advanced Use Cases & Scenarios
-    * Describe 2-3 advanced scenarios that show how to **combine or extend the key concepts** in sophisticated ways to solve complex problems.
-### 11. Troubleshooting
-    * Provide a table of common problems, organized by **Key Concept**. For each problem, list the likely causes, and provide step-by-step solutions that may involve the GUI, CLI, or API.
-### 12. Helpful Resources
-    * Include a final section with a bulleted list of high-quality, relevant links to official documentation or authoritative articles for the concepts discussed.
-**MANDATORY QUALITY STANDARDS:**
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
-Return only the complete markdown guide, ensuring each main section has a '###' header.`;
+            // This is the prompt for generating a new guide
+            const hierarchy = context.hierarchyContext || [];
+            const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
+            const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${task}.`;
+            const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
+            const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
+            const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
+
+            return `You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Your mission is to produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below.
+
+Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management.
+
+//-- GUIDE BLUEPRINT & SCOPE --//
+1. Topic Technology: ${topicTechnology}
+2. Specific Goal: ${specificGoal}
+3. Target Audience: ${targetAudience}
+4. IN-SCOPE (Must be included):
+${inScope}
+5. OUT-OF-SCOPE (Must be excluded):
+${outOfScope}
+
+//-- CRITICAL STRUCTURE & FORMATTING RULES --//
+A. Markdown Formatting:
+You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction.
+
+B. Required Guide Content (Generate all 12 sections):
+
+1. Introduction
+Overview: Briefly explain the technology/task defined in the blueprint.
+Importance: Describe why it is critical in modern IT environments.
+What You'll Learn: Bulleted list of the key concepts and management methods this guide will cover.
+
+2. Architectural Overview
+Explain the high-level architecture of the technology.
+Describe the main components and how they interact.
+
+3. Key Concepts & Terminology
+List and clearly define the fundamental principles, terms, and acronyms the user MUST understand. Definitions only; application comes later.
+
+4. Prerequisites
+Permissions: Detail the specific administrative roles or granular permissions required.
+Software/Licensing: List necessary software, versions, and licensing.
+System Requirements: Specify hardware or network prerequisites.
+
+5. Key Concepts - In-Depth Application & Management
+CRITICAL SECTION: This is the core of the guide. For each individual concept from Section 3, create a detailed mini-guide.
+Multiple Implementation Methods: For each concept, provide detailed instructions for managing it via all relevant methods:
+- GUI-Based Management: Step-by-step instructions with exact navigation.
+- PowerShell/CLI Management: Complete, practical, and runnable code snippets.
+- API/SDK Usage: Explain programmatic interaction with examples (e.g., Microsoft Graph).
+- Third-Party Tool Integration: Briefly describe integration with popular tools.
+Explain the "Why": For each method, explain its use case and trade-offs.
+
+6. Verification and Validation
+Provide specific commands, API calls, or GUI procedures to confirm correct configuration for each concept.
+Describe what a successful output or system state looks like.
+
+7. Best Practices
+Offer expert advice on the most effective, secure, and efficient ways to implement and manage each key concept.
+
+8. Automation Techniques for Key Concepts
+Concept-Specific Automation: For each concept, describe relevant automation opportunities.
+Scripting Examples: Provide complete, practical scripts (e.g., PowerShell, bash) or API usage patterns to automate tasks for that specific concept.
+
+9. Security Considerations
+Concept-Specific Hardening: Provide specific steps to harden each key concept.
+Common Vulnerabilities: Discuss potential security risks associated with each concept.
+Auditing & Logging: Recommend what specific events to audit and how to configure logging for each concept.
+
+10. Advanced Use Cases & Scenarios
+Describe 2-3 advanced scenarios showing how to combine or extend the key concepts to solve complex problems.
+
+11. Troubleshooting
+Provide a table of common problems, organized by Key Concept. For each problem, list likely causes and step-by-step solutions (GUI, CLI, or API).
+
+12. Helpful Resources
+Bulleted list of high-quality links to official documentation or authoritative articles for the concepts discussed.
+
+//-- MANDATORY QUALITY STANDARDS --//
+1. Helpful Resources Link Generation:
+You must provide valid, working hyperlinks. Use your search tool to find the most authoritative and stable URL for each resource. The final output must contain correctly formatted Markdown links (e.g., * [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)), not placeholders.
+
+2. PowerShell Scripting Standards:
+- Internal Validation: Internally validate scripts for syntax and logic errors.
+- Use Correct Cmdlets & Properties: Use modern cmdlets and verify exact property names (e.g., $_.Id from Get-WinEvent, not $_.EventId).
+- Filter on the Server ("Filter Right"): You MUST use built-in filtering parameters (-Filter, -FilterHashtable) for data retrieval cmdlets. DO NOT pipe a full dataset to Where-Object for initial filtering. This is a critical performance requirement.
+- Comprehensive Error Handling: All logic must be in a try/catch block. Use -ErrorAction Stop on commands that might fail to ensure the catch block is triggered.
+- Self-Contained Code: If a helper function is needed, define it within the script.
+- Clarity: Use clear variable names and comments.
+
+3. PowerCLI Scripting Standards:
+- Assume Connection: Assume Connect-VIServer has already been run.
+- Use Correct Cmdlets & Properties: Verify exact property names (e.g., MemoryGB from Get-VM).
+- Filter Efficiently: Use server-side filtering parameters where possible.
+- Error Handling: All logic must be in a try/catch block with -ErrorAction Stop.
+- Clarity: Use clear variable names and include Disconnect-VIServer -Confirm:$false at the end of scripts.`;
         }
         
         async function handleExploreInDepth(topicId, fullHierarchyPath) {
@@ -2382,8 +2481,23 @@ Return only these sections in markdown format. Do not include any other sections
                 if (!initialGuideMarkdown) throw new Error("Failed to generate the initial guide draft.");
 
                 detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the draft...');
-                const reviewRequestPrompt = aiReviewPrompt.replace('**[Insert Complete Markdown of Generated Guide Here]**', initialGuideMarkdown);
-                
+
+                // Prepare the blueprint for the review prompt
+                const hierarchy = fullHierarchyPath || [];
+                const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
+                const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${topicName}.`;
+                const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
+                const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${topicName}.`;
+                const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
+
+                let reviewRequestPrompt = aiReviewPrompt
+                    .replace('{topic_technology}', topicTechnology)
+                    .replace('{specific_goal}', specificGoal)
+                    .replace('{target_audience}', targetAudience)
+                    .replace('{in_scope}', inScope)
+                    .replace('{out_of_scope}', outOfScope)
+                    .replace('[Insert Complete Markdown of Generated Guide Here]', initialGuideMarkdown);
+
                 let finalCompleteGuideMarkdown = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Final)");
                 finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the final, refined guide.");
@@ -3212,7 +3326,6 @@ Return only these sections in markdown format. Do not include any other sections
                         currentHierarchyPath = currentHierarchyPath.slice(0, index + 1);
                         const parentPath = currentHierarchyPath[currentHierarchyPath.length - 1].path;
                         const parentRef = doc(db, parentPath);
-                        // FIX: Corrected the ternary operator syntax
                         renderCategoryLevel(collection(parentRef, index === 0 ? 'subCategories' : 'finalCategories'));
                     }
                     updateBreadcrumbs();
