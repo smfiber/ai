@@ -200,20 +200,22 @@
         }
 
         .floating-action-button {
-            position: fixed; background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-button-text); width: 56px; height: 56px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            position: fixed;
+            background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+            color: var(--color-button-text);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
-            cursor: pointer; transition: all 0.3s ease; z-index: 50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 50;
         }
-        .floating-action-button:hover { transform: translateY(-3px) scale(1.05); }
-        #new-plan-button { bottom: 2rem; right: 2rem; }
-        #settings-button { bottom: 6.5rem; right: 2rem; }
-        #ai-help-button { bottom: 11rem; right: 2rem; }
-        #theme-changer-button { bottom: 15.5rem; right: 2rem; }
-        #prompts-button { bottom: 20rem; right: 2rem; }
-        #firebase-tools-button { bottom: 24.5rem; right: 2rem; }
-        #real-time-log-button { bottom: 29rem; right: 2rem; } /* NEW */
+        .floating-action-button:hover {
+            transform: translateY(-3px) scale(1.05);
+        }
         #scroll-to-top-button { bottom: 2rem; left: 2rem; }
         
         #settings-panel {
@@ -265,7 +267,7 @@
             background: rgba(0,0,0,0.02);
         }
         .grid-card-selector {
-            position: relative; /* Positioning context for the checkmark */
+            position: relative; 
             background-color: white; border: 1px solid var(--color-card-border);
             border-radius: 8px; padding: 1rem; text-align: center;
             cursor: pointer; transition: all 0.2s ease; font-size: 0.875rem; font-weight: 500;
@@ -281,66 +283,33 @@
 
         /* Indicator Styles */
         .indicator {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 1.25rem;
-            height: 1.25rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            border: 2px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            z-index: 10;
+            position: absolute; top: 0.5rem; right: 0.5rem; width: 1.25rem; height: 1.25rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); z-index: 10;
         }
         .indicator svg { width: 0.75rem; height: 0.75rem; }
-        .viewed-indicator { background-color: #ef4444; /* red-500 */ }
-        .sticky-indicator { background-color: #3b82f6; /* blue-500 */ } /* NEW */
+        .viewed-indicator { background-color: #ef4444; }
+        .sticky-indicator { background-color: #3b82f6; }
 
-        .new-item-highlight {
-            border: 2px solid var(--color-primary);
-            box-shadow: 0 0 10px var(--color-primary);
-        }
+        .new-item-highlight { border: 2px solid var(--color-primary); box-shadow: 0 0 10px var(--color-primary); }
         
         .add-topic-container {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--color-card-border);
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
+            margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-card-border);
+            display: flex; gap: 0.75rem; align-items: center;
         }
         
-        /* Docked Search Gemini Button */
         #search-gemini-button {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1000;
+            position: fixed; top: 1rem; left: 1rem; z-index: 1000;
             background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-button-text);
-            padding: 8px 12px;
-            border-radius: 6px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            color: var(--color-button-text); padding: 8px 12px; border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; font-size: 0.875rem;
+            font-weight: 500; display: flex; align-items: center; gap: 6px;
             transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
-        #search-gemini-button:hover {
-            filter: brightness(1.1);
-            transform: scale(1.05);
-        }
+        #search-gemini-button:hover { filter: brightness(1.1); transform: scale(1.05); }
         
         /* Rules for managing modal layers */
-        body.modal-open .modal {
-            visibility: hidden;
-        }
+        body.modal-open .modal { visibility: hidden; }
         body.inDepthModal-open #inDepthModal,
         body.inDepthDetailedModal-open #inDepthDetailedModal,
         body.searchGeminiModal-open #searchGeminiModal,
@@ -349,8 +318,44 @@
         body.themeGeneratorModal-open #themeGeneratorModal,
         body.apiKeyModal-open #apiKeyModal,
         body.aiLogModal-open #aiLogModal,
-        body.loadingStateModal-open #loadingStateModal {
+        body.loadingStateModal-open #loadingStateModal,
+        body.categoryBrowserModal-open #categoryBrowserModal,
+        body.hierarchyManagementModal-open #hierarchyManagementModal,
+        body.messageModal-open #messageModal,
+        body.confirmationModal-open #confirmationModal {
              visibility: visible;
+        }
+
+        /* NEW: Hierarchy Management Modal Styles */
+        .hierarchy-column {
+            border-right: 1px solid var(--color-card-border);
+            padding-right: 1rem;
+            margin-right: 1rem;
+            min-height: 400px;
+        }
+        .hierarchy-column:last-child {
+            border-right: none;
+            padding-right: 0;
+            margin-right: 0;
+        }
+        .hierarchy-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .hierarchy-item {
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+        .hierarchy-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        .hierarchy-item.selected {
+            background-color: var(--color-primary);
+            color: var(--color-button-text);
+            border-color: var(--color-primary-dark);
         }
         
     </style>
@@ -365,12 +370,12 @@
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-sm font-medium themed-text-muted">Gemini API Key (Required)</label>
-                    <input type="password" id="geminiApiKeyInput" name="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required>
+                    <input type="password" id="geminiApiKeyInput" name="geminiApiKeyInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="Your Gemini API Key" required autocomplete="off">
                 </div>
 
                 <div class="mb-4">
                     <label for="firebaseConfigInput" class="block text-sm font-medium themed-text-muted">Firebase Config Object (Required)</label>
-                    <textarea id="firebaseConfigInput" name="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here."></textarea>
+                    <textarea id="firebaseConfigInput" name="firebaseConfigInput" class="w-full mt-1 px-3 py-2 themed-input border rounded-lg focus:ring-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase config snippet here." autocomplete="off"></textarea>
                      <p class="text-xs themed-text-muted mt-1">Find this in your Firebase project settings. You can paste the entire snippet.</p>
                 </div>
 
@@ -379,7 +384,7 @@
                 
                 <div class="mb-4">
                     <label for="googleClientIdInput" class="block text-sm font-medium themed-text-muted">Google Cloud Client ID</label>
-                    <input type="password" id="googleClientIdInput" name="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation">
+                    <input type="password" id="googleClientIdInput" name="googleClientIdInput" class="w-full mt-1 px-4 py-2 themed-input border rounded-lg focus:ring-2" placeholder="For Google Drive & Image Generation" autocomplete="off">
                 </div>
                 
                 <button type="submit" class="w-full btn-primary mt-6">Save Keys and Start</button>
@@ -503,7 +508,7 @@
         </div>
     </div>
 
-    <!-- NEW: AI Log Modal -->
+    <!-- AI Log Modal -->
     <div id="aiLogModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
@@ -512,6 +517,89 @@
             </div>
             <div id="aiLogModalContent" class="p-6 overflow-y-auto">
                 <!-- AI log entries will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Browser Modal -->
+    <div id="categoryBrowserModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 65;">
+        <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary">Browse Categories</h2>
+                <button id="closeCategoryBrowserModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="categoryBrowserBreadcrumbs" class="p-4 border-b bg-gray-50" style="border-color: var(--color-card-border);"></div>
+            <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto">
+                <!-- Categories will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Hierarchy Management Modal -->
+    <div id="hierarchyManagementModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 modal" style="z-index: 75;">
+        <div class="card w-full max-w-6xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 class="text-2xl font-bold themed-text-primary">Hierarchy Management</h2>
+                <button id="closeHierarchyManagementModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columns for Hierarchy -->
+                <div id="hierarchy-columns-container" class="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Main Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Main Categories</h3>
+                        <div id="main-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-main-category-input" placeholder="New Main Category" class="themed-input w-full p-2 rounded-lg text-sm">
+                            <button id="add-main-category-btn" class="btn-secondary w-full mt-2 text-sm">Add</button>
+                        </div>
+                    </div>
+                    <!-- Sub Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Sub Categories</h3>
+                        <div id="sub-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-sub-category-input" placeholder="New Sub Category" class="themed-input w-full p-2 rounded-lg text-sm" disabled>
+                            <button id="add-sub-category-btn" class="btn-secondary w-full mt-2 text-sm" disabled>Add</button>
+                        </div>
+                    </div>
+                    <!-- Final Category Column -->
+                    <div class="hierarchy-column">
+                        <h3 class="font-bold themed-text-accent mb-2">Final Categories</h3>
+                        <div id="final-category-list" class="hierarchy-list space-y-1"></div>
+                        <div class="mt-2">
+                            <input type="text" id="new-final-category-input" placeholder="New Final Category" class="themed-input w-full p-2 rounded-lg text-sm" disabled>
+                            <button id="add-final-category-btn" class="btn-secondary w-full mt-2 text-sm" disabled>Add</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Editing Form -->
+                <div id="hierarchy-edit-form-container" class="lg:col-span-1 p-4 rounded-lg bg-gray-50">
+                    <h3 class="font-bold themed-text-accent mb-4">Edit Details</h3>
+                    <div id="hierarchy-edit-form" class="hidden space-y-4">
+                        <div>
+                            <label for="edit-title" class="block text-sm font-medium themed-text-muted">Title</label>
+                            <input type="text" id="edit-title" class="themed-input w-full p-2 rounded-lg mt-1">
+                        </div>
+                        <div id="edit-description-container">
+                            <label for="edit-description" class="block text-sm font-medium themed-text-muted">Description</label>
+                            <textarea id="edit-description" rows="3" class="themed-input w-full p-2 rounded-lg mt-1"></textarea>
+                        </div>
+                        <div id="edit-initial-prompt-container">
+                            <label for="edit-initial-prompt" class="block text-sm font-medium themed-text-muted">Initial Prompt (for ~10 topics)</label>
+                            <textarea id="edit-initial-prompt" rows="4" class="themed-input w-full p-2 rounded-lg mt-1 font-mono text-xs"></textarea>
+                        </div>
+                        <div id="edit-full-prompt-container">
+                            <label for="edit-full-prompt" class="block text-sm font-medium themed-text-muted">Full Prompt (for ~50 topics)</label>
+                            <textarea id="edit-full-prompt" rows="4" class="themed-input w-full p-2 rounded-lg mt-1 font-mono text-xs"></textarea>
+                        </div>
+                        <div class="flex justify-between items-center pt-4">
+                           <button id="save-hierarchy-item-btn" class="btn-primary">Save Changes</button>
+                           <button id="delete-hierarchy-item-btn" class="btn-secondary !text-red-600 !border-red-300 hover:!bg-red-100">Delete</button>
+                        </div>
+                    </div>
+                    <p id="hierarchy-form-placeholder" class="themed-text-muted text-center mt-8">Select an item to view its details.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -536,30 +624,66 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v4.6.11</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.4</div>
         </header>
-        
-        <!-- Topics Dropdown Menu -->
-        <div class="flex justify-center mb-8">
-            <div id="topics-menu-container" class="relative inline-block text-left hidden">
-                <div>
-                    <button type="button" id="topics-menu-button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500" aria-haspopup="true" aria-expanded="true">
-                        Topics Menu
-                        <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                </div>
-                <div id="topics-menu-items" class="origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-30" role="menu" aria-orientation="vertical" aria-labelledby="topics-menu-button">
-                    <div class="py-1" role="none" style="max-height: 400px; overflow-y: auto;">
-                        <!-- Menu items will be injected here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
 
         <main id="main-content" class="space-y-8">
+            <!-- NEW: Backup Reminder Banner -->
+            <div id="backup-reminder-banner" class="hidden p-4 text-sm text-yellow-800 rounded-lg bg-yellow-50" role="alert">
+              <span class="font-medium">Backup Reminder:</span> It has been over 7 days since your last backup. It's a good practice to export your data regularly using the Admin Tools.
+            </div>
+
+            <!-- MODIFIED: Admin Tools Card -->
+            <div id="admin-tools-card" class="card p-6">
+                <h2 class="text-xl font-bold themed-text-primary flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20h4a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H8a2 2 0 0 0-2 2v2"></path><rect x="2" y="10" width="8" height="12" rx="2"></rect></svg>
+                    Admin Tools
+                </h2>
+                <div id="admin-tools-container" class="flex flex-wrap gap-2 mt-4">
+                    <button id="hierarchy-manager-button" class="btn-secondary" title="Manage Topic Hierarchy">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"></path><polyline points="10 7 15 12 10 17"></polyline><line x1="15" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Hierarchy</span>
+                    </button>
+                    <button id="real-time-log-button" class="btn-secondary" title="Real-Time AI Log">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
+                        <span>AI Log</span>
+                    </button>
+                    <button id="firebase-tools-button" class="btn-secondary" title="Manage Sticky Topics">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
+                         <span>Sticky Topics</span>
+                    </button>
+                    <button id="prompts-button" class="btn-secondary" title="View AI Prompts">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+                        <span>View Prompts</span>
+                    </button>
+                    <button id="theme-changer-button" class="btn-secondary" title="Change Visual Theme">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
+                        <span>Change Theme</span>
+                    </button>
+                     <!-- NEW: Data Management Buttons -->
+                    <button id="export-data-button" class="btn-secondary" title="Export all hierarchy and topic data to a JSON file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Export Data</span>
+                    </button>
+                    <button id="import-data-button" class="btn-secondary" title="Import data from a JSON backup file. This will overwrite existing data.">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Import Data</span>
+                    </button>
+                    <button id="ai-help-button" class="btn-secondary" title="Code Documentation Generation">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
+                        <span>Code Docs</span>
+                    </button>
+                    <button id="settings-button" class="btn-secondary" title="Typography Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                        <span>Display</span>
+                    </button>
+                    <button id="new-plan-button" class="btn-secondary" title="New Session (Reload)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        <span>Reload</span>
+                    </button>
+                </div>
+            </div>
+
             <div id="imported-guides-section" class="hidden">
                  <h2 class="text-3xl font-bold text-center mb-4 themed-text-accent">Imported Guides</h2>
                  <div id="imported-guides-container" class="space-y-8"></div>
@@ -606,43 +730,32 @@
                     <div id="gemini-result-container" class="mt-6"></div>
                 </div>
             </div>
-
-            <div id="main-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            </div>
             
-            <div id="discover-more-container" class="text-center py-8">
-                <button id="discover-more-button" class="btn-primary px-8 py-4 text-lg" title="Generate a new random IT category">
-                    <span class="flex items-center justify-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2.5"/><path d="M12 22v-2.5"/><path d="M21.5 12.5h-2.5"/><path d="M4.5 12.5h2.5"/><path d="M18.89 6.11l-1.77 1.77"/><path d="M6.88 18.88l-1.77 1.77"/></svg>
-                        Discover More IT Topics
-                    </span>
-                </button>
-                <p id="discover-more-error" class="text-red-500 mt-2"></p>
+            <div id="topic-explorer-card" class="card">
+                <div class="p-8 card-content text-center">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Topic Explorer</h2>
+                    <p class="mb-6 themed-text-muted">Begin your journey by discovering featured topics or browsing the complete catalog of AI-generated guides.</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button id="explore-featured-btn" class="btn-secondary px-6 py-3">
+                             <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                                Explore Featured Categories
+                            </span>
+                        </button>
+                        <button id="browse-all-btn" class="btn-primary">
+                            <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"></path></svg>
+                                Browse All Categories
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            <!-- This container will hold the cards generated by user selection -->
+            <div id="dynamic-card-container" class="space-y-8"></div>
         </main>
         
-        <!-- Floating Action Buttons -->
-        <button id="real-time-log-button" class="floating-action-button" title="Real-Time AI Log">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
-        </button>
-        <button id="firebase-tools-button" class="floating-action-button" title="Manage Sticky Topics">
-             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 3.2C18.1 2.5 17.1 2 16 2s-2.1.5-2.8 1.2L2 14.4V20h5.6l11.2-11.2zM12.5 6.5l5 5"/></svg>
-        </button>
-        <button id="prompts-button" class="floating-action-button" title="View AI Prompts">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
-        </button>
-        <button id="theme-changer-button" class="floating-action-button" title="Change Visual Theme">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l.34.34a8 8 0 0111.32 11.32l-.34.34a8 8 0 01-11.32-11.32l.34-.34z"/><path d="M16 12l-4.5 4.5-2.5-2.5"/><path d="M22 12s-4-8-10-8S2 12 2 12s4 8 10 8 10-8 10-8z"/></svg>
-        </button>
-        <button id="ai-help-button" class="floating-action-button" title="AI Help & Feedback">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 22A10 10 0 1 0 12 2a10 10 0 0 0 0 20z"/></svg>
-        </button>
-        <button id="settings-button" class="floating-action-button" title="Typography Settings">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-        </button>
-        <button id="new-plan-button" class="floating-action-button" title="New Session (Reload)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
         <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
@@ -663,7 +776,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase State ---
         let db;
@@ -672,98 +785,60 @@
         let viewedItemsCollectionRef;
         const viewedItemIds = new Set();
         let stickyTopicsUnsubscribe = null;
-        let stickyTopics = {}; // Holds sticky topics per category
+        let stickyTopics = {};
+        let userAddedTopics = {}; // NEW: For user-added sticky topics
+        let userTopicsUnsubscribes = {}; // NEW: To manage listeners for user topics
         let firebaseConfig = null;
         let appIsInitialized = false;
 
         const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
         
         // --- Prompt Engineering Constants ---
-        const linkVerificationAndGenerationMandate = `
-* **Helpful Resources Link Generation Mandate:** A critical requirement is the accuracy and validity of all external hyperlinks in the "Helpful Resources" section. You MUST follow this procedure:
-    1.  **Initial Generation:** First, generate the content for the guide, including the "Helpful Resources" section. In this initial step, you can use placeholder titles for the resources (e.g., "Official Kubernetes Documentation").
-    2.  **Identify Search Topics:** From the list of helpful resources you just generated, identify the specific, core topics that need a URL. For example, from "Official Kubernetes Documentation", the topic is "Kubernetes official documentation".
-    3.  **Perform Search:** For each topic, perform a web search to find the most authoritative and direct URL. Prioritize official vendor documentation, stable product pages, or primary source articles.
-    4.  **Verification & Selection:** From the search results, select the single best URL that leads directly to the relevant, stable content and is highly unlikely to result in a 404 error.
-    5.  **Final Output Construction:** In the final output you provide, replace the placeholder titles in the "Helpful Resources" section with a correctly formatted Markdown link, like: \`* [Official Kubernetes Documentation](https://kubernetes.io/docs/home/)\`. Do not include notes like "(This requires a valid link...)". The final output must contain only the verified, working hyperlinks.`;
-            
-        const powershellStandard = `
-* **PowerShell Scripting Standards:** If you provide any PowerShell code or scripts, you MUST adhere to these strict rules to ensure functionality, security, and robustness:
-    * **Internal Validation First:** Before outputting, internally validate the script for syntax and logical errors. Ensure it is a complete, runnable script.
-    * **Use Correct Cmdlets and Properties:** Always use modern, official cmdlets (e.g., \`Get-CimInstance\` over the obsolete \`Get-WmiObject\`). Critically, you must use the correct, official property names from the objects returned by cmdlets. For example, the event ID from \`Get-WinEvent\` is \`$_.Id\`, not \`$_.EventId\`. The disk size from \`Win32_LogicalDisk\` is \`Size\`, not \`TotalSize\`. Verify these properties.
-    * **Filter on the Server ("Filter Right"):** This is non-negotiable for performance. For cmdlets that retrieve data (\`Get-WinEvent\`, \`Get-ADUser\`, \`Get-CimInstance\`, etc.), you MUST use the built-in filtering parameters like \`-FilterHashtable\`, \`-Filter\`, or a relevant query language. DO NOT pipe the entire output of a command to \`Where-Object\` for the initial filtering of the dataset.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered. Furthermore, include proactive logical error checks, such as verifying a variable is not zero before using it as a denominator to prevent "division by zero" errors.
-    * **Self-Contained Code:** Do not call or pipe to functions or cmdlets that are not built-in to a standard PowerShell installation (e.g., \`Format-Bytes\`). If a helper function is needed for a task like formatting, you must define that function within the script itself.
-    * **Clarity and Best Practices:** Use clear variable names, include comments for complex logic, and maintain consistent formatting.`;
-        
-        const powerCLIStandard = `
-* **PowerCLI Scripting Standards:** For any VMware PowerCLI code, you MUST adhere to these strict rules:
-    * **Assume Connection:** Assume a connection to a vCenter Server or ESXi host is already established via \`Connect-VIServer\`. Do not include the connection command unless the guide is specifically about connecting.
-    * **Use Correct Cmdlets and Properties:** Always use current, official PowerCLI cmdlets. Critically, verify the property names from the objects returned by cmdlets (e.g., the memory size for a VM from \`Get-VM\` is \`MemoryGB\`, not \`Memory\`).
-    * **Filter Efficiently ("Filter Right"):** For performance, use server-side filtering parameters on cmdlets like \`Get-VM\`, \`Get-Datastore\`, etc., whenever possible. Avoid retrieving large collections and then filtering with \`Where-Object\` as the primary method.
-    * **Comprehensive Error Handling:** All logic must be wrapped in a \`try { ... } catch { ... }\` block. Any cmdlet that could potentially terminate the script must include \`-ErrorAction Stop\` to ensure the \`catch\` block is triggered.
-    * **Clarity and Best Practices:** Use clear variable names (e.g., \`$vm\`, \`$datastore\`), include comments for complex logic, and maintain consistent formatting. Always include a disconnect command (\`Disconnect-VIServer -Confirm:$false\`) at the end of a script example.`;
-        
-        // --- Content Generation Categories ---
-        const categoriesToGenerate = [
-            { key: 'activeDirectory', title: 'Active Directory Management', description: "Tasks for managing users, groups, GPOs, and other AD objects.", initialPrompt: `Generate 10 common administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Active Directory Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'azureActiveDirectory', title: 'Azure Active Directory Administration', description: "Managing users, groups, devices, and enterprise applications in Azure AD.", initialPrompt: `Generate 10 common administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Azure Active Directory. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'aiProgramming', title: 'Artificial Intelligence Programming', description: "Concepts and guides for getting started with AI development and programming.", initialPrompt: `Generate 10 common topics for an introduction to AI Programming. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 topics for learning AI Programming, from beginner to advanced. For each, give a unique "id", "title", and a detailed "description" of the topic. Provide the output as a valid JSON array.` },
-            { key: 'citrixAdmin', title: 'Citrix Administration', description: "Managing Citrix Virtual Apps and Desktops environments.", initialPrompt: `Generate 10 common administrative tasks for Citrix. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Citrix. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'geminiInfographics', title: 'Create Infographics in Gemini', description: "Leverage Gemini to conceptualize, structure, and generate content for infographics.", initialPrompt: `Generate 10 ideas for creating infographics using Gemini's capabilities. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed ideas and processes for using Gemini to create infographics. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'geminiLinkedIn', title: 'Create LinkedIn Posts using Gemini', description: "Use Gemini to draft engaging and professional posts for LinkedIn.", initialPrompt: `Generate 10 types of professional content to create for LinkedIn using Gemini. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed strategies and post formats for LinkedIn using Gemini. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'dataCenterPractices', title: 'Data Center Best Practices', description: "Guides on data center operations, cooling, power, and security.", initialPrompt: `Generate 10 best practices for data center management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 best practices for modern data center management. For each, give a unique "id", "title", and a detailed "description" of the practice. Provide the output as a valid JSON array.` },
-            { key: 'webDesignBestPractices', title: 'Designing Web Pages Best Practices', description: "Best practices for UI/UX, accessibility, and performance in web design.", initialPrompt: `Generate 10 best practices for designing web pages. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed best practices for designing modern web pages. For each, give a unique "id", "title", and a detailed "description" of the practice. Provide the output as a valid JSON array.` },
-            { key: 'webDesignGemini', title: 'Designing Web Pages with Gemini AI', description: "Using Gemini AI to assist in the design and development of web pages.", initialPrompt: `Generate 10 ways to use Gemini AI for web design. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 detailed methods for using Gemini AI in web design and development. For each, give a unique "id", "title", and a detailed "description" of the method. Provide the output as a valid JSON array.` },
-            { key: 'dosCommands', title: 'DOS Commands for Administrators', description: "A reference for essential DOS and Command Prompt commands for system admins.", initialPrompt: `Generate 10 essential DOS commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential and advanced DOS/CMD commands for administrators. For each, give a unique "id", "title" (the command itself), and a detailed "description" of its use and parameters. Provide the output as a valid JSON array.` },
-            { key: 'geminiCliGuide', title: 'A Guide to Using the Gemini CLI', description: "Learn how to use the Gemini Command Line Interface for various tasks.", initialPrompt: `Generate 10 common use cases for the Gemini CLI. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced use cases and commands for the Gemini CLI. For each, give a unique "id", "title", and a detailed "description" of the use case. Provide the output as a valid JSON array.` },
-            { key: 'hpeProLiant', title: 'HPE ProLiant Server Management', description: "Managing and troubleshooting HPE ProLiant servers with iLO and other tools.", initialPrompt: `Generate 10 common administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for HPE ProLiant Server Management. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'javascriptForHtml', title: 'JavaScript for HTML', description: "Core JavaScript concepts for manipulating HTML DOM and creating interactive web pages.", initialPrompt: `Generate 10 fundamental JavaScript concepts for HTML manipulation. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential JavaScript concepts and techniques for HTML web development. For each, give a unique "id", "title", and a detailed "description" of the concept. Provide the output as a valid JSON array.` },
-            { key: 'linuxCliAdmin', title: 'Linux CLI for Administration', description: "A reference for essential Linux commands for system administrators.", initialPrompt: `Generate 10 essential Linux CLI commands for administrators. For each, give a unique "id", "title" (the command itself), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 essential and advanced Linux commands for system administration. For each, give a unique "id", "title" (the command), and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Admin', title: 'Microsoft 365 Administration', description: "Administering users, services, and security in Microsoft 365.", initialPrompt: `Generate 10 common administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Microsoft 365. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'm365ConditionalAccess', title: 'M365: Conditional Access Policies', description: "Enforce access controls based on user location, device health, and risk level.", initialPrompt: `Generate 10 common scenarios for using M365 Conditional Access Policies. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 scenarios and configurations for M365 Conditional Access Policies. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Dlp', title: 'M365: Data Loss Prevention (DLP)', description: "Create policies to prevent sensitive information from being shared inappropriately.", initialPrompt: `Generate 10 common Data Loss Prevention (DLP) policy ideas for M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policy ideas and configurations for M365 Data Loss Prevention (DLP). For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365ExchangeAdmin', title: 'M365: Exchange Admin Center', description: "Manage all aspects of your organization's email, including mailboxes, distribution groups, mail flow rules, and anti-spam policies.", initialPrompt: `Generate 10 common tasks for the M365 Exchange Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 tasks and procedures for the M365 Exchange Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365AdminCenter', title: 'M365: Microsoft 365 Admin Center', description: "Your primary portal for managing your Microsoft 365 subscription, serving as a launching point to more specialized admin centers.", initialPrompt: `Generate 10 key tasks and features of the main Microsoft 365 Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 tasks, features, and navigation guides for the main Microsoft 365 Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderEndpoint', title: 'M365: Microsoft Defender for Endpoint', description: "Manage endpoint security, vulnerability assessments, and response actions for devices.", initialPrompt: `Generate 10 common tasks in Microsoft Defender for Endpoint. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and security operations in Microsoft Defender for Endpoint. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderIdentity', title: 'M365: Microsoft Defender for Identity', description: "Monitor and protect against identity-based threats and compromised user accounts.", initialPrompt: `Generate 10 key features of Microsoft Defender for Identity. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features, alerts, and investigation guides for Microsoft Defender for Identity. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365DefenderXdr', title: 'M365: Microsoft Defender XDR Portal', description: "A unified portal to manage and respond to security threats across your Microsoft 365 environment.", initialPrompt: `Generate 10 key areas of the Microsoft Defender XDR portal. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features, investigation workflows, and administrative tasks within the Microsoft Defender XDR portal. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Mfa', title: 'M365: Multi-Factor Authentication (MFA)', description: "Configure and manage MFA settings to enhance security.", initialPrompt: `Generate 10 key aspects of configuring MFA in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 aspects of configuring and managing MFA in M365, including policies and user enrollment. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Pim', title: 'M365: Privileged Identity Management (PIM)', description: "Provide just-in-time privileged access to resources.", initialPrompt: `Generate 10 concepts of using Privileged Identity Management (PIM) in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 concepts and procedures for using Privileged Identity Management (PIM) in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365PowerPlatformAdmin', title: 'M365: Power Platform Admin Center', description: "Manage environments, data policies, and integrations for Power Apps, Power Automate, and Power BI.", initialPrompt: `Generate 10 common tasks for the Power Platform Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and governance policies for the Power Platform Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365SharepointAdmin', title: 'M365: SharePoint Admin Center', description: "Control your organization's SharePoint sites and OneDrive settings. Manage site collections, sharing policies, and storage limits.", initialPrompt: `Generate 10 common tasks for the SharePoint Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks and settings in the SharePoint Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365Sso', title: 'M365: Single Sign-On (SSO)', description: "Manage SSO for thousands of pre-integrated SaaS applications.", initialPrompt: `Generate 10 concepts for configuring SSO in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 concepts and procedures for configuring SSO for apps in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365TeamsAdmin', title: 'M365: Teams Admin Center', description: "Manage all aspects of Microsoft Teams, including user policies, meeting settings, app integrations, and call quality.", initialPrompt: `Generate 10 common tasks for the Teams Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policies, settings, and management tasks for the Teams Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'm365UserGroupMgmt', title: 'M365: User and Group Management', description: "Advanced management of user accounts, security groups, and distribution lists.", initialPrompt: `Generate 10 advanced user and group management tasks in M365. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 advanced user and group management tasks and scenarios in M365. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'msGraphScripting', title: 'MS Graph scripting', description: "Automating M365 tasks using the Microsoft Graph API.", initialPrompt: `Generate 10 common tasks to automate with MS Graph scripting. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced tasks to automate with Microsoft Graph scripting. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'psForM365AdminCenter', title: 'PowerShell for Microsoft 365 Admin Center', description: "Using PowerShell to manage core M365 settings, licenses, and users.", initialPrompt: `Generate 10 common PowerShell tasks for the main M365 Admin Center. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for the main M365 Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Entra', title: 'PowerShell for Microsoft Entra', description: "Using PowerShell to manage users, groups, devices, and applications in Microsoft Entra ID.", initialPrompt: `Generate 10 common PowerShell tasks for Microsoft Entra. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Microsoft Entra. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Exchange', title: 'PowerShell for Microsoft Exchange Online', description: "Using PowerShell to manage mailboxes, transport rules, and other Exchange Online features.", initialPrompt: `Generate 10 common PowerShell tasks for Exchange Online. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Exchange Online. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Sharepoint', title: 'PowerShell for Microsoft SharePoint Online', description: "Using PowerShell to manage SharePoint sites, lists, permissions, and settings.", initialPrompt: `Generate 10 common PowerShell tasks for SharePoint Online. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for SharePoint Online. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'psForM365Teams', title: 'PowerShell for Microsoft Teams', description: "Using PowerShell to manage Teams, channels, policies, and users in Microsoft Teams.", initialPrompt: `Generate 10 common PowerShell tasks for Microsoft Teams. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 policies, settings, and management tasks for the Teams Admin Center. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'powershellWindowsServer', title: 'PowerShell for Windows Server Administration', description: "Automating Windows Server management with PowerShell scripts and cmdlets.", initialPrompt: `Generate 10 common PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced PowerShell tasks for Windows Server Administration. For each, give a unique "id", "title", and a detailed "description" of the task. Provide the output as a valid JSON array.` },
-            { key: 'powershellScripts', title: 'PowerShell Scripts', description: "A collection of useful PowerShell scripts for various administrative tasks.", initialPrompt: `Generate 10 useful PowerShell script ideas for administrators. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 useful and practical PowerShell script ideas for administrators. For each, give a unique "id", "title", and a detailed "description" of the script's purpose. Provide the output as a valid JSON array.` },
-            { key: 'scomAdmin', title: 'SCOM Administration', description: 'Guides for administering Microsoft System Center Operations Manager (SCOM).', initialPrompt: `Generate 10 common administrative tasks for SCOM. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for SCOM. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'serviceNowAdmin', title: 'ServiceNow Platform Administration', description: 'Guides for administering the ServiceNow cloud platform for IT service management (ITSM) and digital workflows.', initialPrompt: `Generate 10 common administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for the ServiceNow platform. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'usefulApis', title: 'Useful APIs for Web Development', description: "A curated list of public APIs that are useful for web development projects.", initialPrompt: `Generate a list of 10 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate a list of 40-50 useful public APIs for web developers. For each, give a unique "id", "title" (API name), and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'vmwareEsxi', title: 'VMware ESXi Administration', description: "Guides and best practices for managing VMware ESXi environments.", initialPrompt: `Generate 10 common administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for VMware ESXi. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'vmwarePowerCli', title: 'VMware PowerCLI', description: "Automating VMware vSphere administration using PowerCLI.", initialPrompt: `Generate 10 common VMware PowerCLI commands for administrators. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced tasks using VMware PowerCLI. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windows11Admin', title: 'Windows 11 Administration', description: "Key tasks and features for administering Windows 11 in an enterprise.", initialPrompt: `Generate 10 key administrative tasks for Windows 11. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows 11. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windows12Features', title: 'Windows 12 - New Features', description: "Exploring the announced and anticipated new features of Windows 12.", initialPrompt: `Generate 10 anticipated new features for Windows 12. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 anticipated new features and changes for Windows 12. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer', title: 'Windows Server Administration', description: "Essential tasks for managing Windows Server instances.", initialPrompt: `Generate 10 common administrative tasks for Windows Server. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 common and advanced administrative tasks for Windows Server. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2019', title: 'Windows Server 2019 Administration', description: "Key tasks and features for administering Windows Server 2019.", initialPrompt: `Generate 10 key administrative tasks for Windows Server 2019. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2019. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2022', title: 'Windows Server 2022 Administration', description: "Key tasks and new features for administering Windows Server 2022.", initialPrompt: `Generate 10 key administrative tasks for Windows Server 2022. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 administrative tasks specific to Windows Server 2022. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2025', title: 'Windows Server 2025', description: "Exploring the new features and administration changes in Windows Server 2025.", initialPrompt: `Generate 10 key new features in Windows Server 2025. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 new features and administrative tasks for Windows Server 2025. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` },
-            { key: 'windowsServer2025Azure', title: 'Windows Server 2025 Datacenter: Azure Edition', description: "Exploring features specific to the Azure Edition of Windows Server 2025, like Hotpatching and SMB over QUIC.", initialPrompt: `Generate 10 key features of Windows Server 2025 Azure Edition. For each, give a unique "id", "title", and a short "description". Provide the output as a valid JSON array.`, fullPrompt: `Generate 40-50 features and management tasks specific to Windows Server 2025 Azure Edition. For each, give a unique "id", "title", and a detailed "description". Provide the output as a valid JSON array.` }
-        ];
+        // ** UPDATED PROMPT (Final Review Prompt) **
+        const finalReviewPrompt = `
+Persona: You are a Lead Technical Editor and a Senior IT Systems Architect. Your role is final quality assurance.
+Objective: Your mission is to audit the DRAFT CONTENT provided below against its ORIGINAL BLUEPRINT. You will then rewrite and enhance the draft to produce final, publishable-grade technical documentation. You must directly implement all corrections and improvements into the text.
+
+//-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (SECTIONS 1-4) --//
+{blueprint_from_step_1}
+
+//-- INPUT 2: DRAFT CONTENT TO REVIEW (SECTIONS 5-12) --//
+{draft_content_to_review}
+
+//-- SYSTEMATIC REVIEW PROTOCOL --//
+(AI: Execute the following review protocol on the DRAFT CONTENT. Your output will be the rewritten content itself, not a list of your actions.)
+
+1.  **Blueprint Adherence Audit:**
+    * Scrutinize the draft against the ORIGINAL BLUEPRINT.
+    * **Crucially, remove any information or sections that violate the established OUT-OF-SCOPE rules (e.g., if the blueprint scopes the guide to GUI only, remove all PowerShell/API sections).**
+    * Ensure all IN-SCOPE topics are present and are the primary focus.
+    * Verify the content's depth and tone are appropriate for the defined TARGET_AUDIENCE.
+
+2.  **Technical Accuracy Validation:**
+    * Scrutinize every technical statement. **Treat any placeholder (e.g., "api.example.com") or hypothetical information as a critical error to be corrected with factual data.**
+    * Verify and correct all PowerShell/CLI cmdlets, parameters, and object properties.
+    * Validate API endpoints, request bodies, and expected response codes against public documentation.
+    * Fact-check procedural steps against current product interfaces and documentation patterns.
+
+3.  **Clarity and Professionalism Polish:**
+    * Rephrase awkward or ambiguous sentences to be direct and clear.
+    * **Eliminate all meta-commentary, asides, and notes from the AI (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Integrate advice naturally into the narrative.**
+    * Enforce consistent terminology.
+    * Ensure all formatting is clean and consistent, preserving the '###' header structure.
+
+**Final Output Instruction:**
+Return ONLY the complete, final, rewritten markdown for the sections you were asked to review. Do not provide a preamble, a list of your changes, or any text other than the final, revised document. Your response must begin directly with the first header of the content you are reviewing (e.g., ### 5. Key Concepts - In-Depth Application & Management).
+`;
         
         // --- Global State & Configuration ---
         let geminiApiKey = "";
         const root = document.documentElement;
         const allThemeData = {};
-        const fullPrompts = {}; 
         let originalGeneratedText = new Map();
-        let aiLog = []; // NEW: For logging AI interactions
+        let aiLog = []; 
+        let currentHierarchyPath = [];
+        let selectedHierarchyItems = { main: null, sub: null, final: null };
+
 
         // --- Google Drive Integration State & Config ---
         let gapiInited = false;
@@ -828,7 +903,6 @@
             const appContainer = document.getElementById('app-container');
 
             if (user) {
-                // User is LOGGED IN
                 appContainer.classList.remove('hidden');
                 closeModal('apiKeyModal');
                 
@@ -849,7 +923,6 @@
                 }
 
             } else {
-                // User is LOGGED OUT
                  authStatusEl.innerHTML = `
                      <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
@@ -859,7 +932,6 @@
                 document.getElementById('login-button').addEventListener('click', handleLogin);
                 
                 appContainer.classList.add('hidden');
-                // Only show API key modal if the user is logged out AND there are no keys saved
                 if (!localStorage.getItem('geminiApiKey')) {
                      openModal('apiKeyModal');
                 }
@@ -876,7 +948,6 @@
                 console.error("Google Sign-In Popup failed:", error);
                 const errorEl = document.getElementById('api-key-error');
                 if (errorEl) {
-                   // Provide more specific error feedback for the user.
                    let userMessage = `Login failed: ${error.code}.`;
                    if (error.code === 'auth/popup-closed-by-user') {
                        userMessage += ' You closed the login window before completing sign-in.';
@@ -913,18 +984,18 @@
         
         async function initializeAppContent() {
             appIsInitialized = true;
-            const loadingMessageEl = document.getElementById('loading-message');
-            loadingMessageEl.textContent = "The AI is generating the initial content and guides. This may take a few moments.";
             openModal('loadingStateModal');
+            const loadingMessageEl = document.getElementById('loading-message');
+            loadingMessageEl.textContent = "Waking up the AI...";
 
-            document.getElementById('main-grid').innerHTML = '';
-            
             document.getElementById('gemini-result-container').innerHTML = '';
-            document.getElementById('discover-more-error').innerHTML = '';
+            
+            checkBackupReminder(); // NEW: Check for backup reminder on app load
 
             try {
                 await generateAndApplyDefaultTheme();
-                await loadAppContent(loadingMessageEl);
+                loadingMessageEl.textContent = "Loading application content...";
+                await loadAppContent();
             } catch (error) {
                 const errorMessage = error ? error.message : "An unknown error occurred.";
                 console.error("A critical error occurred during app initialization:", errorMessage);
@@ -939,10 +1010,6 @@
             }
         }
         
-        /**
-         * Initializes both GAPI (for Drive/Picker) and GSI (for auth token client).
-         * This is called once after config is loaded.
-         */
         function initializeGoogleClients() {
             if (!GOOGLE_CLIENT_ID) {
                 console.warn("Google Client ID is not provided. Cloud features will be disabled.");
@@ -952,7 +1019,6 @@
             document.getElementById('cloud-storage-card').classList.remove('hidden');
             document.getElementById('google-drive-section').classList.remove('hidden');
             
-            // Wait for the gapi script to load.
             const gapiInterval = setInterval(() => {
                 if (window.gapi && window.gapi.load) {
                     clearInterval(gapiInterval);
@@ -963,13 +1029,12 @@
                 }
             }, 100);
 
-            // Wait for the GSI script to load.
             const gsiInterval = setInterval(() => {
                 if (window.google && window.google.accounts) {
                     clearInterval(gsiInterval);
                     google.accounts.id.initialize({
                         client_id: GOOGLE_CLIENT_ID,
-                        callback: () => {}, // Callback is handled by the token client flow
+                        callback: () => {}, 
                     });
                     gisInited = true;
                 }
@@ -1022,12 +1087,14 @@
             });
         }
 
-
         function setupEventListeners() {
             document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
             document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
             document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
-            document.getElementById('discover-more-button').addEventListener('click', handleDiscoverMoreClick);
+            
+            document.getElementById('explore-featured-btn').addEventListener('click', () => openCategoryBrowser('featured'));
+            document.getElementById('browse-all-btn').addEventListener('click', () => openCategoryBrowser('all'));
+            document.getElementById('closeCategoryBrowserModal').addEventListener('click', () => closeModal('categoryBrowserModal'));
 
             document.getElementById('auth-button').addEventListener('click', handleAuthClick);
             document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
@@ -1037,17 +1104,18 @@
 
             document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
             document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-            document.getElementById('real-time-log-button').addEventListener('click', displayAiLog); // NEW
+            document.getElementById('real-time-log-button').addEventListener('click', displayAiLog);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!geminiApiKey) {
-                    openModal('apiKeyModal');
-                    return;
-                }
+                if(!geminiApiKey) { openModal('apiKeyModal'); return; }
                 openModal('themeGeneratorModal');
             });
             document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
             
+            // NEW: Listeners for data management buttons
+            document.getElementById('export-data-button').addEventListener('click', handleExportData);
+            document.getElementById('import-data-button').addEventListener('click', handleImportData);
+
             const settingsPanel = document.getElementById('settings-panel');
             document.getElementById('settings-button').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1058,7 +1126,6 @@
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
             
-            // General modal close listener
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal || e.target.closest('[id^="close"]')) {
@@ -1072,27 +1139,12 @@
             document.addEventListener('mouseup', handleTextSelection);
             document.addEventListener('mousedown', (e) => {
                  const searchButton = document.getElementById('search-gemini-button');
-                 // Hide search button if clicking anywhere other than on the button itself while it's visible.
                  if (!searchButton.classList.contains('hidden') && !searchButton.contains(e.target)) {
                     searchButton.classList.add('hidden');
                  }
             });
 
-            // Topics dropdown menu listeners
-            const topicsMenuButton = document.getElementById('topics-menu-button');
-            const topicsMenuItems = document.getElementById('topics-menu-items');
-
-            topicsMenuButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                topicsMenuItems.classList.toggle('hidden');
-            });
-
             document.addEventListener('click', (e) => {
-                // Hide topics menu if click is outside
-                if (!topicsMenuButton.contains(e.target) && !topicsMenuItems.contains(e.target)) {
-                    topicsMenuItems.classList.add('hidden');
-                }
-
                 const menuItem = e.target.closest('.topics-menu-item');
                 if (menuItem) {
                     e.preventDefault(); 
@@ -1102,7 +1154,6 @@
                         targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
                         setTimeout(() => targetCard.style.boxShadow = '', 2000);
                     }
-                    topicsMenuItems.classList.add('hidden');
                     return;
                 }
 
@@ -1137,8 +1188,10 @@
 
                 const exploreBtn = e.target.closest('.explore-button');
                 if (exploreBtn) {
-                    const cardName = exploreBtn.closest('.card').querySelector('h2').textContent;
-                    handleExploreInDepth(exploreBtn.dataset.themeId, exploreBtn.dataset.themeType, cardName);
+                    const card = exploreBtn.closest('.card');
+                    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+                    const topicId = exploreBtn.dataset.topicId;
+                    handleExploreInDepth(topicId, fullHierarchyPath);
                     return;
                 }
                 
@@ -1162,12 +1215,6 @@
                 if(submitRefineBtn) {
                     const targetModalId = submitRefineBtn.dataset.targetModalId;
                     handleRefineRequest(submitRefineBtn.closest('.refine-container'), targetModalId);
-                    return;
-                }
-
-                const showAllBtn = e.target.closest('.show-all-button');
-                if (showAllBtn) {
-                    handleShowAllClick(showAllBtn);
                     return;
                 }
 
@@ -1208,7 +1255,15 @@
                 }
             });
 
-            // Sticky Topics Modal Listeners
+            // MODIFIED: Added listeners for Hierarchy Management
+            document.getElementById('hierarchy-manager-button').addEventListener('click', openHierarchyManagementModal);
+            document.getElementById('add-main-category-btn').addEventListener('click', () => handleAddHierarchyItem('main'));
+            document.getElementById('add-sub-category-btn').addEventListener('click', () => handleAddHierarchyItem('sub'));
+            document.getElementById('add-final-category-btn').addEventListener('click', () => handleAddHierarchyItem('final'));
+            document.getElementById('save-hierarchy-item-btn').addEventListener('click', handleSaveHierarchyItem);
+            document.getElementById('delete-hierarchy-item-btn').addEventListener('click', handleDeleteHierarchyItem);
+
+
             document.getElementById('firebase-tools-button').addEventListener('click', openStickyTopicsModal);
             document.getElementById('sticky-topic-category-select').addEventListener('change', (e) => listenForStickyTopics(e.target.value));
             document.getElementById('add-sticky-topic-button').addEventListener('click', handleAddStickyTopic);
@@ -1347,7 +1402,6 @@
                 driveFolderId = null;
             }
 
-            // Refresh buttons in any open modals
             if (document.body.classList.contains('inDepthModal-open')) {
                 const isInitial = !!document.getElementById('generate-detailed-steps-btn');
                 addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
@@ -1402,14 +1456,15 @@
             if (modal.parentElement.id === 'searchGeminiModal') {
                 contentToSave = document.getElementById('searchGeminiResult').innerText;
                 cardName = "Gemini Search";
-                topicTitle = document.getElementById('searchGeminiQueryText').value;
+                const fullTopicTitle = document.getElementById('searchGeminiQueryText').value;
+                topicTitle = truncateText(fullTopicTitle, 40);
                 statusEl = document.getElementById('search-modal-status-message');
             } else {
                 const modalFooter = button.closest('[id$="ModalFooter"]');
                 const fullTitle = modalFooter.dataset.fullTitle;
                 cardName = modalFooter.dataset.cardName || "Guide";
                 contentToSave = originalGeneratedText.get(fullTitle);
-                topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '');
+                topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: /g, '');
                 statusEl = modalFooter.querySelector('p[id$="status-message"]');
             }
              
@@ -1419,7 +1474,7 @@
                 return;
              }
 
-             const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize filename
+             const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
              await saveContentToDrive(contentToSave, fileName, statusEl);
         }
 
@@ -1437,7 +1492,6 @@
             }
 
             try {
-                // Check if file already exists
                 const searchResponse = await gapi.client.drive.files.list({
                     q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
                     fields: 'files(id)',
@@ -1471,7 +1525,10 @@
                 });
 
                 statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
-                setTimeout(()=> statusElement.textContent = '', 4000);
+                // NEW: Clear the message after a delay
+                setTimeout(() => {
+                    if (statusElement) statusElement.textContent = '';
+                }, 4000);
             } catch (error) {
                 console.error('Error saving file to Drive:', error);
                 statusElement.textContent = 'Error saving file. Check console.';
@@ -1537,7 +1594,7 @@
             const cardId = `imported-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
             
             const card = document.createElement('div');
-            card.className = 'card md:col-span-2';
+            card.className = 'card';
             card.id = cardId;
             
             const cardContent = document.createElement('div');
@@ -1561,89 +1618,105 @@
         }
         
         // --- Core Application Functions ---
-
-        async function loadAppContent(loadingMessageEl) {
+        
+        async function loadAppContent() {
             try {
-                categoriesToGenerate.sort((a, b) => a.title.localeCompare(b.title));
-
                 await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
-                
-                const generationPromises = categoriesToGenerate.map(cat => {
-                    if (loadingMessageEl) loadingMessageEl.textContent = `Generating guides for: ${cat.title}...`;
-                    return generateAndPopulateAICategory(cat).catch(e => {
-                        console.error(`Failed to load category: ${cat.title}`, e);
-                        return { key: cat.key, error: e };
-                    });
-                });
-
-                const results = await Promise.all(generationPromises);
-                const firstFailure = results.find(r => r && r.error);
-                if(firstFailure){
-                    throw new Error(`One or more AI content categories failed to load, starting with ${firstFailure.key}. The process has been stopped.`);
-                }
-                
-                if (loadingMessageEl) loadingMessageEl.textContent = `Building navigation...`;
-                await generateTopicsMenu();
-
             } catch (error) {
                 console.error("An error occurred while loading app content:", error.message);
                 throw error;
             }
         }
         
-        async function generateAndPopulateAICategory({key, title, description, initialPrompt, fullPrompt}) {
-            const mainGrid = document.getElementById('main-grid');
+        async function generateAndPopulateAICategory(fullHierarchyPath) {
+            const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+            const cardId = `category-card-${finalCategory.id}`;
+            const existingCard = document.getElementById(cardId);
+            if (existingCard) {
+                existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             const card = document.createElement('div');
-            card.className = 'card md:col-span-2';
-            card.id = `${key}-card`;
-            const selectorId = `${key}-selector-visual`;
-            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${title}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-theme-type="${key}" class="w-full">${getLoaderHTML(`AI is generating guides for ${title}...`)}</div><div id="${key}-details" class="details-container mt-4"></div></div>`;
-            mainGrid.appendChild(card);
+            card.className = 'card';
+            card.id = cardId;
+            card.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
             
-            fullPrompts[key] = fullPrompt;
+            const selectorId = `selector-${finalCategory.id}`;
+            card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+            
+            const container = document.getElementById('dynamic-card-container');
+            container.prepend(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // NEW: Listen for user-added topics for this category
+            listenForUserAddedTopics(finalCategory.id);
 
             try {
-                const jsonText = await callGeminiAPI(initialPrompt, true, "Initial Category Population");
-                if (!jsonText) throw new Error(`API returned empty content for ${title}.`);
+                const prompt = finalCategory.initialPrompt || `Generate 8 common topics for ${finalCategory.title}.`;
+                const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
+                if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
                 
                 const data = parseJsonWithCorrections(jsonText);
+
+                if (!Array.isArray(data)) {
+                    console.error("API response for category topics is not an array:", data);
+                    throw new Error("Invalid API response format: Expected an array of topics for the category.");
+                }
+                
                 data.sort((a, b) => a.title.localeCompare(b.title));
-                allThemeData[key] = data;
-                populateCardGridSelector(selectorId, key);
+                allThemeData[finalCategory.id] = data;
+                
+                populateCardGridSelector(card.querySelector(`#${selectorId}`), finalCategory.id);
+                return card;
+
             } catch (error) {
-                handleApiError(error, document.getElementById(selectorId), title, card);
+                handleApiError(error, card.querySelector(`#${selectorId}`), finalCategory.title, card);
                 throw error;
             }
         }
         
-        function populateCardGridSelector(containerId, themeType, newItemsIds = new Set()) {
-            const container = document.getElementById(containerId);
-            const data = allThemeData[themeType] || [];
-            const stickies = stickyTopics[themeType] || [];
+        function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
+            const data = allThemeData[categoryId] || [];
+            const stickies = stickyTopics[categoryId] || [];
+            const userAdded = userAddedTopics[categoryId] || []; // NEW: Get user-added topics
             
             if (!container) return;
-            if (data.length === 0 && stickies.length === 0) {
+            if (data.length === 0 && stickies.length === 0 && userAdded.length === 0) {
                  container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
                 return;
             }
 
             const gridClass = 'card-grid-container';
-            const cardTitle = container.closest('.card').querySelector('h2').textContent;
+            const card = container.closest('.card');
+            const cardTitle = card.querySelector('h2').textContent;
 
             const stickyTitles = new Set(stickies.map(s => s.title));
+            const userAddedTitles = new Set(userAdded.map(u => u.title)); // NEW
 
             const stickyHtml = stickies.map(item => `
-                <div id="grid-selector-${item.id}" class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.title}">
+                <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
                     <div class="indicator sticky-indicator" title="Sticky Topic">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg>
                     </div>
-                    <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                    <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
+                    <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
+                </div>`
+            ).join('');
+
+            // NEW: HTML for user-added topics
+            const userAddedHtml = userAdded.map(item => `
+                <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
+                    <div class="indicator" style="background-color: #f59e0b;" title="Your Added Topic">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.41-1.412A6.962 6.962 0 0010 11.5c-2.25 0-4.33.9-5.535 2.993z"></path></svg>
+                    </div>
+                    <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
                     <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
                 </div>`
             ).join('');
 
             const regularItemsHtml = data
-                .filter(item => !stickyTitles.has(item.title)) // Don't show AI item if a sticky with same title exists
+                .filter(item => !stickyTitles.has(item.title) && !userAddedTitles.has(item.title)) // MODIFIED: Also filter out user-added titles
                 .map(item => {
                     const compositeKey = `${cardTitle} - ${item.title}`;
                     const isViewed = viewedItemIds.has(compositeKey);
@@ -1653,86 +1726,86 @@
                     const newClass = isNew ? 'new-item-highlight' : '';
                     
                     return `
-                    <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.title}">
+                    <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.description || item.title}">
                         ${viewedIndicatorHtml}
-                        <div class="icon">${getIconForTheme(themeType, item.id)}</div>
+                        <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
                         <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
                     </div>`;
             }).join('');
             
-            const topicInputId = `add-topic-input-${themeType}`;
+            const topicInputId = `add-topic-input-${categoryId}`;
+            const containerId = container.id;
             const addNewTopicHtml = `
                 <div class="add-topic-container">
-                    <input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Enter a New Topic..." class="themed-input w-full p-2 rounded-lg text-sm">
-                    <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-theme-type="${themeType}">Add Topic</button>
+                    <input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Add your own topic..." class="themed-input w-full p-2 rounded-lg text-sm">
+                    <button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-category-id="${categoryId}">Add Topic</button>
                 </div>
             `;
             
-            const fullPrompt = fullPrompts[themeType];
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+            const fullPrompt = finalCategory.fullPrompt;
+            
             let actionButtonsHtml = '';
-            const card = container.closest('.card');
-            const isFullyLoaded = card.dataset.isFullyLoaded === 'true';
-
+            // MODIFIED: Removed "Show All" button and changed text for generate more.
             if (fullPrompt && data.length > 0) {
-                if (isFullyLoaded) {
-                    actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Generate 10 More</span></button></div>`;
-                } else {
-                     actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="show-all-button btn-secondary" data-container-id="${containerId}" data-theme-type="${themeType}">Show All (${data.length} of ~50 shown)</button></div>`;
-                }
+                actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
             }
-            container.innerHTML = `<div class="${gridClass}">${stickyHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
+            container.innerHTML = `<div class="${gridClass}">${stickyHtml}${userAddedHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
         }
         
         async function handleAddNewTopic(button) {
-            const { containerId, themeType } = button.dataset;
+            const { categoryId } = button.dataset;
             const inputField = button.previousElementSibling;
             const newTitle = inputField.value.trim();
 
-            if (!newTitle) {
-                inputField.focus();
+            if (!newTitle) { inputField.focus(); return; }
+            if (!userId) {
+                displayMessageInModal("You must be logged in to add your own topics.", 'warning');
                 return;
             }
 
-            const newTopic = {
-                title: newTitle,
-                id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
-                description: `Custom guide for: ${newTitle}` // Provide a default description
-            };
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            // NEW: Path for user-added topics
+            const userTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/userTopics/${categoryId}/topics`);
 
-            // Add to the main data store so it can be found later
-            if (!allThemeData[themeType]) {
-                allThemeData[themeType] = [];
-            }
-            allThemeData[themeType].push(newTopic);
-            allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
+            button.disabled = true;
+            button.innerHTML = 'Adding...';
 
-            populateCardGridSelector(containerId, themeType, new Set([newTopic.id]));
-
-            const newTopicElement = document.getElementById(`grid-selector-${newTopic.id}`);
-            if (newTopicElement) {
-                newTopicElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                await handleGridSelect(newTopicElement);
+            try {
+                const newTopicData = {
+                    title: newTitle,
+                    id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
+                    description: `Custom user-added topic: ${newTitle}`,
+                    createdAt: Timestamp.now()
+                };
+                await addDoc(userTopicsCollectionRef, newTopicData);
+                inputField.value = '';
+                // The onSnapshot listener will automatically update the UI.
+            } catch (error) {
+                console.error("Error adding user topic to Firebase:", error);
+                displayMessageInModal(`Could not add topic: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = 'Add Topic';
             }
         }
 
-
         async function handleGenerateMoreClick(button) {
-            const { containerId, themeType } = button.dataset;
+            const { containerId, categoryId } = button.dataset;
             const container = document.getElementById(containerId);
-            if (!container || !themeType || !allThemeData[themeType]) return;
+            if (!container || !categoryId || !allThemeData[categoryId]) return;
 
             button.disabled = true;
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
 
             const card = container.closest('.card');
-            const categoryTitle = card.querySelector('h2').textContent;
-            const existingTitles = allThemeData[themeType].map(item => item.title);
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
+            const existingTitles = allThemeData[categoryId].map(item => item.title);
             
-            const prompt = `Generate 10 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
-            
-            Existing Task List:
-            - ${existingTitles.join('\n- ')}
-
+            const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
+            Existing Task List:\n- ${existingTitles.join('\n- ')}\n
             For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
 
             try {
@@ -1743,67 +1816,37 @@
                 const newItemIds = new Set(newItems.map(item => item.id));
                 
                 newItems.forEach(newItem => {
-                    if (!allThemeData[themeType].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
-                        allThemeData[themeType].push(newItem);
+                    if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
+                        allThemeData[categoryId].push(newItem);
                     }
                 });
                 
-                allThemeData[themeType].sort((a, b) => a.title.localeCompare(b.title));
-                populateCardGridSelector(containerId, themeType, newItemIds);
-                document.getElementById(`${themeType}-details`).innerHTML = '';
+                allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
+                populateCardGridSelector(container, categoryId, newItemIds);
+                document.getElementById(`details-${categoryId}`).innerHTML = '';
 
             } catch (error) {
-                console.error(`Error generating more items for ${themeType}:`, error);
-                const originalButtonContent = `<span class="flex items-center justify-center gap-2">...</span>`;
+                console.error(`Error generating more items for ${categoryId}:`, error);
+                const originalButtonHTML = button.innerHTML;
                 button.disabled = false;
-                button.innerHTML = originalButtonContent.replace('...', 'Error. Try Again.');
+                button.innerHTML = 'Error. Try Again.';
                 button.classList.add('bg-red-100', 'text-red-700');
                  setTimeout(() => {
                     button.classList.remove('bg-red-100', 'text-red-700');
-                    button.innerHTML = originalButtonContent.replace('...', `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Generate 10 More`);
+                    button.innerHTML = originalButtonHTML.replace('Generating...','Add 8 more topics');
                 }, 3000);
             } 
         }
         
-        async function handleShowAllClick(button) {
-            const { containerId, themeType } = button.dataset;
-            const container = document.getElementById(containerId);
-            const fullPrompt = fullPrompts[themeType];
-
-            if (!container || !fullPrompt) return;
-
-            button.disabled = true;
-            button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Loading all...</span>`;
-
-            try {
-                const jsonText = await callGeminiAPI(fullPrompt, true, "Show All Topics");
-                if (!jsonText) throw new Error(`API returned empty content for ${themeType} (full list).`);
-                
-                const fullData = parseJsonWithCorrections(jsonText);
-                fullData.sort((a, b) => a.title.localeCompare(b.title));
-                allThemeData[themeType] = fullData;
-
-                const card = container.closest('.card');
-                card.dataset.isFullyLoaded = 'true';
-
-                populateCardGridSelector(containerId, themeType);
-                document.getElementById(`${themeType}-details`).innerHTML = '';
-            } catch (error) {
-                button.disabled = false;
-                button.classList.add('bg-red-100', 'text-red-700');
-                button.textContent = "Error. Try again.";
-                console.error(`Error loading full list for ${themeType}:`, error);
-            }
-        }
-
         async function handleGridSelect(target) {
-            const { themeId, themeType } = target.dataset;
-            // Unified search for item data in both AI-generated and sticky topic lists
-            let item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) || 
-                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+            const { topicId, categoryId } = target.dataset;
+            // MODIFIED: Check user-added topics as well
+            let item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || 
+                       stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) ||
+                       userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
             
             if (!item) {
-                console.error("Could not find theme item for:", {themeId, themeType});
+                console.error("Could not find theme item for:", {topicId, categoryId});
                 return;
             }
             
@@ -1815,15 +1858,16 @@
             }
 
             const card = target.closest('.card');
-            const cardTitle = card.querySelector('h2').textContent;
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+            const cardTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
             
             await markItemAsViewed(cardTitle, item.title);
             
-            if (!target.querySelector('.viewed-indicator') && !target.querySelector('.sticky-indicator')) {
+            if (!target.querySelector('.viewed-indicator') && !target.querySelector('.sticky-indicator') && !target.querySelector('[title="Your Added Topic"]')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'indicator viewed-indicator';
                 indicator.title = 'Viewed';
-                indicator.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+                indicator.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></div>`;
                 target.prepend(indicator);
             }
 
@@ -1832,24 +1876,23 @@
                 The overall category is: "${cardTitle}"
                 The category description is: "${item.description || 'General task'}"
                 The specific topic is: "${item.title}"
-
                 Based on this context, generate a very brief, condensed summary for the guide on "${item.title}".
                 For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence.
                 Return the response as a simple markdown string where each section is a bullet point, starting with '*'.
             `;
             
-            const resultContainer = document.getElementById(`${themeType}-details`);
+            const resultContainer = document.getElementById(`details-${categoryId}`);
             resultContainer.innerHTML = getLoaderHTML(`Generating summary for ${item.title}...`);
 
             try {
                 let resultText = await callGeminiAPI(prompt, false, "Generate Topic Summary");
                 resultText = resultText ? resultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                originalGeneratedText.set(themeId, resultText); 
+                originalGeneratedText.set(topicId, resultText); 
                 
                 const resultHtml = marked.parse(resultText || '');
                 resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
 
-                addPostGenerationButtons(resultContainer, themeId, themeType);
+                addPostGenerationButtons(resultContainer, topicId, categoryId);
             } catch (error) {
                 handleApiError(error, resultContainer, `guide for ${item.title}`);
             }
@@ -1857,14 +1900,10 @@
         
         async function markItemAsViewed(cardTitle, buttonTitle) {
             if (!viewedItemsCollectionRef) return;
-
             const compositeKey = `${cardTitle} - ${buttonTitle}`;
-            
             try {
                 const docRef = doc(viewedItemsCollectionRef, compositeKey);
-                await setDoc(docRef, { 
-                    viewedAt: Timestamp.fromDate(new Date()) 
-                });
+                await setDoc(docRef, { viewedAt: Timestamp.fromDate(new Date()) });
             } catch (error) {
                 console.error("Error marking item as viewed:", error);
             }
@@ -1896,13 +1935,27 @@
                                         .map(btn => btn.textContent.trim())
                                         .join(', ');
 
-            const initialCustomPrompt = `You are an expert senior IT administrator and technical writer AI.
-Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following custom topic:
-- **Topic:** "${userPrompt}"
-- **Tailoring Options:** ${selectedOptions ? selectedOptions : 'None'}
+            const initialCustomPrompt = `
+Persona: You are an expert senior IT administrator and technical writer AI.
+Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide.
+This output will serve as the foundational "blueprint" for a more detailed guide later.
 
-Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-Return only these sections in markdown format. Do not include any other sections.`;
+//-- BLUEPRINT DETAILS --//
+- **Topic:** "${userPrompt}"
+- **Context:** "Custom user-generated topic"
+- **Tailoring Options:** "${selectedOptions || 'None'}"
+
+//-- INSTRUCTIONS --//
+1.  **Generate Four Sections Only:** Create detailed content exclusively for:
+    * ### 1. Introduction
+    * ### 2. Architectural Overview
+    * ### 3. Key Concepts & Terminology
+    * ### 4. Prerequisites
+2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope. For example, explicitly mention if the guide will cover GUI, PowerShell, and/or API methods. This is critical as it will dictate the content of the full guide.
+3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for experienced IT administrators.
+4.  **Markdown Format:** Use '###' for section headers.
+
+Return only the markdown for these four sections. Do not include any other content or explanatory text.`;
 
             try {
                 let initialResultText = await callGeminiAPI(initialCustomPrompt, false, "Generate Custom Guide (Initial)");
@@ -1913,6 +1966,9 @@ Return only these sections in markdown format. Do not include any other sections
                 contentEl.innerHTML = '';
                 renderAccordionFromMarkdown(initialResultText, contentEl, false); 
                 
+                const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${userPrompt}`}];
+                footerEl.dataset.fullHierarchyPath = JSON.stringify(dummyHierarchy);
+
                 addModalActionButtons(buttonContainer, true);
 
             } catch(error) {
@@ -1921,7 +1977,6 @@ Return only these sections in markdown format. Do not include any other sections
                 promptInput.value = '';
             }
         }
-
         
         function parseJsonWithCorrections(jsonString) {
             if (!jsonString || typeof jsonString !== 'string') {
@@ -1935,7 +1990,6 @@ Return only these sections in markdown format. Do not include any other sections
                 console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
                 
                 try {
-                    // This regex is a bit more robust for fixing unquoted keys.
                     const correctedJsonString = cleanedString
                         .replace(/\\'/g, "'") 
                         .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
@@ -1949,7 +2003,6 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
-        // --- API CALL FUNCTIONS ---
         function logAiInteraction(prompt, response, type) {
             aiLog.push({
                 timestamp: new Date(),
@@ -2003,7 +2056,7 @@ Return only these sections in markdown format. Do not include any other sections
             }
             const result = await callApi(apiUrl, payload);
             const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-            logAiInteraction(prompt, responseText, logType); // Log the interaction
+            logAiInteraction(prompt, responseText, logType);
             return responseText;
         }
 
@@ -2067,7 +2120,7 @@ Return only these sections in markdown format. Do not include any other sections
             const container = document.getElementById('tailoring-buttons-container');
             container.innerHTML = getLoaderHTML('Loading AI options...');
             try {
-                const prompt = `Generate a comprehensive list of 40-50 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
+                const prompt = `Generate a comprehensive list of 16 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
                 const jsonText = await callGeminiAPI(prompt, true, "Load Tailoring Options");
                 if (!jsonText) {
                     throw new Error("AI did not return any tailoring options.");
@@ -2130,19 +2183,9 @@ Return only these sections in markdown format. Do not include any other sections
         
         function getAppPrompts() {
             const prompts = {};
-
-            categoriesToGenerate.forEach(cat => {
-                prompts[`${cat.title} (Initial Load)`] = cat.initialPrompt;
-                prompts[`${cat.title} (Full Details)`] = cat.fullPrompt;
-            });
-
-            prompts["Generate Detailed Guide (Generic Task)"] = getEnhancedPrompt("{task}", "", "", { cardTitle: "{cardTitle}", cardDescription: "{cardDescription}" });
-            prompts["Refine Existing Guide"] = getEnhancedPrompt("{refinement_request}", "", "{original_text}");
-            prompts["Generate Summary for Topic"] = `Generate a very brief, condensed summary for an IT administration guide on the topic: "{item.title}". For each section (Objective, Pre-requisites, Key Steps, Verification, Helpful Resources), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
-            prompts["Generate UI Screenshot"] = `UI Screenshot for an IT Administration guide showing: {description}. Clean, professional, minimal.`;
-            prompts["Generate Color Theme"] = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-            prompts["Discover New Topic"] = `Generate 1 new, useful IT administration category NOT on this list: {existing_titles}. Provide a "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50). The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description". ${jsonInstruction}`;
-            
+            prompts["Full Guide Generation Prompt"] = getFullGuideGenerationPrompt();
+            prompts["Refinement Prompt"] = getRefinementPrompt();
+            prompts["Final Review Prompt"] = finalReviewPrompt;
             return prompts;
         }
         
@@ -2182,90 +2225,84 @@ Return only these sections in markdown format. Do not include any other sections
             openModal('promptsModal');
         }
 
-        function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-            const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
+        function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
+            return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality.
 
-            if (originalText) {
-                // This is the prompt for refining existing text
-                return `You are an expert senior IT administrator AI. A user has provided the following content and a request to refine it. Your task is to rewrite the entire text to incorporate the user's request.
-**ORIGINAL TEXT:**
----
+Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text.
+
+//-- INPUT 1: ORIGINAL TEXT --//
 ${originalText}
----
-**USER'S REFINEMENT REQUEST:**
-"${task}"
 
-**Instructions for rewriting:**
-1.  **Integrate:** Seamlessly integrate the user's request into the text.
-2.  **Quality Standards:** The rewritten text must be clear, accurate, and practical.
-3.  **Format:** Maintain the original markdown format unless the refinement request implies a structural change.
-Return only the new, complete, and rewritten markdown text.`;
-            }
+//-- INPUT 2: USER'S REVISION DIRECTIVE --//
+${refinementRequest}
 
-            let contextText = `for the task: "${task}"`;
-            if (context.cardTitle) {
-                contextText = `for the following topic.
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${task}"`;
-            }
+//-- GUIDING PRINCIPLES FOR REVISION --//
+- **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies.
+- **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece.
+- **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change.
+- **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices.
 
-            return `You are an expert senior IT administrator and technical writer AI. Your task is to generate a comprehensive, in-depth, and practical guide ${contextText}. ${optionsText}
-
-**CRITICAL FORMATTING INSTRUCTION:** You MUST format each of the 12 main sections below (e.g., "1. Introduction", "2. Architectural Overview") with a '###' markdown header. For example: '### 1. Introduction'. This is required for the content to be displayed correctly.
-
-**REQUIRED GUIDE STRUCTURE & CONTENT:**
-### 1. Introduction
-    * **Overview:** Briefly explain the technology or task.
-    * **Importance:** Describe why this task/technology is important in modern IT environments.
-    * **What You'll Learn:** Provide a bulleted list of key takeaways the user will gain from this guide.
-### 2. Architectural Overview (If Applicable)
-    * For complex topics, explain the high-level architecture. Describe the main components and how they interact. Use simple analogies if possible.
-### 3. Key Concepts & Terminology
-    * Detail the fundamental principles the user MUST understand.
-    * Define all relevant terminology and acronyms clearly. Use real-world examples to illustrate complex concepts.
-### 4. Prerequisites
-    * **Permissions:** Detail the specific administrative roles or granular permissions required (e.g., Active Directory rights, cloud IAM roles).
-    * **Software/Licensing:** List any necessary software, specific versions, and any licensing requirements.
-    * **System Requirements:** Specify any hardware or network prerequisites (e.g., open firewall ports, minimum RAM).
-### 5. Detailed Step-by-Step Instructions
-    * **Task-Specific and Comprehensive:** This is the most critical section. It MUST NOT be generic. It must detail the specific, ordered sequence of actions an administrator would perform for the given task title.
-    * **Clarity and Granularity:** Break down major tasks into smaller, numbered sub-steps. Make the instructions clear and actionable.
-    * **Command-Line Examples:** For CLI-based tasks, provide the *exact* commands to be run.
-    * **GUI Instructions:** For GUI-based tasks, describe the exact sequence of clicks and navigation.
-### 6. Verification and Validation
-    * Provide specific commands or procedures to run to confirm the task was completed successfully.
-    * Describe what a successful output or system state looks out.
-### 7. Best Practices
-    * Offer expert advice on the most effective, secure, and efficient ways to perform the task.
-### 8. Automation Opportunities
-    * **Why Automate:** Discuss the benefits of automating this task.
-    * **Scripting Examples:** Provide complete, practical script examples.
-### 9. Security Considerations
-    * **Hardening:** Provide specific steps to harden the configuration.
-    * **Common Vulnerabilities:** Discuss potential security risks.
-    * **Auditing & Logging:** Recommend what to audit and how to configure logging.
-### 10. Advanced Use Cases & Scenarios
-    * Describe 2-3 advanced or less-common scenarios.
-### 11. Troubleshooting
-    * Provide a table of common problems, their likely causes, and step-by-step solutions.
-### 12. Helpful Resources
-    * Include a final section with a bulleted list of high-quality, relevant links.
-
-**MANDATORY QUALITY STANDARDS:**
-${linkVerificationAndGenerationMandate}
-${powershellStandard}
-${powerCLIStandard}
-
-Return only the complete markdown guide, ensuring each main section has a '###' header.`;
+Final Output Instruction
+Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
         }
         
-        async function handleExploreInDepth(themeId, themeType, cardName) {
-            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId)) ||
-                       stickyTopics[themeType]?.find(d => String(d.id) === String(themeId));
+        // ** ENHANCED PROMPT FUNCTION **
+        function getFullGuideGenerationPrompt(context = {}) {
+            const hierarchy = context.hierarchyContext || [];
+            const task = context.task || '{task}';
+            const options = context.options || '{options}';
+            
+            const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
+            const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${task}.`;
+            const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
+            const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
+            const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
+
+            return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer.
+Mission: Produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below. Your output must be exhaustive, clear, and focused entirely on the defined scope.
+The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management.
+
+//-- GUIDE BLUEPRINT & SCOPE --//
+1. Topic Technology: ${topicTechnology}
+2. Specific Goal: ${specificGoal}
+3. Target Audience: ${targetAudience}
+4. IN-SCOPE (Must be included):
+${inScope}
+5. OUT-OF-SCOPE (Must be excluded):
+${outOfScope}
+
+//-- CRITICAL STRUCTURE & FORMATTING RULES --//
+A. Markdown Formatting: You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction.
+
+B. Required Guide Content (Generate all 12 sections):
+1. Introduction: Overview, Importance, What You'll Learn.
+2. Architectural Overview: Components and interactions.
+3. Key Concepts & Terminology: Definitions only.
+4. Prerequisites: Permissions, Software/Licensing, System Requirements.
+5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.**
+6. Verification and Validation: Specific commands/procedures to confirm correct configuration.
+7. Best Practices: Expert advice for implementation and management.
+8. Automation Techniques for Key Concepts: Concept-specific automation opportunities with full scripts.
+9. Security Considerations: Concept-specific hardening, vulnerabilities, and auditing.
+10. Advanced Use Cases & Scenarios: 2-3 advanced examples combining concepts.
+11. Troubleshooting: A table of common problems, causes, and solutions by concept.
+12. Helpful Resources: Bulleted list of high-quality, working links to official documentation.
+
+//-- MANDATORY QUALITY STANDARDS --//
+1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation.
+2.  **No Placeholders:** Your output MUST NOT contain placeholder links, hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)". You must use your capabilities to find and provide real, authoritative information.
+3.  **PowerShell/CLI Standards:** Scripts must be robust and production-ready. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`.
+4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Instead, integrate advice naturally into the text.`;
+        }
+        
+        async function handleExploreInDepth(topicId, fullHierarchyPath) {
+            const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
+            const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) ||
+                       stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) ||
+                       userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
 
             if (!item) {
-                console.error("Could not find item for in-depth view", { themeId, themeType });
+                console.error("Could not find item for in-depth view", { topicId, categoryId });
                 return;
             }
 
@@ -2280,22 +2317,36 @@ Return only the complete markdown guide, ensuring each main section has a '###' 
             buttonContainer.innerHTML = '';
             document.getElementById('modal-status-message').textContent = '';
 
-            footerEl.dataset.themeId = themeId;
-            footerEl.dataset.themeType = themeType;
+            footerEl.dataset.topicId = topicId;
+            footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
             footerEl.dataset.fullTitle = fullTitle;
-            footerEl.dataset.cardName = cardName;
+            footerEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
 
             openModal('inDepthModal');
+            
+            const contextString = fullHierarchyPath.map(p => p.title).join(' -> ');
 
-            const context = { cardTitle: cardName, cardDescription: item.description };
+            const initialPrompt = `
+Persona: You are an expert senior IT administrator and technical writer AI.
+Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide.
+This output will serve as the foundational "blueprint" for a more detailed guide later.
 
-            const initialPrompt = `You are an expert senior IT administrator and technical writer AI.
-Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive, in-depth IT administration guide for the following topic:
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
-- **Specific Task:** "${item.title}"
-Structure these sections logically using '###' markdown syntax for headers. The content must be detailed, accurate, and reflect real-world best practices.
-Return only these sections in markdown format. Do not include any other sections.`;
+//-- BLUEPRINT DETAILS --//
+- **Topic:** "${item.title}"
+- **Context:** "${contextString}"
+- **Tailoring Options:** "None"
+
+//-- INSTRUCTIONS --//
+1.  **Generate Four Sections Only:** Create detailed content exclusively for:
+    * ### 1. Introduction
+    * ### 2. Architectural Overview
+    * ### 3. Key Concepts & Terminology
+    * ### 4. Prerequisites
+2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope. For example, explicitly mention if the guide will cover GUI, PowerShell, and/or API methods. This is critical as it will dictate the content of the full guide.
+3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for experienced IT administrators.
+4.  **Markdown Format:** Use '###' for section headers.
+
+Return only the markdown for these four sections. Do not include any other content or explanatory text.`;
 
             try {
                 let initialResultText = await callGeminiAPI(initialPrompt, false, "Explore In-Depth (Initial)");
@@ -2313,15 +2364,15 @@ Return only these sections in markdown format. Do not include any other sections
             }
         }
         
+        // ** REFACTORED FUNCTION FOR EFFICIENCY **
         async function generateFullDetailedGuide(button) {
             const firstModalFooter = document.getElementById('inDepthModalFooter');
             const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
-            const cardName = firstModalFooter.dataset.cardName;
-            const initialContentMarkdown = originalGeneratedText.get(fullTitleFromFirstModal); 
-
-            if (!initialContentMarkdown) {
-                console.error("No initial content found to generate detailed steps from.");
-                handleApiError({ message: "Initial guide content missing. Cannot generate detailed instructions." }, document.getElementById('inDepthModalContent'), "detailed instructions");
+            const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
+            const blueprintMarkdown = originalGeneratedText.get(fullTitleFromFirstModal);
+            
+            if (!blueprintMarkdown) {
+                handleApiError({ message: "Could not find the initial guide blueprint to proceed." }, document.getElementById('inDepthDetailedModalContent'), 'full detailed guide');
                 return;
             }
             
@@ -2338,26 +2389,53 @@ Return only these sections in markdown format. Do not include any other sections
             detailedButtonContainer.innerHTML = '';
             
             detailedFooterEl.dataset.fullTitle = detailedModalTitle; 
-            detailedFooterEl.dataset.cardName = cardName;
+            detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
             
             openModal('inDepthDetailedModal');
 
             try {
-                detailedContentEl.innerHTML = getLoaderHTML('Generating full guide...');
-                const topicName = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-                const fullGuidePrompt = getEnhancedPrompt(topicName, '', '', {cardTitle: cardName, cardDescription: 'A comprehensive guide.'});
+                detailedContentEl.innerHTML = getLoaderHTML('Generating detailed sections (5-12)...');
                 
-                let finalCompleteGuideMarkdown = await callGeminiAPI(fullGuidePrompt, false, "Generate Full Guide");
-                finalCompleteGuideMarkdown = finalCompleteGuideMarkdown ? finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-                if (!finalCompleteGuideMarkdown) throw new Error("Failed to generate the full guide.");
+                // New prompt to generate only the remaining sections
+                const remainingSectionsPrompt = `
+Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer.
+Mission: Based on the provided GUIDE BLUEPRINT, generate the remaining detailed sections (5 through 12) for the guide.
 
+//-- GUIDE BLUEPRINT (SECTIONS 1-4 for Context) --//
+${blueprintMarkdown}
+
+//-- INSTRUCTIONS --//
+1.  **Generate Sections 5-12 ONLY:** Your output must start with "### 5. Key Concepts - In-Depth Application & Management" and end with "### 12. Helpful Resources".
+2.  **Adhere to Blueprint:** All content you generate must strictly adhere to the scope and details defined in the provided blueprint.
+3.  **Provide Concrete Examples:** For section 5, for each technique discussed (e.g., Few-Shot Learning), you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts.
+4.  **Uphold Quality Standards:** Ensure all information is factually accurate, contains no placeholders, and is written in a professional tone.
+
+Your response must be ONLY the markdown for sections 5 through 12.`;
+
+                let draftSections5to12 = await callGeminiAPI(remainingSectionsPrompt, false, "Generate Full Guide (Sections 5-12 Draft)");
+                draftSections5to12 = draftSections5to12 ? draftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!draftSections5to12) throw new Error("Failed to generate the detailed sections of the guide.");
+
+                detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the new sections...');
+
+                // Use the final review prompt on the new sections
+                let reviewRequestPrompt = finalReviewPrompt
+                    .replace('{blueprint_from_step_1}', blueprintMarkdown)
+                    .replace('{draft_content_to_review}', draftSections5to12);
+
+                let finalSections5to12 = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Sections 5-12 Final)");
+                finalSections5to12 = finalSections5to12 ? finalSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+                if (!finalSections5to12) throw new Error("Failed to generate the final, refined guide sections.");
+                
+                // Concatenate the final guide
+                const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
                 originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
                 detailedContentEl.innerHTML = '';
                 renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
 
                 addDetailedModalActionButtons(detailedButtonContainer);
-                document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
+                document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated & refined successfully!';
 
             } catch (error) {
                 handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -2380,7 +2458,6 @@ Return only these sections in markdown format. Do not include any other sections
             if(modal) {
                 modal.classList.add('hidden');
                 document.body.classList.remove(`${modalId}-open`);
-                // If this was the last modal, remove the generic class
                 if (document.querySelectorAll('.modal:not(.hidden)').length === 0) {
                      document.body.classList.remove('modal-open');
                 }
@@ -2457,7 +2534,6 @@ Return only these sections in markdown format. Do not include any other sections
             const selectedText = selection.toString().trim();
             const searchButton = document.getElementById('search-gemini-button');
 
-            // Don't show button for selections in input fields
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 searchButton.classList.add('hidden');
                 return;
@@ -2494,9 +2570,9 @@ Return only these sections in markdown format. Do not include any other sections
 
             try {
                 let resultText = await callGeminiAPI(prompt, false, "Text Selection Search");
-                resultText = resultText ? resultText.replace(/```(markdown|json)?\n?|```/g, '').trim() : '';
+                resultText = resultText ? resultText.replace(/```(markdown|json)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
-                originalGeneratedText.set("currentSearch", resultText); // Store for refinement
+                originalGeneratedText.set("currentSearch", resultText);
                 
                 resultEl.innerHTML = marked.parse(resultText || 'No explanation found.');
             } catch (error) {
@@ -2579,54 +2655,31 @@ Return only these sections in markdown format. Do not include any other sections
         }
 
 
-        function addPostGenerationButtons(container, themeId, themeType) {
+        function addPostGenerationButtons(container, topicId, categoryId) {
             let buttonBar = container.querySelector('.button-bar');
             if (buttonBar) buttonBar.remove();
 
             buttonBar = document.createElement('div');
             buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
             buttonBar.style.borderColor = 'var(--color-card-border)';
+            
+            const card = container.closest('.card');
+            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+
             buttonBar.innerHTML = `
                 <button class="btn-secondary text-sm refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                <button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>
+                <button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}" data-full-hierarchy-path='${JSON.stringify(fullHierarchyPath)}'>Explore In-Depth</button>
             `;
             container.appendChild(buttonBar);
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
                 const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
                 if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
             });
-        }
-        
-        async function handleDiscoverMoreClick() {
-            const button = document.getElementById('discover-more-button');
-            const errorP = document.getElementById('discover-more-error');
-            errorP.textContent = '';
-            button.disabled = true;
-
-            const existingTitles = Array.from(document.querySelectorAll('#main-grid h2')).map(h2 => h2.textContent.trim()).filter(Boolean);
-            const titlesString = existingTitles.length > 0 ? `[${existingTitles.map(t => `"${t}"`).join(', ')}]` : 'the default ones';
-            
-            const prompt = `Generate 1 new, useful IT administration category that is NOT in the following list: ${titlesString}.
-Return your response as a single, valid JSON object with the following keys: "key" (camelCase, unique), "title", "description", an "initialPrompt" (for 10 items), and a "fullPrompt" (for 40-50).
-The prompts you generate should instruct an AI to create a JSON array of objects, where each object has an "id", "title", and "description".
-${jsonInstruction}`;
-
-            try {
-                const jsonText = await callGeminiAPI(prompt, true, "Discover More Topics");
-                if (!jsonText) throw new Error("AI did not return a new category.");
-                const newCategory = parseJsonWithCorrections(jsonText);
-                categoriesToGenerate.push(newCategory);
-                categoriesToGenerate.sort((a,b) => a.title.localeCompare(b.title));
-                await generateAndPopulateAICategory(newCategory);
-                await generateTopicsMenu();
-            } catch (error) {
-                console.error("Failed to discover more topics:", error);
-                errorP.textContent = "Sorry, couldn't generate a new topic right now. Please try again.";
-                 handleApiError(error, null, "discover more");
-            } finally {
-                button.disabled = false;
-            }
+             buttonBar.querySelector('.explore-button').addEventListener('click', e => {
+                const { topicId, categoryId } = e.currentTarget.dataset;
+                handleExploreInDepth(topicId, fullHierarchyPath);
+            });
         }
         
         async function handleCustomVisualThemeGeneration() {
@@ -2679,37 +2732,7 @@ ${jsonInstruction}`;
             errorContainer.textContent = message;
             errorContainer.classList.remove('hidden');
         }
-
-        async function generateTopicsMenu() {
-            const menuContainer = document.getElementById('topics-menu-container');
-            const menuItemsContainer = document.getElementById('topics-menu-items').querySelector('div');
-            const cards = Array.from(document.querySelectorAll('#main-grid .card'));
-            
-            if (cards.length <= 1) {
-                menuContainer.classList.add('hidden');
-                return;
-            }
-
-            const cardData = cards.map(card => ({
-                id: card.id,
-                title: card.querySelector('h2')?.textContent
-            })).filter(c => c.id && c.title).sort((a,b) => a.title.localeCompare(b.title));
-            
-            if (cardData.length === 0) {
-                 menuContainer.classList.add('hidden');
-                return;
-            }
-            
-            menuItemsContainer.innerHTML = ''; // Clear previous items
-
-            const menuHtml = cardData.map(card => {
-                return `<a href="#" class="topics-menu-item" role="menuitem" data-target-id="${card.id}">${card.title}</a>`;
-            }).join('');
-
-            menuItemsContainer.innerHTML = menuHtml;
-            menuContainer.classList.remove('hidden');
-        }
-
+        
         function populateTypographySettings() {
             const fontSelect = document.getElementById('font-family-select');
             const sizeSelect = document.getElementById('font-size-select');
@@ -2823,31 +2846,66 @@ ${jsonInstruction}`;
         }
         
         async function handleAIHelpRequest() {
-            document.getElementById('inDepthModalTitle').textContent = "AI Help & Feedback";
+            document.getElementById('inDepthModalTitle').textContent = "Code Documentation Generation";
+            
             const contentEl = document.getElementById('inDepthModalContent');
-            contentEl.innerHTML = getLoaderHTML('Generating help guide and AI feedback...');
+            contentEl.innerHTML = getLoaderHTML('AI is generating the technical code documentation...');
+            
             document.getElementById('inDepthModalButtons').innerHTML = '';
             document.getElementById('modal-status-message').innerHTML = '';
+            
             openModal('inDepthModal');
 
-            const helpPrompt = `Generate a user-friendly help guide for this "IT Administration Hub" application. Explain the key features in separate sections using '###' for each title: Main Dashboard, Generative AI Prompt, Cloud Storage, In-Depth Guides, AI Theme Generator, and Floating Action Buttons.`;
-            const feedbackPrompt = `You are an AI expert in user experience (UX) and IT administration tools. You are reviewing this "IT Administration Hub" application. Based on the features, provide constructive feedback on what is intuitive, what could be improved, and what features might be missing for a senior IT administrator. Format your feedback using '###' for titles "Strengths", "Areas for Improvement", and "Suggested Features".`;
-            
-            try {
-                const [helpResult, feedbackResult] = await Promise.all([
-                    callGeminiAPI(helpPrompt, false, "Generate Help Guide"), 
-                    callGeminiAPI(feedbackPrompt, false, "Generate AI Feedback")
-                ]);
+            const codeDocPrompt = `
+        **Persona:** You are an expert technical writer and senior software architect.
 
-                const helpText = helpResult ? marked.parse(helpResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load help content.</p>';
-                const feedbackText = feedbackResult ? marked.parse(feedbackResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load feedback.</p>';
+        **Objective:** Your task is to analyze this application's structure and generate comprehensive code documentation. The application is a sophisticated "IT Administration Hub" built with HTML, CSS, and modern JavaScript (ESM), integrating with Firebase and various Google Cloud APIs.
+
+        **Instructions:**
+        Based on the application's known features and structure, generate a detailed technical documentation guide. The guide must be written in markdown format and use '###' for all main section headers.
+
+        **Required Sections:**
+
+        ### 1. Application Overview
+        * Describe the application's primary purpose as an AI-powered tool for IT professionals.
+        * Explain its core value proposition: generating dynamic, in-depth administrative guides.
+
+        ### 2. Technologies & Languages
+        * List and describe the core technologies used:
+            * **Frontend:** HTML5, Tailwind CSS, Vanilla JavaScript (ECMAScript Modules).
+            * **Backend & Cloud Services:** Firebase (Authentication, Firestore), Google Cloud Platform.
+            * **Core APIs:** Google Gemini API (for content generation), Google Drive API (for storage), Google Identity Services (for auth), and the Google AI Platform API (for image generation).
+
+        ### 3. Architectural Design
+        * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals.
+        * **State Management:** Describe how the application state is managed, including API keys in localStorage, user session state via Firebase Auth, and in-memory state for generated content.
+        * **Event-Driven Logic:** Explain the role of the central 'setupEventListeners' function and how it delegates tasks based on user interactions.
+        * **Hierarchical Content Model:** Explain the Firestore data structure ('topicHierarchy' collection) for managing content in a nested Main -> Sub -> Final Category structure.
+
+        ### 4. Core Features Deep Dive
+        * For each key feature below, describe its purpose and implementation:
+            * **Dynamic Category Generation:** How 'openCategoryBrowser' and 'generateAndPopulateAICategory' work with Firestore to create UI on demand.
+            * **Multi-Stage Guide Generation:** Detail the process that starts with a summary ('handleGridSelect'), moves to an initial guide ('handleExploreInDepth'), and finishes with a complete, AI-reviewed document ('generateFullDetailedGuide').
+            * **Hierarchy Management:** Describe the purpose and functionality of the 'hierarchyManagementModal' for CRUD operations on the content structure in Firestore.
+
+        ### 5. Key Functions & Logic
+        * **\`initializeApplication()\`:** The main entry point.
+        * **\`callGeminiAPI()\` / \`callApi()\`:** Centralized functions for all generative AI requests.
+        * **\`openHierarchyManagementModal()\` & related functions:** The logic for populating and interacting with the hierarchy management UI.
+        * **\`openCategoryBrowser()\`:** The function that initiates the user-facing topic exploration flow.
+
+        Return only the complete markdown documentation.
+        `;
+
+            try {
+                const documentationResult = await callGeminiAPI(codeDocPrompt, false, "Generate Code Documentation");
                 
-                contentEl.innerHTML = `
-                    <div class="accordion-item"><button type="button" class="accordion-header active"><span class="text-left font-semibold">Application Help Guide</span><svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content open prose max-w-none">${helpText}</div></div>
-                    <div class="accordion-item"><button type="button" class="accordion-header"><span class="text-left font-semibold">AI-Generated Feedback</span><svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button><div class="accordion-content prose max-w-none">${feedbackText}</div></div>
-                `;
+                const documentationHtml = documentationResult ? marked.parse(documentationResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load documentation.</p>';
+                
+                contentEl.innerHTML = `<div class="prose max-w-none">${documentationHtml}</div>`;
+
             } catch (error) {
-                handleApiError(error, contentEl, 'AI help content');
+                handleApiError(error, contentEl, 'code documentation');
             }
         }
         
@@ -2896,13 +2954,19 @@ ${jsonInstruction}`;
             const renderTarget = isSearchModal ? document.getElementById('searchGeminiResult') : contentArea;
             renderTarget.innerHTML = getLoaderHTML(`Refining content based on your request...`);
             
-            const prompt = getEnhancedPrompt(refinementRequest, '', originalText);
+            const prompt = getRefinementPrompt(originalText, refinementRequest);
             
             try {
                 let newText = await callGeminiAPI(prompt, false, "Refine Content");
                 newText = newText ? newText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
                 
                 originalGeneratedText.set(textKey, newText);
+
+                if (isSearchModal) {
+                    const queryTextEl = document.getElementById('searchGeminiQueryText');
+                    const newQueryText = `${queryTextEl.value} (Refined: ${refinementRequest})`;
+                    queryTextEl.value = newQueryText;
+                }
                 
                 if (isSearchModal) {
                     renderTarget.innerHTML = marked.parse(newText || '');
@@ -2916,14 +2980,17 @@ ${jsonInstruction}`;
             }
         }
         
-        function getIconForTheme(themeType, themeId) { 
+        function getIconForTheme(categoryId, topicId) { 
             const icons = {
                 serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
                 windowsServer: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
                 m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
                 default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
             }
-            return icons[themeType] || icons.default;
+            // Simple logic to pick an icon based on a hash of the categoryId, can be improved.
+            const keys = Object.keys(icons);
+            const hash = categoryId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            return icons[keys[hash % keys.length]] || icons.default;
         }
         
         function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
@@ -2934,9 +3001,7 @@ ${jsonInstruction}`;
         }
         
         function truncateText(text, maxLength = 50) {
-            if (typeof text !== 'string' || text.length <= maxLength) {
-                return text;
-            }
+            if (typeof text !== 'string' || text.length <= maxLength) { return text; }
             return text.substring(0, maxLength) + '...';
         }
 
@@ -2955,20 +3020,66 @@ ${jsonInstruction}`;
                 message = `The request timed out. Please check your connection and try again.`;
             } else if (errText.includes('google account to generate images')) {
                 message = `Image generation requires you to connect your Google Account. Please use the 'Connect' button in the Cloud Storage card.`
+            } else if (errText.includes('data.sort is not a function') || errText.includes('invalid api response format')) {
+                message = `The AI returned data in an unexpected format. This usually means the AI did not return a list of topics as expected. Please try again, or adjust the prompt in Hierarchy Management.`;
             }
             return `Sorry, a critical error occurred: ${message}`; 
         }
 
-        // --- Sticky Topics Functions ---
-        function openStickyTopicsModal() {
-            const select = document.getElementById('sticky-topic-category-select');
-            select.innerHTML = '<option value="">Select a category...</option>'; // Clear and add placeholder
-            
-            const sortedCategories = [...categoriesToGenerate].sort((a,b) => a.title.localeCompare(b.title));
+        // --- Sticky Topics & User Topics Functions ---
+        
+        // NEW: Listener for user-added topics
+        function listenForUserAddedTopics(categoryKey) {
+            if (userTopicsUnsubscribes[categoryKey]) {
+                userTopicsUnsubscribes[categoryKey]();
+            }
+            if (!userId || !categoryKey) {
+                if(userAddedTopics[categoryKey]) { userAddedTopics[categoryKey] = []; }
+                return;
+            }
 
-            sortedCategories.forEach(cat => {
-                select.add(new Option(cat.title, cat.key));
+            const appId = firebaseConfig.appId || 'it-admin-hub-global';
+            const userTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/userTopics/${categoryKey}/topics`);
+
+            userTopicsUnsubscribes[categoryKey] = onSnapshot(userTopicsCollectionRef, (snapshot) => {
+                const topics = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+                userAddedTopics[categoryKey] = topics;
+
+                const gridContainer = document.getElementById(`selector-${categoryKey}`);
+                if (gridContainer) {
+                    populateCardGridSelector(gridContainer, categoryKey);
+                }
+            }, (error) => {
+                console.error(`Error listening to user-added topics for ${categoryKey}:`, error);
             });
+        }
+
+        async function openStickyTopicsModal() {
+            const select = document.getElementById('sticky-topic-category-select');
+            select.innerHTML = '<option value="">Select a category...</option>';
+            
+            try {
+                const finalCategories = [];
+                const mainCatsSnapshot = await getDocs(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
+                for (const mainDoc of mainCatsSnapshot.docs) {
+                    const subCatsSnapshot = await getDocs(collection(db, mainDoc.ref.path, 'subCategories'));
+                    for (const subDoc of subCatsSnapshot.docs) {
+                        const finalCatsSnapshot = await getDocs(collection(db, subDoc.ref.path, 'finalCategories'));
+                        finalCatsSnapshot.forEach(finalDoc => {
+                            finalCategories.push({ id: finalDoc.id, ...finalDoc.data() });
+                        });
+                    }
+                }
+                
+                finalCategories.sort((a, b) => a.title.localeCompare(b.title));
+                finalCategories.forEach(cat => {
+                    select.add(new Option(cat.title, cat.id));
+                });
+
+            } catch (error) {
+                console.error("Error populating sticky topic categories:", error);
+                select.innerHTML = '<option value="">Error loading categories</option>';
+            }
 
             document.getElementById('sticky-topics-list').innerHTML = '';
             document.getElementById('new-sticky-topic-input').value = '';
@@ -2981,9 +3092,7 @@ ${jsonInstruction}`;
                 stickyTopicsUnsubscribe();
             }
             if (!userId || !categoryKey) {
-                 if(stickyTopics[categoryKey]) {
-                    stickyTopics[categoryKey] = [];
-                 }
+                 if(stickyTopics[categoryKey]) { stickyTopics[categoryKey] = []; }
                  renderStickyTopics(categoryKey);
                  return;
             }
@@ -2995,10 +3104,10 @@ ${jsonInstruction}`;
                 const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 stickyTopics[categoryKey] = topics;
                 renderStickyTopics(categoryKey);
-                // Also refresh the main card grid if it's visible
-                const gridContainer = document.getElementById(`${categoryKey}-selector-visual`);
+                
+                const gridContainer = document.getElementById(`selector-${categoryKey}`);
                 if (gridContainer) {
-                    populateCardGridSelector(`${categoryKey}-selector-visual`, categoryKey);
+                    populateCardGridSelector(gridContainer, categoryKey);
                 }
             }, (error) => {
                 console.error(`Error listening to sticky topics for ${categoryKey}:`, error);
@@ -3030,14 +3139,13 @@ ${jsonInstruction}`;
             const title = input.value.trim();
 
             if (!categoryKey || !title || !userId) {
-                alert("Please select a category and enter a title.");
+                displayMessageInModal('Please select a category and enter a title.', 'warning');
                 return;
             }
             const appId = firebaseConfig.appId || 'it-admin-hub-global';
             const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
             
             try {
-                // Add a default description for new sticky topics
                 await addDoc(stickyTopicsCollectionRef, { 
                     title: title, 
                     description: `Custom sticky topic: ${title}`,
@@ -3074,21 +3182,406 @@ ${jsonInstruction}`;
 
             if (!categoryKey || !docId || !userId) return;
             
-            if (confirm("Are you sure you want to delete this sticky topic?")) {
+            showConfirmationModal("Are you sure you want to delete this sticky topic?", async () => {
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`, docId);
                 try {
                     await deleteDoc(docRef);
                 } catch (error) {
                     console.error("Error deleting sticky topic:", error);
+                    displayMessageInModal('Failed to delete topic. Check console.', 'error');
                 }
+            });
+        }
+
+        // --- MODIFIED: Topic Browser Functions ---
+        const getHierarchyBasePath = () => `artifacts/${firebaseConfig.appId || 'it-admin-hub-global'}/public/data`;
+
+        async function openCategoryBrowser(mode) {
+            const modalTitle = document.getElementById('categoryBrowserModalTitle');
+            modalTitle.textContent = 'Browse Categories';
+            currentHierarchyPath = [];
+            updateBreadcrumbs();
+            await renderCategoryLevel(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
+            openModal('categoryBrowserModal');
+        }
+
+        async function renderCategoryLevel(collectionRef) {
+            const modalContent = document.getElementById('categoryBrowserModalContent');
+            modalContent.innerHTML = getLoaderHTML('Loading categories...');
+            try {
+                const snapshot = await getDocs(query(collectionRef));
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), path: doc.ref.path }));
+                items.sort((a, b) => a.title.localeCompare(b.title));
+                
+                if (items.length === 0) {
+                    modalContent.innerHTML = `<p class="themed-text-muted text-center">No categories found at this level.</p>`;
+                    return;
+                }
+
+                const categoryGrid = document.createElement('div');
+                categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+
+                categoryGrid.innerHTML = items.map(item => `
+                    <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-item='${JSON.stringify(item)}'>
+                        <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
+                        ${item.description ? `<p class="text-sm themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
+                        <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
+                    </div>
+                `).join('');
+                
+                modalContent.innerHTML = '';
+                modalContent.appendChild(categoryGrid);
+                
+                modalContent.querySelectorAll('.category-selector-item').forEach(itemEl => {
+                    itemEl.addEventListener('click', handleCategoryDrillDown);
+                });
+            } catch (error) {
+                console.error("Error rendering category level:", error);
+                modalContent.innerHTML = `<p class="text-red-500 text-center">Error loading categories. Check console for details.</p>`;
+            }
+        }
+        
+        async function handleCategoryDrillDown(e) {
+            const itemData = JSON.parse(e.currentTarget.dataset.item);
+            currentHierarchyPath.push(itemData);
+            updateBreadcrumbs();
+
+            let nextCollectionName;
+            if (currentHierarchyPath.length === 1) nextCollectionName = 'subCategories';
+            else if (currentHierarchyPath.length === 2) nextCollectionName = 'finalCategories';
+            else {
+                // This is a final category selection
+                closeModal('categoryBrowserModal');
+                await generateAndPopulateAICategory(currentHierarchyPath);
+                return;
+            }
+            
+            const currentDocRef = doc(db, itemData.path);
+            const nextCollectionRef = collection(currentDocRef, nextCollectionName);
+            await renderCategoryLevel(nextCollectionRef);
+        }
+
+        function updateBreadcrumbs() {
+            const breadcrumbsContainer = document.getElementById('categoryBrowserBreadcrumbs');
+            if (currentHierarchyPath.length === 0) {
+                breadcrumbsContainer.innerHTML = `<span class="font-semibold themed-text-primary cursor-pointer" data-index="-1">Top Level</span>`;
+            } else {
+                 breadcrumbsContainer.innerHTML = `<span class="breadcrumb-item cursor-pointer hover:underline" data-index="-1">Top Level</span>` + 
+                 currentHierarchyPath.map((item, index) => 
+                    `<span class="mx-2 themed-text-muted">/</span><span class="breadcrumb-item cursor-pointer hover:underline" data-index="${index}">${item.title}</span>`
+                ).join('');
+            }
+            
+
+            breadcrumbsContainer.querySelectorAll('.breadcrumb-item').forEach(crumb => {
+                crumb.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    if (index === -1) {
+                        currentHierarchyPath = [];
+                        renderCategoryLevel(collection(db, getHierarchyBasePath(), 'topicHierarchy'));
+                    } else {
+                        currentHierarchyPath = currentHierarchyPath.slice(0, index + 1);
+                        const parentPath = currentHierarchyPath[currentHierarchyPath.length - 1].path;
+                        const parentRef = doc(db, parentPath);
+                        renderCategoryLevel(collection(parentRef, index === 0 ? 'subCategories' : 'finalCategories'));
+                    }
+                    updateBreadcrumbs();
+                });
+            });
+        }
+
+
+        // --- NEW: Hierarchy Management Functions ---
+        function openHierarchyManagementModal() {
+            resetHierarchySelection();
+            loadHierarchyColumn('main');
+            openModal('hierarchyManagementModal');
+        }
+
+        function resetHierarchySelection() {
+            selectedHierarchyItems = { main: null, sub: null, final: null };
+            document.getElementById('main-category-list').innerHTML = '';
+            document.getElementById('sub-category-list').innerHTML = '';
+            document.getElementById('final-category-list').innerHTML = '';
+            document.getElementById('new-sub-category-input').disabled = true;
+            document.getElementById('add-sub-category-btn').disabled = true;
+            document.getElementById('new-final-category-input').disabled = true;
+            document.getElementById('add-final-category-btn').disabled = true;
+            hideHierarchyForm();
+        }
+
+        async function loadHierarchyColumn(level, parentDocData = null) {
+            let collectionRef;
+            let listElementId;
+
+            if (level === 'main') {
+                collectionRef = collection(db, getHierarchyBasePath(), 'topicHierarchy');
+                listElementId = 'main-category-list';
+            } else if (level === 'sub' && parentDocData) {
+                collectionRef = collection(db, parentDocData.path, 'subCategories');
+                listElementId = 'sub-category-list';
+            } else if (level === 'final' && parentDocData) {
+                collectionRef = collection(db, parentDocData.path, 'finalCategories');
+                listElementId = 'final-category-list';
+            } else {
+                return;
+            }
+
+            const listElement = document.getElementById(listElementId);
+            listElement.innerHTML = getLoaderHTML('Loading...');
+
+            try {
+                const q = query(collectionRef);
+                const snapshot = await getDocs(q);
+                const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), path: doc.ref.path }));
+                items.sort((a, b) => a.title.localeCompare(b.title));
+                
+                listElement.innerHTML = items.map(item => `
+                    <div class="hierarchy-item" data-id="${item.id}" data-level="${level}">
+                        ${item.title}
+                    </div>
+                `).join('');
+
+                listElement.querySelectorAll('.hierarchy-item').forEach(itemEl => {
+                    itemEl.addEventListener('click', () => handleHierarchySelection(level, itemEl.dataset.id, items));
+                });
+
+            } catch (error) {
+                console.error(`Error loading ${level} categories:`, error);
+                listElement.innerHTML = `<p class="text-red-500 text-xs">Error loading. Check console for details.</p>`;
             }
         }
 
-        // --- NEW: AI Log Functions ---
+        function handleHierarchySelection(level, id, items) {
+            const selectedItem = items.find(item => item.id === id);
+            
+            document.querySelectorAll(`[data-level="${level}"]`).forEach(el => el.classList.remove('selected'));
+            document.querySelector(`[data-level="${level}"][data-id="${id}"]`).classList.add('selected');
+
+            if (level === 'main') {
+                selectedHierarchyItems.main = selectedItem;
+                selectedHierarchyItems.sub = null;
+                selectedHierarchyItems.final = null;
+                document.getElementById('sub-category-list').innerHTML = '';
+                document.getElementById('final-category-list').innerHTML = '';
+                document.getElementById('new-sub-category-input').disabled = false;
+                document.getElementById('add-sub-category-btn').disabled = false;
+                document.getElementById('new-final-category-input').disabled = true;
+                document.getElementById('add-final-category-btn').disabled = true;
+                loadHierarchyColumn('sub', selectedItem);
+                showHierarchyForm(selectedItem, 'main');
+            } else if (level === 'sub') {
+                selectedHierarchyItems.sub = selectedItem;
+                selectedHierarchyItems.final = null;
+                document.getElementById('final-category-list').innerHTML = '';
+                document.getElementById('new-final-category-input').disabled = false;
+                document.getElementById('add-final-category-btn').disabled = false;
+                loadHierarchyColumn('final', selectedItem);
+                showHierarchyForm(selectedItem, 'sub');
+            } else if (level === 'final') {
+                selectedHierarchyItems.final = selectedItem;
+                showHierarchyForm(selectedItem, 'final');
+            }
+        }
+
+        async function handleAddHierarchyItem(level) {
+            let parentData, collectionName, inputElementId;
+            const data = {};
+
+            if (level === 'main') {
+                collectionName = 'topicHierarchy';
+                inputElementId = 'new-main-category-input';
+            } else if (level === 'sub') {
+                parentData = selectedHierarchyItems.main;
+                if (!parentData) { displayMessageInModal("Please select a Main Category first.", 'warning'); return; }
+                collectionName = 'subCategories';
+                inputElementId = 'new-sub-category-input';
+            } else if (level === 'final') {
+                parentData = selectedHierarchyItems.sub;
+                if (!parentData) { displayMessageInModal("Please select a Sub Category first.", 'warning'); return; }
+                collectionName = 'finalCategories';
+                inputElementId = 'new-final-category-input';
+                data.description = "Default description.";
+                data.initialPrompt = "Default initial prompt.";
+                data.fullPrompt = "Default full prompt.";
+            }
+
+            const inputElement = document.getElementById(inputElementId);
+            const title = inputElement.value.trim();
+            if (!title) return;
+
+            data.title = title;
+
+            try {
+                const collectionRef = parentData ? 
+                    collection(db, parentData.path, collectionName) : 
+                    collection(db, getHierarchyBasePath(), collectionName);
+                
+                await addDoc(collectionRef, data);
+                inputElement.value = '';
+                loadHierarchyColumn(level, parentData);
+            } catch (error) {
+                console.error(`Error adding ${level} item:`, error);
+                displayMessageInModal(`Failed to add item. Check console.`, 'error');
+            }
+        }
+
+        function showHierarchyForm(item, level) {
+            document.getElementById('hierarchy-form-placeholder').classList.add('hidden');
+            const form = document.getElementById('hierarchy-edit-form');
+            form.classList.remove('hidden');
+            form.dataset.itemPath = item.path;
+            form.dataset.level = level;
+
+            document.getElementById('edit-title').value = item.title || '';
+            
+            const finalFields = ['edit-description-container', 'edit-initial-prompt-container', 'edit-full-prompt-container'];
+            if (level === 'final') {
+                finalFields.forEach(id => document.getElementById(id).classList.remove('hidden'));
+                document.getElementById('edit-description').value = item.description || '';
+                document.getElementById('edit-initial-prompt').value = item.initialPrompt || '';
+                document.getElementById('edit-full-prompt').value = item.fullPrompt || '';
+            } else {
+                finalFields.forEach(id => document.getElementById(id).classList.add('hidden'));
+            }
+        }
+
+        function hideHierarchyForm() {
+            document.getElementById('hierarchy-form-placeholder').classList.remove('hidden');
+            document.getElementById('hierarchy-edit-form').classList.add('hidden');
+        }
+
+        async function handleSaveHierarchyItem() {
+            const form = document.getElementById('hierarchy-edit-form');
+            const itemPath = form.dataset.itemPath;
+            const level = form.dataset.level;
+            if (!itemPath) return;
+
+            const data = {
+                title: document.getElementById('edit-title').value.trim()
+            };
+
+            if (level === 'final') {
+                data.description = document.getElementById('edit-description').value.trim();
+                data.initialPrompt = document.getElementById('edit-initial-prompt').value.trim();
+                data.fullPrompt = document.getElementById('edit-full-prompt').value.trim();
+            }
+
+            try {
+                const docRef = doc(db, itemPath);
+                await updateDoc(docRef, data);
+                displayMessageInModal('Item updated successfully!', 'success');
+                
+                let parentData = null;
+                if (level === 'sub') parentData = selectedHierarchyItems.main;
+                if (level === 'final') parentData = selectedHierarchyItems.sub;
+
+                loadHierarchyColumn(level, parentData);
+                hideHierarchyForm();
+            } catch (error) {
+                console.error("Error saving item:", error);
+                displayMessageInModal("Failed to save. Check console.", 'error');
+            }
+        }
+        
+        async function handleDeleteHierarchyItem() {
+            const form = document.getElementById('hierarchy-edit-form');
+            const itemPath = form.dataset.itemPath;
+            const title = document.getElementById('edit-title').value;
+            if (!itemPath) return;
+
+            showConfirmationModal(`Are you sure you want to delete "${title}"? This will also delete all of its children.`, async () => {
+                try {
+                    const docRef = doc(db, itemPath);
+                    await deleteDoc(docRef);
+                    displayMessageInModal('Item deleted successfully!', 'success');
+                    resetHierarchySelection();
+                    loadHierarchyColumn('main');
+                } catch (error) {
+                    console.error("Error deleting item:", error);
+                    displayMessageInModal("Failed to delete. Check console.", 'error');
+                }
+            });
+        }
+
+        // --- Custom Modal/Message Box Functions (replacing alert/confirm) ---
+        function displayMessageInModal(message, type = 'info') {
+            const modalId = 'messageModal';
+            let modal = document.getElementById(modalId);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal';
+                modal.innerHTML = `
+                    <div class="card p-8 w-full max-w-sm m-4 text-center">
+                        <h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2>
+                        <p id="messageModalContent" class="mb-6 themed-text-muted"></p>
+                        <button id="closeMessageModal" class="btn-primary w-full">OK</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
+            }
+
+            const titleEl = modal.querySelector('#messageModalTitle');
+            const contentEl = modal.querySelector('#messageModalContent');
+            
+            titleEl.textContent = type === 'error' ? 'Error!' : (type === 'warning' ? 'Warning!' : 'Info');
+            titleEl.className = `text-2xl font-bold mb-4 ${type === 'error' ? 'text-red-600' : (type === 'warning' ? 'text-yellow-600' : 'themed-text-primary')}`;
+            contentEl.textContent = message;
+
+            openModal(modalId);
+        }
+
+        function showConfirmationModal(message, onConfirmCallback) {
+            const modalId = 'confirmationModal';
+            let modal = document.getElementById(modalId);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal';
+                modal.innerHTML = `
+                    <div class="card p-8 w-full max-w-sm m-4 text-center">
+                        <h2 class="text-2xl font-bold mb-4 themed-text-primary">Confirm Action</h2>
+                        <p id="confirmationModalContent" class="mb-6 themed-text-muted"></p>
+                        <div class="flex justify-center gap-4">
+                            <button id="confirmYesBtn" class="btn-primary">Yes</button>
+                            <button id="confirmNoBtn" class="btn-secondary">No</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            const contentEl = modal.querySelector('#confirmationModalContent');
+            contentEl.textContent = message;
+
+            const confirmYesBtn = modal.querySelector('#confirmYesBtn');
+            const confirmNoBtn = modal.querySelector('#confirmNoBtn');
+
+            // Clear previous listeners to prevent multiple calls
+            const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
+            confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
+            const newConfirmNoBtn = confirmNoBtn.cloneNode(true);
+            confirmNoBtn.parentNode.replaceChild(newConfirmNoBtn, confirmNoBtn);
+
+            newConfirmYesBtn.addEventListener('click', () => {
+                onConfirmCallback();
+                closeModal(modalId);
+            });
+            newConfirmNoBtn.addEventListener('click', () => {
+                closeModal(modalId);
+            });
+
+            openModal(modalId);
+        }
+
+
+        // --- AI Log Functions ---
         function displayAiLog() {
             const contentEl = document.getElementById('aiLogModalContent');
-            contentEl.innerHTML = ''; // Clear previous logs
+            contentEl.innerHTML = '';
             
             if (aiLog.length === 0) {
                 contentEl.innerHTML = `<p class="themed-text-muted text-center">No AI interactions have been logged yet.</p>`;
@@ -3096,7 +3589,6 @@ ${jsonInstruction}`;
                 return;
             }
 
-            // Reverse the log to show the most recent first
             const reversedLog = [...aiLog].reverse();
 
             reversedLog.forEach((log, index) => {
@@ -3132,6 +3624,137 @@ ${jsonInstruction}`;
             });
 
             openModal('aiLogModal');
+        }
+
+        // --- NEW: Data Management Functions ---
+        function checkBackupReminder() {
+            const lastBackup = localStorage.getItem('lastBackupTimestamp');
+            if (!lastBackup) {
+                document.getElementById('backup-reminder-banner').classList.remove('hidden');
+                return;
+            }
+            const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
+            if (Date.now() - parseInt(lastBackup, 10) > sevenDaysInMillis) {
+                document.getElementById('backup-reminder-banner').classList.remove('hidden');
+            }
+        }
+
+        async function handleExportData() {
+            const button = document.getElementById('export-data-button');
+            const originalContent = button.innerHTML;
+            button.innerHTML = 'Exporting...';
+            button.disabled = true;
+
+            try {
+                const exportData = {
+                    topicHierarchy: {},
+                };
+
+                async function getCollectionData(collectionPath) {
+                    const collectionRef = collection(db, ...collectionPath);
+                    const snapshot = await getDocs(collectionRef);
+                    if (snapshot.empty) return null;
+                    
+                    const docs = {};
+                    for (const docSnap of snapshot.docs) {
+                        const docData = docSnap.data();
+                        docs[docSnap.id] = { data: docData, subcollections: {} };
+                        
+                        const subcollectionNames = ['subCategories', 'finalCategories'];
+                        for (const subName of subcollectionNames) {
+                            const subPath = [...collectionPath, docSnap.id, subName];
+                            const subDocs = await getCollectionData(subPath);
+                            if (subDocs) {
+                                docs[docSnap.id].subcollections[subName] = subDocs;
+                            }
+                        }
+                    }
+                    return docs;
+                }
+
+                exportData.topicHierarchy = await getCollectionData([getHierarchyBasePath(), 'topicHierarchy']);
+
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `it-admin-hub-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                localStorage.setItem('lastBackupTimestamp', Date.now().toString());
+                document.getElementById('backup-reminder-banner').classList.add('hidden');
+                displayMessageInModal('Data exported successfully!', 'success');
+
+            } catch (error) {
+                console.error("Error exporting data:", error);
+                displayMessageInModal(`Export failed: ${error.message}`, 'error');
+            } finally {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+        }
+
+        function handleImportData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = readerEvent => {
+                    try {
+                        const importedData = JSON.parse(readerEvent.target.result);
+                        if (!importedData.topicHierarchy) {
+                            throw new Error("Invalid backup file format. Missing 'topicHierarchy' key.");
+                        }
+
+                        showConfirmationModal("Are you sure you want to import this data? This will PERMANENTLY OVERWRITE the existing topic hierarchy. This action cannot be undone.", async () => {
+                            const button = document.getElementById('import-data-button');
+                            const originalContent = button.innerHTML;
+                            button.innerHTML = 'Importing...';
+                            button.disabled = true;
+
+                            try {
+                                async function setCollectionData(collectionPath, collectionData) {
+                                    for (const docId in collectionData) {
+                                        const docInfo = collectionData[docId];
+                                        const docRef = doc(db, ...collectionPath, docId);
+                                        await setDoc(docRef, docInfo.data);
+
+                                        for (const subName in docInfo.subcollections) {
+                                            const subPath = [...collectionPath, docId, subName];
+                                            await setCollectionData(subPath, docInfo.subcollections[subName]);
+                                        }
+                                    }
+                                }
+
+                                await setCollectionData([getHierarchyBasePath(), 'topicHierarchy'], importedData.topicHierarchy);
+                                displayMessageInModal('Data imported successfully! The application will now reload.', 'success');
+                                setTimeout(() => location.reload(), 3000);
+
+                            } catch (importError) {
+                                console.error("Error during import:", importError);
+                                displayMessageInModal(`Import failed: ${importError.message}`, 'error');
+                            } finally {
+                                 button.innerHTML = originalContent;
+                                 button.disabled = false;
+                            }
+                        });
+
+                    } catch (parseError) {
+                        console.error("Error parsing import file:", parseError);
+                        displayMessageInModal(`Could not read file. Is it a valid JSON backup?`, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
         }
 
     </script>
