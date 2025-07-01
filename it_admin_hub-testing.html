@@ -624,7 +624,7 @@
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered guides and task generation for IT professionals.</p>
             </div>
             <div id="auth-status" class="absolute top-4 right-4 z-20"></div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.4</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v6.5</div>
         </header>
 
         <main id="main-content" class="space-y-8">
@@ -633,7 +633,53 @@
               <span class="font-medium">Backup Reminder:</span> It has been over 7 days since your last backup. It's a good practice to export your data regularly using the Admin Tools.
             </div>
 
-            <!-- MODIFIED: Admin Tools Card -->
+            <!-- MODIFIED: Card Order Reorganized -->
+            <div id="generative-ai-prompt-card" class="card">
+                <div class="p-8 card-content">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Generative AI Prompt</h2>
+                    <p class="mb-6 themed-text-muted">Need a guide for a specific task? Enter any keyword or concept, and let AI craft a step-by-step plan for you.</p>
+                    <form id="gemini-form">
+                        <input type="text" id="gemini-prompt" name="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
+                        
+                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
+                            <div class="accordion-item">
+                                <button type="button" class="accordion-header" title="Click to see more options">
+                                    <span>Tailor Your Guide:</span>
+                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div class="accordion-content">
+                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
+                    </form>
+                    <div id="gemini-result-container" class="mt-6"></div>
+                </div>
+            </div>
+            
+            <div id="topic-explorer-card" class="card">
+                <div class="p-8 card-content text-center">
+                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Topic Explorer</h2>
+                    <p class="mb-6 themed-text-muted">Begin your journey by discovering featured topics or browsing the complete catalog of AI-generated guides.</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button id="explore-featured-btn" class="btn-secondary px-6 py-3">
+                             <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                                Explore Featured Categories
+                            </span>
+                        </button>
+                        <button id="browse-all-btn" class="btn-primary">
+                            <span class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"></path></svg>
+                                Browse All Categories
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div id="admin-tools-card" class="card p-6">
                 <h2 class="text-xl font-bold themed-text-primary flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20h4a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2a2 2 0 0 0-1.66-.9H8a2 2 0 0 0-2 2v2"></path><rect x="2" y="10" width="8" height="12" rx="2"></rect></svg>
@@ -704,52 +750,6 @@
                          </div>
                      </div>
                  </div>
-            </div>
-
-            <div id="generative-ai-prompt-card" class="card">
-                <div class="p-8 card-content">
-                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Generative AI Prompt</h2>
-                    <p class="mb-6 themed-text-muted">Need a guide for a specific task? Enter any keyword or concept, and let AI craft a step-by-step plan for you.</p>
-                    <form id="gemini-form">
-                        <input type="text" id="gemini-prompt" name="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Configure a new firewall rule'">
-                        
-                        <div class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
-                            <div class="accordion-item">
-                                <button type="button" class="accordion-header" title="Click to see more options">
-                                    <span>Tailor Your Guide:</span>
-                                    <svg class="icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
-                                <div class="accordion-content">
-                                    <div id="tailoring-buttons-container" class="flex flex-wrap gap-2"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-primary w-full mt-4" title="Generate a custom guide based on your text">Generate AI Guide</button>
-                    </form>
-                    <div id="gemini-result-container" class="mt-6"></div>
-                </div>
-            </div>
-            
-            <div id="topic-explorer-card" class="card">
-                <div class="p-8 card-content text-center">
-                    <h2 class="text-2xl font-bold mb-2 themed-text-primary">Topic Explorer</h2>
-                    <p class="mb-6 themed-text-muted">Begin your journey by discovering featured topics or browsing the complete catalog of AI-generated guides.</p>
-                    <div class="flex flex-col sm:flex-row justify-center gap-4">
-                        <button id="explore-featured-btn" class="btn-secondary px-6 py-3">
-                             <span class="flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                                Explore Featured Categories
-                            </span>
-                        </button>
-                        <button id="browse-all-btn" class="btn-primary">
-                            <span class="flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"></path></svg>
-                                Browse All Categories
-                            </span>
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <!-- This container will hold the cards generated by user selection -->
@@ -3221,14 +3221,18 @@ Your response must be ONLY the markdown for sections 5 through 12.`;
 
                 const categoryGrid = document.createElement('div');
                 categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
-
-                categoryGrid.innerHTML = items.map(item => `
-                    <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-item='${JSON.stringify(item)}'>
-                        <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
-                        ${item.description ? `<p class="text-sm themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
-                        <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
-                    </div>
-                `).join('');
+                
+                // MODIFIED: Escape single quotes in the JSON string for the data-item attribute
+                categoryGrid.innerHTML = items.map(item => {
+                    const itemJson = JSON.stringify(item).replace(/'/g, "&apos;");
+                    return `
+                        <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-item='${itemJson}'>
+                            <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
+                            ${item.description ? `<p class="text-sm themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
+                            <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
+                        </div>
+                    `;
+                }).join('');
                 
                 modalContent.innerHTML = '';
                 modalContent.appendChild(categoryGrid);
@@ -3600,163 +3604,4 @@ Your response must be ONLY the markdown for sections 5 through 12.`;
 
                 logItem.innerHTML = `
                     <button type="button" class="accordion-header">
-                        <span class="text-left font-semibold">${log.timestamp.toLocaleTimeString()} - ${log.type}</span>
-                        <svg class="icon w-5 h-5 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="mb-4">
-                            <h4 class="font-semibold themed-text-accent mb-2">Prompt:</h4>
-                            <div id="${promptBlockId}" class="code-block-container !mt-0">
-                                <div class="code-block-header"><span>Prompt</span><button class="copy-code-button">Copy</button></div>
-                                <pre class="text-sm">${log.prompt}</pre>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold themed-text-accent mb-2">Response:</h4>
-                             <div id="${responseBlockId}" class="code-block-container !mt-0">
-                                <div class="code-block-header"><span>Response</span><button class="copy-code-button">Copy</button></div>
-                                <pre class="text-sm">${log.response || "No response text received."}</pre>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                contentEl.appendChild(logItem);
-            });
-
-            openModal('aiLogModal');
-        }
-
-        // --- NEW: Data Management Functions ---
-        function checkBackupReminder() {
-            const lastBackup = localStorage.getItem('lastBackupTimestamp');
-            if (!lastBackup) {
-                document.getElementById('backup-reminder-banner').classList.remove('hidden');
-                return;
-            }
-            const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
-            if (Date.now() - parseInt(lastBackup, 10) > sevenDaysInMillis) {
-                document.getElementById('backup-reminder-banner').classList.remove('hidden');
-            }
-        }
-
-        async function handleExportData() {
-            const button = document.getElementById('export-data-button');
-            const originalContent = button.innerHTML;
-            button.innerHTML = 'Exporting...';
-            button.disabled = true;
-
-            try {
-                const exportData = {
-                    topicHierarchy: {},
-                };
-
-                async function getCollectionData(collectionPath) {
-                    const collectionRef = collection(db, ...collectionPath);
-                    const snapshot = await getDocs(collectionRef);
-                    if (snapshot.empty) return null;
-                    
-                    const docs = {};
-                    for (const docSnap of snapshot.docs) {
-                        const docData = docSnap.data();
-                        docs[docSnap.id] = { data: docData, subcollections: {} };
-                        
-                        const subcollectionNames = ['subCategories', 'finalCategories'];
-                        for (const subName of subcollectionNames) {
-                            const subPath = [...collectionPath, docSnap.id, subName];
-                            const subDocs = await getCollectionData(subPath);
-                            if (subDocs) {
-                                docs[docSnap.id].subcollections[subName] = subDocs;
-                            }
-                        }
-                    }
-                    return docs;
-                }
-
-                exportData.topicHierarchy = await getCollectionData([getHierarchyBasePath(), 'topicHierarchy']);
-
-                const jsonString = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `it-admin-hub-backup-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                localStorage.setItem('lastBackupTimestamp', Date.now().toString());
-                document.getElementById('backup-reminder-banner').classList.add('hidden');
-                displayMessageInModal('Data exported successfully!', 'success');
-
-            } catch (error) {
-                console.error("Error exporting data:", error);
-                displayMessageInModal(`Export failed: ${error.message}`, 'error');
-            } finally {
-                button.innerHTML = originalContent;
-                button.disabled = false;
-            }
-        }
-
-        function handleImportData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = readerEvent => {
-                    try {
-                        const importedData = JSON.parse(readerEvent.target.result);
-                        if (!importedData.topicHierarchy) {
-                            throw new Error("Invalid backup file format. Missing 'topicHierarchy' key.");
-                        }
-
-                        showConfirmationModal("Are you sure you want to import this data? This will PERMANENTLY OVERWRITE the existing topic hierarchy. This action cannot be undone.", async () => {
-                            const button = document.getElementById('import-data-button');
-                            const originalContent = button.innerHTML;
-                            button.innerHTML = 'Importing...';
-                            button.disabled = true;
-
-                            try {
-                                async function setCollectionData(collectionPath, collectionData) {
-                                    for (const docId in collectionData) {
-                                        const docInfo = collectionData[docId];
-                                        const docRef = doc(db, ...collectionPath, docId);
-                                        await setDoc(docRef, docInfo.data);
-
-                                        for (const subName in docInfo.subcollections) {
-                                            const subPath = [...collectionPath, docId, subName];
-                                            await setCollectionData(subPath, docInfo.subcollections[subName]);
-                                        }
-                                    }
-                                }
-
-                                await setCollectionData([getHierarchyBasePath(), 'topicHierarchy'], importedData.topicHierarchy);
-                                displayMessageInModal('Data imported successfully! The application will now reload.', 'success');
-                                setTimeout(() => location.reload(), 3000);
-
-                            } catch (importError) {
-                                console.error("Error during import:", importError);
-                                displayMessageInModal(`Import failed: ${importError.message}`, 'error');
-                            } finally {
-                                 button.innerHTML = originalContent;
-                                 button.disabled = false;
-                            }
-                        });
-
-                    } catch (parseError) {
-                        console.error("Error parsing import file:", parseError);
-                        displayMessageInModal(`Could not read file. Is it a valid JSON backup?`, 'error');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
-
-    </script>
-</body>
-</html>
+                        <span class="text-left font-semibold">${
