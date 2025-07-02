@@ -138,8 +138,7 @@ function setupAuthUI(user) {
             
             <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full flex items-center justify-center gap-2" title="Sign Out">
                     <span>Logout</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 
-1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>
             </div>
         `;
@@ -152,8 +151,7 @@ function setupAuthUI(user) {
     } else {
          authStatusEl.innerHTML = `
              <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 
-0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48" fill="none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.599-1.521 12.643-4.001L30.27 34.138C28.714 36.548 26.521 38 24 38c-5.223 0-9.657-3.341-11.303-7.918l-6.573 4.818C9.656 39.663 16.318 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.571l5.657 5.657C41.389 36.197 44 30.669 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>
                
                  <span>Login with Google</span>
             </button>
@@ -181,11 +179,9 @@ async function handleLogin() {
            if (error.code === 'auth/popup-closed-by-user') {
                userMessage += ' You closed the login window before completing sign-in.';
            } else if (error.code === 'auth/cancelled-popup-request') {
-               userMessage += ' Multiple login windows were opened. ';
-Please try again.';
+               userMessage += ' Multiple login windows were opened. Please try again.';
            } else {
-               userMessage += ' This can be caused by browser pop-up blockers or security settings. ';
-Please check your browser settings and try again.';
+               userMessage += ' This can be caused by browser pop-up blockers or security settings. Please check your browser settings and try again.';
            }
            errorEl.textContent = userMessage;
         }
@@ -204,8 +200,7 @@ function handleLogout() {
         localStorage.removeItem('geminiApiKey');
         localStorage.removeItem('firebaseConfig');
         localStorage.removeItem('googleClientId');
-        console.log('User signed out and local storage ');
-cleared.';
+        console.log('User signed out and local storage cleared.');
         location.reload();
     }).catch(error => {
         console.error("Sign out failed:", error);
@@ -230,15 +225,13 @@ async function initializeAppContent() {
         loadingMessageEl.textContent = "Loading application content...";
         await loadAppContent();
     } catch (error) {
-        const errorMessage = error ?
-error.message : "An unknown error occurred.";
+        const errorMessage = error ? error.message : "An unknown error occurred.";
         console.error("A critical error occurred during app initialization:", errorMessage);
         localStorage.clear();
         openModal('apiKeyModal');
         const errorEl = document.getElementById('api-key-error');
         if(errorEl) {
-            errorEl.textContent = `Setup failed: ${errorMessage}. `;
-Your keys have been cleared. Please check and re-enter them.';
+            errorEl.textContent = `Setup failed: ${errorMessage}. Your keys have been cleared. Please check and re-enter them.`;
         }
     } finally {
         closeModal('loadingStateModal');
@@ -306,8 +299,7 @@ function initializeFirebase() {
         openModal('apiKeyModal');
         const errorEl = document.getElementById('api-key-error');
         if(errorEl) {
-            errorEl.textContent = `Firebase Error: ${error.message}. `;
-Please check your config object.';
+            errorEl.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
         }
     }
 }
@@ -467,8 +459,7 @@ function setupEventListeners() {
             accordionHeader.classList.toggle('active');
             const icon = accordionHeader.querySelector('.icon');
             if(icon) {
-               icon.style.transform = accordionHeader.classList.contains('active') ?
-'rotate(180deg)' : 'rotate(0deg)';
+               icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
             }
             accordionHeader.nextElementSibling.classList.toggle('open');
             return;
@@ -535,8 +526,7 @@ async function handleApiKeySubmit(e) {
             throw new Error("The parsed Firebase config is invalid or missing required properties like 'apiKey' or 'projectId'.");
         }
     } catch (err) {
-        errorEl.textContent = `Invalid Firebase Config: ${err.message}. `;
-Please ensure you've pasted the complete snippet from your Firebase project settings.';
+        errorEl.textContent = `Invalid Firebase Config: ${err.message}. Please ensure you've pasted the complete snippet from your Firebase project settings.`;
         return;
     }
     
@@ -719,16 +709,14 @@ async function handleSaveToDriveClick(button) {
 
 async function saveContentToDrive(content, fileName, statusElement) {
     if (gapi.client.getToken() === null) {
-        statusElement.textContent = 'Please ';
-connect to Google Drive first.';
+        statusElement.textContent = 'Please connect to Google Drive first.';
         return;
     }
 
     statusElement.textContent = 'Saving to Google Drive...';
     const folderId = await getDriveFolderId();
     if (!folderId) {
-        statusElement.textContent = 'Could not find ';
-or create the app folder in Drive.';
+        statusElement.textContent = 'Could not find or create the app folder in Drive.';
         return;
     }
 
@@ -749,8 +737,7 @@ or create the app folder in Drive.';
         }
         
         const multipartRequestBody =
-            delimiter + `Content-Type: application/json; `;
-charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) +
+            delimiter + `Content-Type: application/json; charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) +
             delimiter + `Content-Type: ${contentType}\r\n\r\n` + content +
             close_delim;
         const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
@@ -759,8 +746,7 @@ charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) +
             path: `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`,
             method: fileExists ? 'PATCH' : 'POST',
             params: { uploadType: 'multipart' },
-            headers: {'Content-Type': `multipart/related; `},
-            boundary="${boundary}"`},
+            headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
             body: multipartRequestBody
         });
         statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
@@ -910,8 +896,7 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
 }
 
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
-    const data = allThemeData[categoryId] ||
-[];
+    const data = allThemeData[categoryId] || [];
     const stickies = stickyTopics[categoryId] || [];
     const userAdded = userAddedTopics[categoryId] || [];
 // NEW: Get user-added topics
@@ -932,8 +917,7 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const stickyHtml = stickies.map(item => `
         <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
             <div class="indicator sticky-indicator" title="Sticky Topic">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" 
-fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L13 7.414V17a1 1 0 11-2 0V7.414L7.707 10.707a1 1 0 01-1.414-1.414l4-4z" clip-rule="evenodd" /></svg>
             </div>
             <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
             <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
@@ -944,8 +928,7 @@ fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6
     const userAddedHtml = userAdded.map(item => `
         <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
             <div class="indicator" style="background-color: #f59e0b;" title="Your Added Topic">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" 
-class="w-4 h-4"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.41-1.412A6.962 6.962 0 0010 11.5c-2.25 0-4.33.9-5.535 2.993z"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.41-1.412A6.962 6.962 0 0010 11.5c-2.25 0-4.33.9-5.535 2.993z"></path></svg>
             </div>
             <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
             <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
@@ -965,8 +948,7 @@ class="w-4 h-4"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0
             const newClass = isNew ? 'new-item-highlight' : '';
             
             return `
-            <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.description ||
-item.title}">
+            <div id="grid-selector-${item.id}" class="grid-card-selector ${newClass}" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.description || item.title}">
                 ${viewedIndicatorHtml}
                 <div class="icon">${getIconForTheme(categoryId, item.id)}</div>
                 <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
@@ -984,8 +966,7 @@ item.title}">
         </div>
     `;
     
-    const fullHierarchyPath
-= JSON.parse(card.dataset.fullHierarchyPath);
+    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const fullPrompt = finalCategory.fullPrompt;
     
@@ -1047,8 +1028,7 @@ async function handleGenerateMoreClick(button) {
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
     const existingTitles = allThemeData[categoryId].map(item => item.title);
-    const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". `;
-These tasks must be different from the ones in the following list.
+    const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list.
 Existing Task List:\n- ${existingTitles.join('\n- ')}\n
             For each new task, provide a unique "id", a "title", and a short "description".
             Return the response as a valid JSON array.`;
@@ -1492,14 +1472,12 @@ Do not provide a preamble, an explanation of your changes, or any text other tha
 
 // ** ENHANCED PROMPT FUNCTION **
 function getFullGuideGenerationPrompt(context = {}) {
-    const hierarchy = context.hierarchyContext ||
-[];
+    const hierarchy = context.hierarchyContext || [];
     const task = context.task || '{task}';
     const options = context.options || '{options}';
     const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
     const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${task}.`;
-    const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title ||
-'the topic'}.`;
+    const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
     const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
     const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
     return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer.
@@ -1821,8 +1799,7 @@ Provide a simple definition and a practical example of how it's used. Format the
 
 
 function convertMarkdownToHtml(text, generateImages = true) {
-    if (!text) return '<p class="themed-text-muted">No content received from AI. ';
-Please try a different prompt.</p>';
+    if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
 
     let processedText;
     if (generateImages) {
@@ -2213,11 +2190,9 @@ document.getElementById('searchGeminiResult') : contentArea;
 
 function getIconForTheme(categoryId, topicId) { 
     const icons = {
-        serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 
-2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
+        serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
         windowsServer: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
-        m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 
-4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
+        m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
         default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
     }
     // Simple logic to pick an icon based on a hash of 
@@ -2342,8 +2317,7 @@ function listenForStickyTopics(categoryKey) {
          return;
     }
     
-    const appId = firebaseConfig.appId ||
-'it-admin-hub-global';
+    const appId = firebaseConfig.appId || 'it-admin-hub-global';
     const stickyTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/stickyTopics/${categoryKey}/topics`);
     
     stickyTopicsUnsubscribe = onSnapshot(stickyTopicsCollectionRef, (snapshot) => {
@@ -2443,8 +2417,7 @@ async function handleDeleteStickyTopic(e) {
 }
 
 // --- MODIFIED: Topic Browser Functions ---
-const getHierarchyBasePath = () => `artifacts/${firebaseConfig.appId ||
-'it-admin-hub-global'}/public/data`;
+const getHierarchyBasePath = () => `artifacts/${firebaseConfig.appId || 'it-admin-hub-global'}/public/data`;
 
 async function openCategoryBrowser(mode) {
     const modalTitle = document.getElementById('categoryBrowserModalTitle');
@@ -2473,8 +2446,7 @@ async function renderCategoryLevel(collectionRef) {
         categoryGrid.innerHTML = items.map(item => `
             <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer category-selector-item" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
                 <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
-                ${item.description ? `<p class="text-sm 
-themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
+                ${item.description ? `<p class="text-sm themed-text-muted mt-1 flex-grow">${item.description}</p>` : ''}
                 <span class="text-sm font-semibold themed-text-primary mt-4 self-end">Select →</span>
             </div>
         `).join('');
@@ -2866,8 +2838,7 @@ function displayAiLog() {
            
                   <div id="${responseBlockId}" class="code-block-container !mt-0">
                         <div class="code-block-header"><span>Response</span><button class="copy-code-button">Copy</button></div>
-                        <pre class="text-sm">${log.response ||
-"No response text received."}</pre>
+                        <pre class="text-sm">${log.response || "No response text received."}</pre>
                     </div>
                 </div>
             </div>
@@ -2970,8 +2941,7 @@ function handleImportData() {
                     button.innerHTML = 'Importing...';
                     button.disabled = true;
 
-                    try
-{
+                    try {
                         async function setCollectionData(collectionPath, collectionData) {
                             for (const docId in collectionData) {
                        
@@ -2981,8 +2951,7 @@ function handleImportData() {
                                 await setDoc(docRef, docInfo.data);
 
                                 for (const subName in docInfo.subcollections) {
-                                    const subPath = [...collectionPath,
-docId, subName];
+                                    const subPath = [...collectionPath, docId, subName];
                                     await setCollectionData(subPath, docInfo.subcollections[subName]);
                                 }
                             }
