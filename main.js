@@ -132,6 +132,11 @@ function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
     const appContainer = document.getElementById('app-container');
 
+    if (!authStatusEl || !appContainer) {
+        console.error("Auth UI elements not found. Aborting setup.");
+        return;
+    }
+
     if (user) {
         appContainer.classList.remove('hidden');
         closeModal('apiKeyModal');
@@ -249,8 +254,12 @@ function initializeGoogleClients() {
         return;
     }
 
-    document.getElementById('cloud-storage-card').classList.remove('hidden');
-    document.getElementById('google-drive-section').classList.remove('hidden');
+    const cloudStorageCard = document.getElementById('cloud-storage-card');
+    if (cloudStorageCard) cloudStorageCard.classList.remove('hidden');
+
+    const googleDriveSection = document.getElementById('google-drive-section');
+    if (googleDriveSection) googleDriveSection.classList.remove('hidden');
+
     const gapiInterval = setInterval(() => {
         if (window.gapi && window.gapi.load) {
             clearInterval(gapiInterval);
