@@ -27,7 +27,6 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-// SCOPE REDUCED: Removed cloud-platform scope as image generation is no longer used.
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 
@@ -112,7 +111,6 @@ function loadConfigFromStorage() {
 }
 
 async function initializeAppContent() {
-    // This function is now the single entry point for loading the app's main content after login.
     if (appIsInitialized) return;
     appIsInitialized = true;
 
@@ -147,7 +145,6 @@ function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // REFACTORED: onAuthStateChanged is now the primary gatekeeper for starting the app.
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
@@ -155,17 +152,14 @@ function initializeFirebase() {
                 viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                 listenForViewedItems();
                 
-                // Only initialize the main app content ONCE after a user is confirmed.
                 if (!appIsInitialized) {
                     initializeAppContent();
                 }
             } else {
-                // Handle user sign-out
                 userId = null;
                 viewedItemsCollectionRef = null;
-                appIsInitialized = false; // Reset app state on logout
+                appIsInitialized = false;
             }
-            // Update the auth UI regardless of app initialization state
             setupAuthUI(user);
         });
     } catch (error) {
@@ -324,7 +318,6 @@ function updateSigninStatus(isSignedIn) {
         authButton.textContent = 'Connect';
         authButton.title = 'Connect your Google Account';
         loadBtn.classList.add('hidden');
-        // REMOVED mention of image generation
         statusEl.textContent = 'Connect to save and load guides from Google Drive.';
         driveFolderId = null;
     }
@@ -430,7 +423,7 @@ function setupEventListeners() {
     
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal || e.target.closest('[id^="close"]')) {
+            if (e.target.id.startsWith('close')) {
                 closeModal(modal.id);
             }
         });
@@ -718,34 +711,56 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    allThemeData[finalCategory.id] = null; // Set to null to indicate loading
     listenForUserAddedTopics(finalCategory.id);
+
     try {
         const prompt = finalCategory.initialPrompt || `Generate 8 common topics for ${finalCategory.title}.`;
         const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
         if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
+        
         const data = parseJsonWithCorrections(jsonText);
         if (!Array.isArray(data)) {
             throw new Error("Invalid API response format: Expected an array of topics for the category.");
         }
+        
         data.sort((a, b) => a.title.localeCompare(b.title));
         allThemeData[finalCategory.id] = data;
+        
         populateCardGridSelector(card.querySelector(`#${selectorId}`), finalCategory.id);
         return card;
     } catch (error) {
+        allThemeData[finalCategory.id] = []; // Set to empty array on failure
         handleApiError(error, card.querySelector(`#${selectorId}`), finalCategory.title, card);
         throw error;
     }
 }
 
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
+    if (!container) return;
+
+    // Check if the main data is still being fetched.
+    if (allThemeData[categoryId] === null) {
+        if (!container.querySelector('.loader')) {
+            const cardTitle = document.getElementById(`category-card-${categoryId}`)?.querySelector('h2')?.textContent || 'this category';
+            container.innerHTML = getLoaderHTML(`AI is generating topics for ${cardTitle}...`);
+        }
+        return; // Exit while loading
+    }
+    
     const data = allThemeData[categoryId] || [];
     const stickies = stickyTopics[categoryId] || [];
     const userAdded = userAddedTopics[categoryId] || [];
-    if (!container) return;
+    const topicInputId = `add-topic-input-${categoryId}`;
+    const containerId = container.id;
+    const addNewTopicHtml = `<div class="add-topic-container"><input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Add your own topic..." class="themed-input w-full p-2 rounded-lg text-sm"><button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-category-id="${categoryId}">Add Topic</button></div>`;
+
     if (data.length === 0 && stickies.length === 0 && userAdded.length === 0) {
-         container.innerHTML = `<p class="themed-text-muted">No items to display.</p>`;
+         container.innerHTML = `<p class="themed-text-muted text-center py-8">No topics found. You can add your own below.</p>` + addNewTopicHtml;
          return;
     }
+
     const gridClass = 'card-grid-container';
     const card = container.closest('.card');
     const cardTitle = card.querySelector('h2').textContent;
@@ -775,9 +790,7 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
                 <div class="mt-2 overflow-hidden"><div class="text-sm font-normal leading-tight block">${truncateText(item.title, 50)}</div></div>
             </div>`;
     }).join('');
-    const topicInputId = `add-topic-input-${categoryId}`;
-    const containerId = container.id;
-    const addNewTopicHtml = `<div class="add-topic-container"><input type="text" id="${topicInputId}" name="${topicInputId}" placeholder="Add your own topic..." class="themed-input w-full p-2 rounded-lg text-sm"><button class="btn-secondary add-topic-button !px-4 !py-2" data-container-id="${containerId}" data-category-id="${categoryId}">Add Topic</button></div>`;
+    
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const fullPrompt = finalCategory.fullPrompt;
@@ -1024,7 +1037,6 @@ async function generateAndApplyDefaultTheme() {
     try {
         const colors = await callColorGenAPI(themePrompt);
         applyTheme(colors);
-        // Image generation on default theme load is removed to simplify startup.
     } catch (error) {
         handleApiError(null, null, 'default theme');
         console.error("Failed to generate default theme, continuing with default styles.", error);
@@ -1215,7 +1227,9 @@ async function generateFullDetailedGuide(button) {
 
 function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     buttonContainer.innerHTML = '';
-    const saveDriveBtnHtml = gapi.client.getToken() !== null ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+
     if (isInitialPhase) {
         buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button id="generate-detailed-steps-btn" class="btn-primary text-sm px-4 py-2" title="Generate a full, detailed guide in a new modal">Generate Full Detailed Guide</button>${saveDriveBtnHtml}`;
     } else {
@@ -1231,7 +1245,8 @@ function addModalActionButtons(buttonContainer, isInitialPhase = false) {
 }
 
 function addDetailedModalActionButtons(buttonContainer) {
-    const saveDriveBtnHtml = gapi.client.getToken() !== null ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
     const copyButton = buttonContainer.querySelector('.copy-button');
     if (copyButton) {
@@ -1243,8 +1258,9 @@ function addDetailedModalActionButtons(buttonContainer) {
 }
 
 function addSearchModalActionButtons(buttonContainer) {
-     const saveDriveBtnHtml = gapi.client.getToken() !== null ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
+    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
     const copyButton = buttonContainer.querySelector('.copy-button');
     if (copyButton) {
         copyButton.addEventListener('click', e => {
@@ -1293,7 +1309,6 @@ async function handleSearchGemini() {
     }
 }
 
-// REMOVED: Image generation logic from this function.
 function convertMarkdownToHtml(text) {
     if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
     
@@ -1336,7 +1351,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     });
 }
 
-// REMOVED: Image generation logic from this function.
 async function handleCustomVisualThemeGeneration() {
     const prompt = document.getElementById('theme-prompt').value;
     if(!prompt) return;
@@ -1406,7 +1420,6 @@ function copyElementTextToClipboard(element, button) {
     document.body.removeChild(textarea);
 }
 
-// REMOVED: Image generation logic from this function.
 function renderAccordionFromMarkdown(markdownText, containerElement) {
     containerElement.innerHTML = '';
     if (!markdownText || !markdownText.trim()) {
@@ -1462,7 +1475,6 @@ function renderAccordionFromMarkdown(markdownText, containerElement) {
     }
 }
 
-// REMOVED: Image generation mention from prompt
 async function handleAIHelpRequest() {
     document.getElementById('inDepthModalTitle').textContent = "Code Documentation Generation";
     const contentEl = document.getElementById('inDepthModalContent');
