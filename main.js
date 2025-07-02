@@ -1843,7 +1843,7 @@ async function handleSearchGemini() {
 Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
     try {
         let resultText = await callGeminiAPI(prompt, false, "Text Selection Search");
-        resultText = resultText ? resultText.replace(/```(markdown|json)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        resultText = resultText ? resultText.replace(/```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         
         originalGeneratedText.set("currentSearch", resultText);
         
@@ -2017,16 +2017,24 @@ function populateTypographySettings() {
     const fonts = { 'Default (Inter)': "'Inter', sans-serif", 'Lato': "'Lato', sans-serif", 'Montserrat': "'Montserrat', sans-serif", 'Nunito Sans': "'Nunito Sans', sans-serif", 'Open Sans': "'Open Sans', sans-serif", 'Poppins': "'Poppins', sans-serif", 'Roboto Slab': "'Roboto Slab', serif" };
     const sizes = { '14': '14px', '15': '15px', '16 (Default)': '16px', '17': '17px', '18': '18px' };
     const lineHeights = { '1.4': '1.4', '1.5 (Default)': '1.5', '1.6': '1.6', '1.7': '1.7', '1.8': '1.8' };
-    Object.entries(fonts).forEach(([name, value]) => fontSelect.add(new Option(name, value)));
-    Object.entries(sizes).forEach(([name, value]) => sizeSelect.add(new Option(name, value)));
-    Object.entries(lineHeights).forEach(([name, value]) => lineHeightSelect.add(new Option(name, value)));
-    fontSelect.value = fonts['Default (Inter)'];
-    sizeSelect.value = '16px';
-    lineHeightSelect.value = '1.5';
-    
-    root.style.setProperty('--font-family', fontSelect.value);
-    root.style.setProperty('--font-size-base', sizeSelect.value);
-    root.style.setProperty('--line-height-base', lineHeightSelect.value);
+
+    if (fontSelect) {
+        Object.entries(fonts).forEach(([name, value]) => fontSelect.add(new Option(name, value)));
+        fontSelect.value = fonts['Default (Inter)'];
+        root.style.setProperty('--font-family', fontSelect.value);
+    }
+
+    if (sizeSelect) {
+        Object.entries(sizes).forEach(([name, value]) => sizeSelect.add(new Option(name, value)));
+        sizeSelect.value = '16px';
+        root.style.setProperty('--font-size-base', sizeSelect.value);
+    }
+
+    if (lineHeightSelect) {
+        Object.entries(lineHeights).forEach(([name, value]) => lineHeightSelect.add(new Option(name, value)));
+        lineHeightSelect.value = '1.5';
+        root.style.setProperty('--line-height-base', lineHeightSelect.value);
+    }
 }
 
 function copyElementTextToClipboard(element, button) {
