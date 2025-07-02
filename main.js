@@ -1230,6 +1230,10 @@ async function generateFullDetailedGuide(button) {
     detailedButtonContainer.innerHTML = '';
     detailedFooterEl.dataset.fullTitle = detailedModalTitle;
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
+    // ***** FIX STARTS HERE *****
+    // The missing line is added to ensure the hierarchy path is available to the 'Add to KB' button.
+    detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
+    // ***** FIX ENDS HERE *****
     openModal('inDepthDetailedModal');
     detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
 
