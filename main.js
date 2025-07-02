@@ -33,36 +33,6 @@ let driveFolderId = null;
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
 
-const finalReviewPrompt = `
-Persona: You are a Lead Technical Editor and a Senior IT Systems Architect.
-Your role is final quality assurance.
-Objective: Your mission is to audit the DRAFT CONTENT provided below against its ORIGINAL BLUEPRINT. You will then rewrite and enhance the draft to produce final, publishable-grade technical documentation. You must directly implement all corrections and improvements into the text.
-//-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (SECTIONS 1-4) --//
-{blueprint_from_step_1}
-//-- INPUT 2: DRAFT CONTENT TO REVIEW (SECTIONS 5-12) --//
-{draft_content_to_review}
-//-- SYSTEMATIC REVIEW PROTOCOL --//
-(AI: Execute the following review protocol on the DRAFT CONTENT. Your output will be the rewritten content itself, not a list of your actions.)
-1.  **Blueprint Adherence Audit:**
-    * Scrutinize the draft against the ORIGINAL BLUEPRINT.
-    * **Crucially, remove any information or sections that violate the established OUT-OF-SCOPE rules (e.g., if the blueprint scopes the guide to GUI only, remove all PowerShell/API sections).
-    * Ensure all IN-SCOPE topics are present and are the primary focus.
-    * Verify the content's depth and tone are appropriate for the defined TARGET_AUDIENCE.
-2.  **Technical Accuracy Validation:**
-    * Scrutinize every technical statement.
-    * **Treat any placeholder (e.g., "api.example.com") or hypothetical information as a critical error to be corrected with factual data.**
-    * Verify and correct all PowerShell/CLI cmdlets, parameters, and object properties.
-    * Validate API endpoints, request bodies, and expected response codes against public documentation.
-    * Fact-check procedural steps against current product interfaces and documentation patterns.
-3.  **Clarity and Professionalism Polish:**
-    * Rephrase awkward or ambiguous sentences to be direct and clear.
-    * **Eliminate all meta-commentary, asides, and notes from the AI (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Integrate advice naturally into the narrative.**
-    * Enforce consistent terminology.
-    * Ensure all formatting is clean and consistent, preserving the '###' header structure.
-**Final Output Instruction:**
-Return ONLY the complete, final, rewritten markdown for the sections you were asked to review. Do not provide a preamble, a list of your changes, or any text other than the final, revised document. Your response must begin directly with the first header of the content you are reviewing (e.g., ### 5. Key Concepts - In-Depth Application & Management).`;
-
-
 // --- Function Declarations ---
 
 function openModal(modalId) {
@@ -1122,7 +1092,6 @@ function getAppPrompts() {
     const prompts = {};
     prompts["Full Guide Generation Prompt"] = getFullGuideGenerationPrompt();
     prompts["Refinement Prompt"] = getRefinementPrompt();
-    prompts["Final Review Prompt"] = finalReviewPrompt;
     return prompts;
 }
 
@@ -1157,7 +1126,7 @@ function getFullGuideGenerationPrompt(context = {}) {
     const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
     const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
     const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
-    return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Mission: Produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below. Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management. //-- GUIDE BLUEPRINT & SCOPE --// 1. Topic Technology: ${topicTechnology} 2. Specific Goal: ${specificGoal} 3. Target Audience: ${targetAudience} 4. IN-SCOPE (Must be included): ${inScope} 5. OUT-OF-SCOPE (Must be excluded): ${outOfScope} //-- CRITICAL STRUCTURE & FORMATTING RULES --// A. Markdown Formatting: You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction. B. Required Guide Content (Generate all 12 sections): 1. Introduction: Overview, Importance, What You'll Learn. 2. Architectural Overview: Components and interactions. 3. Key Concepts & Terminology: Definitions only. 4. Prerequisites: Permissions, Software/Licensing, System Requirements. 5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.** 6. Verification and Validation: Specific commands/procedures to confirm correct configuration. 7. Best Practices: Expert advice for implementation and management. 8. Automation Techniques for Key Concepts: Concept-specific automation opportunities with full scripts. 9. Security Considerations: Concept-specific hardening, vulnerabilities, and auditing. 10. Advanced Use Cases & Scenarios: 2-3 advanced examples combining concepts. 11. Troubleshooting: A table of common problems, causes, and solutions by concept. 12. Helpful Resources: Bulleted list of high-quality, working links to official documentation. //-- MANDATORY QUALITY STANDARDS --// 1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation. 2.  **No Placeholders:** Your output MUST NOT contain placeholder links, hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)". You must use your capabilities to find and provide real, authoritative information. 3.  **PowerShell/CLI Standards:** Scripts must be robust and production-ready. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`. 4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Instead, integrate advice naturally into the text.`;
+    return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Mission: Produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below. Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management. //-- GUIDE BLUEPRINT & SCOPE --// 1. Topic Technology: ${topicTechnology} 2. Specific Goal: ${specificGoal} 3. Target Audience: ${targetAudience} 4. IN-SCOPE (Must be included): ${inScope} 5. OUT-OF-SCOPE (Must be excluded): ${outOfScope} //-- CRITICAL STRUCTURE & FORMATTING RULES --// A. Markdown Formatting: You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction. B. Required Guide Content (Generate all 12 sections): 1. Introduction: Overview, Importance, What You'll Learn. 2. Architectural Overview: Components and interactions. 3. Key Concepts & Terminology: Definitions only. 4. Prerequisites: Permissions, Software/Licensing, System Requirements. 5. Detailed Implementation Guide: CRITICAL SECTION. Provide a comprehensive, step-by-step walkthrough of the process outlined in the Introduction. For each major step, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management, as dictated by the scope in the Introduction. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.** 6. Verification and Validation: Specific commands/procedures to confirm correct configuration based on the steps in Section 5. 7. Best Practices: Expert advice for the implementation and management process detailed in Section 5. 8. Automation Techniques: Automation opportunities with full scripts for the process in Section 5. 9. Security Considerations: Hardening, vulnerabilities, and auditing related to the process in Section 5. 10. Advanced Use Cases & Scenarios: 2-3 advanced examples combining concepts from the implementation in Section 5. 11. Troubleshooting: A table of common problems, causes, and solutions related to the process in Section 5. 12. Helpful Resources: Bulleted list of high-quality, working links to official documentation relevant to the process in Section 5. //-- MANDATORY QUALITY STANDARDS --// 1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation. 2.  **No Placeholders:** Your output MUST NOT contain placeholder links, hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)". You must use your capabilities to find and provide real, authoritative information. 3.  **PowerShell/CLI Standards:** Scripts must be robust and production-ready. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`. 4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Instead, integrate advice naturally into the text.`;
 }
 
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
@@ -1221,47 +1190,48 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
     detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
 
-    // --- 3. Define a single, powerful prompt for the final content ---
+    // --- 3. Define the new, improved prompt for the final content ---
     const finalContentPrompt = `
     Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), which is provided below for context. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be exhaustive, practical, and adhere strictly to the rules.
+    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4). Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be a direct and logical expansion of the blueprint, especially the Introduction.
 
-    //-- CONTEXT: THE ALREADY-CREATED BLUEPRINT (SECTIONS 1-4) --//
+    //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
     ${blueprintMarkdown}
 
     //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
 
-    ### 5. Key Concepts - In-Depth Application & Management
-    This is the most CRITICAL section. For each concept defined in Section 3 of the blueprint, you must provide a detailed mini-guide. If the blueprint's scope includes GUI, PowerShell/CLI, and/or API methods, you must provide practical, step-by-step instructions for each. **Crucially, provide at least one clear, real-world example for each method. Use markdown blockquotes for code snippets or commands so the user can copy them directly.**
+    ### 5. Detailed Implementation Guide
+    This is the most CRITICAL section. It must be a comprehensive, step-by-step walkthrough of the primary task outlined in the blueprint's "Introduction". **Do not simply explain the concepts from Section 3 again.** Instead, show how to apply them to achieve the goal stated in the Introduction. Structure this section logically (e.g., Step 1: Configuration, Step 2: Deployment, Step 3: Integration). For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. **Provide clear, real-world examples for each method.** Use markdown blockquotes for code snippets or commands.
 
     ### 6. Verification and Validation
-    Provide specific, copy-able commands or detailed UI navigation steps (e.g., "Navigate to X > Y > Z and confirm the status is 'Active'") to verify the configurations from section 5.
+    Provide specific, copy-able commands or detailed UI navigation steps to confirm that the process detailed in Section 5 was completed successfully.
 
     ### 7. Best Practices
-    List expert, actionable advice for implementation and ongoing management. Go beyond generic advice.
+    List expert, actionable advice directly related to the implementation process from Section 5. Avoid generic advice.
 
-    ### 8. Automation Techniques for Key Concepts
-    If scripting is in scope, provide full, production-ready scripts. Scripts MUST include robust error handling (e.g., PowerShell's try/catch blocks with -ErrorAction Stop).
+    ### 8. Automation Techniques
+    If scripting is in scope, provide full, production-ready scripts that automate the end-to-end process from Section 5. Scripts MUST include robust error handling.
 
     ### 9. Security Considerations
-    Detail concept-specific security hardening steps, potential vulnerabilities, and auditing procedures.
+    Detail security hardening steps, potential vulnerabilities, and auditing procedures specifically for the process and technologies used in Section 5.
 
     ### 10. Advanced Use Cases & Scenarios
-    Describe 2-3 advanced, real-world examples that combine the guide's concepts to solve a complex problem.
+    Describe 2-3 advanced, real-world examples that build upon the successful implementation from Section 5.
 
     ### 11. Troubleshooting
-    Create a detailed markdown table of common problems, their likely causes, and concrete solutions.
+    Create a detailed markdown table of common problems that could occur during the process in Section 5, their likely causes, and concrete solutions.
 
     ### 12. Helpful Resources
-    Provide a bulleted list of high-quality, real, and working URLs to official documentation, whitepapers, or essential community tools.
+    Provide a bulleted list of high-quality, real, and working URLs to official documentation or tools directly relevant to the process in Section 5.
 
     //-- MANDATORY QUALITY STANDARDS --//
-    1.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com") or apologies (e.g., "I cannot provide real-time data").
-    2.  **Factual Accuracy:** All technical content, especially code and commands, must be accurate and validated against current standards.
-    3.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
+    1.  **Introduction-Driven:** All content in sections 5-12 MUST directly support and expand upon the scope defined in the blueprint's Introduction.
+    2.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com").
+    3.  **Factual Accuracy:** All technical content must be accurate and validated against current standards.
+    4.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
 
     //-- FINAL OUTPUT INSTRUCTION --//
-    Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Key Concepts - In-Depth Application & Management". Do not repeat the blueprint.
+    Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
     `;
 
     try {
