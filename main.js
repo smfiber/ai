@@ -128,15 +128,7 @@ function loadConfigFromStorage() {
 }
 
 // --- Login/Logout UI and Handlers ---
-function setupAuthUI(user) {
-    const authStatusEl = document.getElementById('auth-status');
-    const appContainer = document.getElementById('app-container');
-
-    if (!authStatusEl || !appContainer) {
-        console.error("Auth UI elements not found. Aborting setup.");
-        return;
-    }
-
+function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
         appContainer.classList.remove('hidden');
         closeModal('apiKeyModal');
@@ -172,6 +164,24 @@ function setupAuthUI(user) {
         if (!localStorage.getItem('geminiApiKey')) {
              openModal('apiKeyModal');
         }
+    }
+}
+
+function setupAuthUI(user) {
+    let authStatusEl = document.getElementById('auth-status');
+    let appContainer = document.getElementById('app-container');
+
+    if (authStatusEl && appContainer) {
+        _performAuthUISetup(user, authStatusEl, appContainer);
+    } else {
+        const interval = setInterval(() => {
+            authStatusEl = document.getElementById('auth-status');
+            appContainer = document.getElementById('app-container');
+            if (authStatusEl && appContainer) {
+                clearInterval(interval);
+                _performAuthUISetup(user, authStatusEl, appContainer);
+            }
+        }, 100);
     }
 }
 
