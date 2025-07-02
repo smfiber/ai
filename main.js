@@ -177,7 +177,8 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    gapi.load('client:picker', () => {
+    // This line is changed. We load 'client' first to ensure gapi.client is available.
+    gapi.load('client', () => {
         gapiInited = true;
         initializeGapiClient();
     });
@@ -1180,83 +1181,101 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 }
 
 async function generateFullDetailedGuide(button) {
+    // --- 1. Get the necessary context from the first modal ---
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
     const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
     const blueprintMarkdown = originalGeneratedText.get(fullTitleFromFirstModal);
+
     if (!blueprintMarkdown) {
         handleApiError({ message: "Could not find the initial guide blueprint to proceed." }, document.getElementById('inDepthDetailedModalContent'), 'full detailed guide');
         return;
     }
+
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
+    
+    // --- 2. Setup the second (detailed) modal UI ---
     const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
     const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
     const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+    
     const detailedModalTitle = `Complete Guide: ${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}`;
     detailedTitleEl.textContent = detailedModalTitle;
     detailedButtonContainer.innerHTML = '';
     detailedFooterEl.dataset.fullTitle = detailedModalTitle;
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
     openModal('inDepthDetailedModal');
+    detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
+
+    // --- 3. Define a single, powerful prompt for the final content ---
+    const finalContentPrompt = `
+    Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
+    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), which is provided below for context. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be exhaustive, practical, and adhere strictly to the rules.
+
+    //-- CONTEXT: THE ALREADY-CREATED BLUEPRINT (SECTIONS 1-4) --//
+    ${blueprintMarkdown}
+
+    //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
+
+    ### 5. Key Concepts - In-Depth Application & Management
+    This is the most CRITICAL section. For each concept defined in Section 3 of the blueprint, you must provide a detailed mini-guide. If the blueprint's scope includes GUI, PowerShell/CLI, and/or API methods, you must provide practical, step-by-step instructions for each. **Crucially, provide at least one clear, real-world example for each method. Use markdown blockquotes for code snippets or commands so the user can copy them directly.**
+
+    ### 6. Verification and Validation
+    Provide specific, copy-able commands or detailed UI navigation steps (e.g., "Navigate to X > Y > Z and confirm the status is 'Active'") to verify the configurations from section 5.
+
+    ### 7. Best Practices
+    List expert, actionable advice for implementation and ongoing management. Go beyond generic advice.
+
+    ### 8. Automation Techniques for Key Concepts
+    If scripting is in scope, provide full, production-ready scripts. Scripts MUST include robust error handling (e.g., PowerShell's try/catch blocks with -ErrorAction Stop).
+
+    ### 9. Security Considerations
+    Detail concept-specific security hardening steps, potential vulnerabilities, and auditing procedures.
+
+    ### 10. Advanced Use Cases & Scenarios
+    Describe 2-3 advanced, real-world examples that combine the guide's concepts to solve a complex problem.
+
+    ### 11. Troubleshooting
+    Create a detailed markdown table of common problems, their likely causes, and concrete solutions.
+
+    ### 12. Helpful Resources
+    Provide a bulleted list of high-quality, real, and working URLs to official documentation, whitepapers, or essential community tools.
+
+    //-- MANDATORY QUALITY STANDARDS --//
+    1.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com") or apologies (e.g., "I cannot provide real-time data").
+    2.  **Factual Accuracy:** All technical content, especially code and commands, must be accurate and validated against current standards.
+    3.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
+
+    //-- FINAL OUTPUT INSTRUCTION --//
+    Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Key Concepts - In-Depth Application & Management". Do not repeat the blueprint.
+    `;
+
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Generating detailed sections (5-12)...');
-         const remainingSectionsPrompt = `
-         Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-         Mission: Based on the provided GUIDE BLUEPRINT, generate the remaining detailed sections (5 through 12) for the guide. Your output must be exhaustive, clear, and focused entirely on the defined scope.
-         
-         //-- GUIDE BLUEPRINT (SECTIONS 1-4 for Context) --//
-         ${blueprintMarkdown}
-         
-         //-- CRITICAL STRUCTURE & FORMATTING RULES --//
-         A. Markdown Formatting: You MUST format each of the main sections below with a ### header. Example: ### 5. Key Concepts...
-         B. Required Guide Content (Generate all sections from 5 to 12):
-         
-         5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3 of the blueprint, provide detailed mini-guides for the methods (GUI, PowerShell/CLI, API) that are IN-SCOPE according to the blueprint. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets.**
-         
-         6. Verification and Validation: Provide specific commands, UI navigation steps, or API calls to confirm that the configurations from the previous sections were applied correctly.
-         
-         7. Best Practices: Give expert, actionable advice for implementation and ongoing management related to the guide's topic.
-         
-         8. Automation Techniques for Key Concepts: Provide concept-specific automation opportunities. If scripting is in scope, provide full, production-ready scripts with error handling.
-         
-         9. Security Considerations: Detail concept-specific security hardening steps, potential vulnerabilities, and auditing procedures.
-         
-         10. Advanced Use Cases & Scenarios: Describe 2-3 advanced, real-world examples that combine the guide's concepts to solve a complex problem.
-         
-         11. Troubleshooting: Create a markdown table of common problems, their likely causes, and concrete solutions. Structure it by concept.
-         
-         12. Helpful Resources: Provide a bulleted list of high-quality, real, and working links to official documentation, whitepapers, or community tools.
-         
-         //-- MANDATORY QUALITY STANDARDS --//
-         1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation.
-         2.  **No Placeholders or Apologies:** Your output MUST NOT contain placeholder links (e.g., "[Link to documentation]"), hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)" or "I cannot provide real-time data". You must use your capabilities to find and provide real, authoritative information.
-         3.  **PowerShell/CLI Standards:** If in scope, scripts must be robust. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`.
-         4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:"). Integrate advice naturally into the text.
-         
-         //-- FINAL INSTRUCTION --//
-         Your response must be ONLY the markdown for sections 5 through 12. Start directly with "### 5. Key Concepts - In-Depth Application & Management".
-         `;        
-        let draftSections5to12 = await callGeminiAPI(remainingSectionsPrompt, false, "Generate Full Guide (Sections 5-12 Draft)");
-        draftSections5to12 = draftSections5to12 ? draftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-        if (!draftSections5to12) throw new Error("Failed to generate the detailed sections of the guide.");
-        detailedContentEl.innerHTML = getLoaderHTML('AI is now reviewing and refining the new sections...');
-        let reviewRequestPrompt = finalReviewPrompt.replace('{blueprint_from_step_1}', blueprintMarkdown).replace('{draft_content_to_review}', draftSections5to12);
-        let finalSections5to12 = await callGeminiAPI(reviewRequestPrompt, false, "Refine Full Guide (Sections 5-12 Final)");
+        // --- 4. Make a single API call for the final content ---
+        let finalSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Single Call)");
         finalSections5to12 = finalSections5to12 ? finalSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
-        if (!finalSections5to12) throw new Error("Failed to generate the final, refined guide sections.");
+
+        if (!finalSections5to12) {
+            throw new Error("The AI did not return any content for the detailed guide sections.");
+        }
+
+        // --- 5. Combine the blueprint and the new content, then render ---
         const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
         originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
+
         detailedContentEl.innerHTML = '';
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
+        
         addDetailedModalActionButtons(detailedButtonContainer);
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated & refined successfully!';
+        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
+
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
     } finally {
-         button.disabled = false;
-         button.innerHTML = `Generate Full Detailed Guide`;
+        button.disabled = false;
+        button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
 
