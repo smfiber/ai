@@ -1202,7 +1202,42 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
     try {
         detailedContentEl.innerHTML = getLoaderHTML('Generating detailed sections (5-12)...');
-        const remainingSectionsPrompt = `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Mission: Based on the provided GUIDE BLUEPRINT, generate the remaining detailed sections (5 through 12) for the guide. //-- GUIDE BLUEPRINT (SECTIONS 1-4 for Context) --// ${blueprintMarkdown} //-- INSTRUCTIONS --// 1.  **Generate Sections 5-12 ONLY:** Your output must start with "### 5. Key Concepts - In-Depth Application & Management" and end with "### 12. Helpful Resources". 2.  **Adhere to Blueprint:** All content you generate must strictly adhere to the scope and details defined in the provided blueprint. 3.  **Provide Concrete Examples:** For section 5, for each technique discussed (e.g., Few-Shot Learning), you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts. 4.  **Uphold Quality Standards:** Ensure all information is factually accurate, contains no placeholders, and is written in a professional tone. Your response must be ONLY the markdown for sections 5 through 12.`;
+         const remainingSectionsPrompt = `
+         Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
+         Mission: Based on the provided GUIDE BLUEPRINT, generate the remaining detailed sections (5 through 12) for the guide. Your output must be exhaustive, clear, and focused entirely on the defined scope.
+         
+         //-- GUIDE BLUEPRINT (SECTIONS 1-4 for Context) --//
+         ${blueprintMarkdown}
+         
+         //-- CRITICAL STRUCTURE & FORMATTING RULES --//
+         A. Markdown Formatting: You MUST format each of the main sections below with a ### header. Example: ### 5. Key Concepts...
+         B. Required Guide Content (Generate all sections from 5 to 12):
+         
+         5. Key Concepts - In-Depth Application & Management: CRITICAL SECTION. For each concept from Section 3 of the blueprint, provide detailed mini-guides for the methods (GUI, PowerShell/CLI, API) that are IN-SCOPE according to the blueprint. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets.**
+         
+         6. Verification and Validation: Provide specific commands, UI navigation steps, or API calls to confirm that the configurations from the previous sections were applied correctly.
+         
+         7. Best Practices: Give expert, actionable advice for implementation and ongoing management related to the guide's topic.
+         
+         8. Automation Techniques for Key Concepts: Provide concept-specific automation opportunities. If scripting is in scope, provide full, production-ready scripts with error handling.
+         
+         9. Security Considerations: Detail concept-specific security hardening steps, potential vulnerabilities, and auditing procedures.
+         
+         10. Advanced Use Cases & Scenarios: Describe 2-3 advanced, real-world examples that combine the guide's concepts to solve a complex problem.
+         
+         11. Troubleshooting: Create a markdown table of common problems, their likely causes, and concrete solutions. Structure it by concept.
+         
+         12. Helpful Resources: Provide a bulleted list of high-quality, real, and working links to official documentation, whitepapers, or community tools.
+         
+         //-- MANDATORY QUALITY STANDARDS --//
+         1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation.
+         2.  **No Placeholders or Apologies:** Your output MUST NOT contain placeholder links (e.g., "[Link to documentation]"), hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)" or "I cannot provide real-time data". You must use your capabilities to find and provide real, authoritative information.
+         3.  **PowerShell/CLI Standards:** If in scope, scripts must be robust. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`.
+         4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:"). Integrate advice naturally into the text.
+         
+         //-- FINAL INSTRUCTION --//
+         Your response must be ONLY the markdown for sections 5 through 12. Start directly with "### 5. Key Concepts - In-Depth Application & Management".
+         `;        
         let draftSections5to12 = await callGeminiAPI(remainingSectionsPrompt, false, "Generate Full Guide (Sections 5-12 Draft)");
         draftSections5to12 = draftSections5to12 ? draftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         if (!draftSections5to12) throw new Error("Failed to generate the detailed sections of the guide.");
