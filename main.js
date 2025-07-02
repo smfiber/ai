@@ -112,10 +112,15 @@ function loadConfigFromStorage() {
     }
 
     if (geminiApiKey && firebaseConfig) {
-        document.getElementById('geminiApiKeyInput').value = geminiApiKey;
-        document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
+        const geminiInput = document.getElementById('geminiApiKeyInput');
+        if (geminiInput) geminiInput.value = geminiApiKey;
+
+        const firebaseInput = document.getElementById('firebaseConfigInput');
+        if (firebaseInput) firebaseInput.value = JSON.stringify(firebaseConfig, null, 2);
+        
         if (GOOGLE_CLIENT_ID) {
-            document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
+            const googleClientInput = document.getElementById('googleClientIdInput');
+            if (googleClientInput) googleClientInput.value = GOOGLE_CLIENT_ID;
         }
         return true;
     }
