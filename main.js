@@ -27,7 +27,8 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-const G_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/cloud-platform';
+// SCOPE REDUCED: Removed cloud-platform scope as image generation is no longer used.
+const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 
 // --- Prompt Engineering Constants ---
@@ -110,18 +111,8 @@ function loadConfigFromStorage() {
     return false;
 }
 
-function checkAndLaunchApp() {
-    const googleToken = gapi?.client?.getToken();
-    const hasGoogleToken = googleToken && googleToken.access_token;
-
-    if (appIsInitialized || !auth.currentUser || !hasGoogleToken) {
-        return;
-    }
-
-    initializeAppContent();
-}
-
 async function initializeAppContent() {
+    // This function is now the single entry point for loading the app's main content after login.
     if (appIsInitialized) return;
     appIsInitialized = true;
 
@@ -156,18 +147,26 @@ function initializeFirebase() {
         db = getFirestore(app);
         auth = getAuth(app);
 
+        // REFACTORED: onAuthStateChanged is now the primary gatekeeper for starting the app.
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
                 const appId = firebaseConfig.appId || 'it-admin-hub-global';
                 viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                 listenForViewedItems();
+                
+                // Only initialize the main app content ONCE after a user is confirmed.
+                if (!appIsInitialized) {
+                    initializeAppContent();
+                }
             } else {
+                // Handle user sign-out
                 userId = null;
                 viewedItemsCollectionRef = null;
+                appIsInitialized = false; // Reset app state on logout
             }
+            // Update the auth UI regardless of app initialization state
             setupAuthUI(user);
-            checkAndLaunchApp();
         });
     } catch (error) {
         console.error("Firebase initialization error:", error);
@@ -325,7 +324,8 @@ function updateSigninStatus(isSignedIn) {
         authButton.textContent = 'Connect';
         authButton.title = 'Connect your Google Account';
         loadBtn.classList.add('hidden');
-        statusEl.textContent = 'Connect to load/save guides and enable AI image generation.';
+        // REMOVED mention of image generation
+        statusEl.textContent = 'Connect to save and load guides from Google Drive.';
         driveFolderId = null;
     }
 
@@ -339,8 +339,6 @@ function updateSigninStatus(isSignedIn) {
     if (document.body.classList.contains('searchGeminiModal-open')) {
         addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
     }
-
-    checkAndLaunchApp();
 }
 
 function listenForViewedItems() {
@@ -398,9 +396,6 @@ async function handleApiKeySubmit(e) {
         handleLogin();
     }
 }
-
-// ... (rest of the functions from the previous main.js file)
-// NOTE: I'm including all other functions below for completeness.
 
 function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
@@ -691,7 +686,7 @@ function displayImportedGuide(fileName, markdownContent) {
         <div class="prose max-w-none mt-4"></div>
     `;
     const renderTarget = cardContent.querySelector('.prose');
-    renderAccordionFromMarkdown(markdownContent, renderTarget, false);
+    renderAccordionFromMarkdown(markdownContent, renderTarget);
     card.appendChild(cardContent);
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -932,7 +927,7 @@ async function handleGeminiSubmit(e) {
         initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         originalGeneratedText.set(fullTitle, initialResultText);
         contentEl.innerHTML = '';
-        renderAccordionFromMarkdown(initialResultText, contentEl, false);
+        renderAccordionFromMarkdown(initialResultText, contentEl);
         const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${userPrompt}`}];
         footerEl.dataset.fullHierarchyPath = JSON.stringify(dummyHierarchy);
         addModalActionButtons(buttonContainer, true);
@@ -1008,22 +1003,6 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     return responseText;
 }
 
-async function callImageGenAPI(prompt) {
-    const token = gapi.client.getToken();
-    if (!token) {
-        throw new Error("Please connect your Google Account to generate images.");
-    }
-    if (!firebaseConfig || !firebaseConfig.projectId) {
-        throw new Error("Firebase project ID is not configured. Cannot make image generation request.");
-    }
-    const apiUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${firebaseConfig.projectId}/locations/us-central1/publishers/google/models/imagegeneration@0.0.5:predict`;
-    const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-    const authHeader = `Bearer ${token.access_token}`;
-    const result = await callApi(apiUrl, payload, authHeader);
-    const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
-    return base64 ? `data:image/png;base64,${base64}` : null;
-}
-
 async function callColorGenAPI(prompt) {
     const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
     const jsonText = await callGeminiAPI(fullPrompt, true, "Generate Color Theme");
@@ -1042,17 +1021,10 @@ function handleApiError(error, container, contentType = 'content') {
 async function generateAndApplyDefaultTheme() {
     showThemeLoading(true);
     const themePrompt = "Modern Data Center";
-    const imagePrompt = `Artistic, abstract background image inspired by "${themePrompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
     try {
         const colors = await callColorGenAPI(themePrompt);
         applyTheme(colors);
-        const googleToken = gapi?.client?.getToken();
-        if (googleToken && googleToken.access_token) {
-            const imageUrl = await callImageGenAPI(imagePrompt);
-            applyHeaderImage(imageUrl);
-        } else {
-            console.warn("Skipping default header image generation: Google auth token not yet available.");
-        }
+        // Image generation on default theme load is removed to simplify startup.
     } catch (error) {
         handleApiError(null, null, 'default theme');
         console.error("Failed to generate default theme, continuing with default styles.", error);
@@ -1188,7 +1160,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
         initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         originalGeneratedText.set(fullTitle, initialResultText);
         contentEl.innerHTML = '';
-        renderAccordionFromMarkdown(initialResultText, contentEl, false);
+        renderAccordionFromMarkdown(initialResultText, contentEl);
         addModalActionButtons(buttonContainer, true);
     } catch (error) {
         handleApiError(error, contentEl, 'initial in-depth content');
@@ -1230,7 +1202,7 @@ async function generateFullDetailedGuide(button) {
         const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
         originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
         detailedContentEl.innerHTML = '';
-        renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl, false);
+        renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
         addDetailedModalActionButtons(detailedButtonContainer);
         document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated & refined successfully!';
     } catch (error) {
@@ -1321,18 +1293,11 @@ async function handleSearchGemini() {
     }
 }
 
-function convertMarkdownToHtml(text, generateImages = true) {
+// REMOVED: Image generation logic from this function.
+function convertMarkdownToHtml(text) {
     if (!text) return '<p class="themed-text-muted">No content received from AI. Please try a different prompt.</p>';
-    let processedText;
-    if (generateImages) {
-        processedText = text.replace(/\[Screenshot: (.*?)\]/g, (match, description) => {
-            const placeholderId = `image-placeholder-${Date.now()}-${Math.random()}`;
-            return `<div id="${placeholderId}" class="image-generation-container" data-prompt="${description.replace(/"/g, '&quot;')}"><div class="loader themed-loader"></div><p class="mt-2 text-sm italic">${description}</p></div>`;
-        });
-     } else {
-        processedText = text.replace(/\[Screenshot: (.*?)\]/g, '');
-    }
-    let html = marked.parse(processedText);
+    
+    let html = marked.parse(text);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     tempDiv.querySelectorAll('pre').forEach(preBlock => {
@@ -1349,32 +1314,6 @@ function convertMarkdownToHtml(text, generateImages = true) {
         container.appendChild(preBlock);
     });
     return tempDiv.innerHTML;
-}
-
-async function generateAndInjectImages(container) {
-    const placeholders = container.querySelectorAll('.image-generation-container');
-    if (placeholders.length === 0) return;
-    if (!gapi.client.getToken()) {
-        placeholders.forEach(placeholder => {
-            placeholder.innerHTML = `<p class="text-sm themed-text-muted">Connect Google Account to generate images.</p>`;
-        });
-        return;
-    }
-    placeholders.forEach(async (placeholder) => {
-        const prompt = placeholder.dataset.prompt;
-        const imagePrompt = `UI Screenshot for an IT Administration guide showing: ${prompt}. Clean, professional, minimal.`;
-        try {
-           const imageUrl = await callImageGenAPI(imagePrompt);
-            if (imageUrl) {
-                placeholder.innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
-            } else {
-               throw new Error('API returned no image.');
-            }
-        } catch (error) {
-            console.error(`Failed to generate image for prompt: "${prompt}"`, error);
-            placeholder.innerHTML = `<p class="text-red-500 text-sm">Image generation failed.</p><p class="text-xs">${prompt}</p>`;
-        }
-    });
 }
 
 function addPostGenerationButtons(container, topicId, categoryId) {
@@ -1397,6 +1336,7 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     });
 }
 
+// REMOVED: Image generation logic from this function.
 async function handleCustomVisualThemeGeneration() {
     const prompt = document.getElementById('theme-prompt').value;
     if(!prompt) return;
@@ -1407,24 +1347,8 @@ async function handleCustomVisualThemeGeneration() {
     errorContainer.classList.add('hidden');
     generateBtn.disabled = true;
     try {
-        const imagePrompt = `Artistic, abstract background image inspired by "${prompt}". Suitable for an IT administration website. Professional, clean. Wide aspect ratio, photographic, cinematic lighting.`;
-        const promises = [callColorGenAPI(prompt)];
-        if (gapi.client.getToken()) {
-            promises.push(callImageGenAPI(imagePrompt));
-        } else {
-            showThemeError("Connect your Google Account to generate a new header image.");
-        }
-        const [colorResult, imageResult] = await Promise.allSettled(promises);
-        if (colorResult.status === 'fulfilled' && colorResult.value) {
-            applyTheme(colorResult.value);
-        } else {
-            throw colorResult.reason || new Error("Failed to generate color theme.");
-        }
-        if (imageResult && imageResult.status === 'fulfilled' && imageResult.value) {
-            applyHeaderImage(imageResult.value);
-        } else if (imageResult) {
-            showThemeError("Failed to generate header image, but colors were updated.");
-        }
+        const colors = await callColorGenAPI(prompt);
+        applyTheme(colors);
         closeModal('themeGeneratorModal');
     } catch (error) {
         showThemeError(error.message);
@@ -1482,13 +1406,14 @@ function copyElementTextToClipboard(element, button) {
     document.body.removeChild(textarea);
 }
 
-function renderAccordionFromMarkdown(markdownText, containerElement, generateImages = true) {
+// REMOVED: Image generation logic from this function.
+function renderAccordionFromMarkdown(markdownText, containerElement) {
     containerElement.innerHTML = '';
     if (!markdownText || !markdownText.trim()) {
-        containerElement.innerHTML = convertMarkdownToHtml(null, false);
+        containerElement.innerHTML = convertMarkdownToHtml(null);
         return;
     }
-    const fullHtml = convertMarkdownToHtml(markdownText, generateImages);
+    const fullHtml = convertMarkdownToHtml(markdownText);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = fullHtml;
     const nodes = Array.from(tempDiv.childNodes);
@@ -1537,6 +1462,7 @@ function renderAccordionFromMarkdown(markdownText, containerElement, generateIma
     }
 }
 
+// REMOVED: Image generation mention from prompt
 async function handleAIHelpRequest() {
     document.getElementById('inDepthModalTitle').textContent = "Code Documentation Generation";
     const contentEl = document.getElementById('inDepthModalContent');
@@ -1544,7 +1470,7 @@ async function handleAIHelpRequest() {
     document.getElementById('inDepthModalButtons').innerHTML = '';
     document.getElementById('modal-status-message').innerHTML = '';
     openModal('inDepthModal');
-    const codeDocPrompt = `**Persona:** You are an expert technical writer and senior software architect. **Objective:** Your task is to analyze this application's structure and generate comprehensive code documentation. The application is a sophisticated "IT Administration Hub" built with HTML, CSS, and modern JavaScript (ESM), integrating with Firebase and various Google Cloud APIs. **Instructions:** Based on the application's known features and structure, generate a detailed technical documentation guide. The guide must be written in markdown format and use '###' for all main section headers. **Required Sections:** ### 1. Application Overview * Describe the application's primary purpose as an AI-powered tool for IT professionals. * Explain its core value proposition: generating dynamic, in-depth administrative guides. ### 2. Technologies & Languages * List and describe the core technologies used: * **Frontend:** HTML5, Tailwind CSS, Vanilla JavaScript (ECMAScript Modules). * **Backend & Cloud Services:** Firebase (Authentication, Firestore), Google Cloud Platform. * **Core APIs:** Google Gemini API (for content generation), Google Drive API (for storage), Google Identity Services (for auth), and the Google AI Platform API (for image generation). ### 3. Architectural Design * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals. * **State Management:** Describe how the application state is managed, including API keys in localStorage, user session state via Firebase Auth, and in-memory state for generated content. * **Event-Driven Logic:** Explain the role of the central 'setupEventListeners' function and how it delegates tasks based on user interactions. * **Hierarchical Content Model:** Explain the Firestore data structure ('topicHierarchy' collection) for managing content in a nested Main -> Sub -> Final Category structure. ### 4. Core Features Deep Dive * For each key feature below, describe its purpose and implementation: * **Dynamic Category Generation:** How 'openCategoryBrowser' and 'generateAndPopulateAICategory' work with Firestore to create UI on demand. * **Multi-Stage Guide Generation:** Detail the process that starts with a summary ('handleGridSelect'), moves to an initial guide ('handleExploreInDepth'), and finishes with a complete, AI-reviewed document ('generateFullDetailedGuide'). * **Hierarchy Management:** Describe the purpose and functionality of the 'hierarchyManagementModal' for CRUD operations on the content structure in Firestore. ### 5. Key Functions & Logic * **\`initializeApplication()\`:** The main entry point. * **\`callGeminiAPI()\` / \`callApi()\`:** Centralized functions for all generative AI requests. * **\`openHierarchyManagementModal()\` & related functions:** The logic for populating and interacting with the hierarchy management UI. * **\`openCategoryBrowser()\`:** The function that initiates the user-facing topic exploration flow. Return only the complete markdown documentation.`;
+    const codeDocPrompt = `**Persona:** You are an expert technical writer and senior software architect. **Objective:** Your task is to analyze this application's structure and generate comprehensive code documentation. The application is a sophisticated "IT Administration Hub" built with HTML, CSS, and modern JavaScript (ESM), integrating with Firebase and various Google Cloud APIs. **Instructions:** Based on the application's known features and structure, generate a detailed technical documentation guide. The guide must be written in markdown format and use '###' for all main section headers. **Required Sections:** ### 1. Application Overview * Describe the application's primary purpose as an AI-powered tool for IT professionals. * Explain its core value proposition: generating dynamic, in-depth administrative guides. ### 2. Technologies & Languages * List and describe the core technologies used: * **Frontend:** HTML5, Tailwind CSS, Vanilla JavaScript (ECMAScript Modules). * **Backend & Cloud Services:** Firebase (Authentication, Firestore), Google Cloud Platform. * **Core APIs:** Google Gemini API (for content generation), Google Drive API (for storage), Google Identity Services (for auth). ### 3. Architectural Design * **Component-Based UI:** Explain how the UI is dynamically built from cards and modals. * **State Management:** Describe how the application state is managed, including API keys in localStorage, user session state via Firebase Auth, and in-memory state for generated content. * **Event-Driven Logic:** Explain the role of the central 'setupEventListeners' function and how it delegates tasks based on user interactions. * **Hierarchical Content Model:** Explain the Firestore data structure ('topicHierarchy' collection) for managing content in a nested Main -> Sub -> Final Category structure. ### 4. Core Features Deep Dive * For each key feature below, describe its purpose and implementation: * **Dynamic Category Generation:** How 'openCategoryBrowser' and 'generateAndPopulateAICategory' work with Firestore to create UI on demand. * **Multi-Stage Guide Generation:** Detail the process that starts with a summary ('handleGridSelect'), moves to an initial guide ('handleExploreInDepth'), and finishes with a complete, AI-reviewed document ('generateFullDetailedGuide'). * **Hierarchy Management:** Describe the purpose and functionality of the 'hierarchyManagementModal' for CRUD operations on the content structure in Firestore. ### 5. Key Functions & Logic * **\`initializeApplication()\`:** The main entry point. * **\`callGeminiAPI()\` / \`callApi()\`:** Centralized functions for all generative AI requests. * **\`openHierarchyManagementModal()\` & related functions:** The logic for populating and interacting with the hierarchy management UI. * **\`openCategoryBrowser()\`:** The function that initiates the user-facing topic exploration flow. Return only the complete markdown documentation.`;
     try {
         const documentationResult = await callGeminiAPI(codeDocPrompt, false, "Generate Code Documentation");
         const documentationHtml = documentationResult ? marked.parse(documentationResult.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim()) : '<p class="themed-text-muted">Could not load documentation.</p>';
@@ -1603,7 +1529,7 @@ async function handleRefineRequest(refineContainer, targetModalId) {
             renderTarget.innerHTML = marked.parse(newText || '');
         } else {
             renderTarget.innerHTML = '';
-            renderAccordionFromMarkdown(newText, renderTarget, false);
+            renderAccordionFromMarkdown(newText, renderTarget);
         }
     } catch(error) {
         handleApiError(error, renderTarget, 'refinement');
@@ -1647,8 +1573,6 @@ function generateErrorMessage(error, type = 'general') {
         message = `Request limit exceeded. Please try again later.`;
     } else if (errText.includes('timed out')) {
         message = `The request timed out. Please check your connection and try again.`;
-    } else if (errText.includes('google account to generate images')) {
-        message = `Image generation requires you to connect your Google Account. Please use the 'Connect' button in the Cloud Storage card.`
     } else if (errText.includes('data.sort is not a function') || errText.includes('invalid api response format')) {
         message = `The AI returned data in an unexpected format. This usually means the AI did not return a list of topics as expected. Please try again, or adjust the prompt in Hierarchy Management.`;
     }
