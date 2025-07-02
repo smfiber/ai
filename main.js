@@ -35,6 +35,49 @@ const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON o
 
 // --- Function Declarations ---
 
+/**
+ * Saves a completed guide to the 'knowledgeBase' Firestore collection.
+ * @param {string} title The title of the guide.
+ * @param {string} markdownContent The full markdown content of the guide.
+ * @param {Array} hierarchyPath The hierarchical path of the guide's topic.
+ */
+async function saveGuideToKB(title, markdownContent, hierarchyPath) {
+    if (!userId) {
+        displayMessageInModal("You must be logged in to save to the Knowledge Base.", 'warning');
+        return;
+    }
+    if (!db) {
+        console.error("Firestore database is not initialized.");
+        displayMessageInModal("Database connection error. Cannot save guide.", 'error');
+        return;
+    }
+
+    const statusEl = document.getElementById('detailed-modal-status-message');
+    statusEl.textContent = 'Adding to Knowledge Base...';
+
+    // The collection for the Knowledge Base.
+    const kbCollectionRef = collection(db, `knowledgeBase`);
+    const guideData = {
+        title: title,
+        markdownContent: markdownContent,
+        hierarchyPath: hierarchyPath.map(p => p.title || p).join(' / '),
+        createdAt: Timestamp.now(),
+        status: 'completed', // Default status
+        userId: userId, // Associate the guide with the user who saved it
+    };
+
+    try {
+        const docRef = await addDoc(kbCollectionRef, guideData);
+        console.log("Guide saved to Knowledge Base with ID: ", docRef.id);
+        statusEl.textContent = 'Successfully added to Knowledge Base!';
+        setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    } catch (error) {
+        console.error("Error saving guide to Knowledge Base:", error);
+        statusEl.textContent = `Error: ${error.message}`;
+    }
+}
+
+
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
@@ -1283,7 +1326,12 @@ function addModalActionButtons(buttonContainer, isInitialPhase = false) {
 function addDetailedModalActionButtons(buttonContainer) {
     const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
+
+    // Add the new "Add to Knowledge Base" button
+    const addToKbBtnHtml = `<button id="add-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
+
+    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
+
     const copyButton = buttonContainer.querySelector('.copy-button');
     if (copyButton) {
         copyButton.addEventListener('click', e => {
@@ -1291,7 +1339,32 @@ function addDetailedModalActionButtons(buttonContainer) {
             copyElementTextToClipboard(contentToCopy, e.target);
         });
     }
+
+    // Add event listener for the new button
+    const addToKbButton = buttonContainer.querySelector('#add-to-kb-btn');
+    if (addToKbButton) {
+        addToKbButton.addEventListener('click', () => {
+            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
+            const title = detailedFooterEl.dataset.fullTitle;
+            const hierarchyPathString = detailedFooterEl.dataset.fullHierarchyPath;
+            
+            if (!title || !hierarchyPathString) {
+                 displayMessageInModal("Could not save. Guide data is missing.", "error");
+                 return;
+            }
+
+            const hierarchyPath = JSON.parse(hierarchyPathString);
+            const markdownContent = originalGeneratedText.get(title);
+
+            if (markdownContent) {
+                saveGuideToKB(title, markdownContent, hierarchyPath);
+            } else {
+                displayMessageInModal("Could not save. Guide content not found.", "error");
+            }
+        });
+    }
 }
+
 
 function addSearchModalActionButtons(buttonContainer) {
     const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
