@@ -46,8 +46,8 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
         displayMessageInModal("You must be logged in to save to the Knowledge Base.", 'warning');
         return;
     }
-    if (!db) {
-        console.error("Firestore database is not initialized.");
+    if (!db || !firebaseConfig) {
+        console.error("Firestore database or config is not initialized.");
         displayMessageInModal("Database connection error. Cannot save guide.", 'error');
         return;
     }
@@ -55,8 +55,9 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
     const statusEl = document.getElementById('detailed-modal-status-message');
     statusEl.textContent = 'Adding to Knowledge Base...';
 
-    // The collection for the Knowledge Base.
-    const kbCollectionRef = collection(db, `knowledgeBase`);
+    const appId = firebaseConfig.appId || 'it-admin-hub-global';
+    // The collection for the Knowledge Base, now using the correct public path.
+    const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
     const guideData = {
         title: title,
         markdownContent: markdownContent,
