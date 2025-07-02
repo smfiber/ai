@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // --- Firebase State ---
 let db;
 let auth;
@@ -10,9 +11,7 @@ const viewedItemIds = new Set();
 let stickyTopicsUnsubscribe = null;
 let stickyTopics = {};
 let userAddedTopics = {};
-// NEW: For user-added sticky topics
 let userTopicsUnsubscribes = {};
-// NEW: To manage listeners for user topics
 let firebaseConfig = null;
 let appIsInitialized = false;
 
@@ -75,6 +74,7 @@ let tokenClient;
 let GOOGLE_CLIENT_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/cloud-platform';
 let driveFolderId = null;
+
 // --- App Initialization & Event Listeners ---
 function initializeApplication() {
     setupEventListeners();
@@ -96,6 +96,7 @@ function initializeApplication() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApplication);
+
 function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
@@ -127,11 +128,34 @@ function loadConfigFromStorage() {
     return false;
 }
 
+/**
+ * [MODIFIED] This is the new gatekeeper function. It checks if all required services
+ * (Firebase Auth, Google GAPI Client) are ready before launching the main app.
+ * It's designed to be called by both Firebase and Google auth callbacks.
+ */
+function checkAndLaunchApp() {
+    // Conditions to prevent launch:
+    // 1. App is already initialized.
+    // 2. Firebase user isn't authenticated yet.
+    // 3. Google API client doesn't have a token yet (for features like image gen).
+    if (appIsInitialized || !auth.currentUser || !gapi.client.getToken()) {
+        return;
+    }
+
+    // All conditions met, proceed with app initialization.
+    initializeAppContent();
+}
+
+
 // --- Login/Logout UI and Handlers ---
+/**
+ * [MODIFIED] This function NO LONGER calls initializeAppContent(). Its only job
+ * is to update the UI based on the user's authentication status.
+ */
 function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
         appContainer.classList.remove('hidden');
-        appContainer.style.display = 'block'; // Explicitly show the container
+        appContainer.style.display = 'block';
         closeModal('apiKeyModal');
         
         authStatusEl.innerHTML = `
@@ -147,9 +171,8 @@ function _performAuthUISetup(user, authStatusEl, appContainer) {
         `;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
         
-        if (!appIsInitialized) {
-            initializeAppContent();
-        }
+        // CRITICAL CHANGE: The call to initializeAppContent() is removed from here.
+        // It is now handled by the checkAndLaunchApp() gatekeeper function.
 
     } else {
          authStatusEl.innerHTML = `
@@ -231,7 +254,9 @@ function handleLogout() {
 }
 
 async function initializeAppContent() {
-    appIsInitialized = true;
+    // This flag prevents this function from running multiple times.
+    appIsInitialized = true; 
+    
     openModal('loadingStateModal');
     const loadingMessageEl = document.getElementById('loading-message');
     loadingMessageEl.textContent = "Waking up the AI...";
@@ -239,7 +264,6 @@ async function initializeAppContent() {
     document.getElementById('gemini-result-container').innerHTML = '';
     
     checkBackupReminder();
-// NEW: Check for backup reminder on app load
 
     try {
         await generateAndApplyDefaultTheme();
@@ -276,8 +300,7 @@ function initializeGoogleClients() {
             clearInterval(gapiInterval);
             gapi.load('client:picker', () => {
                 gapiInited = true;
-  
-                 initializeGapiClient();
+                initializeGapiClient();
             });
         }
     }, 100);
@@ -286,14 +309,17 @@ function initializeGoogleClients() {
             clearInterval(gsiInterval);
             google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
-  
-               callback: () => {}, 
+                callback: () => {}, 
             });
             gisInited = true;
         }
     }, 100);
 }
 
+/**
+ * [MODIFIED] The onAuthStateChanged listener now calls checkAndLaunchApp()
+ * after it has set up the user's state.
+ */
 function initializeFirebase() {
      if (!firebaseConfig) {
         console.warn("Firebase config is missing. Firebase initialization skipped.");
@@ -314,10 +340,11 @@ function initializeFirebase() {
                 listenForViewedItems();
             } else {
                 userId = null;
-              
                 viewedItemsCollectionRef = null;
             }
             setupAuthUI(user);
+            // Attempt to launch the app now that Firebase auth state is known.
+            checkAndLaunchApp(); 
         });
     } catch (error) {
         console.error("Firebase initialization error:", error);
@@ -336,8 +363,7 @@ function listenForViewedItems() {
             if (change.type === "added") {
                 viewedItemIds.add(change.doc.id);
             }
-           
-     });
+        });
     }, (error) => {
         console.error("Error listening to viewed items:", error);
     });
@@ -421,8 +447,7 @@ function setupEventListeners() {
             if (e.target === modal || e.target.closest('[id^="close"]')) {
                 closeModal(modal.id);
             }
-         
-       });
+        });
     });
 
     const searchGeminiButton = document.getElementById('search-gemini-button');
@@ -628,7 +653,6 @@ async function initializeGapiClient() {
     try {
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-     
         });
         gapiInited = true;
         initializeTokenClient();
@@ -648,16 +672,13 @@ function initializeTokenClient() {
             client_id: GOOGLE_CLIENT_ID,
             scope: G_SCOPES,
             callback: (tokenResponse) => {
-   
                 if (tokenResponse && tokenResponse.access_token) {
                     gapi.client.setToken(tokenResponse);
                     updateSigninStatus(true);
-                   
                 } else {
                     console.error('User denied access or token response was invalid.', tokenResponse);
                     updateSigninStatus(false);
                 }
-     
             },
             popup_closed_callback: () => {
                 console.log('User closed the Google auth popup.');
@@ -696,6 +717,11 @@ function handleAuthClick() {
     }
 }
 
+/**
+ * [MODIFIED] This function now calls checkAndLaunchApp() after updating the UI.
+ * This ensures that if the Google Auth finishes after Firebase, it can trigger
+ * the app launch.
+ */
 function updateSigninStatus(isSignedIn) {
     const authButton = document.getElementById('auth-button');
     const loadBtn = document.getElementById('load-from-drive-btn');
@@ -725,6 +751,9 @@ function updateSigninStatus(isSignedIn) {
     if (document.body.classList.contains('searchGeminiModal-open')) {
         addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
     }
+
+    // Attempt to launch the app now that Google auth state is known.
+    checkAndLaunchApp();
 }
 
 async function getDriveFolderId() {
@@ -804,7 +833,6 @@ async function saveContentToDrive(content, fileName, statusElement) {
     try {
         const searchResponse = await gapi.client.drive.files.list({
             q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
-     
             fields: 'files(id)',
             spaces: 'drive'
         });
@@ -831,7 +859,6 @@ async function saveContentToDrive(content, fileName, statusElement) {
             body: multipartRequestBody
         });
         statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
-// NEW: Clear the message after a delay
         setTimeout(() => {
             if (statusElement) statusElement.textContent = '';
         }, 4000);
@@ -950,7 +977,6 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // NEW: Listen for user-added topics for this category
     listenForUserAddedTopics(finalCategory.id);
     try {
         const prompt = finalCategory.initialPrompt ||
@@ -980,7 +1006,6 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const data = allThemeData[categoryId] || [];
     const stickies = stickyTopics[categoryId] || [];
     const userAdded = userAddedTopics[categoryId] || [];
-// NEW: Get user-added topics
     
     if (!container) return;
     if (data.length === 0 && stickies.length === 0 && userAdded.length === 0) {
@@ -993,7 +1018,7 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const cardTitle = card.querySelector('h2').textContent;
 
     const stickyTitles = new Set(stickies.map(s => s.title));
-    const userAddedTitles = new Set(userAdded.map(u => u.title)); // NEW
+    const userAddedTitles = new Set(userAdded.map(u => u.title));
 
     const stickyHtml = stickies.map(item => `
         <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
@@ -1005,7 +1030,6 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
         
         </div>`
     ).join('');
-// NEW: HTML for user-added topics
     const userAddedHtml = userAdded.map(item => `
         <div id="grid-selector-${item.id}" class="grid-card-selector" data-topic-id="${item.id}" data-category-id="${categoryId}" title="${item.title}">
             <div class="indicator" style="background-color: #f59e0b;" title="Your Added Topic">
@@ -1017,7 +1041,7 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
               </div>`
     ).join('');
     const regularItemsHtml = data
-        .filter(item => !stickyTitles.has(item.title) && !userAddedTitles.has(item.title)) // MODIFIED: Also filter out user-added titles
+        .filter(item => !stickyTitles.has(item.title) && !userAddedTitles.has(item.title))
         .map(item => {
             const compositeKey = `${cardTitle} - ${item.title}`;
             const isViewed = viewedItemIds.has(compositeKey);
@@ -1052,7 +1076,6 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const fullPrompt = finalCategory.fullPrompt;
     
     let actionButtonsHtml = '';
-// MODIFIED: Removed "Show All" button and changed text for generate more.
     if (fullPrompt && data.length > 0) {
         actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
     }
@@ -1072,7 +1095,6 @@ async function handleAddNewTopic(button) {
     }
 
     const appId = firebaseConfig.appId || 'it-admin-hub-global';
-// NEW: Path for user-added topics
     const userTopicsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/userTopics/${categoryId}/topics`);
     button.disabled = true;
     button.innerHTML = 'Adding...';
@@ -1082,12 +1104,10 @@ async function handleAddNewTopic(button) {
             title: newTitle,
             id: `${sanitizeTitle(newTitle).replace(/\s+/g, '-')}-${Date.now()}`,
             description: `Custom user-added topic: ${newTitle}`,
-       
-             createdAt: Timestamp.now()
+            createdAt: Timestamp.now()
         };
         await addDoc(userTopicsCollectionRef, newTopicData);
         inputField.value = '';
-        // The onSnapshot listener will automatically update the UI.
     } catch (error) {
         console.error("Error adding user topic to Firebase:", error);
         displayMessageInModal(`Could not add topic: ${error.message}`, 'error');
@@ -1144,7 +1164,6 @@ Existing Task List:\n- ${existingTitles.join('\n- ')}\n
 
 async function handleGridSelect(target) {
     const { topicId, categoryId } = target.dataset;
-    // MODIFIED: Check user-added topics as well
     let item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) ||
         stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) ||
                userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
@@ -1304,7 +1323,6 @@ function logAiInteraction(prompt, response, type) {
     aiLog.push({
         timestamp: new Date(),
         type: type,
-             
         prompt: prompt,
         response: response
     });
@@ -1324,7 +1342,6 @@ async function callApi(apiUrl, payload, authorization = null) {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload),
-   
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -2284,7 +2301,6 @@ function getIconForTheme(categoryId, topicId) {
         m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
         default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
     }
-    // Simple logic to pick an icon based on a hash of 
     const keys = Object.keys(icons);
     const hash = categoryId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return icons[keys[hash % keys.length]] || icons.default;
@@ -2335,7 +2351,6 @@ Please try again, or adjust the prompt in Hierarchy Management.`;
 
 // --- Sticky Topics & User Topics Functions ---
 
-// NEW: Listener for user-added topics
 function listenForUserAddedTopics(categoryKey) {
     if (userTopicsUnsubscribes[categoryKey]) {
         userTopicsUnsubscribes[categoryKey]();
