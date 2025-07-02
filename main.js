@@ -1,33 +1,33 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; [cite_start]/* [cite: 212] */
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"; [cite_start]/* [cite: 213] */
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; [cite_start]/* [cite: 214] */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // --- Firebase State ---
-let db; [cite_start]/* [cite: 215] */
-let auth; [cite_start]/* [cite: 215] */
-let userId; [cite_start]/* [cite: 215] */
-let viewedItemsCollectionRef; [cite_start]/* [cite: 215] */
-const viewedItemIds = new Set(); [cite_start]/* [cite: 216] */
-let stickyTopicsUnsubscribe = null; [cite_start]/* [cite: 216] */
-let stickyTopics = {}; [cite_start]/* [cite: 216] */
-let userAddedTopics = {}; [cite_start]/* [cite: 216] */
+let db;
+let auth;
+let userId;
+let viewedItemsCollectionRef;
+const viewedItemIds = new Set(); [cite_start]
+let stickyTopicsUnsubscribe = null;
+let stickyTopics = {};
+let userAddedTopics = {};
 // NEW: For user-added sticky topics
-let userTopicsUnsubscribes = {}; [cite_start]/* [cite: 217] */
+let userTopicsUnsubscribes = {};
 // NEW: To manage listeners for user topics
-let firebaseConfig = null; [cite_start]/* [cite: 218] */
-let appIsInitialized = false; [cite_start]/* [cite: 219] */
+let firebaseConfig = null;
+let appIsInitialized = false;
 
-const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. [cite_start]/* [cite: 219] */
-All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). [cite_start]/* [cite: 220] */
-Do not wrap the JSON in markdown code fences.`; [cite_start]/* [cite: 221] */
+const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object.
+All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin").
+Do not wrap the JSON in markdown code fences.`;
 
 // --- Prompt Engineering Constants ---
 // ** UPDATED PROMPT (Final Review Prompt) **
 const finalReviewPrompt = `
-Persona: You are a Lead Technical Editor and a Senior IT Systems Architect. [cite_start]/* [cite: 221] */
-Your role is final quality assurance. [cite_start]/* [cite: 222] */
-Objective: Your mission is to audit the DRAFT CONTENT provided below against its ORIGINAL BLUEPRINT. [cite_start]/* [cite: 222] */
-You will then rewrite and enhance the draft to produce final, publishable-grade technical documentation. [cite_start]/* [cite: 223] */
-You must directly implement all corrections and improvements into the text. [cite_start]/* [cite: 224] */
+Persona: You are a Lead Technical Editor and a Senior IT Systems Architect.
+Your role is final quality assurance.
+Objective: Your mission is to audit the DRAFT CONTENT provided below against its ORIGINAL BLUEPRINT. [cite_start]/*
+You will then rewrite and enhance the draft to produce final, publishable-grade technical documentation.
+You must directly implement all corrections and improvements into the text.
 //-- INPUT 1: ORIGINAL GUIDE BLUEPRINT (SECTIONS 1-4) --//
 {blueprint_from_step_1}
 
@@ -38,10 +38,10 @@ You must directly implement all corrections and improvements into the text. [cit
 (AI: Execute the following review protocol on the DRAFT CONTENT. Your output will be the rewritten content itself, not a list of your actions.)
 
 1.  **Blueprint Adherence Audit:**
-    * Scrutinize the draft against the ORIGINAL BLUEPRINT. [cite_start]/* [cite: 225] */
-    * [cite_start]**Crucially, remove any information or sections that violate the established OUT-OF-SCOPE rules (e.g., if the blueprint scopes the guide to GUI only, remove all PowerShell/API sections).** /* [cite: 226] */
-    * Ensure all IN-SCOPE topics are present and are the primary focus. [cite_start]/* [cite: 226] */
-    * Verify the content's depth and tone are appropriate for the defined TARGET_AUDIENCE. [cite_start]/* [cite: 227] */
+    * Scrutinize the draft against the ORIGINAL BLUEPRINT.
+    * [cite_start]**Crucially, remove any information or sections that violate the established OUT-OF-SCOPE rules (e.g., if the blueprint scopes the guide to GUI only, remove all PowerShell/API sections).
+    * Ensure all IN-SCOPE topics are present and are the primary focus.
+    * Verify the content's depth and tone are appropriate for the defined TARGET_AUDIENCE.
 2.  **Technical Accuracy Validation:**
     * Scrutinize every technical statement. [cite_start]/* [cite: 228] */
     * [cite_start]**Treat any placeholder (e.g., "api.example.com") or hypothetical information as a critical error to be corrected with factual data.** /* [cite: 229] */
