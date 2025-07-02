@@ -2109,47 +2109,47 @@ async function handleDeleteHierarchyItem() {
 function displayMessageInModal(message, type = 'info') {
     const modalId = 'messageModal';
     let modal = document.getElementById(modalId);
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal';
-        modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
-    }
+    
+    // Always ensure the content is there. This is safer than checking for existence.
+    modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
+    modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
+
     const titleEl = modal.querySelector('#messageModalTitle');
     const contentEl = modal.querySelector('#messageModalContent');
+    
     titleEl.textContent = type === 'error' ? 'Error!' : (type === 'warning' ? 'Warning!' : 'Info');
     titleEl.className = `text-2xl font-bold mb-4 ${type === 'error' ? 'text-red-600' : (type === 'warning' ? 'text-yellow-600' : 'themed-text-primary')}`;
     contentEl.textContent = message;
+    
     openModal(modalId);
 }
 
 function showConfirmationModal(message, onConfirmCallback) {
     const modalId = 'confirmationModal';
     let modal = document.getElementById(modalId);
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal';
-        modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 class="text-2xl font-bold mb-4 themed-text-primary">Confirm Action</h2><p id="confirmationModalContent" class="mb-6 themed-text-muted"></p><div class="flex justify-center gap-4"><button id="confirmYesBtn" class="btn-primary">Yes</button><button id="confirmNoBtn" class="btn-secondary">No</button></div></div>`;
-        document.body.appendChild(modal);
-    }
+    
+    // Always ensure the content is there.
+    modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 class="text-2xl font-bold mb-4 themed-text-primary">Confirm Action</h2><p id="confirmationModalContent" class="mb-6 themed-text-muted"></p><div class="flex justify-center gap-4"><button id="confirmYesBtn" class="btn-primary">Yes</button><button id="confirmNoBtn" class="btn-secondary">No</button></div></div>`;
+    
     const contentEl = modal.querySelector('#confirmationModalContent');
     contentEl.textContent = message;
+    
     const confirmYesBtn = modal.querySelector('#confirmYesBtn');
     const confirmNoBtn = modal.querySelector('#confirmNoBtn');
+
+    // Use a fresh listener to avoid stacking them
     const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
     confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
-    const newConfirmNoBtn = confirmNoBtn.cloneNode(true);
-    confirmNoBtn.parentNode.replaceChild(newConfirmNoBtn, confirmNoBtn);
+    
     newConfirmYesBtn.addEventListener('click', () => {
         onConfirmCallback();
         closeModal(modalId);
     });
-    newConfirmNoBtn.addEventListener('click', () => {
+
+    confirmNoBtn.addEventListener('click', () => {
         closeModal(modalId);
     });
+    
     openModal(modalId);
 }
 
