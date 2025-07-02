@@ -73,6 +73,14 @@ function openModal(modalId) {
     }
 }
 
+function checkGapiReady(callback) {
+  if (typeof gapi !== 'undefined' && gapi.load) {
+    callback();
+  } else {
+    setTimeout(() => checkGapiReady(callback), 100);
+  }
+}
+
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
@@ -177,15 +185,19 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // This line is changed. We load 'client' first to ensure gapi.client is available.
-    gapi.load('client', () => {
-        gapiInited = true;
-        initializeGapiClient();
+    // Use a helper to wait for the gapi script to be fully loaded
+    checkGapiReady(() => {
+        // Load both 'client' for authentication and 'picker' for the file dialog.
+        gapi.load('client:picker', () => {
+            // This callback now safely runs only after the libraries are ready.
+            initializeGapiClient();
+        });
     });
 
+    // GIS initialization can happen in parallel
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: () => {},
+        callback: () => {}, // The main callback is handled by the token client
     });
     gisInited = true;
 }
