@@ -84,7 +84,7 @@ function initializeApplication() {
         highlight: (code, lang) => code,
         langPrefix: 'language-',
         gfm: true,
-        [cite_start]breaks: true, /* [cite: 245] */
+        breaks: true,
   });
 
     if (loadConfigFromStorage()) {
