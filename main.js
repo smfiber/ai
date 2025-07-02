@@ -131,6 +131,7 @@ function loadConfigFromStorage() {
 function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
         appContainer.classList.remove('hidden');
+        appContainer.style.display = 'block'; // Explicitly show the container
         closeModal('apiKeyModal');
         
         authStatusEl.innerHTML = `
