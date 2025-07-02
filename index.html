@@ -10,6 +10,8 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Algolia Search Client -->
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,13 +59,14 @@
                 <div class="card p-6">
                     <h2 class="text-xl font-bold mb-4 themed-text-accent">Tools & Actions</h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <button id="ai-help-button" class="btn-secondary">App Docs</button>
+                        <button id="search-kb-button" class="btn-primary">Search KB</button>
                         <button id="prompts-button" class="btn-secondary">Prompts</button>
                         <button id="kb-button" class="btn-secondary">Knowledge Base</button>
                         <button id="real-time-log-button" class="btn-secondary">AI Log</button>
                         <button id="theme-changer-button" class="btn-secondary">Theme</button>
                         <button id="hierarchy-manager-button" class="btn-secondary">Hierarchy</button>
                         <button id="firebase-tools-button" class="btn-secondary">Sticky Topics</button>
+                         <button id="ai-help-button" class="btn-secondary">App Docs</button>
                     </div>
                 </div>
             </div>
@@ -111,12 +114,29 @@
                     <textarea id="geminiApiKeyInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Gemini API Key"></textarea>
                     <textarea id="firebaseConfigInput" class="themed-input w-full p-2 rounded-lg" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                     <textarea id="googleClientIdInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Google Cloud Client ID (for Drive integration)"></textarea>
+                    <input type="text" id="algoliaAppIdInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Application ID">
+                    <input type="text" id="algoliaSearchKeyInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Search-Only API Key">
                 </div>
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="btn-primary">Save and Continue</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <div id="searchModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Search Knowledge Base</h2>
+                <button id="closeSearchModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="search" id="search-input" class="themed-input w-full p-3 text-lg rounded-lg" placeholder="Search for guides...">
+            </div>
+            <div id="search-results-container" class="p-6 pt-0 overflow-y-auto">
+                 <p class="themed-text-muted text-center">Start typing to search for guides in your knowledge base.</p>
+            </div>
         </div>
     </div>
 
