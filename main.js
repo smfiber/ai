@@ -319,40 +319,78 @@ function listenForViewedItems() {
 }
 
 function setupEventListeners() {
-    document.getElementById('apiKeyForm').addEventListener('submit', handleApiKeySubmit);
-    document.getElementById('gemini-form').addEventListener('submit', handleGeminiSubmit);
-    document.getElementById('generate-theme-btn').addEventListener('click', handleCustomVisualThemeGeneration);
-    
-    document.getElementById('explore-featured-btn').addEventListener('click', () => openCategoryBrowser('featured'));
-    document.getElementById('browse-all-btn').addEventListener('click', () => openCategoryBrowser('all'));
-    document.getElementById('closeCategoryBrowserModal').addEventListener('click', () => closeModal('categoryBrowserModal'));
+    const apiKeyForm = document.getElementById('apiKeyForm');
+    if (apiKeyForm) apiKeyForm.addEventListener('submit', handleApiKeySubmit);
 
-    document.getElementById('auth-button').addEventListener('click', handleAuthClick);
-    document.getElementById('load-from-drive-btn').addEventListener('click', async () => {
+    const geminiForm = document.getElementById('gemini-form');
+    if (geminiForm) geminiForm.addEventListener('submit', handleGeminiSubmit);
+
+    const generateThemeBtn = document.getElementById('generate-theme-btn');
+    if (generateThemeBtn) generateThemeBtn.addEventListener('click', handleCustomVisualThemeGeneration);
+    
+    const exploreFeaturedBtn = document.getElementById('explore-featured-btn');
+    if (exploreFeaturedBtn) exploreFeaturedBtn.addEventListener('click', () => openCategoryBrowser('featured'));
+
+    const browseAllBtn = document.getElementById('browse-all-btn');
+    if (browseAllBtn) browseAllBtn.addEventListener('click', () => openCategoryBrowser('all'));
+
+    const closeCategoryBrowserModal = document.getElementById('closeCategoryBrowserModal');
+    if (closeCategoryBrowserModal) closeCategoryBrowserModal.addEventListener('click', () => closeModal('categoryBrowserModal'));
+
+    const authButton = document.getElementById('auth-button');
+    if (authButton) authButton.addEventListener('click', handleAuthClick);
+
+    const loadFromDriveBtn = document.getElementById('load-from-drive-btn');
+    if (loadFromDriveBtn) loadFromDriveBtn.addEventListener('click', async () => {
         const folderId = await getDriveFolderId();
         createPicker('open', folderId);
     });
-    document.getElementById('new-plan-button').addEventListener('click', () => location.reload());
-    document.getElementById('prompts-button').addEventListener('click', displayPromptsInModal);
-    document.getElementById('real-time-log-button').addEventListener('click', displayAiLog);
-    document.getElementById('theme-changer-button').addEventListener('click', () => {
+
+    const newPlanButton = document.getElementById('new-plan-button');
+    if (newPlanButton) newPlanButton.addEventListener('click', () => location.reload());
+
+    const promptsButton = document.getElementById('prompts-button');
+    if (promptsButton) promptsButton.addEventListener('click', displayPromptsInModal);
+
+    const realTimeLogButton = document.getElementById('real-time-log-button');
+    if (realTimeLogButton) realTimeLogButton.addEventListener('click', displayAiLog);
+
+    const themeChangerButton = document.getElementById('theme-changer-button');
+    if (themeChangerButton) themeChangerButton.addEventListener('click', () => {
         if(!geminiApiKey) { openModal('apiKeyModal'); return; }
         openModal('themeGeneratorModal');
     });
-    document.getElementById('ai-help-button').addEventListener('click', handleAIHelpRequest);
-    document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    // NEW: Listeners for data management buttons
-    document.getElementById('export-data-button').addEventListener('click', handleExportData);
-    document.getElementById('import-data-button').addEventListener('click', handleImportData);
 
+    const aiHelpButton = document.getElementById('ai-help-button');
+    if (aiHelpButton) aiHelpButton.addEventListener('click', handleAIHelpRequest);
+
+    const scrollToTopButton = document.getElementById('scroll-to-top-button');
+    if (scrollToTopButton) scrollToTopButton.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    
+    const exportDataButton = document.getElementById('export-data-button');
+    if (exportDataButton) exportDataButton.addEventListener('click', handleExportData);
+
+    const importDataButton = document.getElementById('import-data-button');
+    if (importDataButton) importDataButton.addEventListener('click', handleImportData);
+
+    const settingsButton = document.getElementById('settings-button');
     const settingsPanel = document.getElementById('settings-panel');
-    document.getElementById('settings-button').addEventListener('click', (e) => {
-        e.stopPropagation();
-        settingsPanel.classList.toggle('hidden');
-    });
-    document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
-    document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
-    document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+    if (settingsButton && settingsPanel) {
+        settingsButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPanel.classList.toggle('hidden');
+        });
+    }
+
+    const fontFamilySelect = document.getElementById('font-family-select');
+    if (fontFamilySelect) fontFamilySelect.addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
+
+    const fontSizeSelect = document.getElementById('font-size-select');
+    if (fontSizeSelect) fontSizeSelect.addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
+
+    const lineHeightSelect = document.getElementById('line-height-select');
+    if (lineHeightSelect) lineHeightSelect.addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+    
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal || e.target.closest('[id^="close"]')) {
@@ -361,12 +399,14 @@ function setupEventListeners() {
          
        });
     });
-    document.getElementById('search-gemini-button').addEventListener('click', handleSearchGemini);
+
+    const searchGeminiButton = document.getElementById('search-gemini-button');
+    if (searchGeminiButton) searchGeminiButton.addEventListener('click', handleSearchGemini);
 
     document.addEventListener('mouseup', handleTextSelection);
     document.addEventListener('mousedown', (e) => {
          const searchButton = document.getElementById('search-gemini-button');
-         if (!searchButton.classList.contains('hidden') && !searchButton.contains(e.target)) {
+         if (searchButton && !searchButton.classList.contains('hidden') && !searchButton.contains(e.target)) {
             searchButton.classList.add('hidden');
          }
     });
@@ -465,7 +505,7 @@ function setupEventListeners() {
             return;
         }
 
-        if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
+        if (settingsPanel && !settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
             settingsPanel.classList.add('hidden');
         }
 
@@ -477,25 +517,41 @@ function setupEventListeners() {
     });
     window.addEventListener('scroll', () => {
         const scrollTopButton = document.getElementById('scroll-to-top-button');
-        if (window.scrollY > 300) {
-            scrollTopButton.classList.remove('hidden');
-        } else {
-            
-            scrollTopButton.classList.add('hidden');
+        if (scrollTopButton) {
+            if (window.scrollY > 300) {
+                scrollTopButton.classList.remove('hidden');
+            } else {
+                scrollTopButton.classList.add('hidden');
+            }
         }
     });
-    // MODIFIED: Added listeners for Hierarchy Management
-    document.getElementById('hierarchy-manager-button').addEventListener('click', openHierarchyManagementModal);
-    document.getElementById('add-main-category-btn').addEventListener('click', () => handleAddHierarchyItem('main'));
-    document.getElementById('add-sub-category-btn').addEventListener('click', () => handleAddHierarchyItem('sub'));
-    document.getElementById('add-final-category-btn').addEventListener('click', () => handleAddHierarchyItem('final'));
-    document.getElementById('save-hierarchy-item-btn').addEventListener('click', handleSaveHierarchyItem);
-    document.getElementById('delete-hierarchy-item-btn').addEventListener('click', handleDeleteHierarchyItem);
 
+    const hierarchyManagerButton = document.getElementById('hierarchy-manager-button');
+    if(hierarchyManagerButton) hierarchyManagerButton.addEventListener('click', openHierarchyManagementModal);
+    
+    const addMainCategoryBtn = document.getElementById('add-main-category-btn');
+    if(addMainCategoryBtn) addMainCategoryBtn.addEventListener('click', () => handleAddHierarchyItem('main'));
+    
+    const addSubCategoryBtn = document.getElementById('add-sub-category-btn');
+    if(addSubCategoryBtn) addSubCategoryBtn.addEventListener('click', () => handleAddHierarchyItem('sub'));
+    
+    const addFinalCategoryBtn = document.getElementById('add-final-category-btn');
+    if(addFinalCategoryBtn) addFinalCategoryBtn.addEventListener('click', () => handleAddHierarchyItem('final'));
+    
+    const saveHierarchyItemBtn = document.getElementById('save-hierarchy-item-btn');
+    if(saveHierarchyItemBtn) saveHierarchyItemBtn.addEventListener('click', handleSaveHierarchyItem);
+    
+    const deleteHierarchyItemBtn = document.getElementById('delete-hierarchy-item-btn');
+    if(deleteHierarchyItemBtn) deleteHierarchyItemBtn.addEventListener('click', handleDeleteHierarchyItem);
 
-    document.getElementById('firebase-tools-button').addEventListener('click', openStickyTopicsModal);
-    document.getElementById('sticky-topic-category-select').addEventListener('change', (e) => listenForStickyTopics(e.target.value));
-    document.getElementById('add-sticky-topic-button').addEventListener('click', handleAddStickyTopic);
+    const firebaseToolsButton = document.getElementById('firebase-tools-button');
+    if(firebaseToolsButton) firebaseToolsButton.addEventListener('click', openStickyTopicsModal);
+    
+    const stickyTopicCategorySelect = document.getElementById('sticky-topic-category-select');
+    if(stickyTopicCategorySelect) stickyTopicCategorySelect.addEventListener('change', (e) => listenForStickyTopics(e.target.value));
+    
+    const addStickyTopicButton = document.getElementById('add-sticky-topic-button');
+    if(addStickyTopicButton) addStickyTopicButton.addEventListener('click', handleAddStickyTopic);
 }
 
 async function handleApiKeySubmit(e) {
