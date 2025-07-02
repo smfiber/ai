@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase State ---
@@ -20,7 +20,6 @@ All strings must be enclosed in double quotes. Any double quotes or backslashes 
 Do not wrap the JSON in markdown code fences.`;
 
 // --- Prompt Engineering Constants ---
-// ** UPDATED PROMPT (Final Review Prompt) **
 const finalReviewPrompt = `
 Persona: You are a Lead Technical Editor and a Senior IT Systems Architect.
 Your role is final quality assurance.
@@ -129,33 +128,21 @@ function loadConfigFromStorage() {
 }
 
 /**
- * [MODIFIED] This is the new gatekeeper function. It checks if all required services
- * (Firebase Auth, Google GAPI Client) are ready before launching the main app.
- * It's designed to be called by both Firebase and Google auth callbacks.
+ * Gatekeeper function to ensure all services are ready before launching the app.
  */
 function checkAndLaunchApp() {
-    // Get the Google token and check for the actual access_token property.
     const googleToken = gapi?.client?.getToken();
     const hasGoogleToken = googleToken && googleToken.access_token;
 
-    // Conditions to prevent launch:
-    // 1. App is already initialized.
-    // 2. Firebase user isn't authenticated yet.
-    // 3. A valid Google token is not yet available.
     if (appIsInitialized || !auth.currentUser || !hasGoogleToken) {
         return;
     }
 
-    // All conditions met, proceed with app initialization.
     initializeAppContent();
 }
 
 
 // --- Login/Logout UI and Handlers ---
-/**
- * [MODIFIED] This function NO LONGER calls initializeAppContent(). Its only job
- * is to update the UI based on the user's authentication status.
- */
 function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
         appContainer.classList.remove('hidden');
@@ -175,9 +162,6 @@ function _performAuthUISetup(user, authStatusEl, appContainer) {
         `;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
         
-        // CRITICAL CHANGE: The call to initializeAppContent() is removed from here.
-        // It is now handled by the checkAndLaunchApp() gatekeeper function.
-
     } else {
          authStatusEl.innerHTML = `
              <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full flex items-center justify-center gap-2" title="Sign In with Google">
@@ -213,26 +197,16 @@ function setupAuthUI(user) {
     }
 }
 
-async function handleLogin() {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/cloud-platform');
-    try {
-        const result = await signInWithPopup(auth, provider);
-        console.log("Popup sign-in successful for:", result.user.displayName);
-    } catch (error) {
-        console.error("Google Sign-In Popup failed:", error);
-        const errorEl = document.getElementById('api-key-error');
-        if (errorEl) {
-           let userMessage = `Login failed: ${error.code}.`;
-           if (error.code === 'auth/popup-closed-by-user') {
-               userMessage += ' You closed the login window before completing sign-in.';
-           } else if (error.code === 'auth/cancelled-popup-request') {
-               userMessage += ' Multiple login windows were opened. Please try again.';
-           } else {
-               userMessage += ' This can be caused by browser pop-up blockers or security settings. Please check your browser settings and try again.';
-           }
-           errorEl.textContent = userMessage;
-        }
+/**
+ * [MODIFIED] This function now triggers the Google OAuth flow directly.
+ * The logic to handle the response is in the `initializeTokenClient` callback.
+ */
+function handleLogin() {
+    if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+        console.error("Google Token Client not initialized.");
+        displayMessageInModal("Authentication service is not ready. Please wait a moment and try again.", "warning");
     }
 }
 
@@ -258,7 +232,6 @@ function handleLogout() {
 }
 
 async function initializeAppContent() {
-    // This flag prevents this function from running multiple times.
     appIsInitialized = true; 
     
     openModal('loadingStateModal');
@@ -313,17 +286,33 @@ function initializeGoogleClients() {
             clearInterval(gsiInterval);
             google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
-                callback: () => {}, 
+                callback: handleGoogleCredentialResponse, // Use a named callback
             });
             gisInited = true;
+            initializeTokenClient(); // Initialize token client after GSI is ready
         }
     }, 100);
 }
 
 /**
- * [MODIFIED] The onAuthStateChanged listener now calls checkAndLaunchApp()
- * after it has set up the user's state.
+ * [NEW] This function handles the response from Google's new One Tap
+ * and Sign In with Google button.
  */
+async function handleGoogleCredentialResponse(response) {
+    const id_token = response.credential;
+    const credential = GoogleAuthProvider.credential(id_token);
+    
+    try {
+        await signInWithCredential(auth, credential);
+        console.log("Firebase sign-in with Google credential successful.");
+        // The onAuthStateChanged listener will handle the rest.
+    } catch (error) {
+        console.error("Firebase sign-in with credential failed:", error);
+        displayMessageInModal(`Could not sign in with Google: ${error.message}`, 'error');
+    }
+}
+
+
 function initializeFirebase() {
      if (!firebaseConfig) {
         console.warn("Firebase config is missing. Firebase initialization skipped.");
@@ -342,12 +331,16 @@ function initializeFirebase() {
             
                 viewedItemsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/viewedItems`);
                 listenForViewedItems();
+                
+                // If we have a user but no GAPI token, request one.
+                if (!gapi?.client?.getToken()) {
+                    handleLogin();
+                }
             } else {
                 userId = null;
                 viewedItemsCollectionRef = null;
             }
             setupAuthUI(user);
-            // Attempt to launch the app now that Firebase auth state is known.
             checkAndLaunchApp(); 
         });
     } catch (error) {
@@ -644,11 +637,8 @@ async function handleApiKeySubmit(e) {
     localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
     localStorage.setItem('googleClientId', tempGoogleClientId);
     
-    if (loadConfigFromStorage()) {
-        initializeFirebase();
-        initializeGoogleClients();
-        handleLogin();
-    }
+    // Reload the page to apply the new config.
+    location.reload();
 }
 
 // --- Google Drive & Firebase Functions ---
@@ -659,13 +649,18 @@ async function initializeGapiClient() {
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true;
-        initializeTokenClient();
+        // GAPI is ready, now we can try to launch if other conditions are met.
+        checkAndLaunchApp();
     } catch(error) {
         console.error("Error initializing GAPI Client", error);
-        document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
+        displayMessageInModal('Google API client failed to initialize. Check console.', 'error');
     }
 }
 
+/**
+ * [MODIFIED] This is now the primary authentication function. It gets a token
+ * from Google and then uses it to sign into Firebase.
+ */
 function initializeTokenClient() {
     if (!gisInited || !GOOGLE_CLIENT_ID) {
         console.error("Google GSI client or Client ID is missing. Cannot initialize token client.");
@@ -675,26 +670,33 @@ function initializeTokenClient() {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
             scope: G_SCOPES,
-            callback: (tokenResponse) => {
+            callback: async (tokenResponse) => {
                 if (tokenResponse && tokenResponse.access_token) {
+                    // Set the token for GAPI client usage
                     gapi.client.setToken(tokenResponse);
                     updateSigninStatus(true);
+
+                    // Now, use the token to sign in to Firebase
+                    const credential = GoogleAuthProvider.credential(tokenResponse.id_token);
+                    try {
+                        await signInWithCredential(auth, credential);
+                        console.log("Firebase sign-in with Google credential successful.");
+                        // onAuthStateChanged will fire and call checkAndLaunchApp
+                    } catch (error) {
+                        console.error("Firebase sign-in with credential failed:", error);
+                        displayMessageInModal(`Could not link Google session to Firebase: ${error.message}`, 'error');
+                    }
+
                 } else {
                     console.error('User denied access or token response was invalid.', tokenResponse);
                     updateSigninStatus(false);
+                    displayMessageInModal("Google Authentication Failed. The application requires permissions to function. Please try logging in again.", "warning");
                 }
             },
             popup_closed_callback: () => {
                 console.log('User closed the Google auth popup.');
-                const statusEl = document.getElementById('drive-status');
-      
-                if (statusEl.textContent.includes('Connecting')) {
-                    statusEl.textContent = 'Connection cancelled.';
-                    setTimeout(() => updateSigninStatus(false), 2000);
-                }
             }
         });
-        tokenClient.requestAccessToken({prompt: 'none'});
     } catch(err) {
          console.error("Failed to initialize Google token client:", err);
     }
@@ -703,29 +705,23 @@ function initializeTokenClient() {
 function handleAuthClick() {
      if (!gapiInited || !gisInited || !tokenClient) {
         console.error('Google services are not initialized yet.');
-        document.getElementById('drive-status').textContent = 'Services initializing, please wait...';
+        displayMessageInModal('Authentication services are still initializing. Please wait a moment.', 'warning');
         return;
     }
 
     if (gapi.client.getToken() === null) {
-        document.getElementById('drive-status').textContent = 'Connecting to Google Drive...';
         tokenClient.requestAccessToken({prompt: 'consent'});
     } else {
         const token = gapi.client.getToken();
         if (token) {
             google.accounts.oauth2.revoke(token.access_token, () => {
                 gapi.client.setToken(null);
-                updateSigninStatus(false);
+                signOut(auth); // Also sign out from Firebase
             });
         }
     }
 }
 
-/**
- * [MODIFIED] This function now calls checkAndLaunchApp() after updating the UI.
- * This ensures that if the Google Auth finishes after Firebase, it can trigger
- * the app launch.
- */
 function updateSigninStatus(isSignedIn) {
     const authButton = document.getElementById('auth-button');
     const loadBtn = document.getElementById('load-from-drive-btn');
@@ -756,7 +752,6 @@ function updateSigninStatus(isSignedIn) {
         addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
     }
 
-    // Attempt to launch the app now that Google auth state is known.
     checkAndLaunchApp();
 }
 
@@ -3089,3 +3084,4 @@ function handleImportData() {
         reader.readAsText(file);
     };
     input.click()
+}
