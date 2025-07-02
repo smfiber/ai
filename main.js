@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Global State ---
 let db;
@@ -21,6 +21,12 @@ let originalGeneratedText = new Map();
 let aiLog = [];
 let currentHierarchyPath = [];
 let selectedHierarchyItems = { main: null, sub: null, final: null };
+
+// --- Algolia State ---
+let algoliaAppId = '';
+let algoliaSearchKey = '';
+let algoliaClient;
+let algoliaIndex;
 
 // --- Google API State ---
 let gapiInited = false;
@@ -110,6 +116,8 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
+    algoliaAppId = localStorage.getItem('algoliaAppId');
+    algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
     if (firebaseConfigString) {
         try {
@@ -124,9 +132,9 @@ function loadConfigFromStorage() {
     if (geminiApiKey && firebaseConfig) {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
-        if (GOOGLE_CLIENT_ID) {
-            document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        }
+        if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
+        if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
+        if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
     }
     return false;
@@ -146,6 +154,7 @@ async function initializeAppContent() {
         await generateAndApplyDefaultTheme();
         document.getElementById('loading-message').textContent = "Loading application content...";
         await loadAppContent();
+        initializeAlgoliaSearch();
     } catch (error) {
         const errorMessage = error ? error.message : "An unknown error occurred.";
         console.error("A critical error occurred during app initialization:", errorMessage);
@@ -379,6 +388,8 @@ async function handleApiKeySubmit(e) {
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
+    const tempAlgoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
+    const tempAlgoliaSearchKey = document.getElementById('algoliaSearchKeyInput').value.trim();
     let tempFirebaseConfig;
 
     const errorEl = document.getElementById('api-key-error');
@@ -409,6 +420,9 @@ async function handleApiKeySubmit(e) {
     localStorage.setItem('geminiApiKey', tempGeminiKey);
     localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
     localStorage.setItem('googleClientId', tempGoogleClientId);
+    localStorage.setItem('algoliaAppId', tempAlgoliaAppId);
+    localStorage.setItem('algoliaSearchKey', tempAlgoliaSearchKey);
+
     
     if (loadConfigFromStorage()) {
         initializeFirebase();
@@ -448,6 +462,12 @@ function setupEventListeners() {
     document.getElementById('font-size-select')?.addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
     document.getElementById('line-height-select')?.addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
     
+    // Search and KB listeners
+    document.getElementById('search-kb-button')?.addEventListener('click', () => openModal('searchModal'));
+    document.getElementById('kb-button')?.addEventListener('click', openKbBrowser);
+    document.getElementById('search-input')?.addEventListener('keyup', performSearch);
+
+
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target.id.startsWith('close')) {
@@ -507,6 +527,9 @@ function setupEventListeners() {
             header.nextElementSibling.classList.toggle('open');
         } else if (target.closest('#generate-detailed-steps-btn')) {
             generateFullDetailedGuide(target.closest('#generate-detailed-steps-btn'));
+        } else if (target.closest('.search-result-item')) {
+            const objectID = target.closest('.search-result-item').dataset.id;
+            handleSearchResultClick(objectID);
         }
     });
     window.addEventListener('scroll', () => {
@@ -1231,10 +1254,7 @@ async function generateFullDetailedGuide(button) {
     detailedButtonContainer.innerHTML = '';
     detailedFooterEl.dataset.fullTitle = detailedModalTitle;
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
-    // ***** FIX STARTS HERE *****
-    // The missing line is added to ensure the hierarchy path is available to the 'Add to KB' button.
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
-    // ***** FIX ENDS HERE *****
     openModal('inDepthDetailedModal');
     detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
 
@@ -1858,6 +1878,49 @@ async function openCategoryBrowser(mode) {
     openModal('categoryBrowserModal');
 }
 
+async function openKbBrowser() {
+    if (!db || !firebaseConfig) {
+        displayMessageInModal("Database not initialized.", "error");
+        return;
+    }
+    const modalTitle = document.getElementById('categoryBrowserModalTitle');
+    const modalContent = document.getElementById('categoryBrowserModalContent');
+    modalTitle.textContent = 'Knowledge Base';
+    document.getElementById('categoryBrowserBreadcrumbs').innerHTML = '';
+    modalContent.innerHTML = getLoaderHTML('Loading Knowledge Base...');
+    openModal('categoryBrowserModal');
+
+    try {
+        const appId = firebaseConfig.appId || 'it-admin-hub-global';
+        const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
+        const snapshot = await getDocs(query(kbCollectionRef, orderBy("createdAt", "desc")));
+        
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (items.length === 0) {
+            modalContent.innerHTML = `<p class="themed-text-muted text-center">The Knowledge Base is empty. Add some guides to see them here.</p>`;
+            return;
+        }
+
+        const categoryGrid = document.createElement('div');
+        categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+        categoryGrid.innerHTML = items.map(item => `
+            <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer search-result-item" data-id="${item.id}">
+                <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
+                <p class="text-sm themed-text-muted mt-1 flex-grow">${item.hierarchyPath}</p>
+                 <span class="text-xs themed-text-muted mt-2">${item.createdAt.toDate().toLocaleDateString()}</span>
+                <span class="text-sm font-semibold themed-text-primary mt-4 self-end">View →</span>
+            </div>`).join('');
+        modalContent.innerHTML = '';
+        modalContent.appendChild(categoryGrid);
+
+    } catch (error) {
+        console.error("Error loading Knowledge Base:", error);
+        modalContent.innerHTML = `<p class="text-red-500 text-center">Error loading Knowledge Base. Check console for details.</p>`;
+    }
+}
+
+
 async function renderCategoryLevel(collectionRef) {
     const modalContent = document.getElementById('categoryBrowserModalContent');
     modalContent.innerHTML = getLoaderHTML('Loading categories...');
@@ -2290,6 +2353,103 @@ function handleImportData() {
     };
     input.click()
 }
+
+
+// --- Algolia Search Functions ---
+function initializeAlgoliaSearch() {
+    if (algoliaAppId && algoliaSearchKey) {
+        try {
+            algoliaClient = algoliasearch(algoliaAppId, algoliaSearchKey);
+            algoliaIndex = algoliaClient.initIndex('knowledgeBase');
+            console.log("Algolia search initialized.");
+        } catch (error) {
+            console.error("Could not initialize Algolia Search. Please check your keys.", error);
+            displayMessageInModal("Could not initialize Algolia Search. Check your keys in the settings.", "error");
+        }
+    } else {
+        console.warn("Algolia keys not found. Search will be disabled.");
+    }
+}
+
+async function performSearch(event) {
+    const query = event.target.value;
+    const resultsContainer = document.getElementById('search-results-container');
+    if (!query) {
+        resultsContainer.innerHTML = '<p class="themed-text-muted text-center">Start typing to search for guides in your knowledge base.</p>';
+        return;
+    }
+    if (!algoliaIndex) {
+        resultsContainer.innerHTML = '<p class="text-red-500 text-center">Search is not configured. Please check your API keys.</p>';
+        return;
+    }
+
+    resultsContainer.innerHTML = getLoaderHTML(`Searching for "${query}"...`);
+
+    try {
+        const { hits } = await algoliaIndex.search(query);
+        displaySearchResults(hits);
+    } catch (error) {
+        console.error("Algolia search error:", error);
+        resultsContainer.innerHTML = `<p class="text-red-500 text-center">An error occurred during search: ${error.message}</p>`;
+    }
+}
+
+function displaySearchResults(hits) {
+    const resultsContainer = document.getElementById('search-results-container');
+    if (hits.length === 0) {
+        resultsContainer.innerHTML = '<p class="themed-text-muted text-center">No results found.</p>';
+        return;
+    }
+    resultsContainer.innerHTML = hits.map(hit => `
+        <div class="search-result-item" data-id="${hit.objectID}">
+            <h3>${hit._highlightResult.title.value}</h3>
+            <p>${hit._highlightResult.hierarchyPath.value}</p>
+        </div>
+    `).join('');
+}
+
+async function handleSearchResultClick(objectID) {
+    if (!db || !firebaseConfig) return;
+    closeModal('searchModal');
+    openModal('loadingStateModal');
+    document.getElementById('loading-message').textContent = "Loading guide from search...";
+
+    try {
+        const appId = firebaseConfig.appId || 'it-admin-hub-global';
+        const docRef = doc(db, `artifacts/${appId}/public/data/knowledgeBase`, objectID);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const guide = docSnap.data();
+            const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
+            const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
+            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
+            const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+
+            detailedTitleEl.textContent = guide.title;
+            detailedButtonContainer.innerHTML = '';
+            detailedFooterEl.dataset.fullTitle = guide.title;
+            detailedFooterEl.dataset.cardName = "Knowledge Base Guide";
+            detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify([{ title: guide.hierarchyPath }]);
+            
+            originalGeneratedText.set(guide.title, guide.markdownContent);
+            
+            detailedContentEl.innerHTML = '';
+            renderAccordionFromMarkdown(guide.markdownContent, detailedContentEl);
+            addDetailedModalActionButtons(detailedButtonContainer);
+            
+            openModal('inDepthDetailedModal');
+        } else {
+            displayMessageInModal("Could not find the selected guide in the database.", "error");
+        }
+    } catch (error) {
+        console.error("Error loading guide from Firestore:", error);
+        displayMessageInModal(`Error loading guide: ${error.message}`, "error");
+    } finally {
+        closeModal('loadingStateModal');
+    }
+}
+
 
 // --- App Initialization Trigger ---
 
