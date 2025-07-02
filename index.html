@@ -127,54 +127,55 @@
     </div>
     
     <div id="inDepthModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-        <div class="card p-8 w-full max-w-4xl m-4">
-            <h2 id="inDepthModalTitle" class="text-2xl font-bold mb-4"></h2>
-            <div id="inDepthModalContent" class="prose max-w-none"></div>
-            <div id="inDepthModalFooter" class="mt-6 pt-4 border-t border-gray-200">
-                <div id="inDepthModalButtons" class="flex gap-4"></div>
-                <p id="modal-status-message" class="text-sm text-gray-500 mt-2"></p>
+        <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
+                <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
-            <button id="closeInDepthModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthModalFooter" class="p-4 border-t shrink-0">
+                <div id="inDepthModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
         </div>
     </div>
     <div id="inDepthDetailedModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-         <div class="card p-8 w-full max-w-4xl m-4">
-            <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold mb-4"></h2>
-            <div id="inDepthDetailedModalContent" class="prose max-w-none"></div>
-            <div id="inDepthDetailedModalFooter" class="mt-6 pt-4 border-t border-gray-200">
-                <div id="inDepthDetailedModalButtons" class="flex gap-4"></div>
-                <p id="detailed-modal-status-message" class="text-sm text-gray-500 mt-2"></p>
+         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
+                <button id="closeInDepthDetailedModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
-            <button id="closeInDepthDetailedModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <div id="inDepthDetailedModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthDetailedModalFooter" class="p-4 border-t shrink-0">
+                <div id="inDepthDetailedModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="detailed-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
         </div>
     </div>
     <div id="searchGeminiModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-         <div class="card p-8 w-full max-w-2xl m-4">
-            <h2 class="text-2xl font-bold mb-4">Gemini Search</h2>
-            <input id="searchGeminiQueryText" class="themed-input w-full p-2 rounded-lg mb-4" readonly>
-            <div id="searchGeminiResult" class="prose max-w-none"></div>
-            <div id="searchGeminiModalFooter" class="mt-6 pt-4 border-t border-gray-200">
-                <div id="searchGeminiModalButtons" class="flex gap-4"></div>
-                <p id="search-modal-status-message" class="text-sm text-gray-500 mt-2"></p>
+         <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Gemini Search</h2>
+                <button id="closeSearchGeminiModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
-            <button id="closeSearchGeminiModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <div class="p-6 overflow-y-auto">
+                <input id="searchGeminiQueryText" class="themed-input w-full p-2 rounded-lg mb-4" readonly>
+                <div id="searchGeminiResult" class="prose max-w-none"></div>
+            </div>
+            <div id="searchGeminiModalFooter" class="p-4 border-t shrink-0">
+                <div id="searchGeminiModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="search-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
         </div>
     </div>
     <div id="categoryBrowserModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
         <div class="card w-full max-w-5xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
-            <!-- Modal Header -->
             <div class="p-4 border-b flex justify-between items-center shrink-0">
                 <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary mb-0">Browse Categories</h2>
                 <button id="closeCategoryBrowserModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
-            <!-- Breadcrumbs -->
-            <div id="categoryBrowserBreadcrumbs" class="p-3 bg-gray-50 border-b shrink-0">
-                <!-- Breadcrumbs will be injected here -->
-            </div>
-            <!-- Scrollable Content -->
-            <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto">
-                <!-- Content will be injected here -->
-            </div>
+            <div id="categoryBrowserBreadcrumbs" class="p-3 bg-gray-50 border-b shrink-0"></div>
+            <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
     <div id="stickyTopicsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
