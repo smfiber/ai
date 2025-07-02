@@ -134,11 +134,15 @@ function loadConfigFromStorage() {
  * It's designed to be called by both Firebase and Google auth callbacks.
  */
 function checkAndLaunchApp() {
+    // Get the Google token and check for the actual access_token property.
+    const googleToken = gapi?.client?.getToken();
+    const hasGoogleToken = googleToken && googleToken.access_token;
+
     // Conditions to prevent launch:
     // 1. App is already initialized.
     // 2. Firebase user isn't authenticated yet.
-    // 3. Google API client doesn't have a token yet (for features like image gen).
-    if (appIsInitialized || !auth.currentUser || !gapi.client.getToken()) {
+    // 3. A valid Google token is not yet available.
+    if (appIsInitialized || !auth.currentUser || !hasGoogleToken) {
         return;
     }
 
@@ -1421,11 +1425,14 @@ Suitable for an IT administration website. Professional, clean. Wide aspect rati
         const colors = await callColorGenAPI(themePrompt);
         applyTheme(colors);
 
-        if (gapi.client.getToken()) {
+        const googleToken = gapi?.client?.getToken();
+        if (googleToken && googleToken.access_token) {
             const imageUrl = await callImageGenAPI(imagePrompt);
             applyHeaderImage(imageUrl);
         } else {
-            console.warn("Skipping default header image generation: Google user not signed in.");
+            // This warning should no longer appear if the launch logic is correct,
+            // but it's kept as a safeguard.
+            console.warn("Skipping default header image generation: Google auth token not yet available.");
         }
 
     } catch (error) {
@@ -3081,5 +3088,4 @@ function handleImportData() {
         };
         reader.readAsText(file);
     };
-    input.click();
-}
+    input.click()
