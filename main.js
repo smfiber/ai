@@ -531,7 +531,7 @@ function setupEventListeners() {
     document.getElementById('add-sticky-topic-button')?.addEventListener('click', handleAddStickyTopic);
 }
 
-// MODIFIED: This function now uses a redirect flow and creates a more robust redirect URI.
+// MODIFIED: This function now uses a redirect flow and creates an even more robust redirect URI.
 async function handleAuthClick() {
     // If the user is already connected, this button should act as a disconnect/logout.
     if (gapi.client.getToken() !== null) {
@@ -549,13 +549,24 @@ async function handleAuthClick() {
     // If not connected, redirect to Google's authentication page.
     const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 
-    // Create a robust redirect URI that handles different path variations.
+    // --- START: Create a robust redirect URI ---
+    // Get the base URL of the application.
     let redirectUri = window.location.origin + window.location.pathname;
-    // If the URL ends with 'index.html', remove it to get the base directory URL.
+    
+    // If the URL ends with 'index.html', remove it to get the directory.
     if (redirectUri.endsWith('index.html')) {
         redirectUri = redirectUri.substring(0, redirectUri.lastIndexOf('index.html'));
     }
+    
+    // Ensure the redirect URI ends with a slash if it's a directory path.
+    if (!redirectUri.endsWith('/')) {
+        redirectUri += '/';
+    }
+    // --- END: Create a robust redirect URI ---
 
+    // Log the exact URI to the console for debugging purposes.
+    console.log("Attempting to redirect with URI:", redirectUri);
+    
     const params = {
         'client_id': GOOGLE_CLIENT_ID,
         'redirect_uri': redirectUri, // Use the more robust URI
