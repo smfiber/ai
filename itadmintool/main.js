@@ -36,13 +36,6 @@ let GOOGLE_CLIENT_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 
-// --- Make the initialization function globally accessible ---
-// This function is called by the `onload` parameter in the Google API script tag in index.html
-window.onGapiLoaded = () => {
-    // This safely loads the 'client' and 'picker' libraries, then calls our initialization function.
-    gapi.load('client:picker', initializeGapiClient);
-};
-
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
 
@@ -98,6 +91,14 @@ function openModal(modalId) {
         modal.classList.remove('hidden');
         document.body.classList.add('modal-open', `${modalId}-open`);
     }
+}
+
+function checkGapiReady(callback) {
+  if (typeof gapi !== 'undefined' && gapi.load) {
+    callback();
+  } else {
+    setTimeout(() => checkGapiReady(callback), 100);
+  }
 }
 
 function closeModal(modalId) {
@@ -207,25 +208,29 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // GIS (Google Identity Services) initialization can happen in parallel.
+    // Use a helper to wait for the gapi script to be fully loaded
+    checkGapiReady(() => {
+        // Load both 'client' for authentication and 'picker' for the file dialog.
+        gapi.load('client:picker', () => {
+            // This callback now safely runs only after the libraries are ready.
+            initializeGapiClient();
+        });
+    });
+
+    // GIS initialization can happen in parallel
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: () => {}, // The main callback is handled by the token client.
+        callback: () => {}, // The main callback is handled by the token client
     });
     gisInited = true;
-
-    // The GAPI client (for Drive, Picker) is now initialized by the `onGapiLoaded` 
-    // callback, which is triggered from index.html. This prevents race conditions.
 }
 
 async function initializeGapiClient() {
     try {
-        // Initializes the Google API client with the Drive API.
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true;
-        // Now that the GAPI client is ready, we can initialize the token client.
         initializeTokenClient();
     } catch(error) {
         console.error("Error initializing GAPI Client", error);
@@ -256,7 +261,6 @@ function initializeTokenClient() {
                 }
             }
         });
-        // Check if the user is already signed in without showing a popup.
         tokenClient.requestAccessToken({prompt: 'none'});
     } catch(err) {
          console.error("Failed to initialize Google token client:", err);
@@ -431,20 +435,18 @@ function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
 
-    // Listener for the new collapsible section
-    document.getElementById('toggle-tailoring-options')?.addEventListener('click', () => {
-        const container = document.getElementById('tailoring-buttons-container');
-        const icon = document.getElementById('tailoring-arrow-icon');
-        const isHidden = container.classList.contains('hidden');
+    // Event listeners for the new Prompt Workshop
+    document.getElementById('persona-selector')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('prompt-builder-btn')) {
+            document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+        }
+    });
 
-        if (isHidden) {
-            container.classList.remove('hidden');
-            container.classList.add('flex');
-            icon.style.transform = 'rotate(180deg)';
-        } else {
-            container.classList.add('hidden');
-            container.classList.remove('flex');
-            icon.style.transform = 'rotate(0deg)';
+    document.getElementById('tone-selector')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('prompt-builder-btn')) {
+            document.querySelectorAll('#tone-selector .prompt-builder-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
         }
     });
 
@@ -457,7 +459,7 @@ function setupEventListeners() {
         const folderId = await getDriveFolderId();
         createPicker('open', folderId);
     });
-    document.getElementById('new-plan-button')?.addEventListener('click', () => location.reload());
+    
     document.getElementById('prompts-button')?.addEventListener('click', displayPromptsInModal);
     document.getElementById('real-time-log-button')?.addEventListener('click', displayAiLog);
     document.getElementById('theme-changer-button')?.addEventListener('click', () => {
@@ -512,8 +514,6 @@ function setupEventListeners() {
             handleSaveToDriveClick(target);
         } else if (target.closest('.add-topic-button')) {
             handleAddNewTopic(target.closest('.add-topic-button'));
-        } else if (target.closest('#tailoring-buttons-container .btn-toggle')) {
-            target.closest('#tailoring-buttons-container .btn-toggle').classList.toggle('active');
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         } else if (target.closest('.explore-button')) {
@@ -751,7 +751,7 @@ function displayImportedGuide(fileName, markdownContent) {
 
 async function loadAppContent() {
     try {
-        await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
+        await loadDynamicPlaceholders();
     } catch (error) {
         console.error("An error occurred while loading app content:", error.message);
         throw error;
@@ -982,36 +982,150 @@ async function markItemAsViewed(cardTitle, buttonTitle) {
 
 async function handleGeminiSubmit(e) {
     e.preventDefault();
-    const promptInput = document.getElementById('gemini-prompt');
-    const userPrompt = promptInput.value.trim();
-    if (!userPrompt) return;
+    const form = e.target;
+    
+    // --- 1. Gather all inputs from the Prompt Workshop ---
+    const coreTask = document.getElementById('core-task-input').value.trim();
+    if (!coreTask) {
+        displayMessageInModal("Please define the core task before generating.", 'warning');
+        return;
+    }
+
+    const persona = document.querySelector('#persona-selector .active').dataset.value;
+    const tone = document.querySelector('#tone-selector .active').dataset.value;
+    const outputFormat = form.querySelector('input[name="output-format"]:checked').value;
+    const additionalContext = document.getElementById('additional-context-input').value.trim();
+
+    // --- 2. Route to the correct function based on selected format ---
+    if (outputFormat === 'guide') {
+        generateCustomGuide(coreTask, persona, tone, additionalContext);
+    } else if (outputFormat === 'card') {
+        generateAndPopulateAITopicCard(coreTask, persona, tone, additionalContext);
+    }
+    
+    form.reset();
+    // Reset buttons to default active state
+    document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
+    document.querySelectorAll('#tone-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
+}
+
+async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
+    const fullTitle = `Custom Guide: ${coreTask}`;
+
+    // Setup modal UI
     const titleEl = document.getElementById('inDepthModalTitle');
     const contentEl = document.getElementById('inDepthModalContent');
     const footerEl = document.getElementById('inDepthModalFooter');
     const buttonContainer = document.getElementById('inDepthModalButtons');
-    const fullTitle = `Custom Guide: ${userPrompt}`;
+
     titleEl.textContent = truncateText(fullTitle, 40);
-    contentEl.innerHTML = getLoaderHTML(`Generating initial sections for your custom guide for "${userPrompt}"...`);
+    contentEl.innerHTML = getLoaderHTML(`Generating initial sections for your custom guide for "${coreTask}"...`);
     buttonContainer.innerHTML = '';
     document.getElementById('modal-status-message').textContent = '';
     footerEl.dataset.fullTitle = fullTitle;
-    footerEl.dataset.cardName = "Custom Task"; 
+    footerEl.dataset.cardName = "Custom Task";
     openModal('inDepthModal');
-    const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active')).map(btn => btn.textContent.trim()).join(', ');
-    const initialCustomPrompt = `Persona: You are an expert senior IT administrator and technical writer AI. Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later. //-- BLUEPRINT DETAILS --// - **Topic:** "${userPrompt}" - **Context:** "Custom user-generated topic" - **Tailoring Options:** "${selectedOptions || 'None'}" //-- INSTRUCTIONS --// 1.  **Generate Four Sections Only:** Create detailed content exclusively for: * ### 1. Introduction * ### 2. Architectural Overview * ### 3. Key Concepts & Terminology * ### 4. Prerequisites 2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope. For example, explicitly mention if the guide will cover GUI, PowerShell, and/or API methods. This is critical as it will dictate the content of the full guide. 3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for experienced IT administrators. 4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections. Do not include any other content or explanatory text.`;
+    
+    // Assemble the detailed prompt for the initial guide sections
+    const initialCustomPrompt = `
+        Persona: You are an expert ${persona}.
+        Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
+        
+        //-- BLUEPRINT DETAILS --//
+        - **Topic:** "${coreTask}"
+        - **Audience & Tone:** The guide should be written for a "${tone}" audience.
+        - **Additional Context:** ${additionalContext || 'None'}
+        
+        //-- INSTRUCTIONS --//
+        1.  **Generate Four Sections Only:** Create detailed content exclusively for:
+            * ### 1. Introduction
+            * ### 2. Architectural Overview
+            * ### 3. Key Concepts & Terminology
+            * ### 4. Prerequisites
+        2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope of the guide (e.g., will it cover GUI, PowerShell, API methods?). This is critical.
+        3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for IT administrators.
+        4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections.
+    `;
+
     try {
         let initialResultText = await callGeminiAPI(initialCustomPrompt, false, "Generate Custom Guide (Initial)");
         initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         originalGeneratedText.set(fullTitle, initialResultText);
         contentEl.innerHTML = '';
         renderAccordionFromMarkdown(initialResultText, contentEl);
-        const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${userPrompt}`}];
+        const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${coreTask}`}];
         footerEl.dataset.fullHierarchyPath = JSON.stringify(dummyHierarchy);
         addModalActionButtons(buttonContainer, true);
     } catch(error) {
         handleApiError(error, contentEl, 'custom IT guide (initial sections)');
-    } finally {
-        promptInput.value = '';
+    }
+}
+
+
+async function generateAndPopulateAITopicCard(coreTask, persona, tone, additionalContext) {
+    const cardId = `category-card-${sanitizeTitle(coreTask).replace(/\s+/g, '-')}-${Date.now()}`;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = cardId;
+    const selectorId = `selector-${cardId}`;
+
+    // Assemble a prompt specifically for generating topic ideas
+    const descriptionPrompt = `Persona: You are a helpful AI assistant. Based on the user's request for a topic card about "${coreTask}", write a concise, one-sentence description for this topic card.`;
+    
+    let description = `A collection of topics related to: ${coreTask}`;
+    try {
+        description = (await callGeminiAPI(descriptionPrompt, false, "Generate Topic Card Description")).trim();
+    } catch (e) {
+        console.warn("Could not generate dynamic description, using default.", e);
+    }
+    
+    const fullHierarchyPath = JSON.stringify([{
+        id: cardId,
+        title: coreTask,
+        description: description,
+        fullPrompt: "This is a custom generated card, no full prompt available." // Add a dummy prompt
+    }]);
+
+    card.dataset.fullHierarchyPath = fullHierarchyPath;
+    card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
+    
+    const container = document.getElementById('dynamic-card-container');
+    container.prepend(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    allThemeData[cardId] = null; // Set to null to indicate loading
+
+    try {
+        const topicGenerationPrompt = `
+            Persona: You are an expert ${persona}.
+            Objective: Generate a list of 8 common sub-topics for the main IT administration task: "${coreTask}".
+            
+            //-- CONTEXT --//
+            - **Audience & Tone:** The topics should be suitable for a "${tone}" audience.
+            - **Additional Details:** ${additionalContext || 'None'}
+
+            //-- INSTRUCTIONS --//
+            For each of the 8 topics, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description".
+            Return the response as a valid JSON array of objects. ${jsonInstruction}
+        `;
+
+        const jsonText = await callGeminiAPI(topicGenerationPrompt, true, "Generate Topic Card");
+        if (!jsonText) throw new Error(`API returned empty content for ${coreTask}.`);
+        
+        const data = parseJsonWithCorrections(jsonText);
+        if (!Array.isArray(data)) {
+            throw new Error("Invalid API response format: Expected an array of topics.");
+        }
+        
+        data.sort((a, b) => a.title.localeCompare(b.title));
+        allThemeData[cardId] = data;
+        
+        populateCardGridSelector(card.querySelector(`#${selectorId}`), cardId);
+        return card;
+    } catch (error) {
+        allThemeData[cardId] = []; // Set to empty array on failure
+        handleApiError(error, card.querySelector(`#${selectorId}`), coreTask, card);
+        throw error;
     }
 }
 
@@ -1109,31 +1223,8 @@ async function generateAndApplyDefaultTheme() {
     }
 }
 
-async function loadAITailoringOptions() {
-    const container = document.getElementById('tailoring-buttons-container');
-    container.innerHTML = getLoaderHTML('Loading AI options...');
-    try {
-        const prompt = `Generate a comprehensive list of 16 diverse keywords and concepts for tailoring IT administration guides. The list should cover a wide range of topics including security, performance, automation, specific technologies (like PowerShell, Ansible), methodologies (like IaC), and user levels (like 'for beginners', 'for experts'). Return ONLY a valid JSON array of strings. IMPORTANT: Ensure any double quotes inside the strings are properly escaped.`;
-        const jsonText = await callGeminiAPI(prompt, true, "Load Tailoring Options");
-        if (!jsonText) {
-            throw new Error("AI did not return any tailoring options.");
-        }
-        const options = parseJsonWithCorrections(jsonText);
-        populateTailoringButtons(options);
-    } catch (error) {
-        handleApiError(error, container, 'tailoring options');
-        const fallbackOptions = ["Security Hardening", "Performance Tuning", "Automation Script", "For Beginners"];
-        populateTailoringButtons(fallbackOptions);
-    }
-}
-
-function populateTailoringButtons(options) {
-    const container = document.getElementById('tailoring-buttons-container');
-    container.innerHTML = options.map(option => `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full">${option}</button>`).join('');
-}
-
 async function loadDynamicPlaceholders() {
-    const promptInput = document.getElementById('gemini-prompt');
+    const promptInput = document.getElementById('core-task-input');
     const prompt = `Generate a JSON array of 3 creative IT administration task ideas for input placeholders. Examples: "Onboard a new employee", "Decommission a legacy server". Return ONLY the valid JSON array of strings, ensuring any double quotes inside the strings are properly escaped (e.g., \\"like this\\").`;
     try {
         const jsonText = await callGeminiAPI(prompt, true, "Load Placeholders");
