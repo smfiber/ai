@@ -36,6 +36,13 @@ let GOOGLE_CLIENT_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 
+// --- Make the initialization function globally accessible ---
+// This function is called by the `onload` parameter in the Google API script tag in index.html
+window.onGapiLoaded = () => {
+    // This safely loads the 'client' and 'picker' libraries, then calls our initialization function.
+    gapi.load('client:picker', initializeGapiClient);
+};
+
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
 
@@ -91,14 +98,6 @@ function openModal(modalId) {
         modal.classList.remove('hidden');
         document.body.classList.add('modal-open', `${modalId}-open`);
     }
-}
-
-function checkGapiReady(callback) {
-  if (typeof gapi !== 'undefined' && gapi.load) {
-    callback();
-  } else {
-    setTimeout(() => checkGapiReady(callback), 100);
-  }
 }
 
 function closeModal(modalId) {
@@ -208,29 +207,25 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // Use a helper to wait for the gapi script to be fully loaded
-    checkGapiReady(() => {
-        // Load both 'client' for authentication and 'picker' for the file dialog.
-        gapi.load('client:picker', () => {
-            // This callback now safely runs only after the libraries are ready.
-            initializeGapiClient();
-        });
-    });
-
-    // GIS initialization can happen in parallel
+    // GIS (Google Identity Services) initialization can happen in parallel.
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: () => {}, // The main callback is handled by the token client
+        callback: () => {}, // The main callback is handled by the token client.
     });
     gisInited = true;
+
+    // The GAPI client (for Drive, Picker) is now initialized by the `onGapiLoaded` 
+    // callback, which is triggered from index.html. This prevents race conditions.
 }
 
 async function initializeGapiClient() {
     try {
+        // Initializes the Google API client with the Drive API.
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true;
+        // Now that the GAPI client is ready, we can initialize the token client.
         initializeTokenClient();
     } catch(error) {
         console.error("Error initializing GAPI Client", error);
@@ -261,6 +256,7 @@ function initializeTokenClient() {
                 }
             }
         });
+        // Check if the user is already signed in without showing a popup.
         tokenClient.requestAccessToken({prompt: 'none'});
     } catch(err) {
          console.error("Failed to initialize Google token client:", err);
