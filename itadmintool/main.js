@@ -211,7 +211,7 @@ function initializeGoogleClients() {
     // Use a helper to wait for the gapi script to be fully loaded
     checkGapiReady(() => {
         // Load both 'client' for authentication and 'picker' for the file dialog.
-        gapi.load('client:picker', () => {
+        gapi.load('client picker', () => {
             // This callback now safely runs only after the libraries are ready.
             initializeGapiClient();
         });
