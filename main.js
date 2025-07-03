@@ -434,6 +434,24 @@ async function handleApiKeySubmit(e) {
 function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
+
+    // Listener for the new collapsible section
+    document.getElementById('toggle-tailoring-options')?.addEventListener('click', () => {
+        const container = document.getElementById('tailoring-buttons-container');
+        const icon = document.getElementById('tailoring-arrow-icon');
+        const isHidden = container.classList.contains('hidden');
+
+        if (isHidden) {
+            container.classList.remove('hidden');
+            container.classList.add('flex');
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            container.classList.add('hidden');
+            container.classList.remove('flex');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    });
+
     document.getElementById('generate-theme-btn')?.addEventListener('click', handleCustomVisualThemeGeneration);
     document.getElementById('explore-featured-btn')?.addEventListener('click', () => openCategoryBrowser('featured'));
     document.getElementById('browse-all-btn')?.addEventListener('click', () => openCategoryBrowser('all'));
