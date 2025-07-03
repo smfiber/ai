@@ -159,16 +159,18 @@
                 setIsGenerating(true);
                 setError(null);
                 try {
-                    let generatedTasks = [];
+                    let tasksToProcess = [];
                     if (contentMode === 'ai') {
                         const { mainTitle, points } = await generateTextContent();
                         setTitle(mainTitle);
-                        generatedTasks = points.map((point, index) => ({ id: Date.now() + index, type: 'point', title: point.title, description: point.description, iconUrl: null, isIconLoading: true, x: 0, y: 0 }));
+                        tasksToProcess = points.map((point, index) => ({ id: Date.now() + index, type: 'point', title: point.title, description: point.description, iconUrl: null, isIconLoading: true, x: 0, y: 0 }));
+                        setTasks(tasksToProcess);
                     } else {
-                        generatedTasks = tasks.filter(t => t.type === 'point').map(task => ({ ...task, isIconLoading: true, iconUrl: null }));
+                        tasksToProcess = tasks.filter(t => t.type === 'point');
+                        setTasks(prev => prev.map(t => t.type === 'point' ? {...t, isIconLoading: true, iconUrl: null} : t));
                     }
-                    setTasks(prev => [...prev.filter(t => t.type === 'chart'), ...generatedTasks]);
-                    await Promise.all(generatedTasks.map(async (task) => {
+                    
+                    await Promise.all(tasksToProcess.map(async (task) => {
                         try {
                            const iconUrl = await generateIconForPoint(task.title);
                            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, iconUrl, isIconLoading: false } : t));
@@ -191,7 +193,7 @@
                 setIsDownloading(true);
                 const scale = sizePreset === 'auto' ? 2 : 1;
                 try {
-                    const canvas = await html2canvas(infographicRef.current, { backgroundColor: theme.backgroundColor, useCORS: true, scale: scale });
+                    const canvas = await html2canvas(infographicRef.current, { backgroundColor: 'transparent', useCORS: true, scale: scale });
                     if (format === 'pdf') {
                         const imgData = canvas.toDataURL('image/png');
                         const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
