@@ -91,7 +91,8 @@
             const [title, setTitle] = useState("Your Infographic Title");
             const [pointCount, setPointCount] = useState(3);
             const [layout, setLayout] = useState('grid');
-            const [activePanel, setActivePanel] = useState('content'); // 'content' or 'design'
+            const [activePanel, setActivePanel] = useState('content');
+            const [sizePreset, setSizePreset] = useState('auto'); // NEW: State for export size presets
 
             const [theme, setTheme] = useState({
                 backgroundType: 'solid',
@@ -204,18 +205,22 @@
                     setError(err.message);
                 } finally {
                     setIsGenerating(false);
-                    setActivePanel('design'); // Switch to design panel after generation
+                    setActivePanel('design');
                 }
             };
 
             const performDownload = async (format) => {
                 if (!infographicRef.current) return;
                 setIsDownloading(true);
+                
+                // Use a scale of 1 for presets to get exact dimensions, otherwise use 2 for high-res auto.
+                const scale = sizePreset === 'auto' ? 2 : 1;
+
                 try {
                     const canvas = await html2canvas(infographicRef.current, {
                         backgroundColor: theme.backgroundColor,
                         useCORS: true,
-                        scale: 2 
+                        scale: scale 
                     });
                     if (format === 'pdf') {
                         const imgData = canvas.toDataURL('image/png');
@@ -242,7 +247,7 @@
                 let newItem;
                 if (type === 'point') {
                     newItem = { id: Date.now(), type: 'point', title: "New Point", description: "Describe your point here.", iconUrl: null, isIconLoading: false };
-                } else { // type === 'chart'
+                } else {
                     newItem = { 
                         id: Date.now(), 
                         type: 'chart', 
@@ -272,6 +277,19 @@
             const backgroundStyle = theme.backgroundType === 'solid' 
                 ? { backgroundColor: theme.backgroundColor }
                 : { backgroundImage: `linear-gradient(to bottom right, ${theme.gradientStartColor}, ${theme.gradientEndColor})` };
+
+            // NEW: Get styles for the canvas based on the selected preset
+            const getPresetStyles = () => {
+                switch (sizePreset) {
+                    case 'linkedin':
+                        return { width: '1200px', height: '628px', maxWidth: '100%', margin: '0 auto' };
+                    case 'square':
+                        return { width: '1080px', height: '1080px', maxWidth: '100%', margin: '0 auto', aspectRatio: '1 / 1' };
+                    case 'auto':
+                    default:
+                        return { width: '100%' };
+                }
+            };
 
             if (showApiKeyModal) {
                 return (
@@ -356,6 +374,16 @@
                                 </button>
                                 {activePanel === 'design' && (
                                     <div className="p-4 space-y-4">
+                                        {/* NEW: Export Size Preset Dropdown */}
+                                        <div>
+                                            <label htmlFor="sizePreset" className="block text-sm font-medium text-gray-600 mb-1">Export Size</label>
+                                            <select id="sizePreset" value={sizePreset} onChange={e => setSizePreset(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg">
+                                                <option value="auto">Auto (Responsive)</option>
+                                                <option value="linkedin">LinkedIn Post (1200x628)</option>
+                                                <option value="square">Square Post (1080x1080)</option>
+                                            </select>
+                                        </div>
+
                                         {/* Layout */}
                                         <div>
                                             <label htmlFor="layout" className="block text-sm font-medium text-gray-600 mb-1">Layout</label>
@@ -426,7 +454,7 @@
 
                     {/* --- Infographic Display --- */}
                     <div className="w-full lg:flex-1">
-                        <div ref={infographicRef} style={backgroundStyle} className="p-6 sm:p-8 md:p-12 rounded-2xl shadow-lg min-h-[600px] transition-colors duration-300">
+                        <div ref={infographicRef} style={{ ...backgroundStyle, ...getPresetStyles() }} className="p-6 sm:p-8 md:p-12 rounded-2xl shadow-lg min-h-[600px] transition-all duration-300">
                             <h1 className="text-center font-bold mb-10 md:mb-16 break-words" style={{ color: theme.titleColor, fontSize: `${theme.titleFontSize}px`, fontFamily: `'${theme.titleFontFamily}', sans-serif`, fontWeight: theme.titleFontWeight }}>
                                 {title}
                             </h1>
