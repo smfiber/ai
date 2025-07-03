@@ -210,19 +210,21 @@ function initializeGoogleClients() {
 
     // Use a helper to wait for the gapi script to be fully loaded
     checkGapiReady(() => {
-        // Load both 'client' for authentication and 'picker' for the file dialog.
+        // FIRST: Initialize the Google Identity Services (GSI) client.
+        // This must be done before the GAPI client that depends on it.
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: () => {}, // The main callback is handled by the token client
+        });
+        gisInited = true; // Set the flag indicating GSI is ready.
+
+        // SECOND: Load the GAPI libraries ('client' and 'picker').
         gapi.load('client picker', () => {
-            // This callback now safely runs only after the libraries are ready.
+            // This callback runs after 'client' and 'picker' are loaded.
+            // Now it's safe to initialize the GAPI client.
             initializeGapiClient();
         });
     });
-
-    // GIS initialization can happen in parallel
-    google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: () => {}, // The main callback is handled by the token client
-    });
-    gisInited = true;
 }
 
 async function initializeGapiClient() {
