@@ -531,7 +531,6 @@ function setupEventListeners() {
     document.getElementById('add-sticky-topic-button')?.addEventListener('click', handleAddStickyTopic);
 }
 
-// MODIFIED: This function now uses a redirect flow and creates an even more robust redirect URI.
 async function handleAuthClick() {
     // If the user is already connected, this button should act as a disconnect/logout.
     if (gapi.client.getToken() !== null) {
@@ -1979,6 +1978,7 @@ async function openCategoryBrowser(mode) {
     openModal('categoryBrowserModal');
 }
 
+// MODIFIED: This function now groups guides by their hierarchy path.
 async function openKbBrowser() {
     if (!db || !firebaseConfig) {
         displayMessageInModal("Database not initialized.", "error");
@@ -2003,17 +2003,46 @@ async function openKbBrowser() {
             return;
         }
 
-        const categoryGrid = document.createElement('div');
-        categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
-        categoryGrid.innerHTML = items.map(item => `
-            <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer search-result-item" data-id="${item.id}">
-                <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
-                <p class="text-sm themed-text-muted mt-1 flex-grow">${item.hierarchyPath}</p>
-                 <span class="text-xs themed-text-muted mt-2">${item.createdAt.toDate().toLocaleDateString()}</span>
-                <span class="text-sm font-semibold themed-text-primary mt-4 self-end">View →</span>
-            </div>`).join('');
-        modalContent.innerHTML = '';
-        modalContent.appendChild(categoryGrid);
+        // Group guides by their hierarchy path
+        const groupedGuides = items.reduce((acc, item) => {
+            const path = item.hierarchyPath || 'Uncategorized';
+            if (!acc[path]) {
+                acc[path] = [];
+            }
+            acc[path].push(item);
+            return acc;
+        }, {});
+
+        modalContent.innerHTML = ''; // Clear the loader
+
+        // Sort the group keys alphabetically
+        const sortedGroupKeys = Object.keys(groupedGuides).sort((a, b) => a.localeCompare(b));
+
+        // Render each group
+        sortedGroupKeys.forEach(path => {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'mb-8'; // Add margin between groups
+
+            const groupHeader = document.createElement('h3');
+            groupHeader.className = 'text-xl font-bold themed-text-accent mb-4 pb-2 border-b-2';
+            groupHeader.style.borderColor = 'var(--color-primary-dark)';
+            groupHeader.textContent = path;
+            groupContainer.appendChild(groupHeader);
+
+            const guides = groupedGuides[path];
+            const categoryGrid = document.createElement('div');
+            categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+            categoryGrid.innerHTML = guides.map(item => `
+                <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer search-result-item" data-id="${item.id}">
+                    <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
+                    <p class="text-sm themed-text-muted mt-1 flex-grow">${item.hierarchyPath}</p>
+                    <span class="text-xs themed-text-muted mt-2">${item.createdAt.toDate().toLocaleDateString()}</span>
+                    <span class="text-sm font-semibold themed-text-primary mt-4 self-end">View →</span>
+                </div>`).join('');
+            
+            groupContainer.appendChild(categoryGrid);
+            modalContent.appendChild(groupContainer);
+        });
 
     } catch (error) {
         console.error("Error loading Knowledge Base:", error);
@@ -2553,23 +2582,50 @@ async function handleSearchResultClick(objectID) {
 
 // --- App Initialization Trigger ---
 
-// NEW: This function handles the result of the OAuth redirect.
+// Handles the result of the OAuth redirect.
+// It stores the token and forces a reload to a clean URL.
 function handleRedirectResult() {
     if (window.location.hash.includes('access_token')) {
         const params = new URLSearchParams(window.location.hash.substring(1));
         const token = params.get('access_token');
         if (token) {
-            // Store the token to be used once the GAPI client is ready
-            oauthToken = { access_token: token };
+            // Store the token in session storage to survive the redirect.
+            sessionStorage.setItem('oauthToken', JSON.stringify({ access_token: token }));
+            // Redirect to the clean URL. This stops script execution here.
+            window.location.href = window.location.pathname + window.location.search;
+            return true; // Indicates a redirect is happening.
         }
-        // Clean the token from the URL so it's not processed again on reload
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    }
+    return false; // No redirect happened.
+}
+
+// Checks for a token in session storage on page load.
+function loadTokenFromSession() {
+    const tokenString = sessionStorage.getItem('oauthToken');
+    if (tokenString) {
+        try {
+            oauthToken = JSON.parse(tokenString);
+            // Important: Remove the token from storage after loading it into memory.
+            sessionStorage.removeItem('oauthToken');
+        } catch(e) {
+            console.error("Could not parse token from session storage", e);
+            sessionStorage.removeItem('oauthToken');
+        }
     }
 }
 
-// MODIFIED: This is the main entry point for the application.
+// Main entry point for the application.
 function initializeApplication() {
-    handleRedirectResult(); // Check for a token from a redirect first.
+    // First, check if the current URL is the result of a redirect.
+    // If it is, this function will store the token and force a reload, stopping further execution.
+    if (handleRedirectResult()) {
+        return; // Stop initialization since the page is about to reload.
+    }
+
+    // If we are on a clean page (not a redirect result), check session storage for a token.
+    loadTokenFromSession(); 
+    
+    // Now, proceed with normal application setup.
     setupEventListeners();
     populateTypographySettings();
     marked.setOptions({
