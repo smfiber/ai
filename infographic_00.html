@@ -19,6 +19,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
 </head>
 <body class="bg-gray-100 font-sans">
     <!-- The React app will be rendered here -->
@@ -53,16 +58,28 @@
             const [pointCount, setPointCount] = useState(4);
             const [layout, setLayout] = useState('grid'); // 'grid', 'list'
 
-            // Expanded theme state for advanced design controls
+            // --- ADVANCED THEME STATE ---
             const [theme, setTheme] = useState({
+                // Background
+                backgroundType: 'solid', // 'solid' or 'gradient'
                 backgroundColor: '#F3F4F6',
+                gradientStartColor: '#FFFFFF',
+                gradientEndColor: '#AFAFAF',
+                // Typography
+                titleFontFamily: 'Montserrat',
+                bodyFontFamily: 'Roboto',
+                titleFontSize: 48,
+                titleFontWeight: 700,
+                itemTitleFontSize: 20,
+                itemBodyFontSize: 16,
+                // Colors
                 titleColor: '#111827',
                 textColor: '#374151',
+                // Card Styling
                 cardBgColor: '#FFFFFF',
-                cardPadding: 24, // in pixels
-                cardBorderRadius: 16, // in pixels
-                titleFontSize: 48, // in pixels
-                itemTitleFontSize: 20, // in pixels
+                cardPadding: 24,
+                cardBorderRadius: 16,
+                gap: 32,
             });
 
             const [isDownloading, setIsDownloading] = useState(false);
@@ -88,7 +105,7 @@
                 }
             };
 
-            // --- API Call Functions ---
+            // --- API Call Functions (Unchanged) ---
             const generateTextContent = useCallback(async () => {
                 const systemPrompt = `You are an expert infographic designer. Based on the user's prompt, generate a main title for the infographic and ${pointCount} distinct points. For each point, provide a short, engaging title and a one-sentence description.`;
                 const payload = {
@@ -127,38 +144,22 @@
                 return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
             }, [apiKey]);
 
-            // --- Main Handler Functions ---
+            // --- Main Handler Functions (Unchanged) ---
             const handleGenerate = async () => {
-                if (!prompt && contentMode === 'ai') {
-                    setError("Please enter a topic to generate content.");
-                    return;
-                }
-                if (!apiKey) {
-                    setError("Please set your API key first.");
-                    return;
-                }
-
+                if (!prompt && contentMode === 'ai') { setError("Please enter a topic to generate content."); return; }
+                if (!apiKey) { setError("Please set your API key first."); return; }
                 setIsGenerating(true);
                 setError(null);
-                
                 try {
                     let generatedTasks = [];
                     if (contentMode === 'ai') {
                         const { mainTitle, points } = await generateTextContent();
                         setTitle(mainTitle);
-                        generatedTasks = points.map((point, index) => ({
-                            id: Date.now() + index,
-                            title: point.title,
-                            description: point.description,
-                            iconUrl: null,
-                            isIconLoading: true,
-                        }));
-                    } else { // Manual mode, generate icons for existing tasks
+                        generatedTasks = points.map((point, index) => ({ id: Date.now() + index, title: point.title, description: point.description, iconUrl: null, isIconLoading: true, }));
+                    } else {
                         generatedTasks = tasks.map(task => ({ ...task, isIconLoading: true, iconUrl: null }));
                     }
-
                     setTasks(generatedTasks);
-
                     await Promise.all(generatedTasks.map(async (task) => {
                         try {
                            const iconUrl = await generateIconForPoint(task.title);
@@ -185,14 +186,9 @@
                         useCORS: true,
                         scale: 2 
                     });
-
                     if (format === 'pdf') {
                         const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF({
-                            orientation: canvas.width > canvas.height ? 'l' : 'p',
-                            unit: 'px',
-                            format: [canvas.width, canvas.height]
-                        });
+                        const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
                         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
                         pdf.save('ai-infographic.pdf');
                     } else {
@@ -210,27 +206,26 @@
                 }
             };
 
-            // --- Manual Content Handlers ---
+            // --- Manual Content Handlers (Unchanged) ---
             const addManualPoint = () => {
-                const newPoint = {
-                    id: Date.now(),
-                    title: "New Point",
-                    description: "Describe your point here.",
-                    iconUrl: null,
-                    isIconLoading: false,
-                };
+                const newPoint = { id: Date.now(), title: "New Point", description: "Describe your point here.", iconUrl: null, isIconLoading: false, };
                 setTasks(prev => [...prev, newPoint]);
             };
-
             const updateManualPoint = (id, field, value) => {
                 setTasks(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
             };
-
             const removeManualPoint = (id) => {
                 setTasks(prev => prev.filter(t => t.id !== id));
             };
 
             // --- Render Logic ---
+            const handleThemeChange = (prop, value) => {
+                setTheme(prev => ({...prev, [prop]: value}));
+            };
+
+            const backgroundStyle = theme.backgroundType === 'solid' 
+                ? { backgroundColor: theme.backgroundColor }
+                : { backgroundImage: `linear-gradient(to bottom right, ${theme.gradientStartColor}, ${theme.gradientEndColor})` };
 
             if (showApiKeyModal) {
                 return (
@@ -251,7 +246,7 @@
                     <div className="w-full lg:w-96 lg:max-w-sm bg-white p-6 rounded-2xl shadow-lg sticky top-8 self-start">
                         <h1 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Infographic Studio</h1>
                         
-                        {/* Content Mode Toggle */}
+                        {/* Content Mode Toggle (Unchanged) */}
                         <div className="mb-6">
                             <label className="block text-sm font-semibold text-gray-600 mb-2">Content Mode</label>
                             <div className="flex bg-gray-200 rounded-lg p-1">
@@ -260,7 +255,7 @@
                             </div>
                         </div>
 
-                        {/* AI Content Controls */}
+                        {/* AI & Manual Controls (Unchanged) */}
                         {contentMode === 'ai' && (
                             <div className="space-y-4">
                                 <div>
@@ -277,8 +272,6 @@
                                 </button>
                             </div>
                         )}
-
-                        {/* Manual Content Controls */}
                         {contentMode === 'manual' && (
                             <div className="space-y-4">
                                 <div>
@@ -298,19 +291,13 @@
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={addManualPoint} className="w-full flex items-center justify-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">
-                                    <PlusIcon className="mr-2 w-5 h-5" /> Add Point
-                                </button>
-                                <button onClick={handleGenerate} disabled={isGenerating || tasks.length === 0} className="w-full flex items-center justify-center bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 shadow-md disabled:bg-purple-400">
-                                    <WandIcon className="mr-2 w-5 h-5" />
-                                    {isGenerating ? 'Generating Icons...' : 'Generate Icons for Points'}
-                                </button>
+                                <button onClick={addManualPoint} className="w-full flex items-center justify-center bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700"> <PlusIcon className="mr-2 w-5 h-5" /> Add Point </button>
+                                <button onClick={handleGenerate} disabled={isGenerating || tasks.length === 0} className="w-full flex items-center justify-center bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 shadow-md disabled:bg-purple-400"> <WandIcon className="mr-2 w-5 h-5" /> {isGenerating ? 'Generating Icons...' : 'Generate Icons for Points'} </button>
                             </div>
                         )}
-
                         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
-                        {/* Design and Export Panel */}
+                        {/* --- ADVANCED DESIGN & EXPORT PANEL --- */}
                         <div className="space-y-4 pt-6 border-t mt-6">
                             <h3 className="text-lg font-semibold text-gray-700">Design & Export</h3>
                             
@@ -323,23 +310,49 @@
                                 </select>
                             </div>
 
-                            {/* Colors */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">BG <input type="color" value={theme.backgroundColor} onChange={e => setTheme({...theme, backgroundColor: e.target.value})} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Title <input type="color" value={theme.titleColor} onChange={e => setTheme({...theme, titleColor: e.target.value})} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Text <input type="color" value={theme.textColor} onChange={e => setTheme({...theme, textColor: e.target.value})} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card <input type="color" value={theme.cardBgColor} onChange={e => setTheme({...theme, cardBgColor: e.target.value})} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                            {/* Background Style */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">Background</label>
+                                <div className="flex bg-gray-200 rounded-lg p-1">
+                                    <button onClick={() => handleThemeChange('backgroundType', 'solid')} className={`w-1/2 py-1 text-sm font-bold rounded-md transition-colors ${theme.backgroundType === 'solid' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Solid</button>
+                                    <button onClick={() => handleThemeChange('backgroundType', 'gradient')} className={`w-1/2 py-1 text-sm font-bold rounded-md transition-colors ${theme.backgroundType === 'gradient' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Gradient</button>
+                                </div>
+                                <div className="flex items-center justify-between mt-2">
+                                    {theme.backgroundType === 'solid' ? (
+                                        <label className="text-sm font-medium text-gray-600 flex items-center justify-between w-full">Color <input type="color" value={theme.backgroundColor} onChange={e => handleThemeChange('backgroundColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                    ) : (
+                                        <>
+                                            <label className="text-sm font-medium text-gray-600 flex items-center">Start <input type="color" value={theme.gradientStartColor} onChange={e => handleThemeChange('gradientStartColor', e.target.value)} className="w-8 h-8 ml-2 rounded-md border-none cursor-pointer" /></label>
+                                            <label className="text-sm font-medium text-gray-600 flex items-center">End <input type="color" value={theme.gradientEndColor} onChange={e => handleThemeChange('gradientEndColor', e.target.value)} className="w-8 h-8 ml-2 rounded-md border-none cursor-pointer" /></label>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Sliders */}
-                            <div className="space-y-3 pt-2">
-                                <label className="block text-sm font-medium text-gray-600">Title Size: {theme.titleFontSize}px <input type="range" min="24" max="80" value={theme.titleFontSize} onChange={e => setTheme({...theme, titleFontSize: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
-                                <label className="block text-sm font-medium text-gray-600">Card Padding: {theme.cardPadding}px <input type="range" min="8" max="48" value={theme.cardPadding} onChange={e => setTheme({...theme, cardPadding: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
-                                <label className="block text-sm font-medium text-gray-600">Card Corners: {theme.cardBorderRadius}px <input type="range" min="0" max="40" value={theme.cardBorderRadius} onChange={e => setTheme({...theme, cardBorderRadius: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                             {/* Typography */}
+                            <div className="space-y-3 pt-3 border-t">
+                                <h4 className="text-md font-semibold text-gray-700">Typography</h4>
+                                <label className="block text-sm font-medium text-gray-600">Title Font <select value={theme.titleFontFamily} onChange={e => handleThemeChange('titleFontFamily', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Playfair Display">Playfair Display</option></select></label>
+                                <label className="block text-sm font-medium text-gray-600">Body Font <select value={theme.bodyFontFamily} onChange={e => handleThemeChange('bodyFontFamily', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Playfair Display">Playfair Display</option></select></label>
+                                <label className="block text-sm font-medium text-gray-600">Title Size: {theme.titleFontSize}px <input type="range" min="24" max="80" value={theme.titleFontSize} onChange={e => handleThemeChange('titleFontSize', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                <label className="block text-sm font-medium text-gray-600">Title Weight <select value={theme.titleFontWeight} onChange={e => handleThemeChange('titleFontWeight', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="400">Normal</option><option value="700">Bold</option></select></label>
+                            </div>
+
+                            {/* Colors & Styling */}
+                             <div className="space-y-3 pt-3 border-t">
+                                <h4 className="text-md font-semibold text-gray-700">Colors & Styling</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Title <input type="color" value={theme.titleColor} onChange={e => handleThemeChange('titleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                    <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                    <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                </div>
+                                <label className="block text-sm font-medium text-gray-600">Item Gap: {theme.gap}px <input type="range" min="8" max="64" value={theme.gap} onChange={e => handleThemeChange('gap', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                <label className="block text-sm font-medium text-gray-600">Card Padding: {theme.cardPadding}px <input type="range" min="8" max="48" value={theme.cardPadding} onChange={e => handleThemeChange('cardPadding', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                <label className="block text-sm font-medium text-gray-600">Card Corners: {theme.cardBorderRadius}px <input type="range" min="0" max="40" value={theme.cardBorderRadius} onChange={e => handleThemeChange('cardBorderRadius', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
                             </div>
                             
                             {/* Export Dropdown */}
-                            <div className="relative">
+                            <div className="relative pt-3 border-t">
                                 <button onClick={() => document.getElementById('export-options').classList.toggle('hidden')} disabled={isDownloading || tasks.length === 0} className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 shadow-md disabled:bg-blue-400">
                                     <FileDownIcon className="mr-2 w-5 h-5" />
                                     {isDownloading ? 'Downloading...' : 'Export As...'}
@@ -355,20 +368,25 @@
 
                     {/* --- Infographic Display --- */}
                     <div className="w-full lg:flex-1">
-                        <div ref={infographicRef} style={{ backgroundColor: theme.backgroundColor }} className="p-6 sm:p-8 md:p-12 rounded-2xl shadow-lg min-h-[600px] transition-colors duration-300">
-                            <h1 className="text-center font-bold mb-10 md:mb-16 break-words" style={{ color: theme.titleColor, fontSize: `${theme.titleFontSize}px` }}>
+                        <div ref={infographicRef} style={backgroundStyle} className="p-6 sm:p-8 md:p-12 rounded-2xl shadow-lg min-h-[600px] transition-colors duration-300">
+                            <h1 className="text-center font-bold mb-10 md:mb-16 break-words" style={{ 
+                                color: theme.titleColor, 
+                                fontSize: `${theme.titleFontSize}px`,
+                                fontFamily: `'${theme.titleFontFamily}', sans-serif`,
+                                fontWeight: theme.titleFontWeight,
+                            }}>
                                 {title}
                             </h1>
                             
                             {isGenerating && tasks.length === 0 && (
-                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                <div className="flex flex-col items-center justify-center" style={{color: theme.textColor}}>
                                     <Spinner />
                                     <p className="mt-4">Generating content, please wait...</p>
                                 </div>
                             )}
 
                             {!isGenerating && tasks.length === 0 && !error && (
-                                <div className="text-center text-gray-500 py-20 border-2 border-dashed rounded-lg">
+                                <div className="text-center py-20 border-2 border-dashed rounded-lg" style={{borderColor: theme.textColor, color: theme.textColor}}>
                                     <p>Your infographic will appear here.</p>
                                     <p className="text-sm">Use the controls to get started.</p>
                                 </div>
@@ -376,19 +394,20 @@
 
                             {/* Layout Renderer */}
                             <div className={`
-                                ${layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8' : ''}
-                                ${layout === 'list' ? 'flex flex-col items-center space-y-8' : ''}
-                            `}>
+                                ${layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : ''}
+                                ${layout === 'list' ? 'flex flex-col items-center' : ''}
+                            `} style={{ gap: `${theme.gap}px` }}>
                                 {tasks.map((task) => (
                                     <div key={task.id} 
                                         className={`
-                                            ${layout === 'list' ? 'w-full max-w-2xl' : ''}
+                                            ${layout === 'list' ? `w-full max-w-2xl ${tasks.length > 1 ? 'mb-4' : ''}` : ''}
                                             flex flex-col items-center text-center transition-all duration-300
                                         `}
                                         style={{ 
                                             backgroundColor: theme.cardBgColor, 
                                             padding: `${theme.cardPadding}px`,
-                                            borderRadius: `${theme.cardBorderRadius}px`
+                                            borderRadius: `${theme.cardBorderRadius}px`,
+                                            fontFamily: `'${theme.bodyFontFamily}', sans-serif`,
                                         }}
                                     >
                                         <div className="w-24 h-24 mb-5 shadow-lg rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
@@ -398,7 +417,7 @@
                                         </div>
                                         <div className="flex-grow">
                                             <h3 className="font-bold mb-2 break-words" style={{ color: theme.titleColor, fontSize: `${theme.itemTitleFontSize}px` }}>{task.title}</h3>
-                                            <p className="text-base break-words" style={{ color: theme.textColor }}>{task.description}</p>
+                                            <p className="text-base break-words" style={{ color: theme.textColor, fontSize: `${theme.itemBodyFontSize}px` }}>{task.description}</p>
                                         </div>
                                     </div>
                                 ))}
