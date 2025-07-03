@@ -356,8 +356,68 @@
                                 </button>
                                 {activePanel === 'design' && (
                                     <div className="p-4 space-y-4">
-                                        {/* All design and export controls go here */}
-                                        {/* This section is unchanged from the previous version */}
+                                        {/* Layout */}
+                                        <div>
+                                            <label htmlFor="layout" className="block text-sm font-medium text-gray-600 mb-1">Layout</label>
+                                            <select id="layout" value={layout} onChange={e => setLayout(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg">
+                                                <option value="grid">Grid</option>
+                                                <option value="list">Vertical List</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Background Style */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">Background</label>
+                                            <div className="flex bg-gray-200 rounded-lg p-1">
+                                                <button onClick={() => handleThemeChange('backgroundType', 'solid')} className={`w-1/2 py-1 text-sm font-bold rounded-md transition-colors ${theme.backgroundType === 'solid' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Solid</button>
+                                                <button onClick={() => handleThemeChange('backgroundType', 'gradient')} className={`w-1/2 py-1 text-sm font-bold rounded-md transition-colors ${theme.backgroundType === 'gradient' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Gradient</button>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2">
+                                                {theme.backgroundType === 'solid' ? (
+                                                    <label className="text-sm font-medium text-gray-600 flex items-center justify-between w-full">Color <input type="color" value={theme.backgroundColor} onChange={e => handleThemeChange('backgroundColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                ) : (
+                                                    <>
+                                                        <label className="text-sm font-medium text-gray-600 flex items-center">Start <input type="color" value={theme.gradientStartColor} onChange={e => handleThemeChange('gradientStartColor', e.target.value)} className="w-8 h-8 ml-2 rounded-md border-none cursor-pointer" /></label>
+                                                        <label className="text-sm font-medium text-gray-600 flex items-center">End <input type="color" value={theme.gradientEndColor} onChange={e => handleThemeChange('gradientEndColor', e.target.value)} className="w-8 h-8 ml-2 rounded-md border-none cursor-pointer" /></label>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                         {/* Typography */}
+                                        <div className="space-y-3 pt-3 border-t">
+                                            <h4 className="text-md font-semibold text-gray-700">Typography</h4>
+                                            <label className="block text-sm font-medium text-gray-600">Title Font <select value={theme.titleFontFamily} onChange={e => handleThemeChange('titleFontFamily', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Playfair Display">Playfair Display</option></select></label>
+                                            <label className="block text-sm font-medium text-gray-600">Body Font <select value={theme.bodyFontFamily} onChange={e => handleThemeChange('bodyFontFamily', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="Roboto">Roboto</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Playfair Display">Playfair Display</option></select></label>
+                                            <label className="block text-sm font-medium text-gray-600">Title Size: {theme.titleFontSize}px <input type="range" min="24" max="80" value={theme.titleFontSize} onChange={e => handleThemeChange('titleFontSize', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                            <label className="block text-sm font-medium text-gray-600">Title Weight <select value={theme.titleFontWeight} onChange={e => handleThemeChange('titleFontWeight', e.target.value)} className="w-full p-1.5 mt-1 border rounded-md text-sm"><option value="400">Normal</option><option value="700">Bold</option></select></label>
+                                        </div>
+
+                                        {/* Colors & Styling */}
+                                         <div className="space-y-3 pt-3 border-t">
+                                            <h4 className="text-md font-semibold text-gray-700">Colors & Styling</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Title <input type="color" value={theme.titleColor} onChange={e => handleThemeChange('titleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                            </div>
+                                            <label className="block text-sm font-medium text-gray-600">Item Gap: {theme.gap}px <input type="range" min="8" max="64" value={theme.gap} onChange={e => handleThemeChange('gap', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                            <label className="block text-sm font-medium text-gray-600">Card Padding: {theme.cardPadding}px <input type="range" min="8" max="48" value={theme.cardPadding} onChange={e => handleThemeChange('cardPadding', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                            <label className="block text-sm font-medium text-gray-600">Card Corners: {theme.cardBorderRadius}px <input type="range" min="0" max="40" value={theme.cardBorderRadius} onChange={e => handleThemeChange('cardBorderRadius', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
+                                        </div>
+                                        
+                                        {/* Export Dropdown */}
+                                        <div className="relative pt-3 border-t">
+                                            <button onClick={() => document.getElementById('export-options').classList.toggle('hidden')} disabled={isDownloading || tasks.length === 0} className="w-full flex items-center justify-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 shadow-md disabled:bg-blue-400">
+                                                <FileDownIcon className="mr-2 w-5 h-5" />
+                                                {isDownloading ? 'Downloading...' : 'Export As...'}
+                                            </button>
+                                            <div id="export-options" className="hidden absolute bottom-full mb-2 w-full bg-white border rounded-lg shadow-xl z-10">
+                                                <a onClick={() => performDownload('png')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">PNG</a>
+                                                <a onClick={() => performDownload('jpeg')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">JPEG</a>
+                                                <a onClick={() => performDownload('pdf')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">PDF</a>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
