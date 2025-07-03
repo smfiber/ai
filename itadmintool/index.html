@@ -232,22 +232,28 @@
         </div>
     </div>
     <div id="stickyTopicsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-         <div class="card p-8 w-full max-w-lg m-4">
-            <h2 class="text-2xl font-bold mb-4">Sticky Topics</h2>
-            <select id="sticky-topic-category-select" class="themed-input w-full p-2 rounded-lg mb-4"></select>
-            <div id="sticky-topics-list" class="space-y-2 mb-4"></div>
-            <div class="flex gap-2">
-                <input id="new-sticky-topic-input" class="themed-input flex-grow p-2 rounded-lg" placeholder="New sticky topic...">
-                <button id="add-sticky-topic-button" class="btn-primary">Add</button>
+        <div class="card w-full max-w-lg m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Sticky Topics</h2>
+                <button id="closeStickyTopicsModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
-            <button id="closeStickyTopicsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <div class="p-6 overflow-y-auto">
+                <select id="sticky-topic-category-select" class="themed-input w-full p-2 rounded-lg mb-4"></select>
+                <div id="sticky-topics-list" class="space-y-2 mb-4"></div>
+                <div class="flex gap-2">
+                    <input id="new-sticky-topic-input" class="themed-input flex-grow p-2 rounded-lg" placeholder="New sticky topic...">
+                    <button id="add-sticky-topic-button" class="btn-primary">Add</button>
+                </div>
+            </div>
         </div>
     </div>
     <div id="promptsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-        <div class="card p-8 w-full max-w-4xl m-4">
-            <h2 class="text-2xl font-bold mb-4">Application Prompts</h2>
-            <div id="promptsModalContent" class="prose max-w-none"></div>
-            <button id="closePromptsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Application Prompts</h2>
+                <button id="closePromptsModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div id="promptsModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
         </div>
     </div>
     <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
@@ -263,10 +269,12 @@
         </div>
     </div>
     <div id="aiLogModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
-        <div class="card p-8 w-full max-w-4xl m-4">
-            <h2 class="text-2xl font-bold mb-4">AI Interaction Log</h2>
-            <div id="aiLogModalContent" class="prose max-w-none"></div>
-            <button id="closeAiLogModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">AI Interaction Log</h2>
+                <button id="closeAiLogModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div id="aiLogModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
     <div id="hierarchyManagementModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
