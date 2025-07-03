@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Administration Hub</title>
+    
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100">
+
+    <header class="relative bg-gray-800 text-white p-6 shadow-lg">
+        <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20"></div>
+        <div class="relative container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">IT Administration Hub</h1>
+                <p class="text-sm text-gray-300 mt-1">Your AI-Powered Operations Co-Pilot</p>
+            </div>
+            <div id="auth-status" class="flex items-center">
+                </div>
+        </div>
+        <div id="header-loader" class="absolute inset-0 bg-gray-800 bg-opacity-50 items-center justify-center hidden">
+            <div class="header-loader-spinner animate-spin rounded-full"></div>
+        </div>
+    </header>
+
+    <div id="app-container" class="hidden">
+        <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="md:col-span-2 card p-6">
+                    <h2 class="text-xl font-bold mb-4 themed-text-accent">Generate a New Guide</h2>
+                    <form id="gemini-form" class="flex flex-col sm:flex-row gap-4">
+                        <input type="text" id="gemini-prompt" class="themed-input flex-grow p-3 text-lg rounded-lg" placeholder="e.g., 'Configure a new network printer'">
+                        <button type="submit" id="new-plan-button" class="btn-primary">Generate</button>
+                    </form>
+                    <div id="tailoring-options-wrapper" class="mt-4">
+                        <button id="toggle-tailoring-options" class="flex items-center justify-between w-full text-left themed-text-muted font-semibold text-sm p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                            <span>Advanced Options</span>
+                            <svg id="tailoring-arrow-icon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="tailoring-buttons-container" class="hidden flex-wrap gap-2 mt-2 pt-3 border-t" style="border-color: var(--color-card-border);">
+                            </div>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4 themed-text-accent">Tools & Actions</h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="search-kb-button" class="btn-primary">Search KB</button>
+                        <button id="prompts-button" class="btn-secondary">Prompts</button>
+                        <button id="kb-button" class="btn-secondary">Knowledge Base</button>
+                        <button id="real-time-log-button" class="btn-secondary">AI Log</button>
+                        <button id="theme-changer-button" class="btn-secondary">Theme</button>
+                        <button id="hierarchy-manager-button" class="btn-secondary">Hierarchy</button>
+                        <button id="firebase-tools-button" class="btn-secondary">Sticky Topics</button>
+                         <button id="ai-help-button" class="btn-secondary">App Docs</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card p-6">
+                     <h2 class="text-xl font-bold mb-4 themed-text-accent">Content Explorer</h2>
+                     <div class="space-y-3">
+                        <button id="explore-featured-btn" class="w-full btn-secondary">Explore Featured Topics</button>
+                        <button id="browse-all-btn" class="w-full btn-secondary">Browse All Categories</button>
+                     </div>
+                </div>
+                 <div id="cloud-storage-card" class="md:col-span-2 card p-6 hidden">
+                    <h2 class="text-xl font-bold mb-4 themed-text-accent">Cloud Storage</h2>
+                    <div id="google-drive-section" class="hidden">
+                        <p id="drive-status" class="themed-text-muted mb-4 text-sm"></p>
+                        <div class="flex flex-wrap gap-3">
+                           <button id="auth-button" class="btn-secondary">Connect</button>
+                           <button id="load-from-drive-btn" class="btn-secondary hidden">Load from Drive</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="dynamic-card-container" class="space-y-8"></div>
+            <div id="gemini-result-container" class="mt-8"></div>
+            <div id="imported-guides-section" class="hidden mt-8">
+                <h2 class="text-3xl font-bold mb-4 themed-text-primary border-b-2 pb-2" style="border-color: var(--color-primary-dark);">Imported Guides</h2>
+                <div id="imported-guides-container" class="space-y-8"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card p-8 w-full max-w-lg m-4">
+            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
+            <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are stored locally in your browser.</p>
+            <form id="apiKeyForm">
+                <div class="space-y-4">
+                    <textarea id="geminiApiKeyInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Gemini API Key"></textarea>
+                    <textarea id="firebaseConfigInput" class="themed-input w-full p-2 rounded-lg" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    <textarea id="googleClientIdInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Google Cloud Client ID (for Drive integration)"></textarea>
+                    <input type="text" id="algoliaAppIdInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Application ID">
+                    <input type="text" id="algoliaSearchKeyInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Search-Only API Key">
+                    <div>
+                        <input type="password" id="algoliaAdminKeyInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Admin API Key">
+                        <p class="text-xs themed-text-muted mt-1">Note: The Admin Key is for the backend function setup and is not used directly in the browser.</p>
+                    </div>
+                </div>
+                <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" class="btn-primary">Save and Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="searchModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Search Knowledge Base</h2>
+                <button id="closeSearchModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="search" id="search-input" class="themed-input w-full p-3 text-lg rounded-lg" placeholder="Search for guides...">
+            </div>
+            <div id="search-results-container" class="p-6 pt-0 overflow-y-auto">
+                 <p class="themed-text-muted text-center">Start typing to search for guides in your knowledge base.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="flex flex-col items-center">
+            <div class="loader themed-loader"></div>
+            <p id="loading-message" class="text-white mt-4"></p>
+        </div>
+    </div>
+    
+    <div id="inDepthModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
+                <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthModalFooter" class="p-4 border-t shrink-0">
+                <div id="inDepthModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
+        </div>
+    </div>
+    <div id="inDepthDetailedModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
+                <button id="closeInDepthDetailedModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div id="inDepthDetailedModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
+            <div id="inDepthDetailedModalFooter" class="p-4 border-t shrink-0">
+                <div id="inDepthDetailedModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="detailed-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
+        </div>
+    </div>
+    <div id="searchGeminiModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+         <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Gemini Search</h2>
+                <button id="closeSearchGeminiModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <input id="searchGeminiQueryText" class="themed-input w-full p-2 rounded-lg mb-4" readonly>
+                <div id="searchGeminiResult" class="prose max-w-none"></div>
+            </div>
+            <div id="searchGeminiModalFooter" class="p-4 border-t shrink-0">
+                <div id="searchGeminiModalButtons" class="flex flex-wrap justify-center gap-2"></div>
+                <p id="search-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
+            </div>
+        </div>
+    </div>
+    <div id="categoryBrowserModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card w-full max-w-5xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-4 border-b flex justify-between items-center shrink-0">
+                <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary mb-0">Browse Categories</h2>
+                <button id="closeCategoryBrowserModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div id="categoryBrowserBreadcrumbs" class="p-3 bg-gray-50 border-b shrink-0"></div>
+            <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto"></div>
+        </div>
+    </div>
+    <div id="stickyTopicsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+         <div class="card p-8 w-full max-w-lg m-4">
+            <h2 class="text-2xl font-bold mb-4">Sticky Topics</h2>
+            <select id="sticky-topic-category-select" class="themed-input w-full p-2 rounded-lg mb-4"></select>
+            <div id="sticky-topics-list" class="space-y-2 mb-4"></div>
+            <div class="flex gap-2">
+                <input id="new-sticky-topic-input" class="themed-input flex-grow p-2 rounded-lg" placeholder="New sticky topic...">
+                <button id="add-sticky-topic-button" class="btn-primary">Add</button>
+            </div>
+            <button id="closeStickyTopicsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+    </div>
+    <div id="promptsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card p-8 w-full max-w-4xl m-4">
+            <h2 class="text-2xl font-bold mb-4">Application Prompts</h2>
+            <div id="promptsModalContent" class="prose max-w-none"></div>
+            <button id="closePromptsModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+    </div>
+    <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card p-8 w-full max-w-lg m-4">
+            <h2 class="text-2xl font-bold mb-4">Generate Custom Theme</h2>
+            <input id="theme-prompt" class="themed-input w-full p-2 rounded-lg mb-4" placeholder="e.g., 'Cyberpunk Sunset'">
+            <div id="theme-loader-container" class="hidden">
+                <div class="loader themed-loader"></div>
+            </div>
+            <p id="theme-error-container" class="text-red-500 text-sm mt-2 hidden"></p>
+            <button id="generate-theme-btn" class="btn-primary w-full mt-4">Generate</button>
+            <button id="closeThemeGeneratorModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+    </div>
+    <div id="aiLogModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card p-8 w-full max-w-4xl m-4">
+            <h2 class="text-2xl font-bold mb-4">AI Interaction Log</h2>
+            <div id="aiLogModalContent" class="prose max-w-none"></div>
+            <button id="closeAiLogModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+    </div>
+    <div id="hierarchyManagementModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+        <div class="card w-full max-w-6xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
+            <div class="p-4 border-b flex justify-between items-center shrink-0">
+                <h2 class="text-2xl font-bold themed-text-primary mb-0">Hierarchy Management</h2>
+                <button id="closeHierarchyManagementModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="hierarchy-column">
+                        <h3 class="font-semibold mb-2">Main Categories</h3>
+                        <div id="main-category-list" class="hierarchy-list"></div>
+                        <div class="mt-2 flex gap-2">
+                            <input id="new-main-category-input" class="themed-input w-full p-1 text-sm" placeholder="New main category...">
+                            <button id="add-main-category-btn" class="btn-secondary text-sm !px-2 !py-1">+</button>
+                        </div>
+                    </div>
+                    <div class="hierarchy-column">
+                        <h3 class="font-semibold mb-2">Sub Categories</h3>
+                        <div id="sub-category-list" class="hierarchy-list"></div>
+                         <div class="mt-2 flex gap-2">
+                            <input id="new-sub-category-input" class="themed-input w-full p-1 text-sm" placeholder="New sub category..." disabled>
+                            <button id="add-sub-category-btn" class="btn-secondary text-sm !px-2 !py-1" disabled>+</button>
+                        </div>
+                    </div>
+                    <div class="hierarchy-column">
+                        <h3 class="font-semibold mb-2">Final Topics</h3>
+                        <div id="final-category-list" class="hierarchy-list"></div>
+                         <div class="mt-2 flex gap-2">
+                            <input id="new-final-category-input" class="themed-input w-full p-1 text-sm" placeholder="New final topic..." disabled>
+                            <button id="add-final-category-btn" class="btn-secondary text-sm !px-2 !py-1" disabled>+</button>
+                        </div>
+                    </div>
+                 </div>
+                 <hr class="my-4">
+                 <div id="hierarchy-edit-form" class="hidden">
+                     <h3 class="font-semibold mb-2">Edit Item</h3>
+                     <div class="space-y-3">
+                        <input type="text" id="edit-title" class="themed-input w-full p-2" placeholder="Title">
+                        <div id="edit-description-container" class="hidden"><textarea id="edit-description" class="themed-input w-full p-2" rows="2" placeholder="Description"></textarea></div>
+                        <div id="edit-initial-prompt-container" class="hidden"><textarea id="edit-initial-prompt" class="themed-input w-full p-2" rows="3" placeholder="Initial Prompt for AI"></textarea></div>
+                        <div id="edit-full-prompt-container" class="hidden"><textarea id="edit-full-prompt" class="themed-input w-full p-2" rows="5" placeholder="Full Prompt for AI"></textarea></div>
+                     </div>
+                     <div class="mt-4 flex gap-3">
+                         <button id="save-hierarchy-item-btn" class="btn-primary">Save Changes</button>
+                         <button id="delete-hierarchy-item-btn" class="btn-secondary !text-red-600 hover:!bg-red-100">Delete</button>
+                     </div>
+                </div>
+                <div id="hierarchy-form-placeholder">
+                    <p class="themed-text-muted text-center py-16">Select an item to edit its details.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal"></div>
+    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal"></div>
+    
+    <button id="scroll-to-top-button" class="floating-action-button hidden">&uarr;</button>
+    <div id="settings-panel" class="hidden">
+        <h3 class="font-semibold mb-2">Typography</h3>
+        <div class="space-y-2">
+            <div>
+                <label for="font-family-select" class="text-sm">Font Family</label>
+                <select id="font-family-select" class="themed-input w-full p-1 rounded-md"></select>
+            </div>
+            <div>
+                <label for="font-size-select" class="text-sm">Font Size</label>
+                <select id="font-size-select" class="themed-input w-full p-1 rounded-md"></select>
+            </div>
+            <div>
+                <label for="line-height-select" class="text-sm">Line Height</label>
+                <select id="line-height-select" class="themed-input w-full p-1 rounded-md"></select>
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t">
+            <h3 class="font-semibold mb-2">Data Management</h3>
+            <div class="flex flex-col space-y-2">
+                <button id="export-data-button" class="btn-secondary text-sm">Export Data</button>
+                <button id="import-data-button" class="btn-secondary text-sm">Import Data</button>
+            </div>
+        </div>
+    </div>
+    <button id="settings-button" class="floating-action-button" style="bottom: 2rem; right: 2rem;">&#9881;</button>
+
+    <div id="backup-reminder-banner" class="hidden fixed bottom-0 left-0 right-0 bg-yellow-100 border-t-4 border-yellow-500 text-yellow-700 p-4 flex justify-between items-center">
+        <p><span class="font-bold">Reminder:</span> It's been a while since your last backup. Consider exporting your data for safekeeping.</p>
+        <button onclick="document.getElementById('backup-reminder-banner').classList.add('hidden')">&times;</button>
+    </div>
+
+    <button id="search-gemini-button" class="hidden">&#128269; Search Gemini</button>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
