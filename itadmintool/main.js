@@ -531,7 +531,7 @@ function setupEventListeners() {
     document.getElementById('add-sticky-topic-button')?.addEventListener('click', handleAddStickyTopic);
 }
 
-// MODIFIED: This function now uses a redirect flow instead of a pop-up.
+// MODIFIED: This function now uses a redirect flow and creates a more robust redirect URI.
 async function handleAuthClick() {
     // If the user is already connected, this button should act as a disconnect/logout.
     if (gapi.client.getToken() !== null) {
@@ -549,9 +549,16 @@ async function handleAuthClick() {
     // If not connected, redirect to Google's authentication page.
     const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 
+    // Create a robust redirect URI that handles different path variations.
+    let redirectUri = window.location.origin + window.location.pathname;
+    // If the URL ends with 'index.html', remove it to get the base directory URL.
+    if (redirectUri.endsWith('index.html')) {
+        redirectUri = redirectUri.substring(0, redirectUri.lastIndexOf('index.html'));
+    }
+
     const params = {
         'client_id': GOOGLE_CLIENT_ID,
-        'redirect_uri': window.location.origin + window.location.pathname,
+        'redirect_uri': redirectUri, // Use the more robust URI
         'response_type': 'token',
         'scope': G_SCOPES,
         'include_granted_scopes': 'true'
