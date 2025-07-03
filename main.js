@@ -35,6 +35,7 @@ let tokenClient;
 let GOOGLE_CLIENT_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
+let oauthToken = null; // Used to store token from redirect flow
 
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
@@ -210,20 +211,8 @@ function initializeGoogleClients() {
 
     // Use a helper to wait for the gapi script to be fully loaded
     checkGapiReady(() => {
-        // FIRST: Initialize the Google Identity Services (GSI) client.
-        // This must be done before the GAPI client that depends on it.
-        google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: () => {}, // The main callback is handled by the token client
-        });
-        gisInited = true; // Set the flag indicating GSI is ready.
-
-        // SECOND: Load the GAPI libraries ('client' and 'picker').
-        gapi.load('client picker', () => {
-            // This callback runs after 'client' and 'picker' are loaded.
-            // Now it's safe to initialize the GAPI client.
-            initializeGapiClient();
-        });
+        // Load the GAPI libraries ('client' and 'picker').
+        gapi.load('client:picker', initializeGapiClient);
     });
 }
 
@@ -233,39 +222,16 @@ async function initializeGapiClient() {
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true;
-        initializeTokenClient();
+
+        // If a token was captured from the redirect, set it now.
+        if (oauthToken) {
+            gapi.client.setToken(oauthToken);
+            updateSigninStatus(true);
+            oauthToken = null; // Clear the token after it has been used
+        }
     } catch(error) {
         console.error("Error initializing GAPI Client", error);
         document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
-    }
-}
-
-function initializeTokenClient() {
-    if (!gisInited || !GOOGLE_CLIENT_ID) return;
-    try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: G_SCOPES,
-            callback: (tokenResponse) => {
-                if (tokenResponse && tokenResponse.access_token) {
-                    gapi.client.setToken(tokenResponse);
-                    updateSigninStatus(true);
-                } else {
-                    console.error('User denied access or token response was invalid.', tokenResponse);
-                    updateSigninStatus(false);
-                }
-            },
-            popup_closed_callback: () => {
-                const statusEl = document.getElementById('drive-status');
-                if (statusEl.textContent.includes('Connecting')) {
-                    statusEl.textContent = 'Connection cancelled.';
-                    setTimeout(() => updateSigninStatus(false), 2000);
-                }
-            }
-        });
-        tokenClient.requestAccessToken({prompt: 'none'});
-    } catch(err) {
-         console.error("Failed to initialize Google token client:", err);
     }
 }
 
@@ -328,9 +294,8 @@ async function handleLogin() {
 function handleLogout() {
     const driveToken = gapi?.client?.getToken();
     if (driveToken) {
-        google.accounts.oauth2.revoke(driveToken.access_token, () => {
-             console.log('Google Drive token revoked.');
-        });
+        // This only revokes the token on the client side for GAPI
+        gapi.client.setToken(null);
     }
     signOut(auth).then(() => {
         updateSigninStatus(false);
@@ -566,23 +531,34 @@ function setupEventListeners() {
     document.getElementById('add-sticky-topic-button')?.addEventListener('click', handleAddStickyTopic);
 }
 
+// MODIFIED: This function now uses a redirect flow instead of a pop-up.
 async function handleAuthClick() {
-     if (!gapiInited || !gisInited || !tokenClient) {
-        document.getElementById('drive-status').textContent = 'Services initializing, please wait...';
-        return;
-    }
-    if (gapi.client.getToken() === null) {
-        document.getElementById('drive-status').textContent = 'Connecting to Google Drive...';
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
+    // If the user is already connected, this button should act as a disconnect/logout.
+    if (gapi.client.getToken() !== null) {
         const token = gapi.client.getToken();
         if (token) {
+            // Revoke the token on Google's side
             google.accounts.oauth2.revoke(token.access_token, () => {
                 gapi.client.setToken(null);
                 updateSigninStatus(false);
             });
         }
+        return;
     }
+
+    // If not connected, redirect to Google's authentication page.
+    const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
+
+    const params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': window.location.origin + window.location.pathname,
+        'response_type': 'token',
+        'scope': G_SCOPES,
+        'include_granted_scopes': 'true'
+    };
+
+    const url = oauth2Endpoint + '?' + (new URLSearchParams(params)).toString();
+    window.location.assign(url);
 }
 
 async function getDriveFolderId() {
@@ -686,7 +662,7 @@ async function saveContentToDrive(content, fileName, statusElement) {
 }
 
 function createPicker(mode, startInFolderId = null) { 
-    if (!gisInited || !gapiInited) {
+    if (!gapiInited) {
          (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
          return;
      }
@@ -2557,10 +2533,25 @@ async function handleSearchResultClick(objectID) {
     }
 }
 
-
 // --- App Initialization Trigger ---
 
+// NEW: This function handles the result of the OAuth redirect.
+function handleRedirectResult() {
+    if (window.location.hash.includes('access_token')) {
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const token = params.get('access_token');
+        if (token) {
+            // Store the token to be used once the GAPI client is ready
+            oauthToken = { access_token: token };
+        }
+        // Clean the token from the URL so it's not processed again on reload
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    }
+}
+
+// MODIFIED: This is the main entry point for the application.
 function initializeApplication() {
+    handleRedirectResult(); // Check for a token from a redirect first.
     setupEventListeners();
     populateTypographySettings();
     marked.setOptions({
