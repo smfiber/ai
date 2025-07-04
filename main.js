@@ -39,6 +39,7 @@ let oauthToken = null; // Used to store token from redirect flow
 
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
+const MAX_TOPICS = 48; // Set the maximum number of topics allowed per category.
 
 // --- Function Declarations ---
 
@@ -796,16 +797,19 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     }
 }
 
+/**
+ * MODIFICATION: This function now checks if the number of topics has reached the MAX_TOPICS limit.
+ * If the limit is reached, it displays a message instead of the "Add more topics" button.
+ */
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
     if (!container) return;
 
-    // Check if the main data is still being fetched.
     if (allThemeData[categoryId] === null) {
         if (!container.querySelector('.loader')) {
             const cardTitle = document.getElementById(`category-card-${categoryId}`)?.querySelector('h2')?.textContent || 'this category';
             container.innerHTML = getLoaderHTML(`AI is generating topics for ${cardTitle}...`);
         }
-        return; // Exit while loading
+        return;
     }
     
     const data = allThemeData[categoryId] || [];
@@ -855,7 +859,11 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const fullPrompt = finalCategory.fullPrompt;
     let actionButtonsHtml = '';
     if (fullPrompt && data.length > 0) {
-        actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
+        if (data.length >= MAX_TOPICS) {
+            actionButtonsHtml = `<div class="col-span-full text-center mt-4"><p class="themed-text-muted">Maximum topic limit of ${MAX_TOPICS} reached.</p></div>`;
+        } else {
+            actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
+        }
     }
     container.innerHTML = `<div class="${gridClass}">${stickyHtml}${userAddedHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
 }
@@ -895,11 +903,21 @@ async function handleAddNewTopic(button) {
  * FIX: This function now correctly uses the `fullPrompt` from the category's
  * hierarchy data stored in Firebase, ensuring that the AI gets the best
  * possible instructions for generating new, relevant topics.
+ * UPDATE: Added a check against MAX_TOPICS to prevent unnecessary API calls
+ * and to request the correct number of topics to avoid exceeding the limit.
  */
 async function handleGenerateMoreClick(button) {
     const { containerId, categoryId } = button.dataset;
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
+
+    const currentTopicCount = allThemeData[categoryId].length;
+    if (currentTopicCount >= MAX_TOPICS) {
+        displayMessageInModal(`You have reached the maximum limit of ${MAX_TOPICS} topics for this category.`, 'info');
+        button.disabled = true;
+        button.innerHTML = 'Limit Reached';
+        return;
+    }
 
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
@@ -908,7 +926,6 @@ async function handleGenerateMoreClick(button) {
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     
-    // Retrieve the specific, user-defined prompt from the hierarchy data.
     const basePrompt = finalCategory.fullPrompt;
     if (!basePrompt) {
         handleApiError({ message: "No 'fullPrompt' is configured for this category in the Hierarchy Manager." }, container.closest('.card-content').querySelector('.details-container'));
@@ -918,10 +935,10 @@ async function handleGenerateMoreClick(button) {
     }
 
     const existingTitles = allThemeData[categoryId].map(item => item.title);
+    const topicsToRequest = Math.min(8, MAX_TOPICS - currentTopicCount);
     
-    // Construct a more robust prompt by combining the user's base prompt with a clear negative constraint.
     const prompt = `
-        Based on the following core instruction, generate 8 new and unique topics.
+        Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
         ---
         Core Instruction: "${basePrompt}"
         ---
@@ -942,7 +959,7 @@ async function handleGenerateMoreClick(button) {
         newItems.forEach(newItem => {
             if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
                 allThemeData[categoryId].push(newItem);
-                newItemIds.add(newItem.id); // Add the ID of the new item to the set
+                newItemIds.add(newItem.id);
             }
         });
 
@@ -950,19 +967,13 @@ async function handleGenerateMoreClick(button) {
         populateCardGridSelector(container, categoryId, newItemIds);
         document.getElementById(`details-${categoryId}`).innerHTML = '';
         
-        // Re-enable the button with original text
-        button.disabled = false;
-        button.innerHTML = `<span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span>`;
-
     } catch (error) {
         console.error(`Error generating more items for ${categoryId}:`, error);
-        const originalButtonHTML = button.innerHTML;
         button.disabled = false;
         button.innerHTML = 'Error. Try Again.';
         button.classList.add('bg-red-100', 'text-red-700');
         setTimeout(() => {
             button.classList.remove('bg-red-100', 'text-red-700');
-            // Restore the original "Add 8 more topics" text
             button.innerHTML = `<span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span>`;
         }, 3000);
     } 
@@ -2686,4 +2697,3 @@ function initializeApplication() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApplication);
-
