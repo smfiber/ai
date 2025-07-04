@@ -905,6 +905,8 @@ async function handleAddNewTopic(button) {
  * possible instructions for generating new, relevant topics.
  * UPDATE: Added a check against MAX_TOPICS to prevent unnecessary API calls
  * and to request the correct number of topics to avoid exceeding the limit.
+ * UPDATE 2: This function now generates a unique ID on the client-side for each new item,
+ * ignoring the potentially duplicate ID from the AI. It now only checks for title uniqueness.
  */
 async function handleGenerateMoreClick(button) {
     const { containerId, categoryId } = button.dataset;
@@ -957,7 +959,10 @@ async function handleGenerateMoreClick(button) {
         const newItemIds = new Set();
 
         newItems.forEach(newItem => {
-            if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
+            // Only check for title duplicates, as the AI might reuse IDs.
+            if (!allThemeData[categoryId].some(existing => existing.title === newItem.title)) {
+                // Generate a new, unique ID on the client side to prevent collisions.
+                newItem.id = `${sanitizeTitle(newItem.title).replace(/\s+/g, '-')}-${Date.now()}`;
                 allThemeData[categoryId].push(newItem);
                 newItemIds.add(newItem.id);
             }
