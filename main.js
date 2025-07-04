@@ -900,15 +900,13 @@ async function handleAddNewTopic(button) {
 }
 
 /**
- * FIX: This function now correctly uses the `fullPrompt` from the category's
- * hierarchy data stored in Firebase, ensuring that the AI gets the best
- * possible instructions for generating new, relevant topics.
- * UPDATE: Added a check against MAX_TOPICS to prevent unnecessary API calls
- * and to request the correct number of topics to avoid exceeding the limit.
- * UPDATE 2: This function now generates a unique ID on the client-side for each new item,
- * ignoring the potentially duplicate ID from the AI. It now only checks for title uniqueness.
+ * FIX: This function is now more robust. It includes a retry mechanism.
+ * If the AI fails to return unique topics on the first attempt, it will try
+ * one more time with a more insistent prompt, increasing the likelihood of success.
+ * It also performs a case-insensitive check for duplicate titles.
  */
-async function handleGenerateMoreClick(button) {
+async function handleGenerateMoreClick(button, attempt = 1) {
+    const MAX_ATTEMPTS = 2; // Set a limit for retries
     const { containerId, categoryId } = button.dataset;
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
@@ -922,7 +920,7 @@ async function handleGenerateMoreClick(button) {
     }
 
     button.disabled = true;
-    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
+    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating (Attempt ${attempt})...</span>`;
 
     const card = container.closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
@@ -944,33 +942,50 @@ async function handleGenerateMoreClick(button) {
         ---
         Core Instruction: "${basePrompt}"
         ---
-        IMPORTANT: The new topics MUST be different from the topics in this existing list:
+        This is attempt number ${attempt}. Be extra creative and ensure the new topics are genuinely different from the following list of ${existingTitles.length} existing topics. Do NOT repeat any topics from this list.
+        Existing Topics:
         - ${existingTitles.join('\n- ')}
         
-        For each new topic, provide a unique "id", a "title", and a short one-sentence "description".
+        For each new topic, provide a "title" and a short one-sentence "description".
         ${jsonInstruction}
     `;
 
     try {
-        const jsonText = await callGeminiAPI(prompt, true, "Generate More Topics");
+        const jsonText = await callGeminiAPI(prompt, true, `Generate More Topics (Attempt ${attempt})`);
         if (!jsonText) throw new Error("AI did not return any new items.");
         
         const newItems = parseJsonWithCorrections(jsonText);
-        const newItemIds = new Set();
+        const addedItems = [];
 
         newItems.forEach(newItem => {
             // Only check for title duplicates, as the AI might reuse IDs.
-            if (!allThemeData[categoryId].some(existing => existing.title === newItem.title)) {
+            if (newItem.title && !allThemeData[categoryId].some(existing => existing.title.toLowerCase() === newItem.title.toLowerCase())) {
                 // Generate a new, unique ID on the client side to prevent collisions.
                 newItem.id = `${sanitizeTitle(newItem.title).replace(/\s+/g, '-')}-${Date.now()}`;
-                allThemeData[categoryId].push(newItem);
-                newItemIds.add(newItem.id);
+                addedItems.push(newItem);
             }
         });
 
-        allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
-        populateCardGridSelector(container, categoryId, newItemIds);
-        document.getElementById(`details-${categoryId}`).innerHTML = '';
+        // If no new items were added and we haven't reached max attempts, retry.
+        if (addedItems.length === 0 && attempt < MAX_ATTEMPTS) {
+            console.warn(`Attempt ${attempt} yielded 0 new topics. Retrying...`);
+            await handleGenerateMoreClick(button, attempt + 1);
+            return; // Stop execution of the current attempt
+        }
+
+        if (addedItems.length > 0) {
+            const newItemIds = new Set();
+            addedItems.forEach(item => {
+                 allThemeData[categoryId].push(item);
+                 newItemIds.add(item.id);
+            });
+            allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
+            populateCardGridSelector(container, categoryId, newItemIds);
+            document.getElementById(`details-${categoryId}`).innerHTML = '';
+        } else {
+             // This runs if all attempts fail
+             throw new Error("After multiple attempts, the AI failed to generate unique topics.");
+        }
         
     } catch (error) {
         console.error(`Error generating more items for ${categoryId}:`, error);
