@@ -514,6 +514,7 @@
         let unsubscribeFromDrawings, unsubscribeFromState, unsubscribeFromChat;
         let confirmCallback = null;
         const userProfiles = new Map();
+        const imageCache = new Map(); // <-- FIX: Added image cache
         const state = {
             action: 'none', startPos: null, currentTool: 'pen', currentColor: '#FFFFFF', currentBrushSize: 5, currentEpoch: 0,
             allDrawings: new Map(), sortedDrawings: [], selectedObjectId: null, dragOffset: { x: 0, y: 0 },
@@ -622,7 +623,95 @@
         function drawGrid(rect) { if (!state.isGridVisible) return; ctx.save(); ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'; ctx.lineWidth = 1 / (window.devicePixelRatio || 1); for (let x = 0; x < rect.width; x += state.gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke(); } for (let y = 0; y < rect.height; y += state.gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke(); } ctx.restore(); }
         function redrawCanvas() { const dpr = window.devicePixelRatio || 1; const rect = main_content.getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; [canvas, overlayCanvas].forEach(c => { const targetWidth = rect.width * dpr; const targetHeight = rect.height * dpr; if (c.width !== targetWidth || c.height !== targetHeight) { c.width = targetWidth; c.height = targetHeight; c.style.width = `${rect.width}px`; c.style.height = `${rect.height}px`; c.getContext('2d').scale(dpr, dpr); } }); ctx.clearRect(0, 0, rect.width, rect.height); drawGrid(rect); state.sortedDrawings = Array.from(state.allDrawings.values()).sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)); state.sortedDrawings.forEach(data => drawObject(ctx, data)); drawOverlay(); }
         function drawOverlay() { const rect = main_content.getBoundingClientRect(); overlayCtx.clearRect(0, 0, rect.width, rect.height); if (state.tempDrawing) { drawObject(overlayCtx, state.tempDrawing); } const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { drawSelectionBox(selectedObject); deleteBtn.disabled = false; frontBtn.disabled = false; duplicateBtn.disabled = false; } else { deleteBtn.disabled = true; frontBtn.disabled = true; duplicateBtn.disabled = true; } }
-        function drawObject(context, data) { if (!data) return; context.save(); const center = getObjectCenter(data); context.translate(center.x, center.y); context.rotate(data.rotation || 0); context.strokeStyle = data.color; context.fillStyle = data.color; context.lineWidth = data.lineWidth || 2; context.lineCap = 'round'; context.lineJoin = 'round'; switch(data.type) { case 'path': if (!data.points || data.points.length < 1) break; const pathCenter = getObjectCenter({type:'path', points: data.points}); context.translate(-pathCenter.x, -pathCenter.y); context.beginPath(); if (data.points.length < 3) { context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y); } else { context.moveTo(data.points[0].x, data.points[0].y); for (var i = 1; i < data.points.length - 2; i++) { var c = (data.points[i].x + data.points[i + 1].x) / 2; var d = (data.points[i].y + data.points[i + 1].y) / 2; context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d); } context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y); } context.stroke(); break; case 'line': if (!data.points || data.points.length < 2) break; const halfWidth = (data.points[1].x - data.points[0].x) / 2; const halfHeight = (data.points[1].y - data.points[0].y) / 2; context.beginPath(); context.moveTo(-halfWidth, -halfHeight); context.lineTo(halfWidth, halfHeight); context.stroke(); break; case 'rectangle': context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height); break; case 'circle': context.beginPath(); context.arc(0, 0, data.radius, 0, 2 * Math.PI); context.stroke(); break; case 'polygon': case 'triangle': if (!data.points || data.points.length < 2) break; const polyCenter = getObjectCenter({ type: 'polygon', points: data.points }); context.translate(-polyCenter.x, -polyCenter.y); context.beginPath(); context.moveTo(data.points[0].x, data.points[0].y); for (let i = 1; i < data.points.length; i++) { context.lineTo(data.points[i].x, data.points[i].y); } context.closePath(); context.stroke(); break; case 'text': context.font = `${data.fontSize}px Inter`; context.textBaseline = 'middle'; context.textAlign = 'center'; context.fillText(data.text, 0, 0); break; case 'image': const img = new Image(); img.src = data.url; if (img.complete) { context.drawImage(img, -data.width / 2, -data.height / 2, data.width, data.height); } else { img.onload = redrawCanvas; } break; } context.restore(); }
+        
+        function drawObject(context, data) {
+            if (!data) return;
+            context.save();
+            const center = getObjectCenter(data);
+            context.translate(center.x, center.y);
+            context.rotate(data.rotation || 0);
+            context.strokeStyle = data.color;
+            context.fillStyle = data.color;
+            context.lineWidth = data.lineWidth || 2;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+
+            switch (data.type) {
+                case 'path':
+                    if (!data.points || data.points.length < 1) break;
+                    const pathCenter = getObjectCenter({ type: 'path', points: data.points });
+                    context.translate(-pathCenter.x, -pathCenter.y);
+                    context.beginPath();
+                    if (data.points.length < 3) {
+                        context.moveTo(data.points[0].x, data.points[0].y);
+                        for (let i = 1; i < data.points.length; i++) context.lineTo(data.points[i].x, data.points[i].y);
+                    } else {
+                        context.moveTo(data.points[0].x, data.points[0].y);
+                        for (var i = 1; i < data.points.length - 2; i++) {
+                            var c = (data.points[i].x + data.points[i + 1].x) / 2;
+                            var d = (data.points[i].y + data.points[i + 1].y) / 2;
+                            context.quadraticCurveTo(data.points[i].x, data.points[i].y, c, d);
+                        }
+                        context.quadraticCurveTo(data.points[i].x, data.points[i].y, data.points[i + 1].x, data.points[i + 1].y);
+                    }
+                    context.stroke();
+                    break;
+                case 'line':
+                    if (!data.points || data.points.length < 2) break;
+                    const halfWidth = (data.points[1].x - data.points[0].x) / 2;
+                    const halfHeight = (data.points[1].y - data.points[0].y) / 2;
+                    context.beginPath();
+                    context.moveTo(-halfWidth, -halfHeight);
+                    context.lineTo(halfWidth, halfHeight);
+                    context.stroke();
+                    break;
+                case 'rectangle':
+                    context.strokeRect(-data.width / 2, -data.height / 2, data.width, data.height);
+                    break;
+                case 'circle':
+                    context.beginPath();
+                    context.arc(0, 0, data.radius, 0, 2 * Math.PI);
+                    context.stroke();
+                    break;
+                case 'polygon':
+                case 'triangle':
+                    if (!data.points || data.points.length < 2) break;
+                    const polyCenter = getObjectCenter({ type: 'polygon', points: data.points });
+                    context.translate(-polyCenter.x, -polyCenter.y);
+                    context.beginPath();
+                    context.moveTo(data.points[0].x, data.points[0].y);
+                    for (let i = 1; i < data.points.length; i++) {
+                        context.lineTo(data.points[i].x, data.points[i].y);
+                    }
+                    context.closePath();
+                    context.stroke();
+                    break;
+                case 'text':
+                    context.font = `${data.fontSize}px Inter`;
+                    context.textBaseline = 'middle';
+                    context.textAlign = 'center';
+                    context.fillText(data.text, 0, 0);
+                    break;
+                case 'image':
+                    // FIX: Use image cache to prevent reloading and disappearing images
+                    if (imageCache.has(data.url)) {
+                        const cachedImg = imageCache.get(data.url);
+                        if (cachedImg.complete) {
+                            context.drawImage(cachedImg, -data.width / 2, -data.height / 2, data.width, data.height);
+                        }
+                    } else {
+                        const newImg = new Image();
+                        newImg.src = data.url;
+                        imageCache.set(data.url, newImg); // Add to cache immediately
+                        newImg.onload = () => {
+                            redrawCanvas(); // Redraw once the image is loaded
+                        };
+                    }
+                    break;
+            }
+            context.restore();
+        }
+
         function drawSelectionBox(obj) { const handles = getTransformHandles(obj); if (!handles) return; overlayCtx.save(); overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 1; overlayCtx.setLineDash([4, 4]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tl.x, handles.tl.y); overlayCtx.lineTo(handles.tr.x, handles.tr.y); overlayCtx.lineTo(handles.br.x, handles.br.y); overlayCtx.lineTo(handles.bl.x, handles.bl.y); overlayCtx.closePath(); overlayCtx.stroke(); overlayCtx.setLineDash([]); overlayCtx.beginPath(); overlayCtx.moveTo(handles.tm.x, handles.tm.y); overlayCtx.lineTo(handles.rot.x, handles.rot.y); overlayCtx.stroke(); overlayCtx.fillStyle = '#4f46e5'; overlayCtx.beginPath(); overlayCtx.arc(handles.rot.x, handles.rot.y, 6, 0, 2*Math.PI); overlayCtx.fill(); Object.values(handles).forEach(handle => { if(handle.type === 'resize'){ overlayCtx.fillStyle = 'white'; overlayCtx.strokeStyle = '#4f46e5'; overlayCtx.lineWidth = 2; overlayCtx.fillRect(handle.x - 5, handle.y - 5, 10, 10); overlayCtx.strokeRect(handle.x - 5, handle.y - 5, 10, 10); } }); overlayCtx.restore(); }
         function getObjectBounds(obj) { let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; if(!obj) return null; switch (obj.type) { case 'rectangle': return { x: obj.x, y: obj.y, width: obj.width, height: obj.height }; case 'circle': return { x: obj.x - obj.radius, y: obj.y - obj.radius, width: obj.radius * 2, height: obj.radius * 2 }; case 'text': ctx.font = `${obj.fontSize}px Inter`; const metrics = ctx.measureText(obj.text); const height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent; return { x: obj.x - metrics.width / 2, y: obj.y - height / 2, width: metrics.width, height: height || obj.fontSize }; case 'image': return { x: obj.x - obj.width / 2, y: obj.y - obj.height / 2, width: obj.width, height: obj.height }; case 'path': case 'line': case 'triangle': case 'polygon': if (!obj.points || obj.points.length === 0) return {x:0,y:0,width:0,height:0}; obj.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }); return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }; default: return null; } }
         function getObjectCenter(obj) { const bounds = getObjectBounds(obj); if (!bounds) return {x: 0, y: 0}; return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }; }
