@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v17.43</title>
+    <title>AI Yoga Class & Theme Generator v18.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,6 +53,16 @@
             margin-top: 1.5em;
             margin-bottom: 0.5em;
         }
+        .prose h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-top: 1.75em;
+            margin-bottom: 0.75em;
+            padding-bottom: 0.25em;
+            border-bottom: 1px solid var(--color-card-border);
+        }
+
 
         .card {
             background-color: var(--color-card-bg);
@@ -260,13 +270,12 @@
             color: var(--color-text-muted);
             cursor: pointer;
         }
-        /* UPDATED: Tooltip position changed to be below the icon */
         .tooltip {
             position: absolute;
-            top: 100%; /* Changed from bottom */
+            top: 100%;
             left: 50%;
             transform: translateX(-50%);
-            margin-top: 8px; /* Changed from margin-bottom */
+            margin-top: 8px;
             background-color: var(--color-accent);
             color: var(--color-button-text);
             padding: 8px 12px;
@@ -381,7 +390,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v17.43</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v18.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -440,7 +449,37 @@
     <button id="scroll-to-top-button" class="floating-action-button hidden" title="Scroll to top">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
-    <div id="settings-panel" class="hidden"><h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3><div class="space-y-4"><div><label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label><select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label><select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select></div><div><label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label><select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select></div></div></div>
+    <div id="settings-panel" class="hidden">
+        <h3 class="text-lg font-bold themed-text-accent mb-4">Display Settings</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="font-family-select" class="block text-sm font-medium themed-text-muted mb-1">Font Family</label>
+                <select id="font-family-select" class="w-full p-2 themed-input border rounded-lg"></select>
+            </div>
+            <div>
+                <label for="font-size-select" class="block text-sm font-medium themed-text-muted mb-1">Font Size (px)</label>
+                <select id="font-size-select" class="w-full p-2 themed-input border rounded-lg"></select>
+            </div>
+            <div>
+                <label for="line-height-select" class="block text-sm font-medium themed-text-muted mb-1">Line Spacing</label>
+                <select id="line-height-select" class="w-full p-2 themed-input border rounded-lg"></select>
+            </div>
+            <div>
+                <label for="temperature-slider" class="block text-sm font-medium themed-text-muted mb-1">
+                    AI Creativity
+                    <span class="tooltip-container inline-block ml-1">
+                        <svg class="tooltip-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div class="tooltip" style="width: 220px; text-align: left; bottom: 100%; top: auto; margin-bottom: 8px;">Lower values are more focused/deterministic. Higher values are more random/creative.</div>
+                    </span>
+                </label>
+                <div class="flex items-center gap-2">
+                    <input id="temperature-slider" type="range" min="0.1" max="1.0" step="0.1" class="w-full">
+                    <span id="temperature-value" class="text-sm themed-text-muted font-mono w-8 text-center">0.7</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <footer class="mt-16 py-8 text-center border-t" style="border-color: var(--color-card-border);">
         <div class="max-w-4xl mx-auto px-4">
@@ -455,6 +494,7 @@
     <script type="module">
         // --- Global State & Configuration ---
         let apiKey = "";
+        let temperature = 0.7; // Default creativity/temperature value
         const root = document.documentElement;
         const allThemeData = {};
         const fullPrompts = {}; 
@@ -495,10 +535,18 @@
                 settingsPanel.classList.toggle('hidden');
             });
 
-            // Typography Selects
+            // Typography & Creativity Selects
             document.getElementById('font-family-select').addEventListener('change', (e) => root.style.setProperty('--font-family', e.target.value));
             document.getElementById('font-size-select').addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
             document.getElementById('line-height-select').addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
+            const tempSlider = document.getElementById('temperature-slider');
+            const tempValue = document.getElementById('temperature-value');
+            tempSlider.value = temperature;
+            tempValue.textContent = temperature.toFixed(1);
+            tempSlider.addEventListener('input', (e) => {
+                temperature = parseFloat(e.target.value);
+                tempValue.textContent = temperature.toFixed(1);
+            });
             
             // Modal Closing Listeners
             ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
@@ -901,10 +949,21 @@
         }
 
         async function callGeminiAPI(prompt, isJson = false) {
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            const generationConfig = {
+                temperature: temperature, // Use the global variable for creativity
+                maxOutputTokens: 8192
+            };
+
             if (isJson) {
-                payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
+                generationConfig.responseMimeType = "application/json";
             }
+
+            payload.generationConfig = generationConfig;
+            
             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
@@ -1126,7 +1185,6 @@
             });
         }
         
-        // UPDATED: Added Print button
         function addModalActionButtons(container, themeId, themeType) {
              container.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
@@ -1282,10 +1340,10 @@
         }
         
         function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-             const optionsText = options ? `With a special focus on these elements: ${options}.` : '';
-             
-             if (originalText) {
-                return `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to refine it. Your task is to rewrite the entire yoga plan to incorporate the user's request.
+            const optionsText = options ? `Incorporate these elements: ${options}.` : '';
+
+            if (originalText) {
+                return `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to refine it. Your task is to rewrite the entire yoga plan to creatively incorporate the user's request.
 
 **ORIGINAL YOGA PLAN:**
 ---
@@ -1296,35 +1354,29 @@ ${originalText}
 "${task}"
 
 **Instructions for rewriting:**
-1.  **Structure:** Create clear, descriptive section headers using '###' markdown syntax.
-2.  **Integrate:** Seamlessly integrate the user's request into the plan.
+1.  **Be Creative:** Don't just add the request; reimagine the plan to seamlessly and artfully integrate the new ideas.
+2.  **Structure:** Maintain clear, descriptive section headers using '###' markdown syntax.
 3.  **Completeness:** The entire rewritten guide must be a complete, stand-alone yoga plan.
 
 Return only the new, complete, and rewritten markdown guide.`;
             }
 
             let contextText = `for the theme: "${task}"`;
-             if (context.cardTitle) {
+            if (context.cardTitle) {
                 contextText = `for the following topic.
 - **Category:** "${context.cardTitle}"
 - **Topic Description:** "${context.cardDescription}"
 - **Specific Theme:** "${task}"`;
             }
 
-            return `You are an expert yoga instructor AI. Generate a creative and inspiring yoga class plan ${contextText}. ${optionsText}
+            return `You are a highly creative and expert yoga instructor AI. Your task is to generate a unique, non-traditional, and inspiring yoga class plan ${contextText}. ${optionsText}
 
-Your task is to structure this plan into logical and helpful sections. For each section, create a clear and descriptive header using '###' markdown syntax (e.g., ### Theme Introduction). The content within each section should be detailed and evocative.
+**Instructions:**
+1.  **Avoid Generic Sequences:** Think outside the box and create a plan that is truly distinct and memorable. Avoid the standard "Warm-up, Main Sequence, Cool-down" if a more creative structure fits the theme.
+2.  **Vary the Structure:** Do not use the same sequence of sections for every plan. Consider alternative formats. For example, you could structure the plan around a central story, a specific anatomical journey, or a progressive flow towards a single peak concept rather than just a peak pose.
+3.  **Incorporate Diverse Elements:** Seamlessly weave in elements of meditation, pranayama, mudra, and philosophy in unexpected ways throughout the class, not just in the opening and closing sections.
 
-When generating the plan, ensure it includes the following sections:
--   **Theme Introduction**: Briefly explain the theme and its intention.
--   **Opening Meditation & Breathwork**: A short grounding meditation and a relevant pranayama technique.
--   **Warm-up Sequence**: Gentle movements to prepare the body.
--   **Main Sequence**: A series of poses (asanas) that embody the theme.
--   **Peak Pose(s)**: One or two key poses that are the energetic high point of the class.
--   **Cool-down & Stretches**: Gentle poses to wind down.
--   **Savasana & Closing**: Guided relaxation for integration and a closing thought or mantra.
-
-Return only the complete markdown plan.`;
+Generate a complete, flowing markdown plan. Use '###' markdown for clear section headers. Return only the complete markdown plan.`;
         }
 
         async function handleExploreInDepth(themeId, themeType) {
@@ -1345,26 +1397,23 @@ Return only the complete markdown plan.`;
             modal.classList.remove('hidden');
             
             const isWeeklyPlan = themeType === 'hipReplacement';
-            const prompt = isWeeklyPlan
-              ? `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork"). For each routine, create a "title" and "content" with detailed, safety-focused instructions in markdown format. Structure the entire response as a single markdown document where each routine's title is a '###' header.`
-              : getEnhancedPrompt(item.title, '', '', { cardTitle: item.title, cardDescription: item.description });
+            let prompt;
+
+            if (isWeeklyPlan) {
+                prompt = `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork"). For each routine, create a "title" and "content" with detailed, safety-focused instructions in markdown format. Structure the entire response as a single markdown document where each routine's title is a '###' header.`;
+            } else {
+                prompt = `You are a master yoga teacher AI. A student wants to explore the theme of "${item.title}" (${item.description}) in depth.
+
+Your task is to generate **two completely different, detailed class plans** for this single theme. Each plan must have a unique approach, focus, and sequence. For example, one could be a dynamic, power-based flow, and the other could be a slow, meditative, and restorative practice.
+
+Label each plan clearly with a unique title using a '##' header (e.g., "## Approach 1: Energetic Flow"). Use '###' for the sections within each plan. Ensure the asanas, transitions, and language used are distinct between the two versions. Return only the complete markdown for both plans.`;
+            }
 
             try {
-                let resultText = await callGeminiAPI(prompt, isWeeklyPlan && prompt.includes('JSON'));
-                
-                if (isWeeklyPlan && !prompt.includes('JSON')) {
-                     // The prompt asks for markdown, so we can render directly
-                } else if(isWeeklyPlan) {
-                    // If we accidentally asked for JSON, we need to convert it to markdown
-                    const routines = parseJsonWithCorrections(resultText);
-                    resultText = routines.map(r => `### ${r.title}\n\n${r.content}`).join('\n\n');
-                }
-                
+                let resultText = await callGeminiAPI(prompt);
                 originalGeneratedText.set(themeId + '-full', resultText); 
-                
                 renderAccordionFromMarkdown(resultText, contentEl);
                 addModalActionButtons(footerEl, themeId, themeType);
-
             } catch (error) {
                 handleApiError(error, contentEl, 'in-depth content');
             }
@@ -1471,7 +1520,6 @@ Return only the complete markdown plan.`;
             }, 3000);
         }
 
-        // NEW: Print function
         function handlePrint() {
             const printContent = document.getElementById('inDepthModalContent').cloneNode(true);
             const printFrame = document.createElement('iframe');
@@ -1531,7 +1579,6 @@ Return only the complete markdown plan.`;
             `);
             doc.close();
 
-            // Make all accordion content visible for printing
             const contentSections = doc.querySelectorAll('.accordion-content');
             contentSections.forEach(section => {
                 section.classList.add('open');
