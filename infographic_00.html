@@ -59,9 +59,9 @@
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" tick={{ fill: theme.textColor, fontSize: 12 }} />
                         <YAxis tick={{ fill: theme.textColor, fontSize: 12 }}/>
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: theme.cardBgColor,
+                        <Tooltip 
+                            contentStyle={{ 
+                                backgroundColor: theme.cardBgColor, 
                                 border: `1px solid ${theme.textColor}`,
                                 borderRadius: '0.5rem'
                             }}
@@ -440,8 +440,8 @@
                                         <div> <label htmlFor="layout" className="block text-sm font-medium text-gray-600 mb-1">Layout</label> <select id="layout" value={layout} onChange={e => setLayout(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg"> <option value="grid">Grid</option> <option value="list">Vertical List</option> <option value="freestyle">Freestyle (Draggable)</option> </select> </div>
                                         
                                         {/* Background Style */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-600 mb-2">Background</label>
+                                        <div> 
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">Background</label> 
                                             <div className="grid grid-cols-4 gap-1 bg-gray-200 rounded-lg p-1">
                                                 <button onClick={() => handleThemeChange('backgroundType', 'solid')} className={`py-1 text-xs font-bold rounded-md transition-colors ${theme.backgroundType === 'solid' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Solid</button>
                                                 <button onClick={() => handleThemeChange('backgroundType', 'gradient')} className={`py-1 text-xs font-bold rounded-md transition-colors ${theme.backgroundType === 'gradient' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Gradient</button>
@@ -470,11 +470,11 @@
                                         {/* Colors & Styling */}
                                          <div className="space-y-3 pt-3 border-t">
                                             <h4 className="text-md font-semibold text-gray-700">Default Colors & Styling</h4>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Main Title <input type="color" value={theme.mainTitleColor} onChange={e => handleThemeChange('mainTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card Title <input type="color" value={theme.cardTitleColor} onChange={e => handleThemeChange('cardTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Body Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card BG <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                            <div className="grid grid-cols-2 gap-4"> 
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Main Title <input type="color" value={theme.mainTitleColor} onChange={e => handleThemeChange('mainTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card Title <input type="color" value={theme.cardTitleColor} onChange={e => handleThemeChange('cardTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Body Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card BG <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
                                             </div>
                                             <label className="block text-sm font-medium text-gray-600">Item Gap: {theme.gap}px <input type="range" min="8" max="64" value={theme.gap} onChange={e => handleThemeChange('gap', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
                                             <label className="block text-sm font-medium text-gray-600">Card Padding: {theme.cardPadding}px <input type="range" min="8" max="48" value={theme.cardPadding} onChange={e => handleThemeChange('cardPadding', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
@@ -514,32 +514,35 @@
 
                                     return (
                                         <Draggable key={task.id} onStop={(e, data) => handleDragStop(e, data, task.id)} position={{x: task.x, y: task.y}}>
-                                            <div className="absolute w-80 cursor-grab" style={{
-                                                    backgroundColor: cardBgColor,
-                                                    padding: `${theme.cardPadding}px`,
-                                                    borderRadius: `${theme.cardBorderRadius}px`,
-                                                    fontFamily: `'${theme.bodyFontFamily}', sans-serif`,
-                                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                                    transform: `rotate(${task.rotation || 0}deg)`
-                                                }}>
-                                                {task.type === 'point' ? (
-                                                    <div className="flex flex-col items-center text-center">
-                                                        <div className="w-24 h-24 mb-5 shadow-lg rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                                            {task.isIconLoading && <Spinner />}
-                                                            {task.iconUrl && <img src={task.iconUrl} alt={task.title} className="w-full h-full object-cover" />}
-                                                            {!task.isIconLoading && !task.iconUrl && <div className="text-gray-400 text-xs text-center p-1">Icon failed</div>}
+                                            <div className="absolute w-80 cursor-grab">
+                                                <div style={{ 
+                                                        backgroundColor: cardBgColor,
+                                                        padding: `${theme.cardPadding}px`,
+                                                        borderRadius: `${theme.cardBorderRadius}px`,
+                                                        fontFamily: `'${theme.bodyFontFamily}', sans-serif`,
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                                        transform: `rotate(${task.rotation || 0}deg)`,
+                                                        transition: 'transform 0.2s'
+                                                    }}>
+                                                    {task.type === 'point' ? (
+                                                        <div className="flex flex-col items-center text-center">
+                                                            <div className="w-24 h-24 mb-5 shadow-lg rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                                                                {task.isIconLoading && <Spinner />}
+                                                                {task.iconUrl && <img src={task.iconUrl} alt={task.title} className="w-full h-full object-cover" />}
+                                                                {!task.isIconLoading && !task.iconUrl && <div className="text-gray-400 text-xs text-center p-1">Icon failed</div>}
+                                                            </div>
+                                                            <div className="flex-grow">
+                                                                <h3 className="font-bold mb-2 break-words" style={{ color: cardTitleColor, fontSize: `${theme.itemTitleFontSize}px` }}>{task.title}</h3>
+                                                                <p className="break-words" style={{ color: textColor, fontSize: `${theme.itemBodyFontSize}px` }}>{task.description}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-grow">
-                                                            <h3 className="font-bold mb-2 break-words" style={{ color: cardTitleColor, fontSize: `${theme.itemTitleFontSize}px` }}>{task.title}</h3>
-                                                            <p className="break-words" style={{ color: textColor, fontSize: `${theme.itemBodyFontSize}px` }}>{task.description}</p>
+                                                    ) : (
+                                                        <div className="w-full">
+                                                            <h3 className="font-bold text-center mb-4 break-words" style={{ color: cardTitleColor, fontSize: `${theme.itemTitleFontSize}px` }}>{task.title}</h3>
+                                                            <InfographicBarChart data={task.data} theme={chartTheme} />
                                                         </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full">
-                                                        <h3 className="font-bold text-center mb-4 break-words" style={{ color: cardTitleColor, fontSize: `${theme.itemTitleFontSize}px` }}>{task.title}</h3>
-                                                        <InfographicBarChart data={task.data} theme={chartTheme} />
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
                                         </Draggable>
                                     )
@@ -555,10 +558,10 @@
                                             const chartTheme = { ...theme, cardBgColor, titleColor: cardTitleColor, textColor };
                                             
                                             return (
-                                            <div key={task.id}
+                                            <div key={task.id} 
                                                 className={`${layout === 'list' ? `w-full max-w-2xl ${tasks.length > 1 ? 'mb-4' : ''}` : ''}`}
-                                                style={{
-                                                    backgroundColor: cardBgColor,
+                                                style={{ 
+                                                    backgroundColor: cardBgColor, 
                                                     padding: `${theme.cardPadding}px`,
                                                     borderRadius: `${theme.cardBorderRadius}px`,
                                                     fontFamily: `'${theme.bodyFontFamily}', sans-serif`,
