@@ -15,8 +15,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-
     <script src="https://unpkg.com/react-draggable@4.4.6/build/web/react-draggable.min.js"></script>
+    
+    {/* Added marked.js library */}
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +30,7 @@
 
     <script type="text/babel">
         // --- App Version ---
-        const version = "1.1.2";
+        const version = "1.2.0"; // Updated version for marked.js integration
 
         // --- SVG Icons ---
         const FileDownIcon = ({ className }) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>);
@@ -132,22 +134,87 @@
             
             // --- API Call Functions ---
             const generateTextContent = useCallback(async () => {
-                const systemPrompt = `You are an expert infographic designer. Based on the user's prompt, generate a main title and ${pointCount} distinct points. For each point, provide a short, engaging title and a one-sentence description.`;
-                const payload = { contents: [{ role: "user", parts: [{ text: `Prompt: "${prompt}"\n\n${systemPrompt}` }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "mainTitle": { "type": "STRING" }, "points": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "title": { "type": "STRING" }, "description": { "type": "STRING" } } } } } } } };
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+                const systemPrompt = `You are an expert infographic designer. Based on the user's prompt, generate a main title and ${pointCount} distinct points. For each point, provide a short, engaging title and a one-sentence description. Respond with only a valid JSON object inside a JSON code block that conforms to the provided schema.`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: `Prompt: "${prompt}"\n\n${systemPrompt}` }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "mainTitle": { "type": "STRING" },
+                                "points": {
+                                    "type": "ARRAY",
+                                    "items": {
+                                        "type": "OBJECT",
+                                        "properties": {
+                                            "title": { "type": "STRING" },
+                                            "description": { "type": "STRING" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`Gemini API Error: ${response.status} ${response.statusText} - ${errorBody}`);
+                }
+                
                 const result = await response.json();
-                if (!result.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error("No content generated from Gemini.");
-                const rawText = result.candidates[0].content.parts[0].text;
-                const jsonString = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
-                return JSON.parse(jsonString);
+                
+                if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    throw new Error("No content generated from Gemini.");
+                }
+                
+                let rawText = result.candidates[0].content.parts[0].text;
+                let jsonString = null;
+
+                // Use marked.js to robustly find the JSON code block.
+                const renderer = new marked.Renderer();
+                renderer.code = (code, language) => {
+                    // The API is instructed to return JSON, so we assume the first code block is what we want.
+                    if (!jsonString) {
+                        jsonString = code;
+                    }
+                    // Return nothing as we don't need the rendered HTML output.
+                    return '';
+                };
+
+                // This will parse the markdown and run our custom renderer.
+                marked.parse(rawText, { renderer });
+                
+                // If no code block was found by marked, the raw text itself might be the JSON.
+                // This is a fallback for cases where the LLM doesn't use a markdown block.
+                if (!jsonString) {
+                    jsonString = rawText;
+                }
+
+                try {
+                    // The jsonString should now be a clean JSON string.
+                    return JSON.parse(jsonString);
+                } catch (e) {
+                    console.error("Failed to parse JSON response from Gemini. Raw text:", rawText, "Extracted string:", jsonString);
+                    throw new Error(`The AI returned an invalid data format. Please try generating again. (Details: ${e.message})`);
+                }
             }, [prompt, pointCount, apiKey]);
 
             const generateIconForPoint = useCallback(async (pointTitle) => {
                 const iconPrompt = `A minimalist, flat design icon representing '${pointTitle}', simple, vector style, on a clean white background.`;
                 const payload = { instances: [{ prompt: iconPrompt }], parameters: { "sampleCount": 1 } };
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`Imagen API Error: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`Imagen API Error: ${response.status} ${response.statusText} - ${errorBody}`);
+                }
                 const result = await response.json();
                 if (!result.predictions?.[0]?.bytesBase64Encoded) throw new Error("No image generated from Imagen.");
                 return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
@@ -165,7 +232,7 @@
             // --- Main Handler Functions ---
             const handleGenerate = async () => {
                 if (!prompt && contentMode === 'ai') { setError("Please enter a topic to generate content."); return; }
-                if (!apiKey) { setError("Please set your API key first."); return; }
+                if (!apiKey) { setShowApiKeyModal(true); setError("Please set your API key first."); return; }
                 setIsGenerating(true);
                 setError(null);
 
@@ -191,18 +258,15 @@
                         }));
                     }
 
-                    // Exit if there are no points to generate icons for
                     if (tasksToProcess.length === 0) {
                         setIsGenerating(false);
                         return;
                     }
 
-                    // Use Promise.allSettled to ensure all icon requests complete, even if some fail
                     const iconResults = await Promise.allSettled(
                         tasksToProcess.map(task => generateIconForPoint(task.title))
                     );
 
-                    // Update tasks state in a single batch to avoid race conditions
                     setTasks(prevTasks => {
                         const urlMap = new Map();
                         tasksToProcess.forEach((task, index) => {
@@ -211,11 +275,10 @@
                                 urlMap.set(task.id, result.value);
                             } else {
                                 console.error(`Failed to generate icon for "${task.title}":`, result.reason);
-                                urlMap.set(task.id, null); // Indicate failure
+                                urlMap.set(task.id, null);
                             }
                         });
 
-                        // Map over previous tasks and apply updates from the urlMap
                         return prevTasks.map(task => {
                             if (urlMap.has(task.id)) {
                                 return {
@@ -224,7 +287,7 @@
                                     isIconLoading: false
                                 };
                             }
-                            return task; // Return task unmodified if it wasn't processed
+                            return task;
                         });
                     });
 
@@ -339,7 +402,7 @@
                 }
             };
             if (showApiKeyModal) {
-                return ( <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4"> <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md"> <h2 className="text-2xl font-bold mb-4">Enter Gemini API Key</h2> <p className="text-gray-600 mb-6">To generate content, please provide your Google AI Studio API key. It will be saved in your browser's local storage.</p> <input type="password" value={tempApiKey} onChange={e => setTempApiKey(e.target.value)} placeholder="Enter your API key" className="w-full p-2 border border-gray-300 rounded-lg mb-4"/> <button onClick={handleApiKeySubmit} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Save and Continue</button> </div> </div> );
+                return ( <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4"> <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md"> <h2 className="text-2xl font-bold mb-4">Enter Gemini API Key</h2> <p className="text-gray-600 mb-6">To generate content, please provide your Google AI Studio API key. It will be saved in your browser's local storage.</p> {error && <p className="text-red-500 text-sm mb-4 bg-red-100 p-3 rounded-lg">{error}</p>} <input type="password" value={tempApiKey} onChange={e => setTempApiKey(e.target.value)} placeholder="Enter your API key" className="w-full p-2 border border-gray-300 rounded-lg mb-4"/> <button onClick={handleApiKeySubmit} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">Save and Continue</button> </div> </div> );
             }
 
             return (
@@ -421,7 +484,7 @@
                                                 <button onClick={handleGenerate} disabled={isGenerating || tasks.filter(t=>t.type==='point').length === 0} className="w-full flex items-center justify-center bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 shadow-md disabled:bg-purple-400"> <WandIcon className="mr-2 w-5 h-5" /> {isGenerating ? 'Generating Icons...' : 'Generate Icons for Points'} </button>
                                             </div>
                                         )}
-                                        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                                        {error && <p className="text-red-500 text-sm mt-2 bg-red-100 p-3 rounded-lg">{error}</p>}
                                     </div>
                                 )}
                             </div>
