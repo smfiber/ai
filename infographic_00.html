@@ -5,25 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced AI Infographic Creator</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     
-    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Exporting & Charting Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
 
-    <!-- Draggable Library for Freestyle Layout -->
     <script src="https://unpkg.com/react-draggable@4.4.6/build/web/react-draggable.min.js"></script>
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -65,9 +59,9 @@
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" tick={{ fill: theme.textColor, fontSize: 12 }} />
                         <YAxis tick={{ fill: theme.textColor, fontSize: 12 }}/>
-                        <Tooltip 
-                            contentStyle={{ 
-                                backgroundColor: theme.cardBgColor, 
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: theme.cardBgColor,
                                 border: `1px solid ${theme.textColor}`,
                                 borderRadius: '0.5rem'
                             }}
@@ -174,37 +168,71 @@
                 if (!apiKey) { setError("Please set your API key first."); return; }
                 setIsGenerating(true);
                 setError(null);
+
                 try {
                     let tasksToProcess = [];
                     if (contentMode === 'ai') {
                         const { mainTitle, points } = await generateTextContent();
                         setTitle(mainTitle);
-                        tasksToProcess = points.map((point, index) => ({ 
-                            id: Date.now() + index, type: 'point', title: point.title, 
-                            description: point.description, iconUrl: null, isIconLoading: true, 
-                            ...getNewItemDefaults() 
+                        tasksToProcess = points.map((point, index) => ({
+                            id: Date.now() + index, type: 'point', title: point.title,
+                            description: point.description, iconUrl: null, isIconLoading: true,
+                            ...getNewItemDefaults()
                         }));
                         setTasks(tasksToProcess);
                     } else {
                         tasksToProcess = tasks.filter(t => t.type === 'point');
-                        setTasks(prev => prev.map(t => t.type === 'point' ? {...t, isIconLoading: true, iconUrl: null} : t));
+                        // Set loading state only for the points that will be processed
+                        setTasks(prev => prev.map(t => {
+                            if (tasksToProcess.some(p => p.id === t.id)) {
+                                return { ...t, isIconLoading: true, iconUrl: null };
+                            }
+                            return t;
+                        }));
                     }
-                    
-                    await Promise.all(tasksToProcess.map(async (task) => {
-                        try {
-                           const iconUrl = await generateIconForPoint(task.title);
-                           setTasks(prev => prev.map(t => t.id === task.id ? { ...t, iconUrl, isIconLoading: false } : t));
-                        } catch (iconError) {
-                            console.error(`Failed to generate icon for "${task.title}":`, iconError);
-                             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, isIconLoading: false } : t));
-                        }
-                    }));
+
+                    // Exit if there are no points to generate icons for
+                    if (tasksToProcess.length === 0) {
+                        setIsGenerating(false);
+                        return;
+                    }
+
+                    // Use Promise.allSettled to ensure all icon requests complete, even if some fail
+                    const iconResults = await Promise.allSettled(
+                        tasksToProcess.map(task => generateIconForPoint(task.title))
+                    );
+
+                    // Update tasks state in a single batch to avoid race conditions
+                    setTasks(prevTasks => {
+                        const urlMap = new Map();
+                        tasksToProcess.forEach((task, index) => {
+                            const result = iconResults[index];
+                            if (result.status === 'fulfilled') {
+                                urlMap.set(task.id, result.value);
+                            } else {
+                                console.error(`Failed to generate icon for "${task.title}":`, result.reason);
+                                urlMap.set(task.id, null); // Indicate failure
+                            }
+                        });
+
+                        // Map over previous tasks and apply updates from the urlMap
+                        return prevTasks.map(task => {
+                            if (urlMap.has(task.id)) {
+                                return {
+                                    ...task,
+                                    iconUrl: urlMap.get(task.id),
+                                    isIconLoading: false
+                                };
+                            }
+                            return task; // Return task unmodified if it wasn't processed
+                        });
+                    });
+
                 } catch (err) {
                     console.error("Content generation failed:", err);
                     setError(err.message);
                 } finally {
                     setIsGenerating(false);
-                    // --- FIX: Only switch panels if in AI mode ---
                     if (contentMode === 'ai') {
                         setActivePanel('design');
                     }
@@ -239,14 +267,14 @@
             const addManualItem = (type) => {
                 let newItem;
                 if (type === 'point') {
-                    newItem = { 
-                        id: Date.now(), type: 'point', title: "New Point", 
-                        description: "Describe your point here.", iconUrl: null, isIconLoading: false, 
+                    newItem = {
+                        id: Date.now(), type: 'point', title: "New Point",
+                        description: "Describe your point here.", iconUrl: null, isIconLoading: false,
                         ...getNewItemDefaults()
                     };
                 } else {
-                    newItem = { 
-                        id: Date.now(), type: 'chart', title: "Chart Title", 
+                    newItem = {
+                        id: Date.now(), type: 'chart', title: "Chart Title",
                         data: JSON.stringify([{ name: 'A', value: 400 }, { name: 'B', value: 300 },{ name: 'C', value: 200 }, { name: 'D', value: 278 }], null, 2),
                         ...getNewItemDefaults()
                     };
@@ -262,7 +290,7 @@
             
             // --- Drag handler for freestyle layout ---
             const handleDragStop = (e, data, taskId) => {
-                setTasks(prevTasks => prevTasks.map(task => 
+                setTasks(prevTasks => prevTasks.map(task =>
                     task.id === taskId ? { ...task, x: data.x, y: data.y } : task
                 ));
             };
@@ -412,8 +440,8 @@
                                         <div> <label htmlFor="layout" className="block text-sm font-medium text-gray-600 mb-1">Layout</label> <select id="layout" value={layout} onChange={e => setLayout(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg"> <option value="grid">Grid</option> <option value="list">Vertical List</option> <option value="freestyle">Freestyle (Draggable)</option> </select> </div>
                                         
                                         {/* Background Style */}
-                                        <div> 
-                                            <label className="block text-sm font-medium text-gray-600 mb-2">Background</label> 
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-600 mb-2">Background</label>
                                             <div className="grid grid-cols-4 gap-1 bg-gray-200 rounded-lg p-1">
                                                 <button onClick={() => handleThemeChange('backgroundType', 'solid')} className={`py-1 text-xs font-bold rounded-md transition-colors ${theme.backgroundType === 'solid' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Solid</button>
                                                 <button onClick={() => handleThemeChange('backgroundType', 'gradient')} className={`py-1 text-xs font-bold rounded-md transition-colors ${theme.backgroundType === 'gradient' ? 'bg-white text-gray-800 shadow' : 'text-gray-500'}`}>Gradient</button>
@@ -442,11 +470,11 @@
                                         {/* Colors & Styling */}
                                          <div className="space-y-3 pt-3 border-t">
                                             <h4 className="text-md font-semibold text-gray-700">Default Colors & Styling</h4>
-                                            <div className="grid grid-cols-2 gap-4"> 
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Main Title <input type="color" value={theme.mainTitleColor} onChange={e => handleThemeChange('mainTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card Title <input type="color" value={theme.cardTitleColor} onChange={e => handleThemeChange('cardTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Body Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
-                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card BG <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label> 
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Main Title <input type="color" value={theme.mainTitleColor} onChange={e => handleThemeChange('mainTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card Title <input type="color" value={theme.cardTitleColor} onChange={e => handleThemeChange('cardTitleColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Body Text <input type="color" value={theme.textColor} onChange={e => handleThemeChange('textColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
+                                                <label className="text-sm font-medium text-gray-600 flex items-center justify-between">Card BG <input type="color" value={theme.cardBgColor} onChange={e => handleThemeChange('cardBgColor', e.target.value)} className="w-8 h-8 rounded-md border-none cursor-pointer" /></label>
                                             </div>
                                             <label className="block text-sm font-medium text-gray-600">Item Gap: {theme.gap}px <input type="range" min="8" max="64" value={theme.gap} onChange={e => handleThemeChange('gap', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
                                             <label className="block text-sm font-medium text-gray-600">Card Padding: {theme.cardPadding}px <input type="range" min="8" max="48" value={theme.cardPadding} onChange={e => handleThemeChange('cardPadding', e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/></label>
@@ -486,7 +514,7 @@
 
                                     return (
                                         <Draggable key={task.id} onStop={(e, data) => handleDragStop(e, data, task.id)} position={{x: task.x, y: task.y}}>
-                                            <div className="absolute w-80 cursor-grab" style={{ 
+                                            <div className="absolute w-80 cursor-grab" style={{
                                                     backgroundColor: cardBgColor,
                                                     padding: `${theme.cardPadding}px`,
                                                     borderRadius: `${theme.cardBorderRadius}px`,
@@ -527,10 +555,10 @@
                                             const chartTheme = { ...theme, cardBgColor, titleColor: cardTitleColor, textColor };
                                             
                                             return (
-                                            <div key={task.id} 
+                                            <div key={task.id}
                                                 className={`${layout === 'list' ? `w-full max-w-2xl ${tasks.length > 1 ? 'mb-4' : ''}` : ''}`}
-                                                style={{ 
-                                                    backgroundColor: cardBgColor, 
+                                                style={{
+                                                    backgroundColor: cardBgColor,
                                                     padding: `${theme.cardPadding}px`,
                                                     borderRadius: `${theme.cardBorderRadius}px`,
                                                     fontFamily: `'${theme.bodyFontFamily}', sans-serif`,
