@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Whiteboard 2.0 (AI Update)</title>
+    <title>Collaborative Whiteboard 3.0 (AI Image Gen)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -159,7 +159,16 @@
             align-items: center;
             gap: 0.75rem;
         }
-        #ai-icon-results {
+        .loader {
+            width: 2rem; height: 2rem; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* AI Icon & Image Generation */
+        #ai-icon-results, #ai-image-results {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 1rem;
@@ -167,31 +176,32 @@
             max-height: 50vh;
             overflow-y: auto;
         }
-        .ai-icon-result-item {
-            cursor: pointer;
-            border-radius: 0.5rem;
-            background-color: #374151;
-            padding: 0.5rem;
-            transition: all 0.2s ease;
-            position: relative;
+        #ai-image-results { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+        .ai-result-item {
+            cursor: pointer; border-radius: 0.5rem; background-color: #374151;
+            padding: 0.5rem; transition: all 0.2s ease; position: relative;
         }
-        .ai-icon-result-item:hover {
-            transform: scale(1.05);
-            background-color: var(--accent-color);
+        .ai-result-item:hover { transform: scale(1.05); background-color: var(--accent-color); }
+        .ai-result-item img { width: 100%; height: auto; object-fit: contain; border-radius: 0.25rem; }
+        #ai-image-generation-area .sub-btn { font-size: 0.8rem; padding: 0.25rem 0.5rem; height: auto; }
+
+        /* Image Library */
+        #image-library-gallery {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem; margin-top: 1rem; max-height: 70vh; overflow-y: auto; padding: 0.5rem;
         }
-        .ai-icon-result-item img {
-            width: 100%;
-            height: 100px;
-            object-fit: contain;
-            border-radius: 0.25rem;
+        .library-item { position: relative; border-radius: 0.5rem; overflow: hidden; }
+        .library-item img { width: 100%; height: 150px; object-fit: cover; display: block; }
+        .library-item-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.3s ease;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 0.5rem;
         }
-        .ai-icon-result-item .loader, #chat-summary-modal .loader {
-            width: 2rem; height: 2rem; border-radius: 50%;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .library-item:hover .library-item-overlay { opacity: 1; }
+        .library-item-prompt { font-size: 0.75rem; color: white; text-align: center; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .library-item-actions { display: flex; gap: 0.5rem; }
+        .library-item-actions button { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .library-item-actions button:hover { background: var(--accent-color); }
     </style>
 </head>
 <body class="text-white antialiased">
@@ -236,7 +246,7 @@
                             </button>
                         </div>
                         <div class="text-xs text-gray-500">User ID: <span id="userId" class="font-mono bg-gray-700 px-2 py-1 rounded">Not Signed In</span></div>
-                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">2.0-p2.1-ai-fix</span></div>
+                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">3.0-img-gen</span></div>
                          <button id="help-btn" class="p-2 text-blue-400 hover:text-blue-500 text-2xl" title="Help (Ctrl+K)"><i class="fa-solid fa-circle-question"></i></button>
                     </div>
                 </header>
@@ -253,6 +263,8 @@
                         </div>
                         <button data-tool="text" class="tool-btn p-2" title="Text (T)"><i class="fa-solid fa-font"></i></button>
                         <button data-tool="ai-icon" class="tool-btn p-2 text-purple-400" title="Generate Icon with AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                        <!-- NEW: AI Image Generation Button -->
+                        <button id="ai-image-btn" class="tool-btn p-2 text-teal-400" title="Create Image with AI"><i class="fa-solid fa-image"></i></button>
                     </div>
                     <div class="divider"></div>
                     <div class="toolbar-group">
@@ -282,6 +294,8 @@
                     </div>
                     <div class="divider"></div>
                     <div class="toolbar-group">
+                         <!-- NEW: Image Library Button -->
+                        <button id="image-library-btn" class="tool-btn p-2 text-yellow-400" title="Image Library"><i class="fa-solid fa-images"></i></button>
                         <button id="toggle-grid-btn" class="tool-btn p-2 selected" title="Toggle Grid (G)"><i class="fa-solid fa-border-all"></i></button>
                         <button id="toggle-snap-btn" class="tool-btn p-2 selected" title="Toggle Snapping"><i class="fa-solid fa-magnet"></i></button>
                         <button id="clear-canvas-btn" class="tool-btn p-2 text-red-400" title="Clear Canvas"><i class="fa-solid fa-eraser"></i></button>
@@ -334,7 +348,7 @@
                 <div>
                     <label for="firebase-api-key-input" class="block text-sm font-medium text-gray-200 mb-1">Firebase & Google AI API Key</label>
                     <input type="password" id="firebase-api-key-input" class="w-full bg-gray-800 p-2 rounded border border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Enter your Google Cloud API key">
-                    <p class="text-xs text-gray-400 mt-1">Used for Firebase DB, Auth, and Gemini AI avatars.</p>
+                    <p class="text-xs text-gray-400 mt-1">Used for Firebase DB, Auth, and Gemini/Imagen AI features.</p>
                 </div>
                 <div>
                     <label for="tenor-api-key-input" class="block text-sm font-medium text-gray-200 mb-1">Tenor API Key</label>
@@ -388,6 +402,49 @@
                 <button id="close-chat-summary-btn" class="text-2xl">&times;</button>
             </div>
             <div id="chat-summary-content" class="prose prose-invert max-w-none max-h-[70vh] overflow-y-auto"></div>
+        </div>
+    </div>
+    <!-- NEW: AI Image Generation Modal -->
+    <div id="ai-image-modal-overlay" class="modal-overlay">
+        <div id="ai-image-modal" class="modal glass-ui p-6 w-full max-w-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="ai-image-modal-title" class="text-2xl font-bold">Create an Image with AI</h2>
+                <button id="close-ai-image-btn" class="text-2xl">&times;</button>
+            </div>
+            <div id="ai-image-generation-area">
+                <p class="text-gray-400 mb-4">Describe the image you want to create. Be as descriptive as you like!</p>
+                <textarea id="ai-image-prompt-input" class="w-full bg-gray-800 p-2 rounded border border-gray-600 h-24" placeholder="e.g., a photorealistic cat astronaut floating in space"></textarea>
+                <div class="flex gap-4 items-center my-4">
+                    <label for="ai-image-aspect-ratio" class="font-semibold">Aspect Ratio:</label>
+                    <select id="ai-image-aspect-ratio" class="bg-gray-800 p-2 rounded border border-gray-600">
+                        <option value="1:1">Square (1:1)</option>
+                        <option value="16:9">Landscape (16:9)</option>
+                        <option value="9:16">Portrait (9:16)</option>
+                        <option value="4:3">Standard (4:3)</option>
+                        <option value="3:4">Tall (3:4)</option>
+                    </select>
+                    <button id="ai-image-generate-btn" class="chat-btn ml-auto">Generate</button>
+                </div>
+            </div>
+            <div id="ai-image-results" class="mt-4 flex justify-center items-center min-h-[256px]"></div>
+            <div id="ai-image-actions" class="mt-4 flex justify-center gap-4 hidden">
+                <button id="ai-image-save-btn" class="chat-btn bg-green-600 hover:bg-green-700"><i class="fa-solid fa-save"></i> &nbsp; Save to Library</button>
+                <button id="ai-image-insert-whiteboard-btn" class="chat-btn"><i class="fa-solid fa-plus-square"></i> &nbsp; Insert to Whiteboard</button>
+                <button id="ai-image-send-chat-btn" class="chat-btn"><i class="fa-solid fa-paper-plane"></i> &nbsp; Send in Chat</button>
+                <button id="ai-image-edit-prompt-btn" class="chat-btn bg-gray-600 hover:bg-gray-700"><i class="fa-solid fa-pen"></i> &nbsp; Edit Prompt</button>
+            </div>
+        </div>
+    </div>
+    <!-- NEW: Image Library Modal -->
+    <div id="image-library-modal-overlay" class="modal-overlay">
+        <div id="image-library-modal" class="modal glass-ui p-6 w-full max-w-5xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">My Image Library</h2>
+                <button id="close-image-library-btn" class="text-2xl">&times;</button>
+            </div>
+            <div id="image-library-gallery">
+                <!-- Saved images will be populated here by JS -->
+            </div>
         </div>
     </div>
 
@@ -470,6 +527,25 @@
         const beautifySuggestion = document.getElementById('beautify-suggestion');
         const beautifyConfirmBtn = document.getElementById('beautify-confirm-btn');
         const beautifyCancelBtn = document.getElementById('beautify-cancel-btn');
+        // NEW: AI Image Gen DOM Elements
+        const aiImageBtn = document.getElementById('ai-image-btn');
+        const aiImageModalOverlay = document.getElementById('ai-image-modal-overlay');
+        const aiImageModalTitle = document.getElementById('ai-image-modal-title');
+        const closeAiImageBtn = document.getElementById('close-ai-image-btn');
+        const aiImagePromptInput = document.getElementById('ai-image-prompt-input');
+        const aiImageAspectRatio = document.getElementById('ai-image-aspect-ratio');
+        const aiImageGenerateBtn = document.getElementById('ai-image-generate-btn');
+        const aiImageResults = document.getElementById('ai-image-results');
+        const aiImageActions = document.getElementById('ai-image-actions');
+        const aiImageSaveBtn = document.getElementById('ai-image-save-btn');
+        const aiImageInsertWhiteboardBtn = document.getElementById('ai-image-insert-whiteboard-btn');
+        const aiImageSendChatBtn = document.getElementById('ai-image-send-chat-btn');
+        const aiImageEditPromptBtn = document.getElementById('ai-image-edit-prompt-btn');
+        // NEW: Image Library DOM Elements
+        const imageLibraryBtn = document.getElementById('image-library-btn');
+        const imageLibraryModalOverlay = document.getElementById('image-library-modal-overlay');
+        const closeImageLibraryBtn = document.getElementById('close-image-library-btn');
+        const imageLibraryGallery = document.getElementById('image-library-gallery');
 
 
         // --- Firebase & State Globals ---
@@ -485,7 +561,9 @@
             undoStack: [], redoStack: [],
             isGridVisible: true, isSnapEnabled: true, gridSize: 20,
             originalObjectState: null, hoveredHandle: null,
-            beautifyCandidate: null // Store info for a potential shape beautification
+            beautifyCandidate: null, // Store info for a potential shape beautification
+            currentGeneratedImage: null, // Store data for the last generated image
+            editingImageId: null // Store ID of image being edited
         };
         let commands = [];
         let activeCommandIndex = 0;
@@ -498,13 +576,8 @@
        
         // --- User Profile Management ---
         async function getUserProfile(uid) {
-            // FIX: Add a guard clause to handle cases where uid is undefined or null.
-            if (!uid) {
-                return { name: 'Unknown User', avatar: null };
-            }
-            if (userProfiles.has(uid)) {
-                return userProfiles.get(uid);
-            }
+            if (!uid) { return { name: 'Unknown User', avatar: null }; }
+            if (userProfiles.has(uid)) { return userProfiles.get(uid); }
             try {
                 const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, uid);
                 const userDoc = await getDoc(userDocRef);
@@ -513,10 +586,7 @@
                     userProfiles.set(uid, userData);
                     return userData;
                 }
-            } catch (error) {
-                console.error("Error fetching user profile:", error);
-            }
-            // Fallback if user is not in the database for some reason
+            } catch (error) { console.error("Error fetching user profile:", error); }
             const fallbackProfile = { name: `User ${uid.substring(0, 6)}...`, avatar: null };
             userProfiles.set(uid, fallbackProfile);
             return fallbackProfile;
@@ -525,75 +595,20 @@
         // --- UI & Feature Setup ---
         function setupColorPicker() {
             colorPicker = new iro.ColorPicker('.color-picker-wheel', { width: 200, color: state.currentColor, borderWidth: 1, borderColor: "#fff", layout: [ { component: iro.ui.Wheel }, { component: iro.ui.Slider, options: { sliderType: 'hue' } }, { component: iro.ui.Slider, options: { sliderType: 'saturation' } }, { component: iro.ui.Slider, options: { sliderType: 'value' } }, { component: iro.ui.Slider, options: { sliderType: 'alpha' } }, ] });
-            
-            colorPicker.on('color:change', (color) => {
-                const newColor = color.rgbaString;
-                state.currentColor = newColor;
-                colorPickerBtn.style.backgroundColor = newColor;
-                if (state.selectedObjectId) {
-                    const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                    if (selectedObject) {
-                        selectedObject.color = newColor;
-                        redrawCanvas();
-                    }
-                }
-            });
-
-            colorPicker.on('input:start', () => {
-                if (state.selectedObjectId && !state.originalObjectState) {
-                    const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                    state.originalObjectState = JSON.parse(JSON.stringify(selectedObject));
-                }
-            });
-
-            colorPicker.on('input:end', (color) => {
-                if (state.selectedObjectId && state.originalObjectState) {
-                    const selectedObject = state.allDrawings.get(state.selectedObjectId);
-                    if (selectedObject) {
-                        selectedObject.color = color.rgbaString;
-                        const { id, ...data } = selectedObject;
-                        updateObjectInFirestore(id, data, state.originalObjectState);
-                        state.originalObjectState = null;
-                    }
-                }
-            });
-
-            colorPickerBtn.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                const btnRect = colorPickerBtn.getBoundingClientRect();
-                colorPickerPopover.style.top = `${btnRect.bottom + 10}px`;
-                colorPickerPopover.style.left = `${btnRect.left + btnRect.width / 2 - colorPickerPopover.offsetWidth / 2}px`;
-                colorPickerPopover.classList.toggle('visible'); 
-            });
-            document.addEventListener('click', (e) => {
-                if (!colorPickerPopover.contains(e.target) && e.target !== colorPickerBtn) {
-                    colorPickerPopover.classList.remove('visible');
-                }
-            });
+            colorPicker.on('color:change', (color) => { const newColor = color.rgbaString; state.currentColor = newColor; colorPickerBtn.style.backgroundColor = newColor; if (state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { selectedObject.color = newColor; redrawCanvas(); } } });
+            colorPicker.on('input:start', () => { if (state.selectedObjectId && !state.originalObjectState) { const selectedObject = state.allDrawings.get(state.selectedObjectId); state.originalObjectState = JSON.parse(JSON.stringify(selectedObject)); } });
+            colorPicker.on('input:end', (color) => { if (state.selectedObjectId && state.originalObjectState) { const selectedObject = state.allDrawings.get(state.selectedObjectId); if (selectedObject) { selectedObject.color = color.rgbaString; const { id, ...data } = selectedObject; updateObjectInFirestore(id, data, state.originalObjectState); state.originalObjectState = null; } } });
+            colorPickerBtn.addEventListener('click', (e) => { e.stopPropagation(); const btnRect = colorPickerBtn.getBoundingClientRect(); colorPickerPopover.style.top = `${btnRect.bottom + 10}px`; colorPickerPopover.style.left = `${btnRect.left + btnRect.width / 2 - colorPickerPopover.offsetWidth / 2}px`; colorPickerPopover.classList.toggle('visible'); });
+            document.addEventListener('click', (e) => { if (!colorPickerPopover.contains(e.target) && e.target !== colorPickerBtn) { colorPickerPopover.classList.remove('visible'); } });
         }
 
         function activateEyedropper() {
-            isEyedropperActive = true;
-            document.body.classList.add('eyedropper-active');
-            eventCaptureLayer.style.cursor = 'crosshair';
-            const pickColor = (e) => {
-                const pos = getMousePos(e);
-                const dpr = window.devicePixelRatio || 1;
-                const pixel = ctx.getImageData(pos.x * dpr, pos.y * dpr, 1, 1).data;
-                const color = `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3] / 255})`;
-                state.currentColor = color;
-                colorPicker.color.set(color);
-                colorPickerBtn.style.backgroundColor = color;
-                deactivateEyedropper();
-            };
+            isEyedropperActive = true; document.body.classList.add('eyedropper-active'); eventCaptureLayer.style.cursor = 'crosshair';
+            const pickColor = (e) => { const pos = getMousePos(e); const dpr = window.devicePixelRatio || 1; const pixel = ctx.getImageData(pos.x * dpr, pos.y * dpr, 1, 1).data; const color = `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3] / 255})`; state.currentColor = color; colorPicker.color.set(color); colorPickerBtn.style.backgroundColor = color; deactivateEyedropper(); };
             eventCaptureLayer.addEventListener('click', pickColor, { once: true });
         }
 
-        function deactivateEyedropper() {
-            isEyedropperActive = false;
-            document.body.classList.remove('eyedropper-active');
-            updateCursor();
-        }
+        function deactivateEyedropper() { isEyedropperActive = false; document.body.classList.remove('eyedropper-active'); updateCursor(); }
 
         function setupCommandPalette() {
             commands = [
@@ -605,6 +620,8 @@
                 { name: 'Select Tool: Text', action: () => selectTool('text'), shortcut: 'T' },
                 { name: 'Activate Eyedropper', action: () => eyedropperBtn.click(), shortcut: 'I' },
                 { name: 'Generate AI Icon', action: () => selectTool('ai-icon'), shortcut: 'A' },
+                { name: 'Create AI Image', action: () => aiImageBtn.click(), shortcut: 'C' },
+                { name: 'Open Image Library', action: () => imageLibraryBtn.click(), shortcut: 'L' },
             ];
             renderCommandList(commands);
             commandInput.addEventListener('input', () => { const query = commandInput.value.toLowerCase(); const filteredCommands = commands.filter(cmd => cmd.name.toLowerCase().includes(query)); renderCommandList(filteredCommands); });
@@ -629,11 +646,7 @@
             if (!tool) return;
             if(isEyedropperActive) deactivateEyedropper();
             
-            if (tool === 'ai-icon') {
-                showModal(aiIconModalOverlay);
-                aiIconPromptInput.focus();
-                return; // Don't change the active drawing tool
-            }
+            if (tool === 'ai-icon') { showModal(aiIconModalOverlay); aiIconPromptInput.focus(); return; }
 
             state.currentTool = tool;
             updateCursor();
@@ -658,18 +671,12 @@
         function rotatePoint(point, center, angle) { const dx = point.x - center.x; const dy = point.y - center.y; const sin = Math.sin(angle); const cos = Math.cos(angle); return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos }; }
         function getTransformHandles(obj) { const bounds = getObjectBounds(obj); if (!bounds || bounds.width <= 1 || bounds.height <= 1) return null; const center = getObjectCenter(obj); const w = bounds.width; const h = bounds.height; const angle = obj.rotation || 0; const corners = { tl: {x: center.x - w/2, y: center.y - h/2}, tr: {x: center.x + w/2, y: center.y - h/2}, bl: {x: center.x - w/2, y: center.y + h/2}, br: {x: center.x + w/2, y: center.y + h/2} }; const rotationHandleOffset = 30; const topMid = { x: center.x, y: center.y - h/2 }; const rotationPoint = { x: topMid.x, y: topMid.y - rotationHandleOffset }; const rotateCursorURL = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`; return { tl:  {...rotatePoint(corners.tl, center, angle), type: 'resize', cursor: 'nwse-resize'}, tr:  {...rotatePoint(corners.tr, center, angle), type: 'resize', cursor: 'nesw-resize'}, bl:  {...rotatePoint(corners.bl, center, angle), type: 'resize', cursor: 'nesw-resize'}, br:  {...rotatePoint(corners.br, center, angle), type: 'resize', cursor: 'nwse-resize'}, tm: rotatePoint(topMid, center, angle), rot: {...rotatePoint(rotationPoint, center, angle), type: 'rotate', cursor: `url('${rotateCursorURL}') 12 12, auto`} }; }
         
-        // --- MOUSE EVENT HANDLERS (FIXED) ---
+        // --- MOUSE EVENT HANDLERS ---
         function handleMouseDown(e) {
             if (state.isTexting || isEyedropperActive) return;
             if (!userId) { console.warn("Cannot draw: User not authenticated."); return; }
-            
-            const pos = getMousePos(e);
-            state.startPos = pos;
-            state.action = 'none';
-            hideBeautifySuggestion();
-
+            const pos = getMousePos(e); state.startPos = pos; state.action = 'none'; hideBeautifySuggestion();
             if (state.currentTool === 'select') {
-                // First, check if the click is on a handle of the *currently* selected object
                 const currentSelectedObject = state.allDrawings.get(state.selectedObjectId);
                 if (currentSelectedObject) {
                     const handles = getTransformHandles(currentSelectedObject);
@@ -677,68 +684,47 @@
                         for (const key in handles) {
                             const handle = handles[key];
                             if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) {
-                                // Click was on a handle. Start transform.
-                                state.action = handle.type === 'rotate' ? 'rotating' : 'resizing';
-                                state.transformHandle = key;
+                                state.action = handle.type === 'rotate' ? 'rotating' : 'resizing'; state.transformHandle = key;
                                 state.originalObjectState = JSON.parse(JSON.stringify(currentSelectedObject));
                                 state.originalObjectState.center = getObjectCenter(currentSelectedObject);
-                                return; // Action decided, exit.
+                                return;
                             }
                         }
                     }
                 }
-
-                // If not on a handle, check if we clicked a new object to select it and prepare for moving.
                 const clickedObjectId = findClickedObject(pos.x, pos.y);
                 if (clickedObjectId) {
-                    state.selectedObjectId = clickedObjectId;
-                    state.action = 'moving';
-                    const obj = state.allDrawings.get(clickedObjectId);
-                    const center = getObjectCenter(obj);
+                    state.selectedObjectId = clickedObjectId; state.action = 'moving';
+                    const obj = state.allDrawings.get(clickedObjectId); const center = getObjectCenter(obj);
                     state.dragOffset = { x: pos.x - center.x, y: pos.y - center.y };
                     state.originalObjectState = JSON.parse(JSON.stringify(obj));
                     eventCaptureLayer.style.cursor = 'grabbing';
-                } else {
-                    // Clicked on empty space, deselect.
-                    state.selectedObjectId = null;
-                }
+                } else { state.selectedObjectId = null; }
                 drawOverlay();
-
             } else if (state.currentTool === 'text') {
                 startTextEntry(snapToGrid(pos));
             } else {
-                // This is for all drawing tools (pen, shapes, etc.)
-                state.action = 'drawing';
-                state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
+                state.action = 'drawing'; state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos));
             }
         }
 
         function handleMouseMove(e) { let pos = getMousePos(e); if (!state.startPos) { updateCursor(pos); return; } if (state.action === 'drawing') { if (state.currentTool === 'pen') { state.tempDrawing.points.push(pos); } else { state.tempDrawing = createPreviewObject(snapToGrid(state.startPos), snapToGrid(pos)); } drawOverlay(); } else if (state.action === 'moving' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const newCenter = { x: pos.x - state.dragOffset.x, y: pos.y - state.dragOffset.y }; const snappedCenter = snapToGrid(newCenter); moveObjectTo(selectedObject, snappedCenter.x, snappedCenter.y); drawOverlay(); } else if (state.action === 'rotating' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const originalAngle = Math.atan2(state.startPos.y - center.y, state.startPos.x - center.x); const newAngle = Math.atan2(pos.y - center.y, pos.x - center.x); selectedObject.rotation = (state.originalObjectState.rotation || 0) + (newAngle - originalAngle); drawOverlay(); } else if (state.action === 'resizing' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const center = state.originalObjectState.center; const angle = -(state.originalObjectState.rotation || 0); const localPos = rotatePoint(pos, center, angle); const origBounds = getObjectBounds(state.originalObjectState); if (!origBounds) return; let newWidth = Math.abs(localPos.x - center.x) * 2; let newHeight = Math.abs(localPos.y - center.y) * 2; if (state.isShiftDown && selectedObject.type !== 'line') { const origAspectRatio = origBounds.width / origBounds.height; if (newWidth / origBounds.width > newHeight / origBounds.height) { newHeight = newWidth / origAspectRatio; } else { newWidth = newHeight * origAspectRatio; } } if (selectedObject.type === 'rectangle' || selectedObject.type === 'image') { selectedObject.width = newWidth; selectedObject.height = newHeight; selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'circle') { selectedObject.radius = Math.hypot(localPos.x - center.x, localPos.y - center.y); selectedObject.x = center.x; selectedObject.y = center.y; } else if (selectedObject.type === 'text') { const localStartPos = rotatePoint(state.startPos, center, angle); const origFontSize = state.originalObjectState.fontSize; const origDist = Math.hypot(localStartPos.x - center.x, localStartPos.y - center.y); const newDist = Math.hypot(localPos.x - center.x, localPos.y - center.y); if(origDist > 0.1) { const scale = newDist / origDist; selectedObject.fontSize = Math.max(5, origFontSize * scale); } } else if (['path', 'line', 'triangle', 'polygon'].includes(selectedObject.type)) { const scaleX = newWidth / origBounds.width; const scaleY = newHeight / origBounds.height; const originalPoints = state.originalObjectState.points; const originalCenter = getObjectCenter(state.originalObjectState); selectedObject.points = originalPoints.map(p => ({ x: originalCenter.x + (p.x - originalCenter.x) * scaleX, y: originalCenter.y + (p.y - originalCenter.y) * scaleY, })); } drawOverlay(); } else { updateCursor(pos); } }
         async function handleMouseUp(e) { if (!state.startPos) return; updateCursor(); const objToUpdate = state.allDrawings.get(state.selectedObjectId); if (state.action === 'drawing' && state.tempDrawing) { if (state.currentTool !== 'pen' || state.tempDrawing.points.length >= 2) { const newDocRef = await addObjectToFirestore(state.tempDrawing); if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: state.tempDrawing }}); if (state.currentTool === 'pen') { checkForBeautify(newDocRef.id, state.tempDrawing); } } } } else if (['moving', 'resizing', 'rotating'].includes(state.action) && objToUpdate && state.originalObjectState) { const {id, ...data} = objToUpdate; updateObjectInFirestore(id, data, state.originalObjectState); } state.action = 'none'; state.startPos = null; state.tempDrawing = null; state.transformHandle = null; state.originalObjectState = null; redrawCanvas(); }
         
-        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; if (state.isShiftDown) { const dx = x2 - x1; const dy = y2 - y1; if (state.currentTool === 'line') { const angle = Math.atan2(dy, dx); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx, dy); x2 = x1 + Math.cos(snappedAngle) * dist; y2 = y1 + Math.sin(snappedAngle) * dist; } else if (['rectangle', 'circle', 'polygon'].includes(state.currentTool) || state.currentTool.endsWith('-gon') || state.currentTool === 'star') { const size = Math.max(Math.abs(dx), Math.abs(dy)); x2 = x1 + Math.sign(dx) * size; y2 = y1 + Math.sign(dy) * size; } } const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; const rx = width / 2; const ry = height / 2; const generatePolygon = (sides) => ({ ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, sides) }); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [{x:x1, y:y1}, {x:x2, y:y2}] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 3, -Math.PI / 2) }; case 'diamond': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 4) }; case 'pentagon': return generatePolygon(5); case 'hexagon': return generatePolygon(6); case 'heptagon': return generatePolygon(7); case 'octagon': return generatePolygon(8); case 'star': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 5) }; case 'star-6': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 6) }; case 'arrow-right': return { ...common, type: 'polygon', points: [ {x: x1, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x2, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x1, y: cy + ry/2} ]}; case 'arrow-left': return { ...common, type: 'polygon', points: [ {x: x2, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x1, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x2, y: cy + ry/2} ]}; case 'cross': return { ...common, type: 'polygon', points: [ {x: cx - rx/3, y: y1}, {x: cx + rx/3, y: y1}, {x: cx + rx/3, y: cy - ry/3}, {x: x2, y: cy - ry/3}, {x: x2, y: cy + ry/3}, {x: cx + rx/3, y: cy + ry/3}, {x: cx + rx/3, y: y2}, {x: cx - rx/3, y: y2}, {x: cx - rx/3, y: cy + ry/3}, {x: x1, y: cy + ry/3}, {x: x1, y: cy - ry/3}, {x: cx - rx/3, y: cy - ry/3} ]}; case 'heart': return { ...common, type: 'polygon', points: generateHeartPoints(cx, cy, width, height) }; default: return null; } }
+        function createPreviewObject(start, end) { const common = { color: state.currentColor, lineWidth: state.currentBrushSize, author: userId, epoch: state.currentEpoch, rotation: 0 }; let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y; if (state.isShiftDown) { const dx = x2 - x1; const dy = y2 - y1; if (state.currentTool === 'line') { const angle = Math.atan2(dy, dx); const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4); const dist = Math.hypot(dx, dy); x2 = x1 + Math.cos(snappedAngle) * dist; y2 = y1 + Math.sin(snappedAngle) * dist; } else if (['rectangle', 'circle', 'polygon'].includes(state.currentTool) || state.currentTool.endsWith('-gon') || state.currentTool === 'star') { const size = Math.max(Math.abs(dx), Math.abs(dy)); x2 = x1 + Math.sign(dx) * size; y2 = y1 + Math.sign(dy) * size; } } const width = Math.abs(x1 - x2); const height = Math.abs(y1 - y2); const cx = (x1+x2)/2, cy = (y1+y2)/2; const rx = width / 2; const ry = height / 2; const generatePolygon = (sides) => ({ ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, sides) }); switch (state.currentTool) { case 'pen': return { ...common, type: 'path', points: [start] }; case 'line': return { ...common, type: 'line', points: [{x:x1, y:y1}, {x:x2, y:y2}] }; case 'rectangle': return { ...common, type: 'rectangle', x: Math.min(x1, x2), y: Math.min(y1, y2), width, height }; case 'circle': return { ...common, type: 'circle', x: cx, y: cy, radius: Math.hypot(width, height) / 2 }; case 'triangle': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 3, -Math.PI / 2) }; case 'diamond': return { ...common, type: 'polygon', points: generatePolygonPoints(cx, cy, rx, ry, 4) }; case 'pentagon': return generatePolygon(5); case 'hexagon': return generatePolygon(6); case 'heptagon': return generatePolygon(7); case 'octagon': return generatePolygon(8); case 'star': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 5) }; case 'star-6': return { ...common, type: 'polygon', points: generateStarPoints(cx, cy, Math.max(rx, ry), Math.max(rx, ry) / 2, 6) }; case 'heart': return { ...common, type: 'polygon', points: generateHeartPoints(cx, cy, width, height) }; case 'cross': return { ...common, type: 'polygon', points: [ {x: cx - rx/3, y: y1}, {x: cx + rx/3, y: y1}, {x: cx + rx/3, y: cy - ry/3}, {x: x2, y: cy - ry/3}, {x: x2, y: cy + ry/3}, {x: cx + rx/3, y: cy + ry/3}, {x: cx + rx/3, y: y2}, {x: cx - rx/3, y: y2}, {x: cx - rx/3, y: cy + ry/3}, {x: x1, y: cy + ry/3}, {x: x1, y: cy - ry/3}, {x: cx - rx/3, y: cy - ry/3} ]}; case 'arrow-right': return { ...common, type: 'polygon', points: [ {x: x1, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x2, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x1, y: cy + ry/2} ]}; case 'arrow-left': return { ...common, type: 'polygon', points: [ {x: x2, y: cy - ry/2}, {x: cx, y: cy - ry/2}, {x: cx, y: y1}, {x: x1, y: cy}, {x: cx, y: y2}, {x: cx, y: cy + ry/2}, {x: x2, y: cy + ry/2} ]}; default: return null; } }
         function generatePolygonPoints(cx, cy, rx, ry, sides, angleOffset = 0) { const points = []; for (let i = 0; i < sides; i++) { const angle = (i / sides) * 2 * Math.PI + angleOffset; points.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) }); } return points; }
         function generateStarPoints(cx, cy, outerRadius, innerRadius, numPoints) { const points = []; const angleStep = Math.PI / numPoints; for (let i = 0; i < 2 * numPoints; i++) { const radius = i % 2 === 0 ? outerRadius : innerRadius; const angle = i * angleStep - Math.PI / 2; points.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }); } return points; }
         function generateHeartPoints(cx, cy, w, h) { const points = []; for(let i = 0; i < 100; i++) { const angle = (i/100) * 2 * Math.PI; const x = cx + w/2 * (16 * Math.pow(Math.sin(angle), 3)); const y = cy - h/2 * (13 * Math.cos(angle) - 5 * Math.cos(2*angle) - 2 * Math.cos(3*angle) - Math.cos(4*angle)); points.push({x, y}); } return points; }
         function findClickedObject(x, y) { for (let i = state.sortedDrawings.length - 1; i >= 0; i--) { const obj = state.sortedDrawings[i]; const center = getObjectCenter(obj); const angle = -(obj.rotation || 0); const localClick = rotatePoint({x,y}, center, angle); const bounds = getObjectBounds(obj); if (!bounds) continue; const fuzz = (obj.lineWidth || 2) / 2 + 5; if (localClick.x >= bounds.x - fuzz && localClick.x <= bounds.x + bounds.width + fuzz && localClick.y >= bounds.y - fuzz && localClick.y <= bounds.y + bounds.height + fuzz) { return obj.id; } } return null; }
         function moveObjectTo(obj, newCenterX, newCenterY) { const bounds = getObjectBounds(obj); if (!bounds) return; const oldCenterX = bounds.x + bounds.width / 2; const oldCenterY = bounds.y + bounds.height / 2; const dx = newCenterX - oldCenterX; const dy = newCenterY - oldCenterY; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else { obj.x += dx; obj.y += dy; } }
         
-        // --- TEXT INPUT (FIXED) ---
+        // --- TEXT INPUT ---
         function startTextEntry(pos) {
-            state.isTexting = true;
-            eventCaptureLayer.style.pointerEvents = 'none'; // Allow clicks to pass through to the input
-            textInputContainer.style.left = `${pos.x}px`;
-            textInputContainer.style.top = `${pos.y}px`;
-            textInputContainer.style.display = 'block';
-            textInput.style.color = state.currentColor;
-            textInput.style.fontSize = `${state.currentBrushSize * 5 + 12}px`;
-            textInput.value = '';
-            textInput.focus();
-
+            state.isTexting = true; eventCaptureLayer.style.pointerEvents = 'none';
+            textInputContainer.style.left = `${pos.x}px`; textInputContainer.style.top = `${pos.y}px`; textInputContainer.style.display = 'block';
+            textInput.style.color = state.currentColor; textInput.style.fontSize = `${state.currentBrushSize * 5 + 12}px`; textInput.value = ''; textInput.focus();
             const finish = async (shouldAddText) => {
-                if (!state.isTexting) return;
-                state.isTexting = false;
-                eventCaptureLayer.style.pointerEvents = 'auto'; // Restore pointer events
+                if (!state.isTexting) return; state.isTexting = false; eventCaptureLayer.style.pointerEvents = 'auto';
                 document.removeEventListener('mousedown', handleClickOutside, true);
                 if (shouldAddText) {
                     const text = textInput.value.trim();
@@ -746,33 +732,14 @@
                         const fontSize = state.currentBrushSize * 5 + 12;
                         const textData = { type: 'text', text, x: pos.x, y: pos.y, color: state.currentColor, fontSize: fontSize, author: userId, epoch: state.currentEpoch, rotation: 0 };
                         const newDocRef = await addObjectToFirestore(textData);
-                        if (newDocRef) {
-                            pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }});
-                        }
+                        if (newDocRef) { pushToUndoStack({type: 'add', payload: { id: newDocRef.id, data: textData }}); }
                     }
                 }
-                textInput.value = '';
-                textInputContainer.style.display = 'none';
+                textInput.value = ''; textInputContainer.style.display = 'none';
             };
-
-            const handleClickOutside = (event) => {
-                if (!textInputContainer.contains(event.target)) {
-                    finish(true);
-                }
-            };
-
-            textInput.onkeydown = (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    finish(true);
-                } else if (e.key === 'Escape') {
-                    finish(false);
-                }
-            };
-
-            setTimeout(() => {
-                document.addEventListener('mousedown', handleClickOutside, true);
-            }, 0);
+            const handleClickOutside = (event) => { if (!textInputContainer.contains(event.target)) { finish(true); } };
+            textInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { finish(false); } };
+            setTimeout(() => { document.addEventListener('mousedown', handleClickOutside, true); }, 0);
         }
 
         async function addObjectToFirestore(objData) { if (!userId) { console.error("Cannot add object: User not authenticated."); return null; } try { const docRef = await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), { ...objData, timestamp: serverTimestamp() }); return docRef; } catch (error) { console.error("Error adding document: ", error); return null;} }
@@ -813,21 +780,14 @@
         async function setupChatListener() {
             const chatCollectionPath = `artifacts/${whiteboardId}/public/data/chat`;
             if (unsubscribeFromChat) unsubscribeFromChat();
-
-            // Clear existing messages before attaching the new listener.
             chatMessages.innerHTML = '';
-
             const q = query(collection(db, chatCollectionPath), orderBy("timestamp"));
             
             unsubscribeFromChat = onSnapshot(q, async (snapshot) => {
                 for (const change of snapshot.docChanges()) {
                     if (change.type === "added") {
                         const msg = { id: change.doc.id, ...change.doc.data() };
-                        
-                        // Prevent re-adding a message if it's already in the DOM
-                        if (document.querySelector(`[data-message-id="${msg.id}"]`)) {
-                            continue;
-                        }
+                        if (document.querySelector(`[data-message-id="${msg.id}"]`)) { continue; }
 
                         const profile = await getUserProfile(msg.author);
                         const displayName = profile?.name || 'Anonymous';
@@ -837,40 +797,24 @@
                         messageEl.className = 'chat-message';
                         messageEl.dataset.messageId = msg.id;
 
-                        let textHtml = '';
-                        let mediaHtml = '';
-
-                        if (msg.text) {
-                            const sanitizedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                            textHtml = `<div class="chat-text">${sanitizedText}</div>`;
-                        }
+                        let textHtml = '', mediaHtml = '';
+                        if (msg.text) { textHtml = `<div class="chat-text">${msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`; }
+                        if (msg.type === 'gif' || msg.type === 'image') { mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-sent image">`; }
                         
-                        if (msg.type === 'gif') {
-                            mediaHtml = `<img src="${msg.url}" class="chat-image" data-full-src="${msg.url}" alt="User-selected GIF">`;
-                        }
-                        
-                        const contentHtml = textHtml + mediaHtml;
-
                         messageEl.innerHTML = `
                             <img src="${avatarUrl}" class="chat-avatar" onerror="this.onerror=null;this.src='https://placehold.co/40x40/4b5563/FFFFFF?text=${displayName.charAt(0)}';">
                             <div class="chat-content">
                                 <div class="chat-author">${displayName}</div>
-                                ${contentHtml}
+                                ${textHtml}${mediaHtml}
                             </div>
                         `;
                         chatMessages.appendChild(messageEl);
                     }
                 }
-
-                // Scroll to the bottom if there were changes
-                if (snapshot.docChanges().length > 0) {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
+                if (snapshot.docChanges().length > 0) { chatMessages.scrollTop = chatMessages.scrollHeight; }
             }, error => {
                 console.error("Chat listener error:", error);
-                if (error.code === 'failed-precondition') {
-                    console.error("Firestore error suggests a missing index for the chat. Please create an index for the 'chat' collection on the 'timestamp' field (ascending).");
-                }
+                if (error.code === 'failed-precondition') { console.error("Firestore error suggests a missing index for the chat. Please create an index for the 'chat' collection on the 'timestamp' field (ascending)."); }
             });
         }
 
@@ -886,321 +830,274 @@
 
         async function searchTenorGifs() {
             const query = gifSearchInput.value.trim();
-            if (!query || !tenorApiKey) {
-                 gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Tenor API key is not configured or query is empty.</p>`;
-                 return;
-            }
-
+            if (!query || !tenorApiKey) { gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Tenor API key is not configured or query is empty.</p>`; return; }
             gifSearchExecuteBtn.disabled = true;
-            gifSearchResults.innerHTML = `<div class="col-span-full flex justify-center items-center gap-2"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div><span>Searching...</span></div>`;
-
-            const clientKey = "collaborative-whiteboard-app";
-            const limit = 24;
-            const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${tenorApiKey}&client_key=${clientKey}&limit=${limit}`;
-            
+            gifSearchResults.innerHTML = `<div class="col-span-full flex justify-center items-center gap-2"><div class="loader"></div><span>Searching...</span></div>`;
+            const clientKey = "collaborative-whiteboard-app"; const limit = 24; const apiUrl = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${tenorApiKey}&client_key=${clientKey}&limit=${limit}`;
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`Tenor API error! Status: ${response.status}.`);
                 const result = await response.json();
-
                 gifSearchResults.innerHTML = '';
                 if (result.results?.length > 0) {
                     result.results.forEach(gif => {
-                        const previewUrl = gif.media_formats.tinygif.url;
-                        const fullUrl = gif.media_formats.gif.url;
-                        
-                        const img = document.createElement('img');
-                        img.src = previewUrl;
-                        img.alt = gif.content_description;
-                        img.dataset.fullUrl = fullUrl;
-                        
-                        img.addEventListener('click', () => {
-                            sendChatMessage(null, 'gif', fullUrl);
-                            hideModal(gifSearchModalOverlay);
-                        });
+                        const previewUrl = gif.media_formats.tinygif.url; const fullUrl = gif.media_formats.gif.url;
+                        const img = document.createElement('img'); img.src = previewUrl; img.alt = gif.content_description; img.dataset.fullUrl = fullUrl;
+                        img.addEventListener('click', () => { sendChatMessage(null, 'gif', fullUrl); hideModal(gifSearchModalOverlay); });
                         gifSearchResults.appendChild(img);
                     });
-                } else {
-                    gifSearchResults.innerHTML = `<p class="col-span-full text-center text-gray-400">No GIFs found.</p>`;
-                }
-            } catch (error) {
-                console.error("Error searching for GIFs:", error);
-                gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to load GIFs.</p>`;
-            } finally {
-                gifSearchExecuteBtn.disabled = false;
-            }
+                } else { gifSearchResults.innerHTML = `<p class="col-span-full text-center text-gray-400">No GIFs found.</p>`; }
+            } catch (error) { console.error("Error searching for GIFs:", error); gifSearchResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to load GIFs.</p>`;
+            } finally { gifSearchExecuteBtn.disabled = false; }
         }
         
         // --- Authentication Functions ---
         const signInWithGoogle = async () => {
             const googleProvider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, googleProvider);
-            } catch (error) {
-                console.error("Google Sign-In failed:", error);
-                userIdEl.textContent = 'Auth Error';
-                alert('Could not sign in with Google. Please check your Firebase project configuration and ensure Google authentication is enabled.');
-            }
+            try { await signInWithPopup(auth, googleProvider);
+            } catch (error) { console.error("Google Sign-In failed:", error); userIdEl.textContent = 'Auth Error'; alert('Could not sign in with Google. Please check your Firebase project configuration and ensure Google authentication is enabled.'); }
         };
 
         const signOutUser = async () => {
-            try {
-                await signOut(auth);
-                // Clear local caches on sign out
-                userProfiles.clear();
-                // The onAuthStateChanged listener will handle the UI updates.
-            } catch (error) {
-                console.error("Sign-Out failed:", error);
-            }
+            try { await signOut(auth); userProfiles.clear();
+            } catch (error) { console.error("Sign-Out failed:", error); }
         };
 
         // --- AI Feature Functions ---
-        
-        /**
-         * Summarizes the current chat conversation using the Gemini API.
-         */
         async function summarizeChat() {
-            if (!firebaseApiKey) {
-                alert("Google AI API key is not configured.");
-                return;
-            }
+            if (!firebaseApiKey) { alert("Google AI API key is not configured."); return; }
             showModal(chatSummaryModalOverlay);
             chatSummaryContent.innerHTML = '<div class="flex justify-center items-center"><div class="loader"></div></div>';
-
             try {
                 const chatCollection = collection(db, `artifacts/${whiteboardId}/public/data/chat`);
                 const q = query(chatCollection, orderBy("timestamp"));
                 const chatSnapshot = await getDocs(q);
-                
-                if (chatSnapshot.empty) {
-                    chatSummaryContent.innerHTML = '<p>The chat is empty. Nothing to summarize!</p>';
-                    return;
-                }
-
+                if (chatSnapshot.empty) { chatSummaryContent.innerHTML = '<p>The chat is empty. Nothing to summarize!</p>'; return; }
                 let chatHistory = [];
-                for (const doc of chatSnapshot.docs) {
-                    const msg = doc.data();
-                    const profile = await getUserProfile(msg.author);
-                    const authorName = profile?.name || 'Anonymous';
-                    if (msg.text) {
-                         chatHistory.push({ role: "user", parts: [{ text: `${authorName}: ${msg.text}` }] });
-                    }
-                }
-                
+                for (const doc of chatSnapshot.docs) { const msg = doc.data(); const profile = await getUserProfile(msg.author); const authorName = profile?.name || 'Anonymous'; if (msg.text) { chatHistory.push({ role: "user", parts: [{ text: `${authorName}: ${msg.text}` }] }); } }
                 const prompt = "Please provide a concise summary of the following chat conversation. Identify key decisions, action items, and any unresolved questions. Format the output using Markdown headings for each section (e.g., ## Key Decisions).";
                 chatHistory.unshift({ role: "user", parts: [{ text: prompt }] });
-
                 const payload = { contents: chatHistory };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`);
-                }
-
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { const errorBody = await response.json(); throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`); }
                 const result = await response.json();
-                if (result.candidates && result.candidates.length > 0) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    // Basic Markdown to HTML conversion
-                    let html = text
-                        .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
-                        .replace(/\* \*(.*)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\* (.*)/g, '<li class="ml-4 list-disc">$1</li>')
-                        .replace(/\n/g, '<br>');
-                    chatSummaryContent.innerHTML = html;
-                } else {
-                    throw new Error("No content returned from the AI.");
-                }
-
-            } catch (error) {
-                console.error("Error summarizing chat:", error);
-                chatSummaryContent.innerHTML = `<p class="text-red-400">Failed to generate summary. ${error.message}</p>`;
-            }
+                if (result.candidates && result.candidates.length > 0) { const text = result.candidates[0].content.parts[0].text; let html = text.replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>').replace(/\* \*(.*)\*\*/g, '<strong>$1</strong>').replace(/\* (.*)/g, '<li class="ml-4 list-disc">$1</li>').replace(/\n/g, '<br>'); chatSummaryContent.innerHTML = html;
+                } else { throw new Error("No content returned from the AI."); }
+            } catch (error) { console.error("Error summarizing chat:", error); chatSummaryContent.innerHTML = `<p class="text-red-400">Failed to generate summary. ${error.message}</p>`; }
         }
 
-        /**
-         * Generates an icon using the Imagen API based on a user prompt.
-         */
         async function generateAiIcon() {
             const prompt = aiIconPromptInput.value.trim();
-            if (!prompt) {
-                alert("Please enter a description for the icon.");
-                return;
-            }
-            if (!firebaseApiKey) {
-                alert("Google AI API key is not configured.");
-                return;
-            }
-
+            if (!prompt || !firebaseApiKey) { alert("Prompt or API key is missing."); return; }
             aiIconGenerateBtn.disabled = true;
             aiIconResults.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
-
             const fullPrompt = `A simple, modern, vector-style, flat, monochrome icon of ${prompt}. The icon should be on a transparent background, using only white lines or shapes. It should be easily recognizable and suitable for a whiteboard application.`;
-            
             try {
                 const payload = { instances: [{ prompt: fullPrompt }], parameters: { "sampleCount": 4 } };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${firebaseApiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`);
-                }
-                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { const errorBody = await response.json(); throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`); }
                 const result = await response.json();
                 aiIconResults.innerHTML = '';
-
                 if (result.predictions && result.predictions.length > 0) {
                     result.predictions.forEach(prediction => {
                         if (prediction.bytesBase64Encoded) {
                             const imageUrl = `data:image/png;base64,${prediction.bytesBase64Encoded}`;
-                            const item = document.createElement('div');
-                            item.className = 'ai-icon-result-item';
+                            const item = document.createElement('div'); item.className = 'ai-result-item';
                             item.innerHTML = `<img src="${imageUrl}" alt="AI generated icon for '${prompt}'">`;
-                            item.addEventListener('click', () => {
-                                addImageToCanvas(imageUrl, 100, 100);
-                                hideModal(aiIconModalOverlay);
-                            });
+                            item.addEventListener('click', () => { addImageToCanvas(imageUrl, 100, 100); hideModal(aiIconModalOverlay); });
                             aiIconResults.appendChild(item);
                         }
                     });
-                } else {
-                    throw new Error("No images were generated by the AI.");
-                }
-
-            } catch (error) {
-                console.error("Error generating AI icon:", error);
-                aiIconResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to generate icon. ${error.message}</p>`;
-            } finally {
-                aiIconGenerateBtn.disabled = false;
-            }
+                } else { throw new Error("No images were generated by the AI."); }
+            } catch (error) { console.error("Error generating AI icon:", error); aiIconResults.innerHTML = `<p class="col-span-full text-center text-red-400">Failed to generate icon. ${error.message}</p>`;
+            } finally { aiIconGenerateBtn.disabled = false; }
         }
 
-        /**
-         * Adds a generated image to the center of the canvas.
-         */
         async function addImageToCanvas(url, width, height) {
             const rect = main_content.getBoundingClientRect();
             const centerPos = { x: rect.width / 2, y: rect.height / 2 };
-            const imageData = {
-                type: 'image',
-                url: url,
-                x: centerPos.x,
-                y: centerPos.y,
-                width: width,
-                height: height,
-                author: userId,
-                epoch: state.currentEpoch,
-                rotation: 0
-            };
+            const imageData = { type: 'image', url: url, x: centerPos.x, y: centerPos.y, width: width, height: height, author: userId, epoch: state.currentEpoch, rotation: 0 };
             const newDocRef = await addObjectToFirestore(imageData);
-            if (newDocRef) {
-                pushToUndoStack({ type: 'add', payload: { id: newDocRef.id, data: imageData } });
-                state.selectedObjectId = newDocRef.id;
-                redrawCanvas();
-            }
+            if (newDocRef) { pushToUndoStack({ type: 'add', payload: { id: newDocRef.id, data: imageData } }); state.selectedObjectId = newDocRef.id; redrawCanvas(); }
         }
         
-        /**
-         * Checks if a newly drawn path can be beautified into a simple shape.
-         */
         async function checkForBeautify(docId, drawingData) {
             if (!firebaseApiKey || drawingData.points.length < 10) return;
-
             const prompt = `Analyze the following sequence of 2D points and determine if it represents a simple geometric shape (like a circle, rectangle, line, or triangle). The points are: ${JSON.stringify(drawingData.points)}. If it is one of these shapes, respond with a JSON object describing the shape. For a 'circle', provide 'centerX', 'centerY', and 'radius'. For a 'rectangle', provide 'x', 'y', 'width', and 'height'. For a 'line', provide 'startX', 'startY', 'endX', 'endY'. For a 'triangle', provide the three corner points 'p1', 'p2', 'p3'. If it's not a clear shape, respond with {\"shape\": \"none\"}.`;
-            
             try {
-                const payload = { 
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) return;
-
                 const result = await response.json();
                 if (result.candidates && result.candidates.length > 0) {
                     const jsonText = result.candidates[0].content.parts[0].text;
                     const shapeInfo = JSON.parse(jsonText);
-                    
-                    if (shapeInfo.shape && shapeInfo.shape !== 'none') {
-                        state.beautifyCandidate = {
-                            originalId: docId,
-                            originalData: drawingData,
-                            newShapeInfo: shapeInfo
-                        };
-                        showBeautifySuggestion(drawingData);
-                    }
+                    if (shapeInfo.shape && shapeInfo.shape !== 'none') { state.beautifyCandidate = { originalId: docId, originalData: drawingData, newShapeInfo: shapeInfo }; showBeautifySuggestion(drawingData); }
                 }
-            } catch (error) {
-                console.error("Error during shape beautification check:", error);
-            }
+            } catch (error) { console.error("Error during shape beautification check:", error); }
         }
 
-        function showBeautifySuggestion(originalDrawing) {
-            const bounds = getObjectBounds(originalDrawing);
-            if (!bounds) return;
-            beautifySuggestion.style.left = `${bounds.x + bounds.width + 10}px`;
-            beautifySuggestion.style.top = `${bounds.y}px`;
-            beautifySuggestion.style.display = 'flex';
-        }
-
-        function hideBeautifySuggestion() {
-            beautifySuggestion.style.display = 'none';
-            state.beautifyCandidate = null;
-        }
+        function showBeautifySuggestion(originalDrawing) { const bounds = getObjectBounds(originalDrawing); if (!bounds) return; beautifySuggestion.style.left = `${bounds.x + bounds.width + 10}px`; beautifySuggestion.style.top = `${bounds.y}px`; beautifySuggestion.style.display = 'flex'; }
+        function hideBeautifySuggestion() { beautifySuggestion.style.display = 'none'; state.beautifyCandidate = null; }
 
         async function applyBeautification() {
             if (!state.beautifyCandidate) return;
-            
-            const { originalId, originalData, newShapeInfo } = state.beautifyCandidate;
-            let newObjectData;
-
-            const common = {
-                color: originalData.color,
-                lineWidth: originalData.lineWidth,
-                author: originalData.author,
-                epoch: originalData.epoch,
-                rotation: 0
-            };
-
+            const { originalId, originalData, newShapeInfo } = state.beautifyCandidate; let newObjectData;
+            const common = { color: originalData.color, lineWidth: originalData.lineWidth, author: originalData.author, epoch: originalData.epoch, rotation: 0 };
             switch (newShapeInfo.shape) {
-                case 'circle':
-                    newObjectData = { ...common, type: 'circle', x: newShapeInfo.centerX, y: newShapeInfo.centerY, radius: newShapeInfo.radius };
-                    break;
-                case 'rectangle':
-                    newObjectData = { ...common, type: 'rectangle', x: newShapeInfo.x, y: newShapeInfo.y, width: newShapeInfo.width, height: newShapeInfo.height };
-                    break;
-                case 'line':
-                     newObjectData = { ...common, type: 'line', points: [{x: newShapeInfo.startX, y: newShapeInfo.startY}, {x: newShapeInfo.endX, y: newShapeInfo.endY}] };
-                    break;
-                case 'triangle':
-                    newObjectData = { ...common, type: 'triangle', points: [newShapeInfo.p1, newShapeInfo.p2, newShapeInfo.p3] };
-                    break;
-                default:
-                    hideBeautifySuggestion();
-                    return;
+                case 'circle': newObjectData = { ...common, type: 'circle', x: newShapeInfo.centerX, y: newShapeInfo.centerY, radius: newShapeInfo.radius }; break;
+                case 'rectangle': newObjectData = { ...common, type: 'rectangle', x: newShapeInfo.x, y: newShapeInfo.y, width: newShapeInfo.width, height: newShapeInfo.height }; break;
+                case 'line': newObjectData = { ...common, type: 'line', points: [{x: newShapeInfo.startX, y: newShapeInfo.startY}, {x: newShapeInfo.endX, y: newShapeInfo.endY}] }; break;
+                case 'triangle': newObjectData = { ...common, type: 'triangle', points: [newShapeInfo.p1, newShapeInfo.p2, newShapeInfo.p3] }; break;
+                default: hideBeautifySuggestion(); return;
             }
-
-            // To make this undoable, we treat it as an update.
             await updateObjectInFirestore(originalId, newObjectData, originalData);
             hideBeautifySuggestion();
+        }
+
+        // --- NEW: AI Image Generation & Library Functions ---
+        function resetImageGenModal() {
+            aiImageModalTitle.textContent = "Create an Image with AI";
+            aiImagePromptInput.value = '';
+            aiImageResults.innerHTML = '';
+            aiImageActions.classList.add('hidden');
+            aiImageGenerateBtn.disabled = false;
+            aiImageGenerateBtn.classList.remove('hidden');
+            aiImageGenerationArea.classList.remove('hidden');
+            state.currentGeneratedImage = null;
+            state.editingImageId = null;
+        }
+
+        async function generateAiImage() {
+            const prompt = aiImagePromptInput.value.trim();
+            if (!prompt) { alert("Please enter a prompt."); return; }
+            if (!firebaseApiKey) { alert("Google AI API key is not configured."); return; }
+
+            aiImageGenerateBtn.disabled = true;
+            aiImageResults.innerHTML = '<div class="loader"></div>';
+            aiImageActions.classList.add('hidden');
+
+            try {
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1, "aspectRatio": aiImageAspectRatio.value } };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${firebaseApiKey}`;
+                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { const errorBody = await response.json(); throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`); }
+                
+                const result = await response.json();
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    aiImageResults.innerHTML = `<img src="${imageUrl}" class="max-h-[50vh] rounded-lg" alt="AI generated image for '${prompt}'">`;
+                    aiImageActions.classList.remove('hidden');
+                    aiImageGenerateBtn.classList.add('hidden');
+                    aiImageGenerationArea.classList.add('hidden');
+                    state.currentGeneratedImage = { url: imageUrl, prompt: prompt, aspectRatio: aiImageAspectRatio.value };
+                } else { throw new Error("No image was generated by the AI."); }
+            } catch (error) {
+                console.error("Error generating AI image:", error);
+                aiImageResults.innerHTML = `<p class="text-red-400">Failed to generate image. ${error.message}</p>`;
+                aiImageGenerateBtn.disabled = false;
+            }
+        }
+
+        async function saveImageToLibrary() {
+            if (!state.currentGeneratedImage || !userId) return;
+            aiImageSaveBtn.disabled = true;
+            aiImageSaveBtn.innerHTML = '<div class="loader !w-4 !h-4 !border-2"></div> &nbsp; Saving...';
+            try {
+                const imageData = {
+                    ...state.currentGeneratedImage,
+                    author: userId,
+                    createdAt: serverTimestamp()
+                };
+                const collectionPath = `artifacts/${whiteboardId}/users/${userId}/images`;
+                if (state.editingImageId) {
+                    await setDoc(doc(db, collectionPath, state.editingImageId), imageData);
+                } else {
+                    await addDoc(collection(db, collectionPath), imageData);
+                }
+                hideModal(aiImageModalOverlay);
+            } catch (error) {
+                console.error("Error saving image to library:", error);
+                alert("Could not save image to library. Please try again.");
+            } finally {
+                aiImageSaveBtn.disabled = false;
+                aiImageSaveBtn.innerHTML = '<i class="fa-solid fa-save"></i> &nbsp; Save to Library';
+            }
+        }
+
+        async function openImageLibrary() {
+            if (!userId) { alert("Please sign in to use the image library."); return; }
+            showModal(imageLibraryModalOverlay);
+            imageLibraryGallery.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
+            
+            try {
+                const collectionPath = `artifacts/${whiteboardId}/users/${userId}/images`;
+                const q = query(collection(db, collectionPath), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                imageLibraryGallery.innerHTML = '';
+                if (querySnapshot.empty) {
+                    imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-gray-400">Your library is empty. Create some images!</p>';
+                    return;
+                }
+
+                querySnapshot.forEach(doc => {
+                    const imageData = { id: doc.id, ...doc.data() };
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    item.innerHTML = `
+                        <img src="${imageData.url}" alt="AI generated image: ${imageData.prompt}">
+                        <div class="library-item-overlay">
+                            <p class="library-item-prompt">${imageData.prompt}</p>
+                            <div class="library-item-actions">
+                                <button title="Insert to Whiteboard"><i class="fa-solid fa-plus-square"></i></button>
+                                <button title="Send in Chat"><i class="fa-solid fa-paper-plane"></i></button>
+                                <button title="Edit Prompt"><i class="fa-solid fa-pen"></i></button>
+                                <button title="Delete"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    const actions = item.querySelector('.library-item-actions');
+                    actions.children[0].addEventListener('click', () => { addImageToCanvas(imageData.url, 300, 300); hideModal(imageLibraryModalOverlay); });
+                    actions.children[1].addEventListener('click', () => { sendChatMessage(null, 'image', imageData.url); hideModal(imageLibraryModalOverlay); });
+                    actions.children[2].addEventListener('click', () => editImageFromLibrary(imageData));
+                    actions.children[3].addEventListener('click', () => deleteImageFromLibrary(imageData.id, item));
+                    imageLibraryGallery.appendChild(item);
+                });
+
+            } catch (error) {
+                console.error("Error opening image library:", error);
+                imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Could not load your image library.</p>';
+            }
+        }
+
+        function editImageFromLibrary(imageData) {
+            hideModal(imageLibraryModalOverlay);
+            resetImageGenModal();
+            state.editingImageId = imageData.id;
+            aiImageModalTitle.textContent = "Edit Image Prompt";
+            aiImagePromptInput.value = imageData.prompt;
+            aiImageAspectRatio.value = imageData.aspectRatio || '1:1';
+            showModal(aiImageModalOverlay);
+        }
+
+        async function deleteImageFromLibrary(imageId, itemElement) {
+            showConfirmationModal("Delete Image?", "This will permanently delete the image from your library.", async () => {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${whiteboardId}/users/${userId}/images`, imageId));
+                    itemElement.remove();
+                    if (imageLibraryGallery.children.length === 0) {
+                        imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-gray-400">Your library is empty.</p>';
+                    }
+                } catch (error) {
+                    console.error("Error deleting image:", error);
+                    alert("Failed to delete image.");
+                }
+            });
         }
 
         // --- Main App Initialization ---
@@ -1220,56 +1117,44 @@
                 localStorage.removeItem('firebaseApiKey');
                 if(localStorage.getItem('tenorApiKey')) localStorage.removeItem('tenorApiKey');
                 showModal(apiKeyModalOverlay);
-                return; // Stop execution if initialization fails
+                return;
             }
 
-            // If we reach here, initialization was successful.
             hideModal(apiKeyModalOverlay);
             
             onAuthStateChanged(auth, async (user) => { 
                 if (user) { 
-                    // User is signed in.
                     userId = user.uid;
                     const displayName = user.displayName || 'Anonymous';
                     userIdEl.textContent = userId;
                     userDisplayNameEl.textContent = displayName;
-
-                    // Update UI
                     googleSignInBtn.classList.add('hidden');
                     signOutBtn.classList.remove('hidden');
                     chatInput.disabled = false;
                     chatSendBtn.disabled = false;
                     summarizeChatBtn.disabled = false;
                     gifSearchBtn.disabled = !tenorApiKey;
+                    aiImageBtn.disabled = false;
+                    imageLibraryBtn.disabled = false;
                     chatInput.placeholder = 'Say something...';
-
-                    // Persist user info for chat display
                     const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, user.uid);
-                    await setDoc(userDocRef, {
-                        name: displayName,
-                        avatar: user.photoURL
-                    }, { merge: true });
-
-                    // Setup listeners
+                    await setDoc(userDocRef, { name: displayName, avatar: user.photoURL }, { merge: true });
                     setupStateListener(); 
                     setupDrawingsListener(); 
                     setupChatListener();
                 } else { 
-                    // User is signed out.
                     userId = null;
                     userIdEl.textContent = 'Not Signed In';
                     userDisplayNameEl.textContent = '';
-
-                    // Update UI
                     googleSignInBtn.classList.remove('hidden');
                     signOutBtn.classList.add('hidden');
                     chatInput.disabled = true;
                     chatSendBtn.disabled = true;
                     summarizeChatBtn.disabled = true;
                     gifSearchBtn.disabled = true;
+                    aiImageBtn.disabled = true;
+                    imageLibraryBtn.disabled = true;
                     chatInput.placeholder = 'Sign in to use the chat.';
-
-                    // Clear data and listeners
                     if(unsubscribeFromDrawings) unsubscribeFromDrawings();
                     if(unsubscribeFromState) unsubscribeFromState();
                     if(unsubscribeFromChat) unsubscribeFromChat();
@@ -1283,19 +1168,9 @@
             googleSignInBtn.addEventListener('click', signInWithGoogle);
             signOutBtn.addEventListener('click', signOutUser);
             document.querySelectorAll('#toolbar .tool-btn[data-tool]').forEach(button => button.addEventListener('click', (e) => selectTool(e.currentTarget.dataset.tool)));
-            document.querySelectorAll('.dropdown').forEach(dropdown => {
-                const button = dropdown.querySelector('.tool-btn, .size-btn');
-                button.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('open'); });
-            });
+            document.querySelectorAll('.dropdown').forEach(dropdown => { const button = dropdown.querySelector('.tool-btn, .size-btn'); button.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('open'); }); });
             document.addEventListener('click', () => document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open')));
-            document.querySelectorAll('#brush-size-dropdown .size-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    state.currentBrushSize = parseInt(e.currentTarget.dataset.size, 10);
-                    document.querySelectorAll('#brush-size-dropdown .size-btn').forEach(b => b.classList.remove('selected'));
-                    e.currentTarget.classList.add('selected');
-                });
-            });
-
+            document.querySelectorAll('#brush-size-dropdown .size-btn').forEach(button => { button.addEventListener('click', (e) => { state.currentBrushSize = parseInt(e.currentTarget.dataset.size, 10); document.querySelectorAll('#brush-size-dropdown .size-btn').forEach(b => b.classList.remove('selected')); e.currentTarget.classList.add('selected'); }); });
             undoBtn.addEventListener('click', handleUndo);
             redoBtn.addEventListener('click', handleRedo);
             deleteBtn.addEventListener('click', deleteSelectedObject);
@@ -1305,15 +1180,12 @@
             toggleSnapBtn.addEventListener('click', () => { state.isSnapEnabled = !state.isSnapEnabled; toggleSnapBtn.classList.toggle('selected', state.isSnapEnabled); });
             clearCanvasBtn.addEventListener('click', () => showConfirmationModal("Clear Canvas?", "This will clear the canvas for everyone and cannot be undone.", clearAllDrawings));
             helpBtn.addEventListener('click', () => { showModal(commandPaletteOverlay); commandInput.focus(); commandInput.select(); });
-            
             confirmModalConfirmBtn.addEventListener('click', () => { if (typeof confirmCallback === 'function') { confirmCallback(); } hideModal(confirmModalOverlay); confirmCallback = null; });
             confirmModalCancelBtn.addEventListener('click', () => { hideModal(confirmModalOverlay); confirmCallback = null; });
-            
             toggleChatBtn.addEventListener('click', () => { chatContainer.classList.add('hidden'); showChatBtn.classList.remove('hidden'); setTimeout(redrawCanvas, 310); });
             showChatBtn.addEventListener('click', () => { chatContainer.classList.remove('hidden'); showChatBtn.classList.add('hidden'); setTimeout(redrawCanvas, 310); });
             chatSendBtn.addEventListener('click', () => sendChatMessage(chatInput.value));
             chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(chatInput.value); } });
-            
             gifSearchBtn.addEventListener('click', () => { showModal(gifSearchModalOverlay); gifSearchInput.focus(); });
             closeGifSearchBtn.addEventListener('click', () => hideModal(gifSearchModalOverlay));
             gifSearchExecuteBtn.addEventListener('click', searchTenorGifs);
@@ -1330,6 +1202,24 @@
             beautifyConfirmBtn.addEventListener('click', applyBeautification);
             beautifyCancelBtn.addEventListener('click', hideBeautifySuggestion);
 
+            // NEW: AI Image Gen & Library Listeners
+            aiImageBtn.addEventListener('click', () => { resetImageGenModal(); showModal(aiImageModalOverlay); });
+            closeAiImageBtn.addEventListener('click', () => hideModal(aiImageModalOverlay));
+            aiImageGenerateBtn.addEventListener('click', generateAiImage);
+            aiImageSaveBtn.addEventListener('click', saveImageToLibrary);
+            aiImageInsertWhiteboardBtn.addEventListener('click', () => { if(state.currentGeneratedImage) addImageToCanvas(state.currentGeneratedImage.url, 300, 300); hideModal(aiImageModalOverlay); });
+            aiImageSendChatBtn.addEventListener('click', () => { if(state.currentGeneratedImage) sendChatMessage(null, 'image', state.currentGeneratedImage.url); hideModal(aiImageModalOverlay); });
+            aiImageEditPromptBtn.addEventListener('click', () => {
+                aiImageActions.classList.add('hidden');
+                aiImageGenerateBtn.classList.remove('hidden');
+                aiImageGenerationArea.classList.remove('hidden');
+                aiImageResults.innerHTML = '';
+                aiImagePromptInput.focus();
+            });
+            imageLibraryBtn.addEventListener('click', openImageLibrary);
+            closeImageLibraryBtn.addEventListener('click', () => hideModal(imageLibraryModalOverlay));
+
+
             eventCaptureLayer.addEventListener('mousedown', handleMouseDown); 
             window.addEventListener('mousemove', handleMouseMove); 
             window.addEventListener('mouseup', handleMouseUp); 
@@ -1338,7 +1228,7 @@
             window.addEventListener('keydown', (e) => {
                 state.isShiftDown = e.shiftKey;
                 const isModalOpen = document.querySelector('.modal-overlay.visible');
-                const isTextInputActive = document.activeElement === textInput || document.activeElement === chatInput || document.activeElement === commandInput;
+                const isTextInputActive = [textInput, chatInput, commandInput, aiIconPromptInput, aiImagePromptInput].includes(document.activeElement);
                 if (isModalOpen || isTextInputActive) return;
 
                 if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); handleUndo(); }
@@ -1357,38 +1247,23 @@
 
         function populateShapes() {
             const shapes = [
-                { tool: 'line', icon: 'fa-minus', name: 'Line' },
-                { tool: 'rectangle', icon: 'fa-square', name: 'Rectangle' },
-                { tool: 'circle', icon: 'fa-circle', name: 'Circle' },
-                { tool: 'triangle', icon: 'fa-play fa-rotate-270', name: 'Triangle' },
-                { tool: 'diamond', icon: 'fa-gem', name: 'Diamond' },
-                { tool: 'pentagon', icon: 'fa-draw-polygon', name: 'Pentagon' },
-                { tool: 'hexagon', icon: 'fa-draw-polygon', name: 'Hexagon' },
-                { tool: 'octagon', icon: 'fa-draw-polygon', name: 'Octagon' },
-                { tool: 'star', icon: 'fa-star', name: 'Star' },
-                { tool: 'star-6', icon: 'fa-star-of-david', name: '6-Star' },
-                { tool: 'heart', icon: 'fa-heart', name: 'Heart' },
-                { tool: 'cross', icon: 'fa-plus', name: 'Cross' },
-                { tool: 'arrow-right', icon: 'fa-arrow-right', name: 'Arrow R' },
-                { tool: 'arrow-left', icon: 'fa-arrow-left', name: 'Arrow L' },
+                { tool: 'line', icon: 'fa-minus', name: 'Line' }, { tool: 'rectangle', icon: 'fa-square', name: 'Rectangle' },
+                { tool: 'circle', icon: 'fa-circle', name: 'Circle' }, { tool: 'triangle', icon: 'fa-play fa-rotate-270', name: 'Triangle' },
+                { tool: 'diamond', icon: 'fa-gem', name: 'Diamond' }, { tool: 'pentagon', icon: 'fa-draw-polygon', name: 'Pentagon' },
+                { tool: 'hexagon', icon: 'fa-draw-polygon', name: 'Hexagon' }, { tool: 'octagon', icon: 'fa-draw-polygon', name: 'Octagon' },
+                { tool: 'star', icon: 'fa-star', name: 'Star' }, { tool: 'star-6', icon: 'fa-star-of-david', name: '6-Star' },
+                { tool: 'heart', icon: 'fa-heart', name: 'Heart' }, { tool: 'cross', icon: 'fa-plus', name: 'Cross' },
+                { tool: 'arrow-right', icon: 'fa-arrow-right', name: 'Arrow R' }, { tool: 'arrow-left', icon: 'fa-arrow-left', name: 'Arrow L' },
             ];
-
             const shapesContainer = document.querySelector('#shapes-dropdown .dropdown-content');
             shapesContainer.innerHTML = '';
             shapes.forEach(shape => {
                 const button = document.createElement('button');
-                button.dataset.tool = shape.tool;
-                button.className = 'tool-btn shape-btn';
-                button.title = shape.name;
+                button.dataset.tool = shape.tool; button.className = 'tool-btn shape-btn'; button.title = shape.name;
                 button.innerHTML = `<i class="fa-solid ${shape.icon}"></i><span>${shape.name}</span>`;
                 shapesContainer.appendChild(button);
             });
-            shapesContainer.querySelectorAll('.tool-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    selectTool(e.currentTarget.dataset.tool);
-                    document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
-                });
-            });
+            shapesContainer.querySelectorAll('.tool-btn').forEach(button => { button.addEventListener('click', (e) => { selectTool(e.currentTarget.dataset.tool); document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open')); }); });
         }
 
         window.addEventListener('load', () => {
