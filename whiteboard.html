@@ -452,7 +452,7 @@
     <script type="module">
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, onSnapshot, collection, addDoc, doc, setDoc, getDoc, query, where, updateDoc, serverTimestamp, writeBatch, getDocs, deleteDoc, setLogLevel, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // --- App Configuration ---
@@ -717,7 +717,7 @@
         function generateStarPoints(cx, cy, outerRadius, innerRadius, numPoints) { const points = []; const angleStep = Math.PI / numPoints; for (let i = 0; i < 2 * numPoints; i++) { const radius = i % 2 === 0 ? outerRadius : innerRadius; const angle = i * angleStep - Math.PI / 2; points.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }); } return points; }
         function generateHeartPoints(cx, cy, w, h) { const points = []; for(let i = 0; i < 100; i++) { const angle = (i/100) * 2 * Math.PI; const x = cx + w/2 * (16 * Math.pow(Math.sin(angle), 3)); const y = cy - h/2 * (13 * Math.cos(angle) - 5 * Math.cos(2*angle) - 2 * Math.cos(3*angle) - Math.cos(4*angle)); points.push({x, y}); } return points; }
         function findClickedObject(x, y) { for (let i = state.sortedDrawings.length - 1; i >= 0; i--) { const obj = state.sortedDrawings[i]; const center = getObjectCenter(obj); const angle = -(obj.rotation || 0); const localClick = rotatePoint({x,y}, center, angle); const bounds = getObjectBounds(obj); if (!bounds) continue; const fuzz = (obj.lineWidth || 2) / 2 + 5; if (localClick.x >= bounds.x - fuzz && localClick.x <= bounds.x + bounds.width + fuzz && localClick.y >= bounds.y - fuzz && localClick.y <= bounds.y + bounds.height + fuzz) { return obj.id; } } return null; }
-        function moveObjectTo(obj, newCenterX, newCenterY) { const bounds = getObjectBounds(obj); if (!bounds) return; const oldCenterX = bounds.x + bounds.width / 2; const oldCenterY = bounds.y + bounds.height / 2; const dx = newCenterX - oldCenterX; const dy = newCenterY - oldCenterY; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else { obj.x += dx; obj.y += dy; } }
+        function moveObjectTo(obj, newCenterX, newCenterY) { const bounds = getObjectBounds(obj); if (!bounds) return; const oldCenterX = bounds.x + bounds.width / 2; const oldCenterY = bounds.y + bounds.height / 2; const dx = newCenterX - oldCenterY; const dy = newCenterY - oldCenterY; if (obj.points) { obj.points = obj.points.map(p => ({ x: p.x + dx, y: p.y + dy })); } else { obj.x += dx; obj.y += dy; } }
         
         // --- TEXT INPUT ---
         function startTextEntry(pos) {
@@ -858,7 +858,7 @@
                 if (snapshot.docChanges().length > 0) { chatMessages.scrollTop = chatMessages.scrollHeight; }
             }, error => {
                 console.error("Chat listener error:", error);
-                if (error.code === 'failed-precondition') { console.error("Firestore error suggests a missing index for the chat. Please create an index for the 'chat' collection on the 'timestamp' field (ascending)."); }
+                if (error.code === 'failed-precondition') { console.error("Firestore error suggests a missing index for the chat. Please create an index for the 'timestamp' field (ascending)."); }
             });
         }
 
@@ -907,7 +907,14 @@
         };
 
         const signOutUser = async () => {
-            try { await signOut(auth); userProfiles.clear();
+            try { 
+                const isAnonymous = auth.currentUser.isAnonymous;
+                await signOut(auth); 
+                userProfiles.clear();
+                // If the user was anonymous, sign them back in anonymously to maintain a session.
+                if (isAnonymous) {
+                    await signInAnonymously(auth);
+                }
             } catch (error) { console.error("Sign-Out failed:", error); }
         };
 
@@ -1184,10 +1191,13 @@
                 if (user) { 
                     userId = user.uid;
                     const displayName = user.displayName || 'Anonymous';
+                    const isAnonymous = user.isAnonymous;
+
                     userIdEl.textContent = userId;
-                    userDisplayNameEl.textContent = displayName;
-                    googleSignInBtn.classList.add('hidden');
-                    signOutBtn.classList.remove('hidden');
+                    userDisplayNameEl.textContent = isAnonymous ? 'Anonymous User' : displayName;
+                    googleSignInBtn.classList.toggle('hidden', !isAnonymous);
+                    signOutBtn.classList.toggle('hidden', isAnonymous);
+                    
                     chatInput.disabled = false;
                     chatSendBtn.disabled = false;
                     summarizeChatBtn.disabled = false;
@@ -1195,12 +1205,17 @@
                     aiImageBtn.disabled = false;
                     imageLibraryBtn.disabled = false;
                     chatInput.placeholder = 'Say something...';
-                    const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, user.uid);
-                    await setDoc(userDocRef, { name: displayName, avatar: user.photoURL }, { merge: true });
+                    
+                    if (!isAnonymous) {
+                        const userDocRef = doc(db, `artifacts/${whiteboardId}/public/data/users`, user.uid);
+                        await setDoc(userDocRef, { name: displayName, avatar: user.photoURL }, { merge: true });
+                    }
+
                     setupStateListener(); 
                     setupDrawingsListener(); 
                     setupChatListener();
                 } else { 
+                    // This block will now only be hit if anonymous sign-in also fails.
                     userId = null;
                     userIdEl.textContent = 'Not Signed In';
                     userDisplayNameEl.textContent = '';
@@ -1221,6 +1236,15 @@
                     redrawCanvas();
                 } 
             });
+
+            // Try to sign in anonymously if no user is found
+            if (!auth.currentUser) {
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Anonymous sign-in failed:", error);
+                    showInfoModal("Authentication Error", "Could not start an anonymous session. Some features may be unavailable.");
+                });
+            }
+
 
             // Setup Event Listeners for UI
             googleSignInBtn.addEventListener('click', signInWithGoogle);
