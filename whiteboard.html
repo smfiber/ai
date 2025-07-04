@@ -532,6 +532,7 @@
         const aiImageModalOverlay = document.getElementById('ai-image-modal-overlay');
         const aiImageModalTitle = document.getElementById('ai-image-modal-title');
         const closeAiImageBtn = document.getElementById('close-ai-image-btn');
+        const aiImageGenerationArea = document.getElementById('ai-image-generation-area'); // <-- FIX: This line was added
         const aiImagePromptInput = document.getElementById('ai-image-prompt-input');
         const aiImageAspectRatio = document.getElementById('ai-image-aspect-ratio');
         const aiImageGenerateBtn = document.getElementById('ai-image-generate-btn');
@@ -925,7 +926,7 @@
         
         async function checkForBeautify(docId, drawingData) {
             if (!firebaseApiKey || drawingData.points.length < 10) return;
-            const prompt = `Analyze the following sequence of 2D points and determine if it represents a simple geometric shape (like a circle, rectangle, line, or triangle). The points are: ${JSON.stringify(drawingData.points)}. If it is one of these shapes, respond with a JSON object describing the shape. For a 'circle', provide 'centerX', 'centerY', and 'radius'. For a 'rectangle', provide 'x', 'y', 'width', and 'height'. For a 'line', provide 'startX', 'startY', 'endX', 'endY'. For a 'triangle', provide the three corner points 'p1', 'p2', 'p3'. If it's not a clear shape, respond with {\"shape\": \"none\"}.`;
+            const prompt = `Analyze the following sequence of 2D points and determine if it represents a simple geometric shape (like a circle, rectangle, line, or triangle). The points are: ${JSON.stringify(drawingData.points)}. If it is one of these shapes, respond with a JSON object describing the shape. For a 'circle', provide 'centerX', 'centerY', and 'radius'. For a 'rectangle', provide 'x', 'y', 'width', 'height'. For a 'line', provide 'startX', 'startY', 'endX', 'endY'. For a 'triangle', provide the three corner points 'p1', 'p2', 'p3'. If it's not a clear shape, respond with {\"shape\": \"none\"}.`;
             try {
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
