@@ -551,7 +551,7 @@
             // Modal Closing Listeners
             ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
                  document.getElementById(id).addEventListener('click', (e) => {
-                     if (e.target.id === id || e.target.closest('[id^="close"]')) {
+                     if (e.target.closest('[id^="close"]')) {
                          document.getElementById(id).classList.add('hidden');
                      }
                  });
