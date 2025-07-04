@@ -532,7 +532,7 @@
         const aiImageModalOverlay = document.getElementById('ai-image-modal-overlay');
         const aiImageModalTitle = document.getElementById('ai-image-modal-title');
         const closeAiImageBtn = document.getElementById('close-ai-image-btn');
-        const aiImageGenerationArea = document.getElementById('ai-image-generation-area'); // <-- FIX: This line was added
+        const aiImageGenerationArea = document.getElementById('ai-image-generation-area');
         const aiImagePromptInput = document.getElementById('ai-image-prompt-input');
         const aiImageAspectRatio = document.getElementById('ai-image-aspect-ratio');
         const aiImageGenerateBtn = document.getElementById('ai-image-generate-btn');
@@ -757,11 +757,51 @@
         function getMousePos(evt) { const rect = eventCaptureLayer.getBoundingClientRect(); return { x: evt.clientX - rect.left, y: evt.clientY - rect.top }; }
         function snapToGrid(pos) { if (!state.isSnapEnabled) return pos; return { x: Math.round(pos.x / state.gridSize) * state.gridSize, y: Math.round(pos.y / state.gridSize) * state.gridSize, }; }
         function updateCursor(pos) { let newCursor = ''; switch (state.currentTool) { case 'select': newCursor = 'grab'; break; case 'text': newCursor = 'text'; break; default: newCursor = 'crosshair'; } if (state.currentTool === 'select' && state.selectedObjectId) { const selectedObject = state.allDrawings.get(state.selectedObjectId); const handles = getTransformHandles(selectedObject); let handleFound = false; if (handles && pos) { for (const key in handles) { const handle = handles[key]; if (handle.type && Math.hypot(pos.x - handle.x, pos.y - handle.y) < 10) { newCursor = handle.cursor; handleFound = true; break; } } } } if (isEyedropperActive) { newCursor = 'crosshair'; } eventCaptureLayer.style.cursor = newCursor; }
-        function showConfirmationModal(title, text, onConfirm) { confirmModalTitle.textContent = title; confirmModalText.textContent = text; confirmCallback = onConfirm; showModal(confirmModalOverlay); }
+        
+        function showConfirmationModal(title, text, onConfirm) {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmCallback = onConfirm;
+            showModal(confirmModalOverlay);
+        }
+
+        // NEW: Function to show a simple info modal, replacing alert()
+        function showInfoModal(title, text) {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmModalCancelBtn.classList.add('hidden');
+            confirmModalConfirmBtn.textContent = 'OK';
+            
+            // The callback will reset the button states when the modal is closed.
+            confirmCallback = () => {
+                confirmModalCancelBtn.classList.remove('hidden');
+                confirmModalConfirmBtn.textContent = 'Confirm';
+            };
+            showModal(confirmModalOverlay);
+        }
+
+        // NEW: Firestore has a 1MiB limit per document. We can't store large base64 images.
+        const FIRESTORE_MAX_FIELD_SIZE = 1048487; // 1 MiB = 1,048,576 bytes. A little buffer for safety.
+
+        function isUrlTooLargeForFirestore(url) {
+            // This check applies to base64 data URLs, which are the ones that can get very large.
+            if (!url || !url.startsWith('data:image')) {
+                return false;
+            }
+            // A direct length check is a simple and effective safeguard against exceeding Firestore's 1MiB field size limit.
+            return url.length > FIRESTORE_MAX_FIELD_SIZE;
+        }
+
         async function clearAllDrawings() { const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`; const q = query(collection(db, drawingsCollectionPath)); const querySnapshot = await getDocs(q); if (querySnapshot.empty) return; const batch = writeBatch(db); querySnapshot.forEach((doc) => batch.delete(doc.ref)); await batch.commit(); await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true }); }
         
         async function sendChatMessage(text, type = 'text', url = null) {
             if (!userId) return;
+
+            if (url && isUrlTooLargeForFirestore(url)) {
+                showInfoModal("Image Too Large", "This image is too large to be sent in the chat due to database size limits.");
+                return;
+            }
+
             const content = text ? text.trim() : '';
             if (content || url) {
                 try {
@@ -770,7 +810,10 @@
                     if (url) messageData.url = url;
                     await addDoc(collection(db, `artifacts/${whiteboardId}/public/data/chat`), messageData);
                     chatInput.value = '';
-                } catch (error) { console.error("Error sending chat message:", error); }
+                } catch (error) { 
+                    console.error("Error sending chat message:", error);
+                    showInfoModal("Chat Error", "Could not send the message. " + error.message);
+                }
             }
         }
 
@@ -856,7 +899,11 @@
         const signInWithGoogle = async () => {
             const googleProvider = new GoogleAuthProvider();
             try { await signInWithPopup(auth, googleProvider);
-            } catch (error) { console.error("Google Sign-In failed:", error); userIdEl.textContent = 'Auth Error'; alert('Could not sign in with Google. Please check your Firebase project configuration and ensure Google authentication is enabled.'); }
+            } catch (error) { 
+                console.error("Google Sign-In failed:", error); 
+                userIdEl.textContent = 'Auth Error'; 
+                showInfoModal('Sign-In Failed', 'Could not sign in with Google. Please check your Firebase project configuration and ensure Google authentication is enabled.');
+            }
         };
 
         const signOutUser = async () => {
@@ -866,7 +913,7 @@
 
         // --- AI Feature Functions ---
         async function summarizeChat() {
-            if (!firebaseApiKey) { alert("Google AI API key is not configured."); return; }
+            if (!firebaseApiKey) { showInfoModal("API Key Missing", "Google AI API key is not configured."); return; }
             showModal(chatSummaryModalOverlay);
             chatSummaryContent.innerHTML = '<div class="flex justify-center items-center"><div class="loader"></div></div>';
             try {
@@ -890,7 +937,7 @@
 
         async function generateAiIcon() {
             const prompt = aiIconPromptInput.value.trim();
-            if (!prompt || !firebaseApiKey) { alert("Prompt or API key is missing."); return; }
+            if (!prompt || !firebaseApiKey) { showInfoModal("Input Missing", "Please enter a prompt. The Google AI API key must also be configured."); return; }
             aiIconGenerateBtn.disabled = true;
             aiIconResults.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
             const fullPrompt = `A simple, modern, vector-style, flat, monochrome icon of ${prompt}. The icon should be on a transparent background, using only white lines or shapes. It should be easily recognizable and suitable for a whiteboard application.`;
@@ -917,6 +964,10 @@
         }
 
         async function addImageToCanvas(url, width, height) {
+            if (isUrlTooLargeForFirestore(url)) {
+                showInfoModal("Image Too Large", "This image is too large to be added to the whiteboard due to database size limits.");
+                return;
+            }
             const rect = main_content.getBoundingClientRect();
             const centerPos = { x: rect.width / 2, y: rect.height / 2 };
             const imageData = { type: 'image', url: url, x: centerPos.x, y: centerPos.y, width: width, height: height, author: userId, epoch: state.currentEpoch, rotation: 0 };
@@ -974,8 +1025,8 @@
 
         async function generateAiImage() {
             const prompt = aiImagePromptInput.value.trim();
-            if (!prompt) { alert("Please enter a prompt."); return; }
-            if (!firebaseApiKey) { alert("Google AI API key is not configured."); return; }
+            if (!prompt) { showInfoModal("Input Missing", "Please enter a prompt to generate an image."); return; }
+            if (!firebaseApiKey) { showInfoModal("API Key Missing", "Google AI API key is not configured."); return; }
 
             aiImageGenerateBtn.disabled = true;
             aiImageResults.innerHTML = '<div class="loader"></div>';
@@ -1006,6 +1057,12 @@
 
         async function saveImageToLibrary() {
             if (!state.currentGeneratedImage || !userId) return;
+
+            if (isUrlTooLargeForFirestore(state.currentGeneratedImage.url)) {
+                showInfoModal("Image Too Large", "This AI-generated image is too large to be saved to the library due to database size limits.");
+                return;
+            }
+
             aiImageSaveBtn.disabled = true;
             aiImageSaveBtn.innerHTML = '<div class="loader !w-4 !h-4 !border-2"></div> &nbsp; Saving...';
             try {
@@ -1023,7 +1080,7 @@
                 hideModal(aiImageModalOverlay);
             } catch (error) {
                 console.error("Error saving image to library:", error);
-                alert("Could not save image to library. Please try again.");
+                showInfoModal("Save Failed", "Could not save image to library. It might be too large.");
             } finally {
                 aiImageSaveBtn.disabled = false;
                 aiImageSaveBtn.innerHTML = '<i class="fa-solid fa-save"></i> &nbsp; Save to Library';
@@ -1031,7 +1088,7 @@
         }
 
         async function openImageLibrary() {
-            if (!userId) { alert("Please sign in to use the image library."); return; }
+            if (!userId) { showInfoModal("Authentication Required", "Please sign in to use the image library."); return; }
             showModal(imageLibraryModalOverlay);
             imageLibraryGallery.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
             
@@ -1096,7 +1153,7 @@
                     }
                 } catch (error) {
                     console.error("Error deleting image:", error);
-                    alert("Failed to delete image.");
+                    showInfoModal("Error", "Failed to delete image.");
                 }
             });
         }
@@ -1114,7 +1171,7 @@
                 setLogLevel('debug');
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                alert("Firebase initialization failed, likely due to an invalid API key. Please re-enter your key.");
+                showInfoModal("Firebase Error", "Firebase initialization failed, likely due to an invalid API key. Please re-enter your key.");
                 localStorage.removeItem('firebaseApiKey');
                 if(localStorage.getItem('tenorApiKey')) localStorage.removeItem('tenorApiKey');
                 showModal(apiKeyModalOverlay);
@@ -1288,7 +1345,7 @@
                     if(tKey) localStorage.setItem('tenorApiKey', tKey);
                     initializeAppLogic(fKey, tKey);
                 } else {
-                    alert("Please provide the Firebase & Google AI API key to continue."); 
+                    showInfoModal("API Key Required", "Please provide the Firebase & Google AI API key to continue."); 
                 }
             });
 
