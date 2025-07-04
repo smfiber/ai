@@ -184,24 +184,6 @@
         .ai-result-item:hover { transform: scale(1.05); background-color: var(--accent-color); }
         .ai-result-item img { width: 100%; height: auto; object-fit: contain; border-radius: 0.25rem; }
         #ai-image-generation-area .sub-btn { font-size: 0.8rem; padding: 0.25rem 0.5rem; height: auto; }
-
-        /* Image Library */
-        #image-library-gallery {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem; margin-top: 1rem; max-height: 70vh; overflow-y: auto; padding: 0.5rem;
-        }
-        .library-item { position: relative; border-radius: 0.5rem; overflow: hidden; }
-        .library-item img { width: 100%; height: 150px; object-fit: cover; display: block; }
-        .library-item-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.3s ease;
-            display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 0.5rem;
-        }
-        .library-item:hover .library-item-overlay { opacity: 1; }
-        .library-item-prompt { font-size: 0.75rem; color: white; text-align: center; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-        .library-item-actions { display: flex; gap: 0.5rem; }
-        .library-item-actions button { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .library-item-actions button:hover { background: var(--accent-color); }
     </style>
 </head>
 <body class="text-white antialiased">
@@ -294,8 +276,6 @@
                     </div>
                     <div class="divider"></div>
                     <div class="toolbar-group">
-                         <!-- NEW: Image Library Button -->
-                        <button id="image-library-btn" class="tool-btn p-2 text-yellow-400" title="Image Library"><i class="fa-solid fa-images"></i></button>
                         <button id="toggle-grid-btn" class="tool-btn p-2 selected" title="Toggle Grid (G)"><i class="fa-solid fa-border-all"></i></button>
                         <button id="toggle-snap-btn" class="tool-btn p-2 selected" title="Toggle Snapping"><i class="fa-solid fa-magnet"></i></button>
                         <button id="clear-canvas-btn" class="tool-btn p-2 text-red-400" title="Clear Canvas"><i class="fa-solid fa-eraser"></i></button>
@@ -428,26 +408,12 @@
             </div>
             <div id="ai-image-results" class="mt-4 flex justify-center items-center min-h-[256px]"></div>
             <div id="ai-image-actions" class="mt-4 flex justify-center gap-4 hidden">
-                <button id="ai-image-save-btn" class="chat-btn bg-green-600 hover:bg-green-700"><i class="fa-solid fa-save"></i> &nbsp; Save to Library</button>
                 <button id="ai-image-insert-whiteboard-btn" class="chat-btn"><i class="fa-solid fa-plus-square"></i> &nbsp; Insert to Whiteboard</button>
                 <button id="ai-image-send-chat-btn" class="chat-btn"><i class="fa-solid fa-paper-plane"></i> &nbsp; Send in Chat</button>
                 <button id="ai-image-edit-prompt-btn" class="chat-btn bg-gray-600 hover:bg-gray-700"><i class="fa-solid fa-pen"></i> &nbsp; Edit Prompt</button>
             </div>
         </div>
     </div>
-    <!-- NEW: Image Library Modal -->
-    <div id="image-library-modal-overlay" class="modal-overlay">
-        <div id="image-library-modal" class="modal glass-ui p-6 w-full max-w-5xl">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">My Image Library</h2>
-                <button id="close-image-library-btn" class="text-2xl">&times;</button>
-            </div>
-            <div id="image-library-gallery">
-                <!-- Saved images will be populated here by JS -->
-            </div>
-        </div>
-    </div>
-
 
     <script type="module">
         // --- Firebase Imports ---
@@ -538,16 +504,9 @@
         const aiImageGenerateBtn = document.getElementById('ai-image-generate-btn');
         const aiImageResults = document.getElementById('ai-image-results');
         const aiImageActions = document.getElementById('ai-image-actions');
-        const aiImageSaveBtn = document.getElementById('ai-image-save-btn');
         const aiImageInsertWhiteboardBtn = document.getElementById('ai-image-insert-whiteboard-btn');
         const aiImageSendChatBtn = document.getElementById('ai-image-send-chat-btn');
         const aiImageEditPromptBtn = document.getElementById('ai-image-edit-prompt-btn');
-        // NEW: Image Library DOM Elements
-        const imageLibraryBtn = document.getElementById('image-library-btn');
-        const imageLibraryModalOverlay = document.getElementById('image-library-modal-overlay');
-        const closeImageLibraryBtn = document.getElementById('close-image-library-btn');
-        const imageLibraryGallery = document.getElementById('image-library-gallery');
-
 
         // --- Firebase & State Globals ---
         let db, userId, auth, colorPicker;
@@ -564,7 +523,6 @@
             originalObjectState: null, hoveredHandle: null,
             beautifyCandidate: null, // Store info for a potential shape beautification
             currentGeneratedImage: null, // Store data for the last generated image
-            editingImageId: null // Store ID of image being edited
         };
         let commands = [];
         let activeCommandIndex = 0;
@@ -622,7 +580,6 @@
                 { name: 'Activate Eyedropper', action: () => eyedropperBtn.click(), shortcut: 'I' },
                 { name: 'Generate AI Icon', action: () => selectTool('ai-icon'), shortcut: 'A' },
                 { name: 'Create AI Image', action: () => aiImageBtn.click(), shortcut: 'C' },
-                { name: 'Open Image Library', action: () => imageLibraryBtn.click(), shortcut: 'L' },
             ];
             renderCommandList(commands);
             commandInput.addEventListener('input', () => { const query = commandInput.value.toLowerCase(); const filteredCommands = commands.filter(cmd => cmd.name.toLowerCase().includes(query)); renderCommandList(filteredCommands); });
@@ -780,27 +737,10 @@
             showModal(confirmModalOverlay);
         }
 
-        // NEW: Firestore has a 1MiB limit per document. We can't store large base64 images.
-        const FIRESTORE_MAX_FIELD_SIZE = 1048487; // 1 MiB = 1,048,576 bytes. A little buffer for safety.
-
-        function isUrlTooLargeForFirestore(url) {
-            // This check applies to base64 data URLs, which are the ones that can get very large.
-            if (!url || !url.startsWith('data:image')) {
-                return false;
-            }
-            // A direct length check is a simple and effective safeguard against exceeding Firestore's 1MiB field size limit.
-            return url.length > FIRESTORE_MAX_FIELD_SIZE;
-        }
-
         async function clearAllDrawings() { const drawingsCollectionPath = `artifacts/${whiteboardId}/public/data/drawings`; const q = query(collection(db, drawingsCollectionPath)); const querySnapshot = await getDocs(q); if (querySnapshot.empty) return; const batch = writeBatch(db); querySnapshot.forEach((doc) => batch.delete(doc.ref)); await batch.commit(); await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() }, { merge: true }); }
         
         async function sendChatMessage(text, type = 'text', url = null) {
             if (!userId) return;
-
-            if (url && isUrlTooLargeForFirestore(url)) {
-                showInfoModal("Image Too Large", "This image is too large to be sent in the chat due to database size limits.");
-                return;
-            }
 
             const content = text ? text.trim() : '';
             if (content || url) {
@@ -971,10 +911,6 @@
         }
 
         async function addImageToCanvas(url, width, height) {
-            if (isUrlTooLargeForFirestore(url)) {
-                showInfoModal("Image Too Large", "This image is too large to be added to the whiteboard due to database size limits.");
-                return;
-            }
             const rect = main_content.getBoundingClientRect();
             const centerPos = { x: rect.width / 2, y: rect.height / 2 };
             const imageData = { type: 'image', url: url, x: centerPos.x, y: centerPos.y, width: width, height: height, author: userId, epoch: state.currentEpoch, rotation: 0 };
@@ -1017,7 +953,43 @@
             hideBeautifySuggestion();
         }
 
-        // --- NEW: AI Image Generation & Library Functions ---
+        // --- AI Image Generation & Resizing Functions ---
+
+        /**
+         * Resizes a base64 image to a maximum dimension, converting it to JPEG for size efficiency.
+         * @param {string} base64Str - The base64 data URL of the image.
+         * @param {number} [maxDim=800] - The maximum width or height for the new image.
+         * @returns {Promise<string>} A promise that resolves with the new, smaller base64 data URL.
+         */
+        function resizeImage(base64Str, maxDim = 800) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Convert to JPEG with a quality setting of 0.8 for significant file size reduction.
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            });
+        }
+
         function resetImageGenModal() {
             aiImageModalTitle.textContent = "Create an Image with AI";
             aiImagePromptInput.value = '';
@@ -1027,7 +999,6 @@
             aiImageGenerateBtn.classList.remove('hidden');
             aiImageGenerationArea.classList.remove('hidden');
             state.currentGeneratedImage = null;
-            state.editingImageId = null;
         }
 
         async function generateAiImage() {
@@ -1048,121 +1019,22 @@
                 
                 const result = await response.json();
                 if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                    aiImageResults.innerHTML = `<img src="${imageUrl}" class="max-h-[50vh] rounded-lg" alt="AI generated image for '${prompt}'">`;
+                    const originalImageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    
+                    // Resize the image before showing it or storing it in state
+                    const resizedImageUrl = await resizeImage(originalImageUrl);
+
+                    aiImageResults.innerHTML = `<img src="${resizedImageUrl}" class="max-h-[50vh] rounded-lg" alt="AI generated image for '${prompt}'">`;
                     aiImageActions.classList.remove('hidden');
                     aiImageGenerateBtn.classList.add('hidden');
                     aiImageGenerationArea.classList.add('hidden');
-                    state.currentGeneratedImage = { url: imageUrl, prompt: prompt, aspectRatio: aiImageAspectRatio.value };
+                    state.currentGeneratedImage = { url: resizedImageUrl, prompt: prompt, aspectRatio: aiImageAspectRatio.value };
                 } else { throw new Error("No image was generated by the AI."); }
             } catch (error) {
                 console.error("Error generating AI image:", error);
                 aiImageResults.innerHTML = `<p class="text-red-400">Failed to generate image. ${error.message}</p>`;
                 aiImageGenerateBtn.disabled = false;
             }
-        }
-
-        async function saveImageToLibrary() {
-            if (!state.currentGeneratedImage || !userId) return;
-
-            if (isUrlTooLargeForFirestore(state.currentGeneratedImage.url)) {
-                showInfoModal("Image Too Large", "This AI-generated image is too large to be saved to the library due to database size limits.");
-                return;
-            }
-
-            aiImageSaveBtn.disabled = true;
-            aiImageSaveBtn.innerHTML = '<div class="loader !w-4 !h-4 !border-2"></div> &nbsp; Saving...';
-            try {
-                const imageData = {
-                    ...state.currentGeneratedImage,
-                    author: userId,
-                    createdAt: serverTimestamp()
-                };
-                const collectionPath = `artifacts/${whiteboardId}/users/${userId}/images`;
-                if (state.editingImageId) {
-                    await setDoc(doc(db, collectionPath, state.editingImageId), imageData);
-                } else {
-                    await addDoc(collection(db, collectionPath), imageData);
-                }
-                hideModal(aiImageModalOverlay);
-            } catch (error) {
-                console.error("Error saving image to library:", error);
-                showInfoModal("Save Failed", "Could not save image to library. It might be too large.");
-            } finally {
-                aiImageSaveBtn.disabled = false;
-                aiImageSaveBtn.innerHTML = '<i class="fa-solid fa-save"></i> &nbsp; Save to Library';
-            }
-        }
-
-        async function openImageLibrary() {
-            if (!userId) { showInfoModal("Authentication Required", "Please sign in to use the image library."); return; }
-            showModal(imageLibraryModalOverlay);
-            imageLibraryGallery.innerHTML = '<div class="col-span-full flex justify-center items-center"><div class="loader"></div></div>';
-            
-            try {
-                const collectionPath = `artifacts/${whiteboardId}/users/${userId}/images`;
-                const q = query(collection(db, collectionPath), orderBy("createdAt", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                imageLibraryGallery.innerHTML = '';
-                if (querySnapshot.empty) {
-                    imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-gray-400">Your library is empty. Create some images!</p>';
-                    return;
-                }
-
-                querySnapshot.forEach(doc => {
-                    const imageData = { id: doc.id, ...doc.data() };
-                    const item = document.createElement('div');
-                    item.className = 'library-item';
-                    item.innerHTML = `
-                        <img src="${imageData.url}" alt="AI generated image: ${imageData.prompt}">
-                        <div class="library-item-overlay">
-                            <p class="library-item-prompt">${imageData.prompt}</p>
-                            <div class="library-item-actions">
-                                <button title="Insert to Whiteboard"><i class="fa-solid fa-plus-square"></i></button>
-                                <button title="Send in Chat"><i class="fa-solid fa-paper-plane"></i></button>
-                                <button title="Edit Prompt"><i class="fa-solid fa-pen"></i></button>
-                                <button title="Delete"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </div>
-                    `;
-                    const actions = item.querySelector('.library-item-actions');
-                    actions.children[0].addEventListener('click', () => { addImageToCanvas(imageData.url, 300, 300); hideModal(imageLibraryModalOverlay); });
-                    actions.children[1].addEventListener('click', () => { sendChatMessage(null, 'image', imageData.url); hideModal(imageLibraryModalOverlay); });
-                    actions.children[2].addEventListener('click', () => editImageFromLibrary(imageData));
-                    actions.children[3].addEventListener('click', () => deleteImageFromLibrary(imageData.id, item));
-                    imageLibraryGallery.appendChild(item);
-                });
-
-            } catch (error) {
-                console.error("Error opening image library:", error);
-                imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-red-400">Could not load your image library.</p>';
-            }
-        }
-
-        function editImageFromLibrary(imageData) {
-            hideModal(imageLibraryModalOverlay);
-            resetImageGenModal();
-            state.editingImageId = imageData.id;
-            aiImageModalTitle.textContent = "Edit Image Prompt";
-            aiImagePromptInput.value = imageData.prompt;
-            aiImageAspectRatio.value = imageData.aspectRatio || '1:1';
-            showModal(aiImageModalOverlay);
-        }
-
-        async function deleteImageFromLibrary(imageId, itemElement) {
-            showConfirmationModal("Delete Image?", "This will permanently delete the image from your library.", async () => {
-                try {
-                    await deleteDoc(doc(db, `artifacts/${whiteboardId}/users/${userId}/images`, imageId));
-                    itemElement.remove();
-                    if (imageLibraryGallery.children.length === 0) {
-                        imageLibraryGallery.innerHTML = '<p class="col-span-full text-center text-gray-400">Your library is empty.</p>';
-                    }
-                } catch (error) {
-                    console.error("Error deleting image:", error);
-                    showInfoModal("Error", "Failed to delete image.");
-                }
-            });
         }
 
         // --- Main App Initialization ---
@@ -1203,7 +1075,6 @@
                     summarizeChatBtn.disabled = false;
                     gifSearchBtn.disabled = !tenorApiKey;
                     aiImageBtn.disabled = false;
-                    imageLibraryBtn.disabled = false;
                     chatInput.placeholder = 'Say something...';
                     
                     if (!isAnonymous) {
@@ -1226,7 +1097,6 @@
                     summarizeChatBtn.disabled = true;
                     gifSearchBtn.disabled = true;
                     aiImageBtn.disabled = true;
-                    imageLibraryBtn.disabled = true;
                     chatInput.placeholder = 'Sign in to use the chat.';
                     if(unsubscribeFromDrawings) unsubscribeFromDrawings();
                     if(unsubscribeFromState) unsubscribeFromState();
@@ -1288,7 +1158,6 @@
             aiImageBtn.addEventListener('click', () => { resetImageGenModal(); showModal(aiImageModalOverlay); });
             closeAiImageBtn.addEventListener('click', () => hideModal(aiImageModalOverlay));
             aiImageGenerateBtn.addEventListener('click', generateAiImage);
-            aiImageSaveBtn.addEventListener('click', saveImageToLibrary);
             aiImageInsertWhiteboardBtn.addEventListener('click', () => { if(state.currentGeneratedImage) addImageToCanvas(state.currentGeneratedImage.url, 300, 300); hideModal(aiImageModalOverlay); });
             aiImageSendChatBtn.addEventListener('click', () => { if(state.currentGeneratedImage) sendChatMessage(null, 'image', state.currentGeneratedImage.url); hideModal(aiImageModalOverlay); });
             aiImageEditPromptBtn.addEventListener('click', () => {
@@ -1298,9 +1167,6 @@
                 aiImageResults.innerHTML = '';
                 aiImagePromptInput.focus();
             });
-            imageLibraryBtn.addEventListener('click', openImageLibrary);
-            closeImageLibraryBtn.addEventListener('click', () => hideModal(imageLibraryModalOverlay));
-
 
             eventCaptureLayer.addEventListener('mousedown', handleMouseDown); 
             window.addEventListener('mousemove', handleMouseMove); 
