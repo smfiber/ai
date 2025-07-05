@@ -797,10 +797,6 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     }
 }
 
-/**
- * MODIFICATION: This function now checks if the number of topics has reached the MAX_TOPICS limit.
- * If the limit is reached, it displays a message instead of the "Add more topics" button.
- */
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
     if (!container) return;
 
@@ -858,13 +854,12 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const fullPrompt = finalCategory.fullPrompt;
     let actionButtonsHtml = '';
+    
+    // This logic is simplified to always show the button if a prompt exists.
     if (fullPrompt && data.length > 0) {
-        if (data.length >= MAX_TOPICS) {
-            actionButtonsHtml = `<div class="col-span-full text-center mt-4"><p class="themed-text-muted">Maximum topic limit of ${MAX_TOPICS} reached.</p></div>`;
-        } else {
-            actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
-        }
+        actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
     }
+
     container.innerHTML = `<div class="${gridClass}">${stickyHtml}${userAddedHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
 }
 
@@ -911,13 +906,7 @@ async function handleGenerateMoreClick(button, attempt = 1) {
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
 
-    const currentTopicCount = allThemeData[categoryId].length;
-    if (currentTopicCount >= MAX_TOPICS) {
-        displayMessageInModal(`You have reached the maximum limit of ${MAX_TOPICS} topics for this category.`, 'info');
-        button.disabled = true;
-        button.innerHTML = 'Limit Reached';
-        return;
-    }
+    // The check for MAX_TOPICS has been removed from here.
 
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating (Attempt ${attempt})...</span>`;
@@ -935,7 +924,9 @@ async function handleGenerateMoreClick(button, attempt = 1) {
     }
 
     const existingTitles = allThemeData[categoryId].map(item => item.title);
-    const topicsToRequest = Math.min(8, MAX_TOPICS - currentTopicCount);
+    
+    // The topicsToRequest is now always 8.
+    const topicsToRequest = 8;
     
     const prompt = `
         Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
@@ -958,19 +949,16 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         const addedItems = [];
 
         newItems.forEach(newItem => {
-            // Only check for title duplicates, as the AI might reuse IDs.
             if (newItem.title && !allThemeData[categoryId].some(existing => existing.title.toLowerCase() === newItem.title.toLowerCase())) {
-                // Generate a new, unique ID on the client side to prevent collisions.
                 newItem.id = `${sanitizeTitle(newItem.title).replace(/\s+/g, '-')}-${Date.now()}`;
                 addedItems.push(newItem);
             }
         });
 
-        // If no new items were added and we haven't reached max attempts, retry.
         if (addedItems.length === 0 && attempt < MAX_ATTEMPTS) {
             console.warn(`Attempt ${attempt} yielded 0 new topics. Retrying...`);
             await handleGenerateMoreClick(button, attempt + 1);
-            return; // Stop execution of the current attempt
+            return; 
         }
 
         if (addedItems.length > 0) {
@@ -983,7 +971,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
             populateCardGridSelector(container, categoryId, newItemIds);
             document.getElementById(`details-${categoryId}`).innerHTML = '';
         } else {
-             // This runs if all attempts fail
              throw new Error("After multiple attempts, the AI failed to generate unique topics.");
         }
         
@@ -998,7 +985,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         }, 3000);
     } 
 }
-
 
 async function handleGridSelect(target) {
     const { topicId, categoryId } = target.dataset;
