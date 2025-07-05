@@ -1433,15 +1433,18 @@ async function generateFullDetailedGuide(button) {
     // --- 3. Define the new, improved prompt for the final content ---
     const finalContentPrompt = `
     Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4). Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be a direct and logical expansion of the blueprint, especially the Introduction.
+    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide.
 
     //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
     ${blueprintMarkdown}
 
+    //-- CRITICAL INSTRUCTION: ADHERE TO THE INTRODUCTION'S SCOPE --//
+    The "Introduction" (Section 1) of the blueprint above is the master plan. It defines the guide's overall topic and scope. All content you generate for sections 5-12 MUST be about this main topic. DO NOT deviate by focusing on a single, minor term from the "Key Concepts & Terminology" section. You are to expand on the entire subject promised in the introduction, making it a practical, step-by-step guide for that subject.
+
     //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
 
     ### 5. Detailed Implementation Guide
-    This is the most CRITICAL section. It must be a comprehensive, step-by-step walkthrough of the primary task outlined in the blueprint's "Introduction". **Do not simply explain the concepts from Section 3 again.** Instead, show how to apply them to achieve the goal stated in the Introduction. Structure this section logically (e.g., Step 1: Configuration, Step 2: Deployment, Step 3: Integration). For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. **Provide clear, real-world examples for each method.** Use markdown blockquotes for code snippets or commands.
+    This is the most CRITICAL section. Based **strictly** on the overall topic defined in the Introduction, provide a comprehensive, step-by-step walkthrough. Structure this section logically to cover the main topic. For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. Provide clear, real-world examples for each method. Use markdown blockquotes for code snippets or commands.
 
     ### 6. Verification and Validation
     Provide specific, copy-able commands or detailed UI navigation steps to confirm that the process detailed in Section 5 was completed successfully.
@@ -1468,7 +1471,6 @@ async function generateFullDetailedGuide(button) {
     1.  **Introduction-Driven:** All content in sections 5-12 MUST directly support and expand upon the scope defined in the blueprint's Introduction.
     2.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com").
     3.  **Factual Accuracy:** All technical content must be accurate and validated against current standards.
-    4.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
 
     //-- FINAL OUTPUT INSTRUCTION --//
     Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
@@ -1500,7 +1502,6 @@ async function generateFullDetailedGuide(button) {
         button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
-
 function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     buttonContainer.innerHTML = '';
     const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
