@@ -39,6 +39,7 @@ let oauthToken = null; // Used to store token from redirect flow
 
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
+const MAX_TOPICS = 48; // Set the maximum number of topics allowed per category.
 
 // --- Function Declarations ---
 
@@ -799,13 +800,12 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
     if (!container) return;
 
-    // Check if the main data is still being fetched.
     if (allThemeData[categoryId] === null) {
         if (!container.querySelector('.loader')) {
             const cardTitle = document.getElementById(`category-card-${categoryId}`)?.querySelector('h2')?.textContent || 'this category';
             container.innerHTML = getLoaderHTML(`AI is generating topics for ${cardTitle}...`);
         }
-        return; // Exit while loading
+        return;
     }
     
     const data = allThemeData[categoryId] || [];
@@ -854,9 +854,12 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const fullPrompt = finalCategory.fullPrompt;
     let actionButtonsHtml = '';
+    
+    // This logic is simplified to always show the button if a prompt exists.
     if (fullPrompt && data.length > 0) {
         actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
     }
+
     container.innerHTML = `<div class="${gridClass}">${stickyHtml}${userAddedHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
 }
 
@@ -891,39 +894,94 @@ async function handleAddNewTopic(button) {
     }
 }
 
-async function handleGenerateMoreClick(button) {
+/**
+ * FIX: This function is now more robust. It includes a retry mechanism.
+ * If the AI fails to return unique topics on the first attempt, it will try
+ * one more time with a more insistent prompt, increasing the likelihood of success.
+ * It also performs a case-insensitive check for duplicate titles.
+ */
+async function handleGenerateMoreClick(button, attempt = 1) {
+    const MAX_ATTEMPTS = 2; // Set a limit for retries
     const { containerId, categoryId } = button.dataset;
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
+
+    // The check for MAX_TOPICS has been removed from here.
+
     button.disabled = true;
-    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
+    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating (Attempt ${attempt})...</span>`;
+
     const card = container.closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-    const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
+    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+    
+    const basePrompt = finalCategory.fullPrompt;
+    if (!basePrompt) {
+        handleApiError({ message: "No 'fullPrompt' is configured for this category in the Hierarchy Manager." }, container.closest('.card-content').querySelector('.details-container'));
+        button.disabled = false;
+        button.innerHTML = 'Error: Prompt not configured';
+        return;
+    }
+
     const existingTitles = allThemeData[categoryId].map(item => item.title);
-    const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list. Existing Task List:\n- ${existingTitles.join('\n- ')}\n For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
+    
+    // The topicsToRequest is now always 8.
+    const topicsToRequest = 8;
+    
+    const prompt = `
+        Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
+        ---
+        Core Instruction: "${basePrompt}"
+        ---
+        This is attempt number ${attempt}. Be extra creative and ensure the new topics are genuinely different from the following list of ${existingTitles.length} existing topics. Do NOT repeat any topics from this list.
+        Existing Topics:
+        - ${existingTitles.join('\n- ')}
+        
+        For each new topic, provide a "title" and a short one-sentence "description".
+        ${jsonInstruction}
+    `;
+
     try {
-        const jsonText = await callGeminiAPI(prompt, true, "Generate More Topics");
+        const jsonText = await callGeminiAPI(prompt, true, `Generate More Topics (Attempt ${attempt})`);
         if (!jsonText) throw new Error("AI did not return any new items.");
+        
         const newItems = parseJsonWithCorrections(jsonText);
-        const newItemIds = new Set(newItems.map(item => item.id));
+        const addedItems = [];
+
         newItems.forEach(newItem => {
-            if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
-                allThemeData[categoryId].push(newItem);
+            if (newItem.title && !allThemeData[categoryId].some(existing => existing.title.toLowerCase() === newItem.title.toLowerCase())) {
+                newItem.id = `${sanitizeTitle(newItem.title).replace(/\s+/g, '-')}-${Date.now()}`;
+                addedItems.push(newItem);
             }
         });
-        allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
-        populateCardGridSelector(container, categoryId, newItemIds);
-        document.getElementById(`details-${categoryId}`).innerHTML = '';
+
+        if (addedItems.length === 0 && attempt < MAX_ATTEMPTS) {
+            console.warn(`Attempt ${attempt} yielded 0 new topics. Retrying...`);
+            await handleGenerateMoreClick(button, attempt + 1);
+            return; 
+        }
+
+        if (addedItems.length > 0) {
+            const newItemIds = new Set();
+            addedItems.forEach(item => {
+                 allThemeData[categoryId].push(item);
+                 newItemIds.add(item.id);
+            });
+            allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
+            populateCardGridSelector(container, categoryId, newItemIds);
+            document.getElementById(`details-${categoryId}`).innerHTML = '';
+        } else {
+             throw new Error("After multiple attempts, the AI failed to generate unique topics.");
+        }
+        
     } catch (error) {
         console.error(`Error generating more items for ${categoryId}:`, error);
-        const originalButtonHTML = button.innerHTML;
         button.disabled = false;
         button.innerHTML = 'Error. Try Again.';
         button.classList.add('bg-red-100', 'text-red-700');
         setTimeout(() => {
             button.classList.remove('bg-red-100', 'text-red-700');
-            button.innerHTML = originalButtonHTML.replace('Generating...','Add 8 more topics');
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span>`;
         }, 3000);
     } 
 }
@@ -1361,15 +1419,18 @@ async function generateFullDetailedGuide(button) {
     // --- 3. Define the new, improved prompt for the final content ---
     const finalContentPrompt = `
     Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4). Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be a direct and logical expansion of the blueprint, especially the Introduction.
+    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide.
 
     //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
     ${blueprintMarkdown}
 
+    //-- CRITICAL INSTRUCTION: ADHERE TO THE INTRODUCTION'S SCOPE --//
+    The "Introduction" (Section 1) of the blueprint above is the master plan. It defines the guide's overall topic and scope. All content you generate for sections 5-12 MUST be about this main topic. DO NOT deviate by focusing on a single, minor term from the "Key Concepts & Terminology" section. You are to expand on the entire subject promised in the introduction, making it a practical, step-by-step guide for that subject.
+
     //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
 
     ### 5. Detailed Implementation Guide
-    This is the most CRITICAL section. It must be a comprehensive, step-by-step walkthrough of the primary task outlined in the blueprint's "Introduction". **Do not simply explain the concepts from Section 3 again.** Instead, show how to apply them to achieve the goal stated in the Introduction. Structure this section logically (e.g., Step 1: Configuration, Step 2: Deployment, Step 3: Integration). For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. **Provide clear, real-world examples for each method.** Use markdown blockquotes for code snippets or commands.
+    This is the most CRITICAL section. Based **strictly** on the overall topic defined in the Introduction, provide a comprehensive, step-by-step walkthrough. Structure this section logically to cover the main topic. For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. Provide clear, real-world examples for each method. Use markdown blockquotes for code snippets or commands.
 
     ### 6. Verification and Validation
     Provide specific, copy-able commands or detailed UI navigation steps to confirm that the process detailed in Section 5 was completed successfully.
@@ -1396,7 +1457,6 @@ async function generateFullDetailedGuide(button) {
     1.  **Introduction-Driven:** All content in sections 5-12 MUST directly support and expand upon the scope defined in the blueprint's Introduction.
     2.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com").
     3.  **Factual Accuracy:** All technical content must be accurate and validated against current standards.
-    4.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
 
     //-- FINAL OUTPUT INSTRUCTION --//
     Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
@@ -1428,7 +1488,6 @@ async function generateFullDetailedGuide(button) {
         button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
-
 function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     buttonContainer.innerHTML = '';
     const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
