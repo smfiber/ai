@@ -1468,8 +1468,13 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
+/**
+ * [MODIFIED] This function now includes an automated self-refinement step.
+ * After generating the initial guide, it extracts the "Detailed Implementation Guide"
+ * and sends it back to the AI with a specific prompt to add more practical,
+ * actionable details, making the final guide more robust automatically.
+ */
 async function generateFullDetailedGuide(button) {
-    // --- 1. Get the necessary context from the first modal ---
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
     const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
@@ -1483,7 +1488,6 @@ async function generateFullDetailedGuide(button) {
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
     
-    // --- 2. Setup the second (detailed) modal UI ---
     const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
     const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
@@ -1496,64 +1500,69 @@ async function generateFullDetailedGuide(button) {
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
-    detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
+    detailedContentEl.innerHTML = getLoaderHTML('Generating initial guide (sections 5-12)...');
 
-    // --- 3. Define the new, improved prompt for the final content ---
     const finalContentPrompt = `
     Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
     Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide.
-
     //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
     ${blueprintMarkdown}
-
     //-- CRITICAL INSTRUCTION: ADHERE TO THE INTRODUCTION'S SCOPE --//
-    The "Introduction" (Section 1) of the blueprint above is the master plan. It defines the guide's overall topic and scope. All content you generate for sections 5-12 MUST be about this main topic. DO NOT deviate by focusing on a single, minor term from the "Key Concepts & Terminology" section. You are to expand on the entire subject promised in the introduction, making it a practical, step-by-step guide for that subject.
-
+    The "Introduction" (Section 1) of the blueprint above is the master plan. It defines the guide's overall topic and scope. All content you generate for sections 5-12 MUST be about this main topic.
     //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
-
     ### 5. Detailed Implementation Guide
-    This is the most CRITICAL section. Based **strictly** on the overall topic defined in the Introduction, provide a comprehensive, step-by-step walkthrough. Structure this section logically to cover the main topic. For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. Provide clear, real-world examples for each method. Use markdown blockquotes for code snippets or commands.
-
+    This is the most CRITICAL section. Provide a comprehensive, step-by-step walkthrough. Structure this section logically. For each major step, provide practical instructions for the methods (e.g., GUI) defined as IN-SCOPE in the Introduction. Provide clear, real-world examples. Use markdown blockquotes for code snippets or commands.
     ### 6. Verification and Validation
-    Provide specific, copy-able commands or detailed UI navigation steps to confirm that the process detailed in Section 5 was completed successfully.
-
     ### 7. Best Practices
-    List expert, actionable advice directly related to the implementation process from Section 5. Avoid generic advice.
-
     ### 8. Automation Techniques
-    If scripting is in scope, provide full, production-ready scripts that automate the end-to-end process from Section 5. Scripts MUST include robust error handling.
-
     ### 9. Security Considerations
-    Detail security hardening steps, potential vulnerabilities, and auditing procedures specifically for the process and technologies used in Section 5.
-
     ### 10. Advanced Use Cases & Scenarios
-    Describe 2-3 advanced, real-world examples that build upon the successful implementation from Section 5.
-
     ### 11. Troubleshooting
-    Create a detailed markdown table of common problems that could occur during the process in Section 5, their likely causes, and concrete solutions.
-
     ### 12. Helpful Resources
-    Provide a bulleted list of high-quality, real, and working URLs to official documentation or tools directly relevant to the process in Section 5.
-
-    //-- MANDATORY QUALITY STANDARDS --//
-    1.  **Introduction-Driven:** All content in sections 5-12 MUST directly support and expand upon the scope defined in the blueprint's Introduction.
-    2.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com").
-    3.  **Factual Accuracy:** All technical content must be accurate and validated against current standards.
-
     //-- FINAL OUTPUT INSTRUCTION --//
     Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
     `;
 
     try {
-        // --- 4. Make a single API call for the final content ---
-        let finalSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Single Call)");
-        finalSections5to12 = finalSections5to12 ? finalSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        let initialDraftSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Initial Draft)");
+        initialDraftSections5to12 = initialDraftSections5to12 ? initialDraftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-        if (!finalSections5to12) {
+        if (!initialDraftSections5to12) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        // --- 5. Combine the blueprint and the new content, then render ---
+        // --- Automated Refinement Step ---
+        detailedContentEl.innerHTML = getLoaderHTML('Auto-refining implementation steps for clarity...');
+
+        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.)/;
+        const section5Match = initialDraftSections5to12.match(section5Regex);
+        const originalSection5 = section5Match ? section5Match[1].trim() : '';
+
+        let finalSections5to12 = initialDraftSections5to12;
+
+        if (originalSection5) {
+            const refinementPrompt = `
+            Persona: You are a Master Technical Editor.
+            Task: The following "Detailed Implementation Guide" is too abstract. Your job is to rewrite it to be highly practical and actionable for an IT administrator.
+            
+            //-- ORIGINAL ABSTRACT GUIDE --//
+            ${originalSection5}
+
+            //-- REWRITING INSTRUCTIONS --//
+            1.  **Add GUI Specifics:** For each step, describe the visual elements. What is the exact name of the menu? What is the button label (e.g., "Create Virtual Disk," "Add Physical Disks")?
+            2.  **Provide Click-Paths:** Give the user a clear, step-by-step navigation path (e.g., "From the main dashboard, navigate to Storage > Controllers > Array A > Logical Drives.").
+            3.  **Include Concrete Examples:** Use markdown blockquotes to show example text the user might see in a dialog box, a confirmation message, or a value they might need to enter.
+            4.  **Add Placeholders for Visuals:** Where a visual would be most helpful, insert a placeholder like: "[Screenshot of the 'Select Physical Disks' dialog, showing three available drives highlighted.]"
+            5.  **Maintain Structure:** Keep the original step-by-step structure, but replace the abstract descriptions with your new, detailed instructions.
+
+            Return ONLY the rewritten, highly-detailed "Detailed Implementation Guide" section. Do not include the "### 5. ..." header in your response.
+            `;
+            const refinedSection5 = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
+            if (refinedSection5) {
+                finalSections5to12 = initialDraftSections5to12.replace(originalSection5, refinedSection5.trim());
+            }
+        }
+        
         const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
         originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
@@ -1561,7 +1570,7 @@ async function generateFullDetailedGuide(button) {
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
         
         addDetailedModalActionButtons(detailedButtonContainer);
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
+        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and auto-refined successfully!';
 
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -1570,6 +1579,7 @@ async function generateFullDetailedGuide(button) {
         button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
+
 
 /**
  * [FIXED] Dynamically adds action buttons to modals, now correctly checking
