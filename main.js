@@ -95,13 +95,20 @@ function openModal(modalId) {
     }
 }
 
-function checkGapiReady(callback) {
-  if (typeof gapi !== 'undefined' && gapi.load) {
-    callback();
-  } else {
-    setTimeout(() => checkGapiReady(callback), 100);
-  }
+/**
+ * [FIXED] Helper function to safely wait for the GAPI script to load.
+ * This is crucial to prevent race conditions.
+ * @param {function} callback The function to execute once GAPI is ready.
+ */
+function gapiLoaded(callback) {
+    if (typeof gapi !== 'undefined' && gapi.load) {
+        callback();
+    } else {
+        // Poll every 100ms until the gapi script is available.
+        setTimeout(() => gapiLoaded(callback), 100);
+    }
 }
+
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -203,8 +210,9 @@ function initializeFirebase() {
 }
 
 /**
- * [MODIFIED] Initializes Google API clients, including the new Identity Services client
- * for a more robust authentication flow that handles token refreshes.
+ * [FIXED & RESTRUCTURED] Initializes Google API clients for authentication and Drive.
+ * This function now correctly waits for the GAPI script to be loaded before
+ * attempting to use it, preventing the critical race condition.
  */
 function initializeGoogleClients() {
     if (!GOOGLE_CLIENT_ID) {
@@ -214,23 +222,18 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // Use a helper to wait for the gapi script to be fully loaded
-    checkGapiReady(() => {
-        // Load the GAPI libraries ('client' and 'picker').
-        gapi.load('client:picker', initializeGapiClient);
-    });
-
-    // Initialize the Google Identity Services (GIS) client
+    // 1. Initialize the Google Identity Services (GIS) client immediately.
+    // This part doesn't depend on gapi.
     try {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
             scope: G_SCOPES,
             callback: (tokenResponse) => {
-                // This callback handles the response from the Google auth flow
+                // This callback handles the response from the Google auth flow.
                 if (tokenResponse && tokenResponse.access_token) {
-                    oauthToken = tokenResponse;
-                    gapi.client.setToken(oauthToken);
-                    updateSigninStatus(true); // Update UI to show connected state
+                    // A token has been received. Store it and update the UI.
+                    gapi.client.setToken(tokenResponse);
+                    updateSigninStatus(true);
                 } else {
                     console.error("Authentication failed or was cancelled. Token not received.");
                     displayMessageInModal("Google Drive connection failed. Please try again.", 'error');
@@ -243,27 +246,35 @@ function initializeGoogleClients() {
         console.error("Error initializing Google Identity Service client:", error);
         document.getElementById('drive-status').textContent = 'Google Identity client failed to load.';
     }
+
+    // 2. Wait for the main GAPI script to be loaded, then initialize the GAPI client.
+    // This prevents the "gapi.load is not a function" error.
+    gapiLoaded(() => {
+        gapi.load('client:picker', initializeGapiClient);
+    });
 }
 
 
+/**
+ * [FIXED] This function is now the callback for `gapi.load`.
+ * It will only run after `gapi.client` and `gapi.picker` are available.
+ */
 async function initializeGapiClient() {
     try {
+        // Initialize the GAPI client with the discovery document for the Drive API.
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true;
-
-        // If a token was captured from the redirect, set it now.
-        if (oauthToken) {
-            gapi.client.setToken(oauthToken);
-            updateSigninStatus(true);
-            oauthToken = null; // Clear the token after it has been used
-        }
+        // After initialization, immediately check if there's an existing token
+        // and update the UI accordingly. This handles cases where the user is already logged in.
+        updateSigninStatus(gapi.client.getToken() !== null);
     } catch(error) {
         console.error("Error initializing GAPI Client", error);
         document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
     }
 }
+
 
 function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
@@ -347,6 +358,11 @@ function handleLogout() {
     });
 }
 
+/**
+ * [FIXED] Updates all UI elements related to Google Drive sign-in status.
+ * This function is now the single source of truth for showing/hiding Drive buttons.
+ * @param {boolean} isSignedIn Whether the user is signed into Google Drive.
+ */
 function updateSigninStatus(isSignedIn) {
     const authButton = document.getElementById('auth-button');
     const loadBtn = document.getElementById('load-from-drive-btn');
@@ -366,6 +382,7 @@ function updateSigninStatus(isSignedIn) {
         driveFolderId = null;
     }
 
+    // Refresh the action buttons in any open modals to show/hide the "Save to Drive" button.
     if (document.body.classList.contains('inDepthModal-open')) {
         const isInitial = !!document.getElementById('generate-detailed-steps-btn');
         addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
@@ -463,6 +480,8 @@ function setupEventListeners() {
     document.getElementById('browse-all-btn')?.addEventListener('click', () => openCategoryBrowser('all'));
     document.getElementById('closeCategoryBrowserModal')?.addEventListener('click', () => closeModal('categoryBrowserModal'));
     document.getElementById('auth-button')?.addEventListener('click', handleAuthClick);
+    
+    // [NEW] Event listener for the "Load from Drive" button, which opens the file picker.
     document.getElementById('load-from-drive-btn')?.addEventListener('click', async () => {
         const folderId = await getDriveFolderId();
         createPicker('open', folderId);
@@ -573,9 +592,8 @@ function setupEventListeners() {
 }
 
 /**
- * [MODIFIED] Handles connecting to and disconnecting from Google Drive. It now uses the
- * modern token client for a smoother authentication experience, replacing the old,
- * cumbersome redirect flow.
+ * [FIXED] Handles connecting to and disconnecting from Google Drive using the modern
+ * token client for a smoother authentication experience.
  */
 async function handleAuthClick() {
     if (gapi?.client?.getToken()) {
@@ -590,7 +608,7 @@ async function handleAuthClick() {
         // If no token, the user wants to connect.
         if (gisInited && tokenClient) {
             // This triggers the Google auth prompt for a new token.
-            tokenClient.requestAccessToken();
+            tokenClient.requestAccessToken({ prompt: 'consent' });
         } else {
             console.error("Google token client is not initialized.");
             displayMessageInModal("Google services are not ready. Please wait a moment and try again.", "error");
@@ -700,9 +718,10 @@ async function saveContentToDrive(content, fileName, statusElement) {
 }
 
 /**
- * [MODIFIED] Creates and displays the Google Picker for file selection. This version
- * is more robust, providing better error handling and user feedback if the token is
- * missing or APIs aren't ready.
+ * [NEW & FIXED] Creates and displays the Google Picker for file selection.
+ * This version is more robust, providing better error handling and user feedback.
+ * @param {string} mode The picker mode ('open' for files).
+ * @param {string|null} startInFolderId The ID of the Drive folder to open in.
  */
 function createPicker(mode, startInFolderId = null) {
     const statusEl = document.getElementById('drive-status');
@@ -716,15 +735,11 @@ function createPicker(mode, startInFolderId = null) {
     const token = gapi.client.getToken()?.access_token;
     if (!token) {
         statusEl.textContent = 'Please connect to Google Drive first.';
-        // Trigger the connection flow automatically if the token is missing.
         handleAuthClick(); 
         return;
     }
 
     try {
-        // Note: The developer key should be your Google Cloud API Key.
-        // The application currently uses the Gemini API Key for this. This will work
-        // if they are from the same Google Cloud project.
         const builder = new google.picker.PickerBuilder()
             .setOAuthToken(token)
             .setDeveloperKey(geminiApiKey); // This should be your project's general API Key
@@ -747,6 +762,10 @@ function createPicker(mode, startInFolderId = null) {
 }
 
 
+/**
+ * [NEW] Callback function for the Google Picker. Handles the selected file.
+ * @param {object} data The data returned from the Google Picker API.
+ */
 async function pickerCallbackOpen(data) {
     if (data.action === google.picker.Action.PICKED) {
         const fileId = data.docs[0].id;
@@ -758,7 +777,12 @@ async function pickerCallbackOpen(data) {
             const fileName = data.docs[0].name;
             displayImportedGuide(fileName, fileContent);
             statusEl.textContent = 'File loaded successfully.';
-            setTimeout(() => updateSigninStatus(true), 3000);
+            // Reset status message after a few seconds
+            setTimeout(() => {
+                if (gapi.client.getToken()) {
+                    statusEl.textContent = 'Connected to Google Drive.';
+                }
+            }, 3000);
         } catch (error) {
             console.error("Error loading file content:", error);
             statusEl.textContent = 'Error loading file from Google Drive.';
@@ -766,29 +790,42 @@ async function pickerCallbackOpen(data) {
     }
 }
 
+/**
+ * [NEW] Displays an imported guide in a new card on the main page.
+ * @param {string} fileName The name of the imported file.
+ * @param {string} markdownContent The markdown content of the file.
+ */
 function displayImportedGuide(fileName, markdownContent) {
     const section = document.getElementById('imported-guides-section');
     const container = document.getElementById('imported-guides-container');
     section.classList.remove('hidden');
     const cardId = `imported-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
+    
     const card = document.createElement('div');
     card.className = 'card';
     card.id = cardId;
+
     const cardContent = document.createElement('div');
     cardContent.className = 'p-8 card-content';
+    
+    // Create the header with an icon
     cardContent.innerHTML = `
-        <h2 class="text-2xl font-bold mb-2 themed-text-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+        <h2 class="text-2xl font-bold mb-2 themed-text-primary flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Imported: ${fileName}
         </h2>
         <div class="prose max-w-none mt-4"></div>
     `;
+    
     const renderTarget = cardContent.querySelector('.prose');
+    // Use the existing accordion renderer for a consistent look
     renderAccordionFromMarkdown(markdownContent, renderTarget);
+    
     card.appendChild(cardContent);
-    container.prepend(card);
+    container.prepend(card); // Prepend to show the newest import first
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
 
 async function loadAppContent() {
     try {
@@ -1533,9 +1570,17 @@ async function generateFullDetailedGuide(button) {
         button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
+
+/**
+ * [FIXED] Dynamically adds action buttons to modals, now correctly checking
+ * for a valid Google Drive token before showing the "Save to Drive" button.
+ * @param {HTMLElement} buttonContainer The container to add the buttons to.
+ * @param {boolean} isInitialPhase Whether this is for the initial guide blueprint.
+ */
 function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     buttonContainer.innerHTML = '';
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    // This check is now reliable because the GAPI client is initialized correctly.
+    const hasToken = gapi?.client?.getToken() !== null;
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
 
     if (isInitialPhase) {
@@ -1552,11 +1597,15 @@ function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     }
 }
 
+/**
+ * [FIXED] Dynamically adds action buttons to the detailed guide modal.
+ * Now correctly shows "Save to Drive" and "Add to Knowledge Base" when appropriate.
+ */
 function addDetailedModalActionButtons(buttonContainer) {
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    const hasToken = gapi?.client?.getToken() !== null;
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
 
-    // Add the new "Add to Knowledge Base" button
+    // The "Add to Knowledge Base" button is always shown for completed guides.
     const addToKbBtnHtml = `<button id="add-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
 
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
@@ -1569,7 +1618,7 @@ function addDetailedModalActionButtons(buttonContainer) {
         });
     }
 
-    // Add event listener for the new button
+    // Add event listener for the new "Add to KB" button
     const addToKbButton = buttonContainer.querySelector('#add-to-kb-btn');
     if (addToKbButton) {
         addToKbButton.addEventListener('click', () => {
@@ -1595,8 +1644,9 @@ function addDetailedModalActionButtons(buttonContainer) {
 }
 
 
+
 function addSearchModalActionButtons(buttonContainer) {
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+    const hasToken = gapi?.client?.getToken() !== null;
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
     const copyButton = buttonContainer.querySelector('.copy-button');
@@ -2687,11 +2737,10 @@ async function handleSearchResultClick(objectID) {
 // --- App Initialization Trigger ---
 
 /**
- * [MODIFIED] Main entry point for the application. The old redirect-based
- * authentication logic has been removed for a cleaner, more modern startup sequence.
+ * [FIXED] Main entry point for the application. The initialization sequence
+ * is now more robust to prevent race conditions with external scripts.
  */
 function initializeApplication() {
-    // Now, proceed with normal application setup.
     setupEventListeners();
     populateTypographySettings();
     marked.setOptions({
@@ -2704,6 +2753,7 @@ function initializeApplication() {
 
     if (loadConfigFromStorage()) {
         initializeFirebase();
+        // This now correctly orchestrates the loading of Google's APIs.
         initializeGoogleClients();
     } else {
         openModal('apiKeyModal');
