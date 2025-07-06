@@ -246,8 +246,8 @@ function initializeGoogleApiClients() {
 }
 
 /**
- * [FIXED] Initializes the Google Identity Services (GIS) client for authentication.
- * This function is now called safely by the `gisLoaded` helper.
+ * [FIXED & MORE ROBUST] Initializes the Google Identity Services (GIS) client for authentication.
+ * Now includes comprehensive error handling and user feedback.
  */
 function initGisClient() {
     try {
@@ -255,17 +255,11 @@ function initGisClient() {
             client_id: GOOGLE_CLIENT_ID,
             scope: G_SCOPES,
             callback: (tokenResponse) => {
-                // This callback handles the response from the Google auth flow.
-                oauthToken = tokenResponse; // Store the raw token response
-
-                // If GAPI is already initialized, we can set the token immediately.
-                // Otherwise, initGapiClient will handle it when it's ready.
+                oauthToken = tokenResponse; 
                 if (gapiInited && oauthToken && oauthToken.access_token) {
                     gapi.client.setToken(oauthToken);
                     updateSigninStatus(true);
-                }
-                // Handle cases where auth failed or was cancelled.
-                else if (!oauthToken || !oauthToken.access_token) {
+                } else if (!oauthToken || !oauthToken.access_token) {
                     console.error("Authentication failed or was cancelled. Token not received.");
                     displayMessageInModal("Google Drive connection failed. Please try again.", 'error');
                     updateSigninStatus(false);
@@ -274,34 +268,32 @@ function initGisClient() {
         });
         gisInited = true;
     } catch (error) {
-        console.error("Error initializing Google Identity Service client:", error);
-        document.getElementById('drive-status').textContent = 'Google Identity client failed to load.';
+        console.error("Critical Error: Failed to initialize Google Identity Service client.", error);
+        document.getElementById('drive-status').textContent = 'Error: Google Auth failed to load. Check console.';
+        document.getElementById('auth-button').disabled = true;
     }
 }
 
 /**
- * [FIXED] Initializes the Google API (GAPI) client for Drive functionality.
- * This function is now the callback for `gapi.load` and synchronizes with the GIS client.
+ * [FIXED & MORE ROBUST] Initializes the Google API (GAPI) client for Drive functionality.
+ * Now includes comprehensive error handling and synchronizes with the GIS client.
  */
 async function initGapiClient() {
     try {
-        // Initialize the GAPI client for the Drive API.
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
-        gapiInited = true; // Mark GAPI as ready
+        gapiInited = true; 
 
-        // If the GIS authentication flow finished first and we have a token, set it now.
         if (oauthToken && oauthToken.access_token) {
             gapi.client.setToken(oauthToken);
         }
-
-        // Update the UI based on the final token state. This handles both
-        // new sign-ins and pre-existing sessions that gapi.client might have stored.
+        
         updateSigninStatus(gapi.client.getToken() !== null);
     } catch(error) {
-        console.error("Error initializing GAPI Client", error);
-        document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
+        console.error("Critical Error: Failed to initialize GAPI Client for Drive.", error);
+        document.getElementById('drive-status').textContent = 'Error: Drive API failed to load. Check console.';
+        document.getElementById('auth-button').disabled = true;
     }
 }
 
@@ -709,11 +701,11 @@ async function handleSaveToDriveClick(button) {
 }
 
 /**
- * [FIXED] Saves content to Google Drive. Now uses optional chaining `?.` for safety,
- * preventing crashes if the GAPI client is not ready.
+ * [FIXED & MORE ROBUST] Saves content to Google Drive. Now includes explicit checks
+ * and provides clear user feedback if the API isn't ready.
  */
 async function saveContentToDrive(content, fileName, statusElement) {
-    if (!gapi?.client?.getToken()) {
+    if (!gapiInited || !gisInited || !gapi.client?.getToken()) {
         statusElement.textContent = 'Please connect to Google Drive first.';
         return;
     }
@@ -756,10 +748,8 @@ async function saveContentToDrive(content, fileName, statusElement) {
 }
 
 /**
- * Creates and displays the Google Picker for file selection.
- * This version is more robust, providing better error handling and user feedback.
- * @param {string} mode The picker mode ('open' for files).
- * @param {string|null} startInFolderId The ID of the Drive folder to open in.
+ * [FIXED & MORE ROBUST] Creates and displays the Google Picker for file selection.
+ * Now includes explicit checks and provides clear user feedback if the API isn't ready.
  */
 function createPicker(mode, startInFolderId = null) {
     const statusEl = document.getElementById('drive-status');
@@ -780,7 +770,7 @@ function createPicker(mode, startInFolderId = null) {
     try {
         const builder = new google.picker.PickerBuilder()
             .setOAuthToken(token)
-            .setDeveloperKey(geminiApiKey); // This should be your project's general API Key
+            .setDeveloperKey(geminiApiKey); 
 
         if (mode === 'open') {
             const view = new google.picker.View(google.picker.ViewId.DOCS);
