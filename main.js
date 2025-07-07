@@ -1577,16 +1577,18 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
-async function generateVerifiedResources(topic) {
+async function generateVerifiedResources(topic, fullHierarchyPath) {
     if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID is not configured. Skipping real-time resource search.");
         return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
 
     let helpfulResourcesMarkdown = '';
+    // [MODIFIED] Create a more specific search query using the hierarchy context.
+    const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic].join(' ');
 
     try {
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(topic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
@@ -1619,7 +1621,7 @@ async function generateVerifiedResources(topic) {
 
             helpfulResourcesMarkdown = await callGeminiAPI(resourcesPrompt, false, "Format Helpful Resources");
         } else {
-             helpfulResourcesMarkdown = `### 12. Helpful Resources\n*No relevant online resources were found for "${topic}".*`;
+             helpfulResourcesMarkdown = `### 12. Helpful Resources\n*No relevant online resources were found for "${contextualTopic}".*`;
         }
 
     } catch (searchError) {
@@ -1710,7 +1712,7 @@ async function generateFullDetailedGuide(button) {
         // --- 4. Conduct Link Research ---
         detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching the web for verified resources...');
         const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch);
+        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch, fullHierarchyPath);
 
         // --- 5. Final Assembly ---
         detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
@@ -2102,10 +2104,19 @@ function getIconForTheme(categoryId, topicId) {
 
 function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
 
+/**
+ * [MODIFIED] Sanitizes a title string for safe HTML rendering.
+ * Removes leading/trailing special characters and trims whitespace.
+ * Also removes angle brackets to prevent HTML injection.
+ * @param {string} title The title to sanitize.
+ * @returns {string} The sanitized title.
+ */
 function sanitizeTitle(title) {
     if (typeof title !== 'string') return '';
-    return title.replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
+    // Remove angle brackets first, then trim other unwanted characters
+    return title.replace(/<|>/g, '').replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
 }
+
 
 function truncateText(text, maxLength = 50) {
     if (typeof text !== 'string' || text.length <= maxLength) { return text; }
