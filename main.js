@@ -544,8 +544,8 @@ function setupEventListeners() {
             const codeBlock = target.closest('.code-block-container').querySelector('code, pre');
             copyElementTextToClipboard(codeBlock, target);
         } else if (target.closest('#save-to-drive-btn')) {
-            handleSaveToDriveClick(target);
-        } else if (target.closest('.add-topic-button')) {
+            handleSaveToDriveClick(target.closest('#save-to-drive-btn'));
+        } else if (target.closest('.add-topic-button')) {            
             handleAddNewTopic(target.closest('.add-topic-button'));
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
