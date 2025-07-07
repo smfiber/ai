@@ -708,11 +708,11 @@ async function handleSaveToDriveClick(button) {
 
 /**
  * [FIX] Saves content to Google Drive. This is the core fix.
- * It now checks our reliable `oauthToken` state variable instead of the faulty `gapi.client.getToken()`.
- * It also explicitly sets the token on the GAPI client right before making the request, ensuring authentication.
+ * It now correctly handles file updates (PATCH) by sending an empty metadata
+ * object, ensuring the API updates the file content. It also properly escapes
+ * double quotes in filenames for robust searching.
  */
 async function saveContentToDrive(content, fileName, statusElement) {
-    // The check for connection status is now based on our reliable `oauthToken` state variable.
     if (!gapiInited || !gisInited || !oauthToken || !oauthToken.access_token) {
         statusElement.textContent = 'Please connect to Google Drive first.';
         return;
@@ -725,35 +725,49 @@ async function saveContentToDrive(content, fileName, statusElement) {
         return;
     }
     try {
-        // Explicitly set the token on the GAPI client immediately before the request.
-        // This ensures the client is using the latest, valid token.
         gapi.client.setToken(oauthToken);
 
+        // [FIX] Added escaping for double quotes to prevent search query errors.
+        const safeFileName = fileName.replace(/'/g, "\\'").replace(/"/g, '\\"');
         const searchResponse = await gapi.client.drive.files.list({
-            q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
+            q: `name='${safeFileName}' and '${folderId}' in parents and trashed=false`,
             fields: 'files(id)',
             spaces: 'drive'
         });
+
+        const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
+        const fileId = fileExists ? searchResponse.result.files[0].id : null;
+
         const boundary = '-------314159265358979323846';
         const delimiter = "\r\n--" + boundary + "\r\n";
         const close_delim = "\r\n--" + boundary + "--";
         const contentType = 'text/markdown';
-        const metadata = { name: fileName };
-        if (!searchResponse.result.files || searchResponse.result.files.length === 0) {
-             metadata.parents = [folderId];
-        }
-        const multipartRequestBody = delimiter + `Content-Type: application/json; charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) + delimiter + `Content-Type: ${contentType}\r\n\r\n` + content + close_delim;
-        const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
-        const fileId = fileExists ? searchResponse.result.files[0].id : null;
 
-        // The gapi.client.request will now be properly authenticated.
+        // [FIX] Restructured metadata logic for clarity and correctness.
+        // For updates, we send empty metadata `{}`. For new files, we specify name and parent.
+        const metadata = fileExists
+            ? {}
+            : { name: fileName, parents: [folderId] };
+
+        const multipartRequestBody = delimiter +
+            `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+            JSON.stringify(metadata) +
+            delimiter +
+            `Content-Type: ${contentType}\r\n\r\n` +
+            content +
+            close_delim;
+
+        const requestPath = `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`;
+        const requestMethod = fileExists ? 'PATCH' : 'POST';
+
         await gapi.client.request({
-            path: `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`,
-            method: fileExists ? 'PATCH' : 'POST',
+            path: requestPath,
+            method: requestMethod,
             params: { uploadType: 'multipart' },
-            headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
+            headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
             body: multipartRequestBody
         });
+
         statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
         setTimeout(() => { if (statusElement) statusElement.textContent = ''; }, 4000);
     } catch (error) {
