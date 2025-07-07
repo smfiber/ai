@@ -678,34 +678,54 @@ async function getDriveFolderId() {
 }
 
 async function handleSaveToDriveClick(button) {
-     const modal = button.closest('.card');
-     if (!modal) return;
-     
-     let contentToSave, statusEl, cardName, topicTitle;
-     if (modal.parentElement.id === 'searchGeminiModal') {
+    const modal = button.closest('.card');
+    if (!modal) return;
+
+    let contentToSave, statusEl, topicTitle, finalFileName;
+
+    if (modal.parentElement.id === 'searchGeminiModal') {
         contentToSave = document.getElementById('searchGeminiResult').innerText;
-        cardName = "Gemini Search";
+        const cardName = "Gemini Search";
         const fullTopicTitle = document.getElementById('searchGeminiQueryText').value;
         topicTitle = truncateText(fullTopicTitle, 40);
         statusEl = document.getElementById('search-modal-status-message');
+        finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
         const modalFooter = button.closest('[id$="ModalFooter"]');
         const fullTitle = modalFooter.dataset.fullTitle;
-        cardName = modalFooter.dataset.cardName || "Guide";
+        const hierarchyPathString = modalFooter.dataset.fullHierarchyPath;
+
         contentToSave = originalGeneratedText.get(fullTitle);
-        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: /g, '');
+        // [FIX] Added 'Complete Guide:' to the replacement to get a clean topic title.
+        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '').trim();
         statusEl = modalFooter.querySelector('p[id$="status-message"]');
+
+        // [FIX] Default to the cardName but prefer the full hierarchy path for a more descriptive filename.
+        let breadcrumbs = modalFooter.dataset.cardName || 'Guide';
+        try {
+            // Use the more reliable full hierarchy path to build the filename.
+            if (hierarchyPathString && hierarchyPathString !== 'undefined') {
+                const hierarchyPath = JSON.parse(hierarchyPathString);
+                if (Array.isArray(hierarchyPath)) {
+                    breadcrumbs = hierarchyPath.map(p => p.title || p).join(' / ');
+                }
+            }
+        } catch (e) {
+            console.error("Could not parse hierarchy path for filename, using fallback.", e);
+        }
+        finalFileName = `${breadcrumbs} - ${topicTitle}.md`;
     }
-     
-     if (!contentToSave) {
+
+    if (!contentToSave) {
         if (statusEl) statusEl.textContent = "Error: Content not found.";
         return;
-     }
+    }
 
-     const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
-     await saveContentToDrive(contentToSave, fileName, statusEl);
+    // Sanitize the final constructed filename to remove invalid characters.
+    // The forward slash from the breadcrumbs is replaced with a hyphen.
+    const safeFileName = finalFileName.replace(/[/\\?%*:|"<>]/g, '-');
+    await saveContentToDrive(contentToSave, safeFileName, statusEl);
 }
-
 /**
  * [FIX] Saves content to Google Drive. This is the core fix.
  * It now correctly handles file updates (PATCH) by sending an empty metadata
