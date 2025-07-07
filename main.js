@@ -681,7 +681,7 @@ async function handleSaveToDriveClick(button) {
     const modal = button.closest('.card');
     if (!modal) return;
 
-    let contentToSave, statusEl, topicTitle, finalFileName;
+    let contentToSave, statusEl, topicTitle, finalFileName, modalFooter;
 
     if (modal.parentElement.id === 'searchGeminiModal') {
         contentToSave = document.getElementById('searchGeminiResult').innerText;
@@ -691,19 +691,29 @@ async function handleSaveToDriveClick(button) {
         statusEl = document.getElementById('search-modal-status-message');
         finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
-        const modalFooter = button.closest('[id$="ModalFooter"]');
+        // [FIX] Explicitly check which modal is open to get the correct data footer.
+        // This prevents grabbing data from the underlying (but hidden) initial modal.
+        if (document.body.classList.contains('inDepthDetailedModal-open')) {
+            modalFooter = document.getElementById('inDepthDetailedModalFooter');
+        } else if (document.body.classList.contains('inDepthModal-open')) {
+            modalFooter = document.getElementById('inDepthModalFooter');
+        } else {
+            console.error("Save to Drive Error: Could not determine the active modal.");
+            // Try to find a status element to display an error
+            const anyStatusEl = button.closest('.modal-footer')?.querySelector('p[id$="status-message"]');
+            if(anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
+            return;
+        }
+
         const fullTitle = modalFooter.dataset.fullTitle;
         const hierarchyPathString = modalFooter.dataset.fullHierarchyPath;
 
         contentToSave = originalGeneratedText.get(fullTitle);
-        // [FIX] Added 'Complete Guide:' to the replacement to get a clean topic title.
         topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '').trim();
         statusEl = modalFooter.querySelector('p[id$="status-message"]');
 
-        // [FIX] Default to the cardName but prefer the full hierarchy path for a more descriptive filename.
         let breadcrumbs = modalFooter.dataset.cardName || 'Guide';
         try {
-            // Use the more reliable full hierarchy path to build the filename.
             if (hierarchyPathString && hierarchyPathString !== 'undefined') {
                 const hierarchyPath = JSON.parse(hierarchyPathString);
                 if (Array.isArray(hierarchyPath)) {
@@ -916,6 +926,20 @@ async function loadAppContent() {
     }
 }
 
+/**
+ * [NEW] Creates the HTML for a breadcrumb display from a hierarchy path array.
+ * @param {Array} pathArray An array of objects, each with a 'title' property.
+ * @returns {string} The generated HTML string for the breadcrumbs.
+ */
+function createBreadcrumbsHtml(pathArray) {
+    if (!pathArray || pathArray.length === 0) {
+        return '';
+    }
+    // Creates a "Path / To / Topic" style breadcrumb
+    const pathSegments = pathArray.map(p => `<span>${p.title}</span>`).join('<span class="mx-2 opacity-50">/</span>');
+    return `<div class="flex items-center flex-wrap gap-x-2 text-sm themed-text-muted mb-3">${pathSegments}</div>`;
+}
+
 async function generateAndPopulateAICategory(fullHierarchyPath) {
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const cardId = `category-card-${finalCategory.id}`;
@@ -929,7 +953,11 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     card.id = cardId;
     card.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     const selectorId = `selector-${finalCategory.id}`;
-    card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+    
+    // [MODIFIED] Generate and add the breadcrumbs HTML to the card's content.
+    const breadcrumbsHtml = createBreadcrumbsHtml(fullHierarchyPath);
+    card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+    
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1286,15 +1314,18 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
         console.warn("Could not generate dynamic description, using default.", e);
     }
     
-    const fullHierarchyPath = JSON.stringify([{
-        id: cardId,
-        title: coreTask,
-        description: description,
-        fullPrompt: "This is a custom generated card, no full prompt available." // Add a dummy prompt
-    }]);
+    // [MODIFIED] Create a more descriptive hierarchy for the breadcrumbs.
+    const hierarchyArray = [
+        { title: "Prompt Workshop" },
+        { title: coreTask }
+    ];
+    const fullHierarchyPath = JSON.stringify(hierarchyArray);
 
     card.dataset.fullHierarchyPath = fullHierarchyPath;
-    card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
+    
+    // [MODIFIED] Generate and add the breadcrumbs HTML to the card's content.
+    const breadcrumbsHtml = createBreadcrumbsHtml(hierarchyArray);
+    card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
     
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
