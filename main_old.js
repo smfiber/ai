@@ -1207,25 +1207,13 @@ async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
     openModal('inDepthModal');
     
     // Assemble the detailed prompt for the initial guide sections
-    const initialCustomPrompt = `
-        Persona: You are an expert ${persona}.
-        Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
-        
-        //-- BLUEPRINT DETAILS --//
-        - **Topic:** "${coreTask}"
-        - **Audience & Tone:** The guide should be written for a "${tone}" audience.
-        - **Additional Context:** ${additionalContext || 'None'}
-        
-        //-- INSTRUCTIONS --//
-        1.  **Generate Four Sections Only:** Create detailed content exclusively for:
-            * ### 1. Introduction
-            * ### 2. Architectural Overview
-            * ### 3. Key Concepts & Terminology
-            * ### 4. Prerequisites
-        2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope of the guide (e.g., will it cover GUI, PowerShell, API methods?). This is critical.
-        3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for IT administrators.
-        4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections.
-    `;
+    const context = {
+        coreTask: coreTask,
+        persona: persona,
+        tone: tone,
+        additionalContext: additionalContext
+    };
+    const initialCustomPrompt = getMasterGuidePrompt('blueprint', context);
 
     try {
         let initialResultText = await callGeminiAPI(initialCustomPrompt, false, "Generate Custom Guide (Initial)");
@@ -1476,17 +1464,72 @@ function getRefinementPrompt(originalText = '{original_text}', refinementRequest
     return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
 }
 
-function getFullGuideGenerationPrompt(context = {}) {
-    const hierarchy = context.hierarchyContext || [];
-    const task = context.task || '{task}';
-    const options = context.options || '{options}';
-    const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
-    const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${task}.`;
-    const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
-    const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
-    const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
-    return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Mission: Produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below. Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management. //-- GUIDE BLUEPRINT & SCOPE --// 1. Topic Technology: ${topicTechnology} 2. Specific Goal: ${specificGoal} 3. Target Audience: ${targetAudience} 4. IN-SCOPE (Must be included): ${inScope} 5. OUT-OF-SCOPE (Must be excluded): ${outOfScope} //-- CRITICAL STRUCTURE & FORMATTING RULES --// A. Markdown Formatting: You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction. B. Required Guide Content (Generate all 12 sections): 1. Introduction: Overview, Importance, What You'll Learn. 2. Architectural Overview: Components and interactions. 3. Key Concepts & Terminology: Definitions only. 4. Prerequisites: Permissions, Software/Licensing, System Requirements. 5. Detailed Implementation Guide: CRITICAL SECTION. Provide a comprehensive, step-by-step walkthrough of the process outlined in the Introduction. For each major step, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management, as dictated by the scope in the Introduction. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.** 6. Verification and Validation: Specific commands/procedures to confirm correct configuration based on the steps in Section 5. 7. Best Practices: Expert advice for the implementation and management process detailed in Section 5. 8. Automation Techniques: Automation opportunities with full scripts for the process in Section 5. 9. Security Considerations: Hardening, vulnerabilities, and auditing related to the process in Section 5. 10. Advanced Use Cases & Scenarios: 2-3 advanced examples combining concepts from the implementation in Section 5. 11. Troubleshooting: A table of common problems, causes, and solutions related to the process in Section 5. 12. Helpful Resources: Bulleted list of high-quality, working links to official documentation relevant to the process in Section 5. //-- MANDATORY QUALITY STANDARDS --// 1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation. 2.  **No Placeholders:** Your output MUST NOT contain placeholder links, hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)". You must use your capabilities to find and provide real, authoritative information. 3.  **PowerShell/CLI Standards:** Scripts must be robust and production-ready. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`. 4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Instead, integrate advice naturally into the text.`;
+/**
+ * [NEW] Creates a master prompt for guide generation to ensure consistency.
+ * @param {string} type - The type of guide to generate ('blueprint' or 'fullGuide').
+ * @param {object} context - The context for the prompt, including db prompts and workshop inputs.
+ * @returns {string} The fully constructed master prompt.
+ */
+function getMasterGuidePrompt(type, context) {
+    const { blueprintMarkdown = '', coreTask = '', persona = '', tone = '', additionalContext = '', dbPrompt = '' } = context;
+
+    const personaAndObjective = dbPrompt 
+        ? `//-- PERSONA, OBJECTIVE & INSTRUCTIONS (FROM DATABASE) --//
+${dbPrompt}` 
+        : `//-- PERSONA & OBJECTIVE (FROM WORKSHOP) --//
+Persona: You are an expert ${persona}.
+Audience & Tone: The guide should be written for a "${tone}" audience.
+Additional Context: ${additionalContext || 'None'}`;
+
+    if (type === 'blueprint') {
+        return `
+        //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
+        Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
+
+        ${personaAndObjective}
+        
+        //-- SPECIFIC TOPIC TO WRITE ABOUT --//
+        - **Topic:** "${coreTask}"
+        
+        //-- REQUIRED OUTPUT --//
+        1.  **Generate Four Sections Only:** Create detailed content exclusively for:
+            * ### 1. Introduction
+            * ### 2. Architectural Overview
+            * ### 3. Key Concepts & Terminology
+            * ### 4. Prerequisites
+        2.  **Define Scope Clearly:** In the "Introduction," you MUST state the guide's scope (e.g., GUI, PowerShell, API).
+        3.  **Professional & Accurate:** Content must be technically accurate and professionally written.
+        4.  **Markdown Format:** Use '###' for section headers. Return ONLY markdown for these four sections.`;
+    }
+
+    if (type === 'fullGuide') {
+        return `
+        //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
+        You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide, following all instructions.
+
+        //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
+        ${blueprintMarkdown}
+
+        ${personaAndObjective}
+
+        //-- CRITICAL INSTRUCTION: ADHERE TO THE BLUEPRINT'S SCOPE --//
+        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic and adhere to the scope defined within that introduction.
+
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 --//
+        Generate all of the following sections, providing comprehensive, practical, and expert-level detail. Use markdown blockquotes for all code snippets or commands.
+        ### 5. Detailed Implementation Guide
+        ### 6. Verification and Validation
+        ### 7. Best Practices
+        ### 8. Automation Techniques
+        ### 9. Security Considerations
+        ### 10. Advanced Use Cases & Scenarios
+        ### 11. Troubleshooting
+        ### 12. Helpful Resources
+        
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
+    }
 }
+
 
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
@@ -1506,8 +1549,14 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     footerEl.dataset.fullTitle = fullTitle;
     footerEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
     openModal('inDepthModal');
-    const contextString = fullHierarchyPath.map(p => p.title).join(' -> ');
-    const initialPrompt = `Persona: You are an expert senior IT administrator and technical writer AI. Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later. //-- BLUEPRINT DETAILS --// - **Topic:** "${item.title}" - **Context:** "${contextString}" - **Tailoring Options:** "None" //-- INSTRUCTIONS --// 1.  **Generate Four Sections Only:** Create detailed content exclusively for: * ### 1. Introduction * ### 2. Architectural Overview * ### 3. Key Concepts & Terminology * ### 4. Prerequisites 2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope. For example, explicitly mention if the guide will cover GUI, PowerShell, and/or API methods. This is critical as it will dictate the content of the full guide. 3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for experienced IT administrators. 4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections. Do not include any other content or explanatory text.`;
+    
+    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+    const context = {
+        coreTask: item.title,
+        dbPrompt: finalCategory.initialPrompt // This is the rich prompt from your database!
+    };
+    const initialPrompt = getMasterGuidePrompt('blueprint', context);
+
     try {
         let initialResultText = await callGeminiAPI(initialPrompt, false, "Explore In-Depth (Initial)");
         initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
@@ -1554,26 +1603,13 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
     detailedContentEl.innerHTML = getLoaderHTML('Generating initial guide (sections 5-12)...');
 
-    const finalContentPrompt = `
-    Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide.
-    //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
-    ${blueprintMarkdown}
-    //-- CRITICAL INSTRUCTION: ADHERE TO THE INTRODUCTION'S SCOPE --//
-    The "Introduction" (Section 1) of the blueprint above is the master plan. It defines the guide's overall topic and scope. All content you generate for sections 5-12 MUST be about this main topic.
-    //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
-    ### 5. Detailed Implementation Guide
-    This is the most CRITICAL section. Provide a comprehensive, step-by-step walkthrough. Structure this section logically. For each major step, provide practical instructions for the methods (e.g., GUI) defined as IN-SCOPE in the Introduction. Provide clear, real-world examples. Use markdown blockquotes for code snippets or commands.
-    ### 6. Verification and Validation
-    ### 7. Best Practices
-    ### 8. Automation Techniques
-    ### 9. Security Considerations
-    ### 10. Advanced Use Cases & Scenarios
-    ### 11. Troubleshooting
-    ### 12. Helpful Resources
-    //-- FINAL OUTPUT INSTRUCTION --//
-    Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
-    `;
+    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+    const context = {
+        blueprintMarkdown: blueprintMarkdown,
+        // Use the 'fullPrompt' if available, otherwise fall back to the initial one
+        dbPrompt: finalCategory.fullPrompt || finalCategory.initialPrompt 
+    };
+    const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
 
     try {
         let initialDraftSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Initial Draft)");
