@@ -1472,20 +1472,20 @@ Additional Context: ${additionalContext || 'None'}`;
         //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
         Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
 
+        //-- PRIMARY SUBJECT (MANDATORY) --//
+        The Primary Subject of this guide is exclusively: "${coreTask}".
+        **CRITICAL RULE: You MUST NOT deviate from this Primary Subject.** Do not introduce other main topics like iLO, Active Directory, or specific hardware unless they are directly required to explain a subordinate point of the Primary Subject. Your entire focus is on "${coreTask}".
+
         ${personaAndObjective}
-        
-        //-- SPECIFIC TOPIC TO WRITE ABOUT --//
-        - **Topic:** "${coreTask}"
         
         //-- REQUIRED OUTPUT --//
         1.  **Generate Four Sections Only:** Create detailed content exclusively for:
-            * ### 1. Introduction
-            * ### 2. Architectural Overview
-            * ### 3. Key Concepts & Terminology
-            * ### 4. Prerequisites
-        2.  **Define Scope Clearly:** In the "Introduction," you MUST state the guide's scope (e.g., GUI, PowerShell, API).
-        3.  **Professional & Accurate:** Content must be technically accurate and professionally written.
-        4.  **Markdown Format:** Use '###' for section headers. Return ONLY markdown for these four sections.`;
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${coreTask}". You MUST clearly state the guide's scope (e.g., GUI, PowerShell, API) within this section.
+            * ### 2. Architectural Overview: Describe the architecture relevant to "${coreTask}".
+            * ### 3. Key Concepts & Terminology: Define terms and concepts essential for understanding "${coreTask}".
+            * ### 4. Prerequisites: List the skills and access required to perform tasks related to "${coreTask}".
+        2.  **Professional & Accurate:** Content must be technically accurate and professionally written.
+        3.  **Markdown Format:** Use '###' for section headers. Return ONLY markdown for these four sections.`;
     }
 
     if (type === 'fullGuide') {
