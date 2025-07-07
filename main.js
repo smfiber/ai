@@ -1630,7 +1630,17 @@ async function generateVerifiedResources(topic) {
     return helpfulResourcesMarkdown;
 }
 
+/**
+ * [MODIFIED] Implements the complete multi-step guide generation workflow.
+ * 1. Generates a first draft of the main content (Sections 5-12).
+ * 2. Extracts the "Detailed Implementation Guide" (Section 5) from the draft.
+ * 3. Performs auto-refinement on Section 5 by sending it back to the AI.
+ * 4. Conducts a web search for the "Helpful Resources" section.
+ * 5. Assembles the final guide from the blueprint, the refined Section 5, the rest of the draft, and the researched links.
+ * @param {HTMLButtonElement} button The button that triggered the function.
+ */
 async function generateFullDetailedGuide(button) {
+    // --- 0. Initial Setup ---
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
     const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
@@ -1656,33 +1666,67 @@ async function generateFullDetailedGuide(button) {
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
-    detailedContentEl.innerHTML = getLoaderHTML('Generating complete guide with expert detail...');
-
-    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
-    const context = {
-        blueprintMarkdown: blueprintMarkdown,
-        dbPrompt: finalCategory.fullPrompt || finalCategory.initialPrompt 
-    };
-    const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
 
     try {
-        let generatedSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Integrated)");
-        generatedSections5to12 = generatedSections5to12 ? generatedSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        // --- 1. Write the First Draft (Sections 5-12) ---
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
+        const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        const context = {
+            blueprintMarkdown: blueprintMarkdown,
+            dbPrompt: finalCategory.fullPrompt || finalCategory.initialPrompt 
+        };
+        const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
+        let firstDraftMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Draft)");
+        firstDraftMarkdown = firstDraftMarkdown ? firstDraftMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-        if (!generatedSections5to12) {
+        if (!firstDraftMarkdown) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Searching the web for verified helpful resources...');
+        // --- 2. Extract Section 5 for Auto-Refinement ---
+        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
+        const section5Match = firstDraftMarkdown.match(section5Regex);
+        const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
+
+        if (!implementationGuideDraft) {
+            throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
+        }
+        
+        // --- 3. Perform Auto-Refinement on Section 5 ---
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
+        const refinementPrompt = `
+            Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
+            
+            Original Section:
+            ${implementationGuideDraft}
+        `;
+        let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
+        // Ensure the header is present
+        if (!refinedImplementationGuide.startsWith('### 5.')) {
+            refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
+        }
+
+
+        // --- 4. Conduct Link Research ---
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching the web for verified resources...');
         const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
         const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch);
 
-        let finalSections5to12 = generatedSections5to12;
-        if (helpfulResourcesMarkdown) {
-            finalSections5to12 = finalSections5to12.replace(/(### 12\. Helpful Resources[\s\S]*)/, helpfulResourcesMarkdown.trim());
-        }
+        // --- 5. Final Assembly ---
+        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
+        
+        // Get sections 6-11 from the original draft
+        const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
+        const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
+        const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
 
-        const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
+        const finalCompleteGuideMarkdown = [
+            blueprintMarkdown,
+            refinedImplementationGuide,
+            sections6to11.trim(),
+            helpfulResourcesMarkdown.trim()
+        ].join("\n\n").trim();
+        
         originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
         detailedContentEl.innerHTML = '';
