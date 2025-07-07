@@ -33,7 +33,7 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-let GOOGLE_SEARCH_ENGINE_ID = '';
+let Google Search_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 let oauthToken = null;
@@ -134,7 +134,7 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
-    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
+    Google Search_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -152,7 +152,7 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
+        if (Google Search_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = Google Search_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -1424,6 +1424,11 @@ function showThemeLoading(isLoading) {
     document.getElementById('header-loader').classList.toggle('flex', isLoading);
 }
 
+/**
+ * [FIXED] Constructs and retrieves the application's master prompts.
+ * Passes a valid, structured array for fullHierarchyPath to prevent TypeErrors.
+ * @returns {object} An object containing the application's core prompts.
+ */
 function getAppPrompts() {
     const prompts = {};
     const blueprintContext = {
@@ -1431,12 +1436,12 @@ function getAppPrompts() {
         persona: '{persona}', // from workshop
         tone: '{tone}', // from workshop
         additionalContext: '{additional_context}', // from workshop
-        fullHierarchyPath: '[{...}]' // from hierarchy
+        fullHierarchyPath: [{ title: 'Example Main Category' }, { title: 'Example Final Topic', initialPrompt: 'Persona: an example persona.' }]
     };
     const fullGuideContext = {
         blueprintMarkdown: '{blueprint_markdown}',
         coreTask: '{core_task}',
-        fullHierarchyPath: '[{...}]'
+        fullHierarchyPath: [{ title: 'Example Main Category' }, { title: 'Example Final Topic', initialPrompt: 'Persona: an example persona.' }]
     };
     prompts["Blueprint Generation Prompt"] = getMasterGuidePrompt('blueprint', blueprintContext);
     prompts["Full Guide Generation Prompt"] = getMasterGuidePrompt('fullGuide', fullGuideContext);
@@ -1467,9 +1472,9 @@ function getRefinementPrompt(originalText = '{original_text}', refinementRequest
 }
 
 /**
- * [REVISED] Constructs the master prompt for generating guide content.
- * It now correctly separates logic for hierarchy-based generation vs. workshop-based generation,
- * ensuring the correct context and persona are always used.
+ * [FIXED] Constructs the master prompt for generating guide content.
+ * It now combines the main category with the core task to create a more specific `fullSubject`,
+ * ensuring the AI generates content with the proper context.
  * @param {string} type - The type of guide to generate ('blueprint' or 'fullGuide').
  * @param {object} context - An object containing the necessary data for prompt construction.
  * @returns {string} The fully constructed prompt for the AI.
@@ -1485,16 +1490,20 @@ function getMasterGuidePrompt(type, context) {
     } = context;
 
     let personaAndObjective;
+    let fullSubject = coreTask; // Default subject is the core task
 
     // Logic for generating from the hierarchy.
-    if (fullHierarchyPath && fullHierarchyPath.length > 0) {
+    if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
         const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
         const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
 
-        // Extract the persona description from the category's initial prompt.
+        // [FIX] Create a more specific subject by combining the main category and the final topic.
+        if (fullHierarchyPath.length > 1) {
+            fullSubject = `${coreTask} for ${fullHierarchyPath[0].title}`;
+        }
+        
         let personaDescription = "an expert IT Administrator"; // Default persona
         if (finalCategory && finalCategory.initialPrompt) {
-            // This regex looks for "Persona:" and captures everything until it hits "Objective:" or "Instructions:"
             const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
             if (match && match[1]) {
                 personaDescription = match[1].trim();
@@ -1524,17 +1533,17 @@ Additional Context: ${additionalContext || 'None'}`;
         Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
 
         //-- PRIMARY SUBJECT (MANDATORY) --//
-        The Primary Subject of this guide is exclusively: "${coreTask}".
-        **CRITICAL RULE: You MUST NOT deviate from this Primary Subject.** Your entire focus is on "${coreTask}".
+        The Primary Subject of this guide is exclusively: "${fullSubject}".
+        **CRITICAL RULE: You MUST NOT deviate from this Primary Subject.** Your entire focus is on "${fullSubject}".
 
         ${personaAndObjective}
         
         //-- REQUIRED OUTPUT --//
         1.  **Generate Four Sections Only:** Create detailed content exclusively for:
-            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${coreTask}". You MUST clearly state the guide's scope (e.g., GUI, PowerShell, API) within this section.
-            * ### 2. Architectural Overview: Describe the architecture relevant to "${coreTask}".
-            * ### 3. Key Concepts & Terminology: Define terms and concepts essential for understanding "${coreTask}".
-            * ### 4. Prerequisites: List the skills and access required to perform tasks related to "${coreTask}".
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${fullSubject}". You MUST clearly state the guide's scope (e.g., GUI, PowerShell, API) within this section.
+            * ### 2. Architectural Overview: Describe the architecture relevant to "${fullSubject}".
+            * ### 3. Key Concepts & Terminology: Define terms and concepts essential for understanding "${fullSubject}".
+            * ### 4. Prerequisites: List the skills and access required to perform tasks related to "${fullSubject}".
         2.  **Professional & Accurate:** Content must be technically accurate and professionally written.
         3.  **Markdown Format:** Use '###' for section headers. Return ONLY markdown for these four sections.`;
     }
@@ -1550,7 +1559,7 @@ Additional Context: ${additionalContext || 'None'}`;
         ${personaAndObjective}
 
         //-- CRITICAL INSTRUCTION: ADHERE TO THE BLUEPRINT'S SCOPE --//
-        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic ("${coreTask}") and adhere to the scope defined within that introduction. For example, if the intro specifies a GUI-based approach for HPE iLO, do not provide CLI commands unless they are supplementary.
+        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic ("${fullSubject}") and adhere to the scope defined within that introduction. For example, if the intro specifies a GUI-based approach for HPE iLO, do not provide CLI commands unless they are supplementary.
 
         //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH SPECIFIC INSTRUCTIONS --//
         Generate all of the following sections.
@@ -1592,8 +1601,8 @@ Additional Context: ${additionalContext || 'None'}`;
 
 
 /**
- * [REVISED] Kicks off the generation of the initial guide blueprint (sections 1-4).
- * It now correctly passes the full hierarchy path to getMasterGuidePrompt.
+ * [FIXED] Kicks off the generation of the initial guide blueprint (sections 1-4).
+ * It now displays the full hierarchy path as a breadcrumb in the modal title.
  * @param {string} topicId - The ID of the selected topic.
  * @param {Array} fullHierarchyPath - The full path array from the root to the selected topic.
  */
@@ -1608,7 +1617,12 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const buttonContainer = document.getElementById('inDepthModalButtons');
 
     const fullTitle = `In-Depth: ${item.title}`;
-    titleEl.textContent = fullTitle;
+    
+    // [FIX] Create and display breadcrumbs in the modal title
+    const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
+    const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
+    titleEl.innerHTML = `${breadcrumbHtml}${fullTitle}`;
+    
     contentEl.innerHTML = getLoaderHTML(`Generating foundational guide for ${item.title}...`);
     buttonContainer.innerHTML = '';
     document.getElementById('modal-status-message').textContent = '';
@@ -1616,11 +1630,9 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     footerEl.dataset.topicId = topicId;
     footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     footerEl.dataset.fullTitle = fullTitle;
-    footerEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
+    footerEl.dataset.cardName = pathString;
     openModal('inDepthModal');
     
-    // [FIX] Construct the context correctly, passing the full hierarchy path
-    // instead of the problematic database prompt.
     const context = {
         coreTask: item.title,
         fullHierarchyPath: fullHierarchyPath
@@ -1640,7 +1652,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 }
 
 async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
+    if (!Google Search_ENGINE_ID) {
         console.warn("Google Search Engine ID is not configured. Skipping real-time resource search.");
         return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
@@ -1649,7 +1661,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
     const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic].join(' ');
 
     try {
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
@@ -1694,8 +1706,8 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 }
 
 /**
- * [REVISED] Implements the complete multi-step guide generation workflow.
- * Now correctly passes the full hierarchy context to the prompt generation logic.
+ * [FIXED] Implements the complete multi-step guide generation workflow.
+ * Now correctly displays the full hierarchy path as a breadcrumb in the modal title.
  * @param {HTMLButtonElement} button The button that triggered the function.
  */
 async function generateFullDetailedGuide(button) {
@@ -1718,20 +1730,26 @@ async function generateFullDetailedGuide(button) {
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
     const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
     
-    const detailedModalTitle = `Complete Guide: ${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}`;
-    detailedTitleEl.textContent = detailedModalTitle;
+    // [FIX] Create and display breadcrumbs in the detailed modal title
+    const detailedModalTitleText = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+    const mainTitle = `Complete Guide: ${detailedModalTitleText}`;
+    const detailedModalTitleKey = mainTitle; // Use this as the consistent key
+    
+    const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
+    const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
+    detailedTitleEl.innerHTML = `${breadcrumbHtml}${mainTitle}`;
+    
     detailedButtonContainer.innerHTML = '';
-    detailedFooterEl.dataset.fullTitle = detailedModalTitle;
-    detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
+    detailedFooterEl.dataset.fullTitle = detailedModalTitleKey;
+    detailedFooterEl.dataset.cardName = pathString;
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
 
     try {
         // --- 1. Write the First Draft (Sections 5-12) ---
         detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
-        const coreTopic = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '').trim();
+        const coreTopic = detailedModalTitleText.trim();
         
-        // [FIX] Construct the context correctly for the full guide.
         const context = {
             blueprintMarkdown: blueprintMarkdown,
             fullHierarchyPath: fullHierarchyPath,
@@ -1789,7 +1807,7 @@ async function generateFullDetailedGuide(button) {
             helpfulResourcesMarkdown.trim()
         ].join("\n\n").trim();
         
-        originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
+        originalGeneratedText.set(detailedModalTitleKey, finalCompleteGuideMarkdown);
 
         detailedContentEl.innerHTML = '';
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
