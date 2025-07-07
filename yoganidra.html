@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yoga Nidra Creator</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         /* Adjusted scrollbar styles */
-        #script-display-area::-webkit-scrollbar, textarea::-webkit-scrollbar, .custom-dropdown-content::-webkit-scrollbar { width: 8px; }
-        #script-display-area::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track, .custom-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
-        #script-display-area::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb, .custom-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        #script-display-area::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        textarea::-webkit-scrollbar, .custom-dropdown-content::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track, .custom-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
+        textarea::-webkit-scrollbar-thumb, .custom-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         
         .generated-script {
             background-image: linear-gradient(to right, #1e293b, #1a222f);
@@ -63,13 +64,15 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
-    <div id="app-container" class="w-full min-h-screen flex flex-col bg-gray-800 p-4 sm:p-6">
+    <!-- App container -->
+    <div id="app-container" class="w-full min-h-dvh flex flex-col bg-gray-800 p-4 sm:p-6">
+        <!-- Header Section -->
         <header class="flex flex-col w-full mb-4 pb-4 border-b border-gray-700">
             <div class="flex flex-wrap justify-between items-start w-full mb-4 gap-y-4">
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
                         Yoga Nidra Creator
-                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.27</span>
+                        <span id="version-number" class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">1.28</span>
                         <button id="help-icon" title="How to Use">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
                         </button>
@@ -80,6 +83,7 @@
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
                 </div>
                 <div class="flex flex-wrap items-end gap-4">
+                    <!-- Controls -->
                     <div class="w-96 relative">
                         <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Script Type (Optional):</label>
                         <select id="script-type-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
@@ -106,8 +110,10 @@
             </div>
         </header>
 
+        <!-- Script Display Area -->
         <main id="script-display-area" class="w-full p-4 space-y-6 flex flex-col"></main>
         
+        <!-- User Input Area -->
         <footer class="mt-4 pt-4 border-t border-gray-700">
             <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
             <div class="flex justify-end items-center mt-2 gap-4">
@@ -119,6 +125,7 @@
         </footer>
     </div>
     
+    <!-- Modals -->
     <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[80vh] flex flex-col">
             <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Yoga Nidra Creator</h2>
@@ -734,7 +741,7 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                 scriptParagraph.classList.add('generated-script');
                 scriptParagraph.textContent = scriptText;
                 scriptDisplayArea.appendChild(scriptParagraph);
-                scriptDisplayArea.scrollTop = 0;
+                window.scrollTo(0, 0);
             }
 
             function displaySystemMessage(text, type = 'system-message-paragraph') {
@@ -753,7 +760,13 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                     tempTextArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(tempTextArea);
-                    displaySystemMessage("Script copied to clipboard!", 'system-message-paragraph');
+                    // Use a temporary message that doesn't clear the whole screen
+                    const copyButton = document.getElementById('copy-script-btn');
+                    const originalText = copyButton.textContent;
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = originalText;
+                    }, 2000);
                 }
             }
 
@@ -774,21 +787,28 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
             async function getAIResponse(prompt) {
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    const errorData = JSON.parse(errorText || "{}");
-                    throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
-                }
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    return result.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error(`Unexpected API response format.`);
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        const errorData = JSON.parse(errorText || "{}");
+                        throw new Error(errorData?.error?.message || `API request failed with status ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                        throw new Error("The response was blocked due to safety settings. Please modify your prompt and try again.");
+                    } else {
+                        throw new Error(`Unexpected API response format. Check console for details.`);
+                    }
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                    throw new Error("Network error or failed API request. Please check your connection and API key.");
                 }
             }
             
