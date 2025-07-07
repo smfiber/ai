@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Administration Hub</title>
     
-    <script src="[https://apis.google.com/js/api.js](https://apis.google.com/js/api.js)" async defer></script>
-    <script src="[https://accounts.google.com/gsi/client](https://accounts.google.com/gsi/client)" async defer></script>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/marked/marked.min.js](https://cdn.jsdelivr.net/npm/marked/marked.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js](https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js)"></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
     
-    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap)" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Nunito+Sans:wght@400;700&family=Open+Sans:wght@400;700&family=Poppins:wght@400;500;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -148,12 +148,12 @@
                         <input type="password" id="algoliaAdminKeyInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Algolia Admin API Key">
                         <p class="text-xs themed-text-muted mt-1">Note: The Admin Key is for the backend function setup and is not used directly in the browser.</p>
                     </div>
-                    <div>
-                        <label for="googleSearchEngineIdInput" class="block text-sm font-medium themed-text-primary mb-1">Google Programmable Search Engine ID (Optional)</label>
-                        <input type="text" id="googleSearchEngineIdInput" name="googleSearchEngineIdInput" class="themed-input w-full p-2 rounded-lg" placeholder="Enter your Search Engine ID">
-                        <p class="text-xs themed-text-muted mt-1">Required for the "Helpful Resources" section to find live URLs.</p>
-                    </div>
                 </div>
+                <div class="mb-4">
+                    <label for="googleSearchEngineIdInput" class="block text-sm font-medium themed-text-primary mb-1">Google Programmable Search Engine ID (Optional)</label>
+                    <input type="text" id="googleSearchEngineIdInput" name="googleSearchEngineIdInput" class="themed-input w-full" placeholder="Enter your Search Engine ID">
+                    <p class="text-xs themed-text-muted mt-1">Required for the "Helpful Resources" section to find live URLs.</p>
+                </div>                
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="btn-primary">Save and Continue</button>
@@ -191,7 +191,7 @@
                 <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-            <div id="inDepthModalFooter" class="p-4 border-t shrink-0 modal-footer">
+            <div id="inDepthModalFooter" class="p-4 border-t shrink-0">
                 <div id="inDepthModalButtons" class="flex flex-wrap justify-center gap-2"></div>
                 <p id="modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
@@ -204,7 +204,7 @@
                 <button id="closeInDepthDetailedModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none">&times;</button>
             </div>
             <div id="inDepthDetailedModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
-            <div id="inDepthDetailedModalFooter" class="p-4 border-t shrink-0 modal-footer">
+            <div id="inDepthDetailedModalFooter" class="p-4 border-t shrink-0">
                 <div id="inDepthDetailedModalButtons" class="flex flex-wrap justify-center gap-2"></div>
                 <p id="detailed-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
@@ -220,7 +220,7 @@
                 <input id="searchGeminiQueryText" class="themed-input w-full p-2 rounded-lg mb-4" readonly>
                 <div id="searchGeminiResult" class="prose max-w-none"></div>
             </div>
-            <div id="searchGeminiModalFooter" class="p-4 border-t shrink-0 modal-footer">
+            <div id="searchGeminiModalFooter" class="p-4 border-t shrink-0">
                 <div id="searchGeminiModalButtons" class="flex flex-wrap justify-center gap-2"></div>
                 <p id="search-modal-status-message" class="text-xs text-center themed-text-muted mt-2"></p>
             </div>
