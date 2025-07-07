@@ -33,14 +33,15 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
+// [NEW] Add a placeholder for the Google Programmable Search Engine ID.
+let GOOGLE_SEARCH_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
-// [FIX] This variable is now the single source of truth for the Google Drive connection status.
 let oauthToken = null;
 
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
-const MAX_TOPICS = 48; // Set the maximum number of topics allowed per category.
+const MAX_TOPICS = 48;
 
 // --- Function Declarations ---
 
@@ -65,15 +66,14 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
     statusEl.textContent = 'Adding to Knowledge Base...';
 
     const appId = firebaseConfig.appId || 'it-admin-hub-global';
-    // The collection for the Knowledge Base, now using the correct public path.
     const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
     const guideData = {
         title: title,
         markdownContent: markdownContent,
         hierarchyPath: hierarchyPath.map(p => p.title || p).join(' / '),
         createdAt: Timestamp.now(),
-        status: 'completed', // Default status
-        userId: userId, // Associate the guide with the user who saved it
+        status: 'completed',
+        userId: userId,
     };
 
     try {
@@ -98,28 +98,24 @@ function openModal(modalId) {
 
 /**
  * Helper function to safely wait for the GAPI script to load.
- * This prevents race conditions by polling for the script's existence.
  * @param {function} callback The function to execute once GAPI is ready.
  */
 function gapiLoaded(callback) {
     if (typeof gapi !== 'undefined' && gapi.load) {
         callback();
     } else {
-        // Poll every 100ms until the gapi script is available.
         setTimeout(() => gapiLoaded(callback), 100);
     }
 }
 
 /**
  * Helper function to safely wait for the Google Identity Services (GIS) script to load.
- * This prevents race conditions by polling for the script's existence.
  * @param {function} callback The function to execute once GIS is ready.
  */
 function gisLoaded(callback) {
     if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
         callback();
     } else {
-        // Poll every 100ms until the gis script is available.
         setTimeout(() => gisLoaded(callback), 100);
     }
 }
@@ -140,6 +136,8 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
+    // [NEW] Load the Search Engine ID from local storage.
+    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -157,6 +155,8 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
+        // [NEW] Populate the Search Engine ID input field.
+        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -226,20 +226,15 @@ function initializeFirebase() {
 
 /**
  * Orchestrates the initialization of all Google API clients.
- * This function ensures that both the authentication (GIS) and Drive (GAPI)
- * clients are loaded safely and without race conditions.
  */
 function initializeGoogleApiClients() {
     if (!GOOGLE_CLIENT_ID) {
         console.warn("Google Client ID is not provided. Cloud features will be disabled.");
         return;
     }
-    // Make the UI visible
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // Start both initialization processes. They will wait for their respective scripts
-    // to load by using the polling helper functions.
     gisLoaded(initGisClient);
     gapiLoaded(() => {
         gapi.load('client:picker', initGapiClient);
@@ -248,7 +243,6 @@ function initializeGoogleApiClients() {
 
 /**
  * Initializes the Google Identity Services (GIS) client for authentication.
- * This is the modern way to handle Google Sign-In and OAuth.
  */
 function initGisClient() {
     try {
@@ -256,11 +250,8 @@ function initGisClient() {
             client_id: GOOGLE_CLIENT_ID,
             scope: G_SCOPES,
             callback: (tokenResponse) => {
-                // [FIX] This callback is the key. It receives the token from Google.
-                // We store it in our `oauthToken` variable to manage the state ourselves.
                 oauthToken = tokenResponse; 
                 if (gapiInited && oauthToken && oauthToken.access_token) {
-                    // We explicitly set the token for the GAPI client to use.
                     gapi.client.setToken(oauthToken);
                     updateSigninStatus(true);
                 } else if (!oauthToken || !oauthToken.access_token) {
@@ -287,9 +278,6 @@ async function initGapiClient() {
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         gapiInited = true; 
-
-        // [FIX] The status on load should reflect our state variable, not gapi.client.getToken().
-        // On a fresh load, oauthToken will be null, so this correctly shows a disconnected state.
         updateSigninStatus(!!(oauthToken && oauthToken.access_token));
     } catch(error) {
         console.error("Critical Error: Failed to initialize GAPI Client for Drive.", error);
@@ -355,28 +343,21 @@ async function handleLogin() {
     }
 }
 
-/**
- * [FIX] Handles logging out of the application, ensuring the Google Drive
- * token from our state variable is revoked for a complete sign-out.
- */
 function handleLogout() {
-    // Revoke the Google Drive token on Google's side using our state variable.
     if (oauthToken && oauthToken.access_token) {
         google.accounts.oauth2.revoke(oauthToken.access_token, () => {
             console.log("Google Drive token revoked during logout.");
         });
     }
-    // It's still good practice to clear the GAPI client's internal token.
     if (gapi?.client) {
        gapi.client.setToken(null);
     }
     
-    // Sign out from Firebase
     signOut(auth).then(() => {
-        oauthToken = null; // Clear our locally stored token state
+        oauthToken = null;
         updateSigninStatus(false);
         localStorage.clear();
-        sessionStorage.clear(); // Clear session storage as well
+        sessionStorage.clear();
         location.reload();
     }).catch(error => {
         console.error("Sign out failed:", error);
@@ -385,8 +366,6 @@ function handleLogout() {
 
 /**
  * Updates all UI elements related to Google Drive sign-in status.
- * This function is the single source of truth for showing/hiding Drive buttons,
- * ensuring the UI is always in sync with the actual connection status.
  * @param {boolean} isSignedIn Whether the user is signed into Google Drive.
  */
 function updateSigninStatus(isSignedIn) {
@@ -408,7 +387,6 @@ function updateSigninStatus(isSignedIn) {
         driveFolderId = null;
     }
 
-    // Refresh the action buttons in any open modals to show/hide the "Save to Drive" button.
     const hasToken = !!(oauthToken && oauthToken.access_token);
     if (document.body.classList.contains('inDepthModal-open')) {
         const isInitial = !!document.getElementById('generate-detailed-steps-btn');
@@ -440,6 +418,8 @@ async function handleApiKeySubmit(e) {
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
+    // [NEW] Get the Search Engine ID from the form.
+    const tempGoogleSearchEngineId = document.getElementById('googleSearchEngineIdInput').value.trim();
     const tempAlgoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
     const tempAlgoliaSearchKey = document.getElementById('algoliaSearchKeyInput').value.trim();
     let tempFirebaseConfig;
@@ -472,6 +452,8 @@ async function handleApiKeySubmit(e) {
     localStorage.setItem('geminiApiKey', tempGeminiKey);
     localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
     localStorage.setItem('googleClientId', tempGoogleClientId);
+    // [NEW] Save the Search Engine ID to local storage.
+    localStorage.setItem('googleSearchEngineId', tempGoogleSearchEngineId);
     localStorage.setItem('algoliaAppId', tempAlgoliaAppId);
     localStorage.setItem('algoliaSearchKey', tempAlgoliaSearchKey);
 
@@ -487,7 +469,6 @@ function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
 
-    // Event listeners for the new Prompt Workshop
     document.getElementById('persona-selector')?.addEventListener('click', (e) => {
         if (e.target.classList.contains('prompt-builder-btn')) {
             document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach(btn => btn.classList.remove('active'));
@@ -508,7 +489,6 @@ function setupEventListeners() {
     document.getElementById('closeCategoryBrowserModal')?.addEventListener('click', () => closeModal('categoryBrowserModal'));
     document.getElementById('auth-button')?.addEventListener('click', handleAuthClick);
     
-    // Event listener for the "Load from Drive" button, which opens the file picker.
     document.getElementById('load-from-drive-btn')?.addEventListener('click', async () => {
         const folderId = await getDriveFolderId();
         createPicker('open', folderId);
@@ -532,7 +512,6 @@ function setupEventListeners() {
     document.getElementById('font-size-select')?.addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
     document.getElementById('line-height-select')?.addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
     
-    // Search and KB listeners
     document.getElementById('search-kb-button')?.addEventListener('click', () => openModal('searchModal'));
     document.getElementById('kb-button')?.addEventListener('click', openKbBrowser);
     document.getElementById('search-input')?.addEventListener('keyup', performSearch);
@@ -618,28 +597,18 @@ function setupEventListeners() {
     document.getElementById('add-sticky-topic-button')?.addEventListener('click', handleAddStickyTopic);
 }
 
-/**
- * [FIX] Handles connecting to and disconnecting from Google Drive.
- * The logic now reliably uses our `oauthToken` state variable as the source of truth
- * for whether the user is connected.
- */
 async function handleAuthClick() {
-    // Check our state variable to see if we have a valid token.
     if (oauthToken && oauthToken.access_token) {
-        // If a token exists, the user wants to disconnect.
         google.accounts.oauth2.revoke(oauthToken.access_token, () => {
             if (gapi?.client) {
                 gapi.client.setToken(null);
             }
-            oauthToken = null; // Clear our local token cache
+            oauthToken = null;
             updateSigninStatus(false);
             console.log('Google Drive token has been revoked.');
         });
     } else {
-        // If no token, the user wants to connect.
         if (gisInited && tokenClient) {
-            // This triggers the Google auth prompt. The result is handled by the
-            // callback function defined in `initGisClient`.
             tokenClient.requestAccessToken({ prompt: 'consent' });
         } else {
             console.error("Google token client is not initialized.");
@@ -677,6 +646,11 @@ async function getDriveFolderId() {
     }
 }
 
+/**
+ * [FIX] This function now correctly identifies the active modal's data.
+ * It uses `button.closest('.modal-footer')` to reliably find the correct
+ * footer and its associated data attributes, preventing duplicate filenames.
+ */
 async function handleSaveToDriveClick(button) {
     const modal = button.closest('.card');
     if (!modal) return;
@@ -691,17 +665,15 @@ async function handleSaveToDriveClick(button) {
         statusEl = document.getElementById('search-modal-status-message');
         finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
-        // [FIX] Explicitly check which modal is open to get the correct data footer.
-        // This prevents grabbing data from the underlying (but hidden) initial modal.
-        if (document.body.classList.contains('inDepthDetailedModal-open')) {
-            modalFooter = document.getElementById('inDepthDetailedModalFooter');
-        } else if (document.body.classList.contains('inDepthModal-open')) {
-            modalFooter = document.getElementById('inDepthModalFooter');
-        } else {
-            console.error("Save to Drive Error: Could not determine the active modal.");
-            // Try to find a status element to display an error
+        // [FIX] Get the footer directly from the clicked button's parent hierarchy.
+        // This is more reliable than checking body classes and avoids ambiguity when
+        // one modal is open on top of another.
+        modalFooter = button.closest('.modal-footer');
+
+        if (!modalFooter) {
+            console.error("Save to Drive Error: Could not find the modal footer for the clicked button.");
             const anyStatusEl = button.closest('.modal-footer')?.querySelector('p[id$="status-message"]');
-            if(anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
+            if (anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
             return;
         }
 
@@ -736,12 +708,7 @@ async function handleSaveToDriveClick(button) {
     const safeFileName = finalFileName.replace(/[/\\?%*:|"<>]/g, '-');
     await saveContentToDrive(contentToSave, safeFileName, statusEl);
 }
-/**
- * [FIX] Saves content to Google Drive. This is the core fix.
- * It now correctly handles file updates (PATCH) by sending an empty metadata
- * object, ensuring the API updates the file content. It also properly escapes
- * double quotes in filenames for robust searching.
- */
+
 async function saveContentToDrive(content, fileName, statusElement) {
     if (!gapiInited || !gisInited || !oauthToken || !oauthToken.access_token) {
         statusElement.textContent = 'Please connect to Google Drive first.';
@@ -757,7 +724,6 @@ async function saveContentToDrive(content, fileName, statusElement) {
     try {
         gapi.client.setToken(oauthToken);
 
-        // [FIX] Added escaping for double quotes to prevent search query errors.
         const safeFileName = fileName.replace(/'/g, "\\'").replace(/"/g, '\\"');
         const searchResponse = await gapi.client.drive.files.list({
             q: `name='${safeFileName}' and '${folderId}' in parents and trashed=false`,
@@ -773,8 +739,6 @@ async function saveContentToDrive(content, fileName, statusElement) {
         const close_delim = "\r\n--" + boundary + "--";
         const contentType = 'text/markdown';
 
-        // [FIX] Restructured metadata logic for clarity and correctness.
-        // For updates, we send empty metadata `{}`. For new files, we specify name and parent.
         const metadata = fileExists
             ? {}
             : { name: fileName, parents: [folderId] };
@@ -806,10 +770,6 @@ async function saveContentToDrive(content, fileName, statusElement) {
     }
 }
 
-/**
- * Creates and displays the Google Picker for file selection.
- * Now includes explicit checks and provides clear user feedback if the API isn't ready.
- */
 function createPicker(mode, startInFolderId = null) {
     const statusEl = document.getElementById('drive-status');
 
@@ -819,7 +779,6 @@ function createPicker(mode, startInFolderId = null) {
         return;
     }
 
-    // [FIX] Check our state variable for the token.
     const token = oauthToken?.access_token;
     if (!token) {
         statusEl.textContent = 'Please connect to Google Drive first.';
@@ -850,24 +809,18 @@ function createPicker(mode, startInFolderId = null) {
 }
 
 
-/**
- * Callback function for the Google Picker. Handles the selected file.
- * @param {object} data The data returned from the Google Picker API.
- */
 async function pickerCallbackOpen(data) {
     if (data.action === google.picker.Action.PICKED) {
         const fileId = data.docs[0].id;
         const statusEl = document.getElementById('drive-status');
         statusEl.textContent = 'Loading selected file...';
         try {
-            // [FIX] Ensure the GAPI client has the token before making the request.
             gapi.client.setToken(oauthToken);
             const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
             const fileContent = response.body;
             const fileName = data.docs[0].name;
             displayImportedGuide(fileName, fileContent);
             statusEl.textContent = 'File loaded successfully.';
-            // Reset status message after a few seconds
             setTimeout(() => {
                 if (oauthToken && oauthToken.access_token) {
                     statusEl.textContent = 'Connected to Google Drive.';
@@ -880,11 +833,6 @@ async function pickerCallbackOpen(data) {
     }
 }
 
-/**
- * Displays an imported guide in a new card on the main page.
- * @param {string} fileName The name of the imported file.
- * @param {string} markdownContent The markdown content of the file.
- */
 function displayImportedGuide(fileName, markdownContent) {
     const section = document.getElementById('imported-guides-section');
     const container = document.getElementById('imported-guides-container');
@@ -898,7 +846,6 @@ function displayImportedGuide(fileName, markdownContent) {
     const cardContent = document.createElement('div');
     cardContent.className = 'p-8 card-content';
     
-    // Create the header with an icon
     cardContent.innerHTML = `
         <h2 class="text-2xl font-bold mb-2 themed-text-primary flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -908,11 +855,10 @@ function displayImportedGuide(fileName, markdownContent) {
     `;
     
     const renderTarget = cardContent.querySelector('.prose');
-    // Use the existing accordion renderer for a consistent look
     renderAccordionFromMarkdown(markdownContent, renderTarget);
     
     card.appendChild(cardContent);
-    container.prepend(card); // Prepend to show the newest import first
+    container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -926,16 +872,10 @@ async function loadAppContent() {
     }
 }
 
-/**
- * [NEW] Creates the HTML for a breadcrumb display from a hierarchy path array.
- * @param {Array} pathArray An array of objects, each with a 'title' property.
- * @returns {string} The generated HTML string for the breadcrumbs.
- */
 function createBreadcrumbsHtml(pathArray) {
     if (!pathArray || pathArray.length === 0) {
         return '';
     }
-    // Creates a "Path / To / Topic" style breadcrumb
     const pathSegments = pathArray.map(p => `<span>${p.title}</span>`).join('<span class="mx-2 opacity-50">/</span>');
     return `<div class="flex items-center flex-wrap gap-x-2 text-sm themed-text-muted mb-3">${pathSegments}</div>`;
 }
@@ -954,7 +894,6 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     card.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     const selectorId = `selector-${finalCategory.id}`;
     
-    // [MODIFIED] Generate and add the breadcrumbs HTML to the card's content.
     const breadcrumbsHtml = createBreadcrumbsHtml(fullHierarchyPath);
     card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
     
@@ -962,7 +901,7 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    allThemeData[finalCategory.id] = null; // Set to null to indicate loading
+    allThemeData[finalCategory.id] = null;
     listenForUserAddedTopics(finalCategory.id);
 
     try {
@@ -981,7 +920,7 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
         populateCardGridSelector(card.querySelector(`#${selectorId}`), finalCategory.id);
         return card;
     } catch (error) {
-        allThemeData[finalCategory.id] = []; // Set to empty array on failure
+        allThemeData[finalCategory.id] = [];
         handleApiError(error, card.querySelector(`#${selectorId}`), finalCategory.title, card);
         throw error;
     }
@@ -1045,7 +984,6 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const fullPrompt = finalCategory.fullPrompt;
     let actionButtonsHtml = '';
     
-    // This logic is simplified to always show the button if a prompt exists.
     if (fullPrompt && data.length > 0) {
         actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
     }
@@ -1084,14 +1022,8 @@ async function handleAddNewTopic(button) {
     }
 }
 
-/**
- * FIX: This function is now more robust. It includes a retry mechanism.
- * If the AI fails to return unique topics on the first attempt, it will try
- * one more time with a more insistent prompt, increasing the likelihood of success.
- * It also performs a case-insensitive check for duplicate titles.
- */
 async function handleGenerateMoreClick(button, attempt = 1) {
-    const MAX_ATTEMPTS = 2; // Set a limit for retries
+    const MAX_ATTEMPTS = 2;
     const { containerId, categoryId } = button.dataset;
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
@@ -1114,7 +1046,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
     const existingTitles = allThemeData[categoryId].map(item => item.title);
     const topicsToRequest = 8;
     
-    // [FIX] The prompt now explicitly demands a JSON array as the output.
     const prompt = `
         Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
         ---
@@ -1134,7 +1065,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         
         const newItems = parseJsonWithCorrections(jsonText);
 
-        // [FIX] Add a check to ensure the parsed response is an array.
         if (!Array.isArray(newItems)) {
             console.error("The AI response was not a valid array.", jsonText);
             throw new Error("The AI returned data in an unexpected format. Please try again.");
@@ -1231,7 +1161,6 @@ async function handleGeminiSubmit(e) {
     e.preventDefault();
     const form = e.target;
     
-    // --- 1. Gather all inputs from the Prompt Workshop ---
     const coreTask = document.getElementById('core-task-input').value.trim();
     if (!coreTask) {
         displayMessageInModal("Please define the core task before generating.", 'warning');
@@ -1243,7 +1172,6 @@ async function handleGeminiSubmit(e) {
     const outputFormat = form.querySelector('input[name="output-format"]:checked').value;
     const additionalContext = document.getElementById('additional-context-input').value.trim();
 
-    // --- 2. Route to the correct function based on selected format ---
     if (outputFormat === 'guide') {
         generateCustomGuide(coreTask, persona, tone, additionalContext);
     } else if (outputFormat === 'card') {
@@ -1251,7 +1179,6 @@ async function handleGeminiSubmit(e) {
     }
     
     form.reset();
-    // Reset buttons to default active state
     document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
     document.querySelectorAll('#tone-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
 }
@@ -1259,7 +1186,6 @@ async function handleGeminiSubmit(e) {
 async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
     const fullTitle = `Custom Guide: ${coreTask}`;
 
-    // Setup modal UI
     const titleEl = document.getElementById('inDepthModalTitle');
     const contentEl = document.getElementById('inDepthModalContent');
     const footerEl = document.getElementById('inDepthModalFooter');
@@ -1273,7 +1199,6 @@ async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
     footerEl.dataset.cardName = "Custom Task";
     openModal('inDepthModal');
     
-    // Assemble the detailed prompt for the initial guide sections
     const context = {
         coreTask: coreTask,
         persona: persona,
@@ -1304,7 +1229,6 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
     card.id = cardId;
     const selectorId = `selector-${cardId}`;
 
-    // Assemble a prompt specifically for generating topic ideas
     const descriptionPrompt = `Persona: You are a helpful AI assistant. Based on the user's request for a topic card about "${coreTask}", write a concise, one-sentence description for this topic card.`;
     
     let description = `A collection of topics related to: ${coreTask}`;
@@ -1314,7 +1238,6 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
         console.warn("Could not generate dynamic description, using default.", e);
     }
     
-    // [MODIFIED] Create a more descriptive hierarchy for the breadcrumbs.
     const hierarchyArray = [
         { title: "Prompt Workshop" },
         { title: coreTask }
@@ -1323,7 +1246,6 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
 
     card.dataset.fullHierarchyPath = fullHierarchyPath;
     
-    // [MODIFIED] Generate and add the breadcrumbs HTML to the card's content.
     const breadcrumbsHtml = createBreadcrumbsHtml(hierarchyArray);
     card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
     
@@ -1331,7 +1253,7 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    allThemeData[cardId] = null; // Set to null to indicate loading
+    allThemeData[cardId] = null;
 
     try {
         const topicGenerationPrompt = `
@@ -1361,7 +1283,7 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
         populateCardGridSelector(card.querySelector(`#${selectorId}`), cardId);
         return card;
     } catch (error) {
-        allThemeData[cardId] = []; // Set to empty array on failure
+        allThemeData[cardId] = [];
         handleApiError(error, card.querySelector(`#${selectorId}`), coreTask, card);
         throw error;
     }
@@ -1423,7 +1345,6 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
     
-    // Check if JSON is expected and append the instruction if not already present
     let finalPrompt = prompt;
     if (isJson && !prompt.includes(jsonInstruction)) {
         finalPrompt += jsonInstruction;
@@ -1435,7 +1356,7 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
     }
     const result = await callApi(apiUrl, payload);
     const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    logAiInteraction(finalPrompt, responseText, logType); // Log the final prompt
+    logAiInteraction(finalPrompt, responseText, logType);
     return responseText;
 }
 
@@ -1534,12 +1455,6 @@ function getRefinementPrompt(originalText = '{original_text}', refinementRequest
     return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
 }
 
-/**
- * [NEW] Creates a master prompt for guide generation to ensure consistency.
- * @param {string} type - The type of guide to generate ('blueprint' or 'fullGuide').
- * @param {object} context - The context for the prompt, including db prompts and workshop inputs.
- * @returns {string} The fully constructed master prompt.
- */
 function getMasterGuidePrompt(type, context) {
     const { blueprintMarkdown = '', coreTask = '', persona = '', tone = '', additionalContext = '', dbPrompt = '' } = context;
 
@@ -1623,7 +1538,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const context = {
         coreTask: item.title,
-        dbPrompt: finalCategory.initialPrompt // This is the rich prompt from your database!
+        dbPrompt: finalCategory.initialPrompt
     };
     const initialPrompt = getMasterGuidePrompt('blueprint', context);
 
@@ -1640,10 +1555,74 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 }
 
 /**
- * [MODIFIED] This function now includes an automated self-refinement step and a
- * new, dedicated research step to find and include real, helpful links.
- * After generating the initial guide, it refines the implementation steps and then
- * performs a separate AI call to generate a high-quality "Helpful Resources" section.
+ * [NEW] This function implements the hybrid search-then-summarize approach.
+ * It first performs a live Google search and then passes the verified
+ * results to the LLM for formatting and curation.
+ * @param {string} topic The topic to search for.
+ * @returns {Promise<string>} The formatted markdown for the "Helpful Resources" section.
+ */
+async function generateVerifiedResources(topic) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
+        console.warn("Google Search Engine ID is not configured. Skipping real-time resource search.");
+        return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
+    }
+
+    let helpfulResourcesMarkdown = '';
+
+    try {
+        // 1. Perform the real-time Google Search
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(topic)}`;
+        const searchResponse = await fetch(searchApiUrl);
+        if (!searchResponse.ok) {
+            const errorData = await searchResponse.json();
+            console.error("Google Search API Error:", errorData);
+            throw new Error(`Google Search API request failed: ${errorData.error.message}`);
+        }
+        const searchResults = await searchResponse.json();
+        const searchItems = searchResults.items?.slice(0, 5) || [];
+
+        if (searchItems.length > 0) {
+            // 2. Create a context of verified links to pass to the LLM
+            const verifiedLinksContext = searchItems.map(item =>
+                `- Title: ${item.title}\n- URL: ${item.link}\n- Snippet: ${item.snippet}`
+            ).join('\n\n');
+
+            // 3. Create a new prompt asking the AI to format the search results
+            const resourcesPrompt = `
+                Persona: You are an expert IT Technical Writer.
+                Task: Your job is to format the following list of verified search results into a clean, professional "Helpful Resources" section for a technical guide.
+
+                //-- VERIFIED SEARCH RESULTS --//
+                ${verifiedLinksContext}
+
+                //-- INSTRUCTIONS --//
+                1.  **Select the Best 3-4 Links:** From the provided list, choose the most relevant and high-quality links. Prioritize official documentation or deep technical articles.
+                2.  **Use Provided Title and URL:** You MUST use the exact URL provided for each link. Use the provided Title as the linked text.
+                3.  **Write a New Description:** Based on the title and snippet, write a concise, one-sentence description for each resource explaining its value. Do not just copy the snippet.
+                4.  **Format as Markdown:** Structure your response as a complete markdown section, starting with the "### 12. Helpful Resources" header.
+
+                Return ONLY the complete markdown for this section.
+            `;
+
+            helpfulResourcesMarkdown = await callGeminiAPI(resourcesPrompt, false, "Format Helpful Resources");
+        } else {
+             helpfulResourcesMarkdown = `### 12. Helpful Resources\n*No relevant online resources were found for "${topic}".*`;
+        }
+
+    } catch (searchError) {
+        console.error("Could not fetch or format helpful resources:", searchError);
+        helpfulResourcesMarkdown = `### 12. Helpful Resources\n*An error occurred while trying to find real-time resources: ${searchError.message}*`;
+    }
+    
+    return helpfulResourcesMarkdown;
+}
+
+
+/**
+ * [MODIFIED] This function now incorporates the hybrid search for resources.
+ * It generates the guide, auto-refines it, and then calls the new
+ * `generateVerifiedResources` function to create a high-quality, verified
+ * "Helpful Resources" section.
  */
 async function generateFullDetailedGuide(button) {
     const firstModalFooter = document.getElementById('inDepthModalFooter');
@@ -1676,7 +1655,6 @@ async function generateFullDetailedGuide(button) {
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const context = {
         blueprintMarkdown: blueprintMarkdown,
-        // Use the 'fullPrompt' if available, otherwise fall back to the initial one
         dbPrompt: finalCategory.fullPrompt || finalCategory.initialPrompt 
     };
     const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
@@ -1689,7 +1667,6 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        // --- Automated Refinement Step ---
         detailedContentEl.innerHTML = getLoaderHTML('Auto-refining implementation steps for clarity...');
 
         const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.)/;
@@ -1702,17 +1679,14 @@ async function generateFullDetailedGuide(button) {
             const refinementPrompt = `
             Persona: You are a Master Technical Editor.
             Task: The following "Detailed Implementation Guide" is too abstract. Your job is to rewrite it to be highly practical and actionable for an IT administrator.
-            
             //-- ORIGINAL ABSTRACT GUIDE --//
             ${originalSection5}
-
             //-- REWRITING INSTRUCTIONS --//
             1.  **Add GUI Specifics:** For each step, describe the visual elements. What is the exact name of the menu? What is the button label (e.g., "Create Virtual Disk," "Add Physical Disks")?
             2.  **Provide Click-Paths:** Give the user a clear, step-by-step navigation path (e.g., "From the main dashboard, navigate to Storage > Controllers > Array A > Logical Drives.").
             3.  **Include Concrete Examples:** Use markdown blockquotes to show example text the user might see in a dialog box, a confirmation message, or a value they might need to enter.
             4.  **Add Placeholders for Visuals:** Where a visual would be most helpful, insert a placeholder like: "[Screenshot of the 'Select Physical Disks' dialog, showing three available drives highlighted.]"
             5.  **Maintain Structure:** Keep the original step-by-step structure, but replace the abstract descriptions with your new, detailed instructions.
-
             Return ONLY the rewritten, highly-detailed "Detailed Implementation Guide" section. Do not include the "### 5. ..." header in your response.
             `;
             const refinedSection5 = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
@@ -1721,35 +1695,12 @@ async function generateFullDetailedGuide(button) {
             }
         }
         
-        // --- [NEW] Step 2: Dedicated AI call to find and verify helpful resources ---
-        detailedContentEl.innerHTML = getLoaderHTML('Finding and verifying helpful resources...');
+        // [NEW] Use the hybrid search approach to get verified resources.
+        detailedContentEl.innerHTML = getLoaderHTML('Searching the web for helpful resources...');
         const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-        const resourcesPrompt = `
-            Persona: You are an expert IT Research Assistant.
-            Task: Your sole job is to find real, high-quality, and relevant online resources for the following IT topic.
+        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch);
 
-            //-- TOPIC --//
-            "${coreTopicForSearch}"
-
-            //-- INSTRUCTIONS --//
-            1.  **Find 3-5 Links:** Search for and provide between 3 and 5 genuinely helpful resources.
-            2.  **Prioritize Sources:** Focus on official documentation (e.g., Microsoft Learn, VMware Docs, vendor knowledge bases), highly respected community blogs, and detailed technical articles.
-            3.  **Verify URLs:** Ensure the URLs are correct and lead to the expected content.
-            4.  **Format as Markdown:** Structure your response as a complete "Helpful Resources" markdown section. Start with the "### 12. Helpful Resources" header. For each resource, provide a bullet point with a linked title and a brief, one-sentence description of what it contains.
-
-            //-- EXAMPLE OUTPUT FORMAT --//
-            ### 12. Helpful Resources
-            * [Official SNMP Documentation](https://docs.microsoft.com/...) - The definitive guide from Microsoft on SNMP services.
-            * [Step-by-Step SCOM Configuration Guide](https://community.spiceworks.com/...) - A detailed community-written tutorial with screenshots for configuring SCOM monitoring.
-
-            Return ONLY the complete markdown for this section.
-        `;
-        
-        const helpfulResourcesMarkdown = await callGeminiAPI(resourcesPrompt, false, "Generate Helpful Resources");
-
-        // [NEW] Replace the generic resources section with the new, high-quality one.
         if (helpfulResourcesMarkdown) {
-            // This regex finds the original H3 header and all content after it, and replaces it.
             finalSections5to12 = finalSections5to12.replace(/(### 12\. Helpful Resources[\s\S]*)/, helpfulResourcesMarkdown.trim());
         }
 
@@ -1771,13 +1722,6 @@ async function generateFullDetailedGuide(button) {
 }
 
 
-/**
- * [FIX] Dynamically adds action buttons to modals, now correctly checking
- * the connection status before showing the "Save to Drive" button.
- * @param {HTMLElement} buttonContainer The container to add the buttons to.
- * @param {boolean} isInitialPhase Whether this is for the initial guide blueprint.
- * @param {boolean} hasToken Whether a valid Google Drive token exists.
- */
 function addModalActionButtons(buttonContainer, isInitialPhase = false, hasToken = false) {
     buttonContainer.innerHTML = '';
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
@@ -1796,18 +1740,9 @@ function addModalActionButtons(buttonContainer, isInitialPhase = false, hasToken
     }
 }
 
-/**
- * [FIX] Dynamically adds action buttons to the detailed guide modal,
- * now correctly showing "Save to Drive" based on the connection status.
- * @param {HTMLElement} buttonContainer The container to add the buttons to.
- * @param {boolean} hasToken Whether a valid Google Drive token exists.
- */
 function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-
-    // The "Add to Knowledge Base" button is always shown for completed guides.
     const addToKbBtnHtml = `<button id="add-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
-
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
 
     const copyButton = buttonContainer.querySelector('.copy-button');
@@ -1818,7 +1753,6 @@ function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
         });
     }
 
-    // Add event listener for the new "Add to KB" button
     const addToKbButton = buttonContainer.querySelector('#add-to-kb-btn');
     if (addToKbButton) {
         addToKbButton.addEventListener('click', () => {
@@ -2331,7 +2265,6 @@ async function openCategoryBrowser(mode) {
     openModal('categoryBrowserModal');
 }
 
-// MODIFIED: This function now groups guides by their hierarchy path.
 async function openKbBrowser() {
     if (!db || !firebaseConfig) {
         displayMessageInModal("Database not initialized.", "error");
@@ -2356,7 +2289,6 @@ async function openKbBrowser() {
             return;
         }
 
-        // Group guides by their hierarchy path
         const groupedGuides = items.reduce((acc, item) => {
             const path = item.hierarchyPath || 'Uncategorized';
             if (!acc[path]) {
@@ -2366,15 +2298,13 @@ async function openKbBrowser() {
             return acc;
         }, {});
 
-        modalContent.innerHTML = ''; // Clear the loader
+        modalContent.innerHTML = '';
 
-        // Sort the group keys alphabetically
         const sortedGroupKeys = Object.keys(groupedGuides).sort((a, b) => a.localeCompare(b));
 
-        // Render each group
         sortedGroupKeys.forEach(path => {
             const groupContainer = document.createElement('div');
-            groupContainer.className = 'mb-8'; // Add margin between groups
+            groupContainer.className = 'mb-8';
 
             const groupHeader = document.createElement('h3');
             groupHeader.className = 'text-xl font-bold themed-text-accent mb-4 pb-2 border-b-2';
@@ -2661,7 +2591,6 @@ function displayMessageInModal(message, type = 'info') {
     const modalId = 'messageModal';
     let modal = document.getElementById(modalId);
     
-    // Always ensure the content is there. This is safer than checking for existence.
     modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
     modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
 
@@ -2679,7 +2608,6 @@ function showConfirmationModal(message, onConfirmCallback) {
     const modalId = 'confirmationModal';
     let modal = document.getElementById(modalId);
     
-    // Always ensure the content is there.
     modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 class="text-2xl font-bold mb-4 themed-text-primary">Confirm Action</h2><p id="confirmationModalContent" class="mb-6 themed-text-muted"></p><div class="flex justify-center gap-4"><button id="confirmYesBtn" class="btn-primary">Yes</button><button id="confirmNoBtn" class="btn-secondary">No</button></div></div>`;
     
     const contentEl = modal.querySelector('#confirmationModalContent');
@@ -2688,7 +2616,6 @@ function showConfirmationModal(message, onConfirmCallback) {
     const confirmYesBtn = modal.querySelector('#confirmYesBtn');
     const confirmNoBtn = modal.querySelector('#confirmNoBtn');
 
-    // Use a fresh listener to avoid stacking them
     const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
     confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
     
@@ -2934,11 +2861,6 @@ async function handleSearchResultClick(objectID) {
 }
 
 // --- App Initialization Trigger ---
-
-/**
- * Main entry point for the application. The initialization sequence
- * is now more robust to prevent race conditions with external scripts.
- */
 function initializeApplication() {
     setupEventListeners();
     populateTypographySettings();
@@ -2952,7 +2874,6 @@ function initializeApplication() {
 
     if (loadConfigFromStorage()) {
         initializeFirebase();
-        // This now correctly orchestrates the loading of Google's APIs.
         initializeGoogleApiClients();
     } else {
         openModal('apiKeyModal');
