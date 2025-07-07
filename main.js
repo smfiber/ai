@@ -550,12 +550,19 @@ function setupEventListeners() {
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         } else if (target.closest('.explore-button')) {
-            // [FIX] This is the delegated event listener that will now handle the click.
-            // It reads the data directly from the button that was clicked, ensuring it's always current.
+            // [FIX] This is the robust, delegated event listener.
+            // It gets the button that was clicked, then finds its parent card.
+            // This ensures it always gets the correct hierarchy path from the card,
+            // and the topic ID from the button itself.
             const button = target.closest('.explore-button');
-            const fullHierarchyPath = JSON.parse(button.dataset.fullHierarchyPath);
-            const topicId = button.dataset.topicId;
-            handleExploreInDepth(topicId, fullHierarchyPath);
+            const card = button.closest('.card');
+            if (card) {
+                const topicId = button.dataset.topicId;
+                const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+                handleExploreInDepth(topicId, fullHierarchyPath);
+            } else {
+                console.error("Could not find parent card for explore button.");
+            }
         } else if (target.closest('.refine-button')) {
             toggleRefineUI(target.closest('.refine-button').parentElement);
         } else if (target.closest('.modal-refine-button')) {
@@ -1860,11 +1867,10 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar = document.createElement('div');
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
-    const card = container.closest('.card');
-    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     
-    // [FIX] The data-full-hierarchy-path attribute is added here. The delegated listener in setupEventListeners will read this.
-    buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}" data-full-hierarchy-path='${JSON.stringify(fullHierarchyPath).replace(/'/g, "&#39;")}'>Explore In-Depth</button>`;
+    // [FIX] This function is now simplified. It no longer needs to handle the
+    // fullHierarchyPath, as the new delegated listener gets this from the card.
+    buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>`;
     
     container.appendChild(buttonBar);
     
@@ -1873,8 +1879,8 @@ function addPostGenerationButtons(container, topicId, categoryId) {
         if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
     });
 
-    // [FIX] The problematic direct event listener for '.explore-button' has been removed.
-    // The click is now handled reliably by the main delegated event listener in setupEventListeners.
+    // The direct event listener for '.explore-button' has been removed to prevent the bug.
+    // All clicks are now handled by the single, reliable delegated listener in setupEventListeners.
 }
 
 async function handleCustomVisualThemeGeneration() {
