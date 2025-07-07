@@ -550,9 +550,11 @@ function setupEventListeners() {
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         } else if (target.closest('.explore-button')) {
-            const card = target.closest('.card');
-            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-            const topicId = target.closest('.explore-button').dataset.topicId;
+            // [FIX] This is the delegated event listener that will now handle the click.
+            // It reads the data directly from the button that was clicked, ensuring it's always current.
+            const button = target.closest('.explore-button');
+            const fullHierarchyPath = JSON.parse(button.dataset.fullHierarchyPath);
+            const topicId = button.dataset.topicId;
             handleExploreInDepth(topicId, fullHierarchyPath);
         } else if (target.closest('.refine-button')) {
             toggleRefineUI(target.closest('.refine-button').parentElement);
@@ -1860,16 +1862,19 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar.style.borderColor = 'var(--color-card-border)';
     const card = container.closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+    
+    // [FIX] The data-full-hierarchy-path attribute is added here. The delegated listener in setupEventListeners will read this.
     buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}" data-full-hierarchy-path='${JSON.stringify(fullHierarchyPath).replace(/'/g, "&#39;")}'>Explore In-Depth</button>`;
+    
     container.appendChild(buttonBar);
+    
     buttonBar.querySelector('.copy-button').addEventListener('click', e => {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
         if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
     });
-    buttonBar.querySelector('.explore-button').addEventListener('click', e => {
-        const { topicId, categoryId } = e.currentTarget.dataset;
-        handleExploreInDepth(topicId, fullHierarchyPath);
-    });
+
+    // [FIX] The problematic direct event listener for '.explore-button' has been removed.
+    // The click is now handled reliably by the main delegated event listener in setupEventListeners.
 }
 
 async function handleCustomVisualThemeGeneration() {
