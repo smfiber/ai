@@ -914,14 +914,24 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     listenForUserAddedTopics(finalCategory.id);
 
     try {
-        const prompt = finalCategory.initialPrompt || `Generate 8 common topics for ${finalCategory.title}.`;
+        // THIS IS THE FIX: Ensure the prompt asks for an ID and that the data has one.
+        const defaultPrompt = `Generate 8 common topics for "${finalCategory.title}". For each topic, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description". Return a valid JSON array of objects.`;
+        const prompt = finalCategory.initialPrompt || defaultPrompt;
+        
         const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
         if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
         
-        const data = parseJsonWithCorrections(jsonText);
+        let data = parseJsonWithCorrections(jsonText);
         if (!Array.isArray(data)) {
             throw new Error("Invalid API response format: Expected an array of topics for the category.");
         }
+
+        // Add a fallback to ensure every item has a unique ID, even if the AI forgets.
+        data.forEach(item => {
+            if (!item.id) {
+                item.id = `${sanitizeTitle(item.title).replace(/\s+/g, '-')}-${Date.now()}`;
+            }
+        });
         
         data.sort((a, b) => a.title.localeCompare(b.title));
         allThemeData[finalCategory.id] = data;
