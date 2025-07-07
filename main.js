@@ -33,7 +33,6 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-// [NEW] Add a placeholder for the Google Programmable Search Engine ID.
 let GOOGLE_SEARCH_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
@@ -136,7 +135,6 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
-    // [NEW] Load the Search Engine ID from local storage.
     GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
@@ -155,7 +153,6 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        // [NEW] Populate the Search Engine ID input field.
         if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
@@ -418,7 +415,6 @@ async function handleApiKeySubmit(e) {
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
-    // [NEW] Get the Search Engine ID from the form.
     const tempGoogleSearchEngineId = document.getElementById('googleSearchEngineIdInput').value.trim();
     const tempAlgoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
     const tempAlgoliaSearchKey = document.getElementById('algoliaSearchKeyInput').value.trim();
@@ -452,7 +448,6 @@ async function handleApiKeySubmit(e) {
     localStorage.setItem('geminiApiKey', tempGeminiKey);
     localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
     localStorage.setItem('googleClientId', tempGoogleClientId);
-    // [NEW] Save the Search Engine ID to local storage.
     localStorage.setItem('googleSearchEngineId', tempGoogleSearchEngineId);
     localStorage.setItem('algoliaAppId', tempAlgoliaAppId);
     localStorage.setItem('algoliaSearchKey', tempAlgoliaSearchKey);
@@ -550,10 +545,6 @@ function setupEventListeners() {
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         } else if (target.closest('.explore-button')) {
-            // [FIX] This is the robust, delegated event listener.
-            // It gets the button that was clicked, then finds its parent card.
-            // This ensures it always gets the correct hierarchy path from the card,
-            // and the topic ID from the button itself.
             const button = target.closest('.explore-button');
             const card = button.closest('.card');
             if (card) {
@@ -655,11 +646,6 @@ async function getDriveFolderId() {
     }
 }
 
-/**
- * [FIX] This function now correctly identifies the active modal's data.
- * It uses a robust selector to find the correct footer element based on its ID,
- * preventing errors when saving from different modals.
- */
 async function handleSaveToDriveClick(button) {
     const modal = button.closest('.card');
     if (!modal) return;
@@ -674,13 +660,10 @@ async function handleSaveToDriveClick(button) {
         statusEl = document.getElementById('search-modal-status-message');
         finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
-        // [FIX] Changed selector from '.modal-footer' to '[id$="ModalFooter"]' to correctly find the footer div,
-        // as the class does not exist in the HTML. This targets elements like 'inDepthModalFooter'.
         modalFooter = button.closest('[id$="ModalFooter"]');
 
         if (!modalFooter) {
             console.error("Save to Drive Error: Could not find the modal footer for the clicked button.");
-            // [FIX] Corrected the selector here as well to find the status message within the now-correctly-identified footer.
             const anyStatusEl = modalFooter?.querySelector('p[id$="status-message"]');
             if (anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
             return;
@@ -712,8 +695,6 @@ async function handleSaveToDriveClick(button) {
         return;
     }
 
-    // Sanitize the final constructed filename to remove invalid characters.
-    // The forward slash from the breadcrumbs is replaced with a hyphen.
     const safeFileName = finalFileName.replace(/[/\\?%*:|"<>]/g, '-');
     await saveContentToDrive(contentToSave, safeFileName, statusEl);
 }
@@ -914,7 +895,6 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     listenForUserAddedTopics(finalCategory.id);
 
     try {
-        // THIS IS THE FIX: Ensure the prompt asks for an ID and that the data has one.
         const defaultPrompt = `Generate 8 common topics for "${finalCategory.title}". For each topic, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description". Return a valid JSON array of objects.`;
         const prompt = finalCategory.initialPrompt || defaultPrompt;
         
@@ -926,7 +906,6 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
             throw new Error("Invalid API response format: Expected an array of topics for the category.");
         }
 
-        // Add a fallback to ensure every item has a unique ID, even if the AI forgets.
         data.forEach(item => {
             if (!item.id) {
                 item.id = `${sanitizeTitle(item.title).replace(/\s+/g, '-')}-${Date.now()}`;
@@ -1447,7 +1426,10 @@ function showThemeLoading(isLoading) {
 
 function getAppPrompts() {
     const prompts = {};
-    prompts["Full Guide Generation Prompt"] = getFullGuideGenerationPrompt();
+    const blueprintContext = { coreTask: '{core_task}', persona: '{persona}', tone: '{tone}', additionalContext: '{additional_context}' };
+    const fullGuideContext = { blueprintMarkdown: '{blueprint_markdown}', dbPrompt: '{database_prompt}' };
+    prompts["Blueprint Generation Prompt"] = getMasterGuidePrompt('blueprint', blueprintContext);
+    prompts["Full Guide Generation Prompt"] = getMasterGuidePrompt('fullGuide', fullGuideContext);
     prompts["Refinement Prompt"] = getRefinementPrompt();
     return prompts;
 }
@@ -1471,7 +1453,7 @@ function displayPromptsInModal() {
 }
 
 function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
-    return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
+    return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
 }
 
 function getMasterGuidePrompt(type, context) {
@@ -1509,7 +1491,7 @@ Additional Context: ${additionalContext || 'None'}`;
     if (type === 'fullGuide') {
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
-        You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide, following all instructions.
+        You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide, following all instructions with expert-level detail.
 
         //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
         ${blueprintMarkdown}
@@ -1517,20 +1499,42 @@ Additional Context: ${additionalContext || 'None'}`;
         ${personaAndObjective}
 
         //-- CRITICAL INSTRUCTION: ADHERE TO THE BLUEPRINT'S SCOPE --//
-        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic and adhere to the scope defined within that introduction.
+        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic and adhere to the scope defined within that introduction. For example, if the intro specifies a GUI-based approach, do not provide CLI commands unless they are supplementary.
 
-        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 --//
-        Generate all of the following sections, providing comprehensive, practical, and expert-level detail. Use markdown blockquotes for all code snippets or commands.
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH SPECIFIC INSTRUCTIONS --//
+        Generate all of the following sections.
+
         ### 5. Detailed Implementation Guide
+        **CRITICAL:** This section must be highly practical and actionable. Do NOT be abstract.
+        - For each step, describe the visual elements. What is the exact name of the menu? What is the button label (e.g., "Create Virtual Disk," "Add Physical Disks")?
+        - Provide clear, step-by-step click-paths (e.g., "From the main dashboard, navigate to Storage > Controllers > Array A > Logical Drives.").
+        - Use markdown blockquotes to show example text the user might see in a dialog box, a confirmation message, or a value they might need to enter.
+        - Where a visual would be most helpful, insert a placeholder like: "[Screenshot of the 'Select Physical Disks' dialog, showing three available drives highlighted.]"
+
         ### 6. Verification and Validation
+        - Provide specific commands (e.g., \`wmic qfe list\`, \`Get-Hotfix\`) or GUI steps to confirm the update/patch was successful.
+        - Describe what a successful output should look like.
+
         ### 7. Best Practices
+        - List at least 3-5 actionable best practices directly related to the specific topic, not generic advice.
+
         ### 8. Automation Techniques
+        - Provide a practical PowerShell or Bash script example to automate a key part of the process described in the guide. The script must be complete and enclosed in a markdown blockquote.
+
         ### 9. Security Considerations
+        - Detail specific security hardening steps related to the topic. For example, which policies to enable, which ports to check, or what permissions to verify.
+
         ### 10. Advanced Use Cases & Scenarios
+        - Describe at least two advanced or non-obvious scenarios where this knowledge could be applied.
+
         ### 11. Troubleshooting
+        - List at least three common, specific error messages or failure symptoms and their corresponding solutions.
+
         ### 12. Helpful Resources
-        
-        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
+        - Provide a list of 3-4 placeholder links to high-quality, relevant resources like official documentation or deep technical articles. This section will be replaced later by a live web search, but provide realistic-looking placeholders for now.
+
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".
+        `;
     }
 }
 
@@ -1573,13 +1577,6 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
-/**
- * [NEW] This function implements the hybrid search-then-summarize approach.
- * It first performs a live Google search and then passes the verified
- * results to the LLM for formatting and curation.
- * @param {string} topic The topic to search for.
- * @returns {Promise<string>} The formatted markdown for the "Helpful Resources" section.
- */
 async function generateVerifiedResources(topic) {
     if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID is not configured. Skipping real-time resource search.");
@@ -1589,7 +1586,6 @@ async function generateVerifiedResources(topic) {
     let helpfulResourcesMarkdown = '';
 
     try {
-        // 1. Perform the real-time Google Search
         const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(topic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
@@ -1601,12 +1597,10 @@ async function generateVerifiedResources(topic) {
         const searchItems = searchResults.items?.slice(0, 5) || [];
 
         if (searchItems.length > 0) {
-            // 2. Create a context of verified links to pass to the LLM
             const verifiedLinksContext = searchItems.map(item =>
                 `- Title: ${item.title}\n- URL: ${item.link}\n- Snippet: ${item.snippet}`
             ).join('\n\n');
 
-            // 3. Create a new prompt asking the AI to format the search results
             const resourcesPrompt = `
                 Persona: You are an expert IT Technical Writer.
                 Task: Your job is to format the following list of verified search results into a clean, professional "Helpful Resources" section for a technical guide.
@@ -1636,13 +1630,6 @@ async function generateVerifiedResources(topic) {
     return helpfulResourcesMarkdown;
 }
 
-
-/**
- * [MODIFIED] This function now incorporates the hybrid search for resources.
- * It generates the guide, auto-refines it, and then calls the new
- * `generateVerifiedResources` function to create a high-quality, verified
- * "Helpful Resources" section.
- */
 async function generateFullDetailedGuide(button) {
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
@@ -1669,7 +1656,7 @@ async function generateFullDetailedGuide(button) {
     detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
-    detailedContentEl.innerHTML = getLoaderHTML('Generating initial guide (sections 5-12)...');
+    detailedContentEl.innerHTML = getLoaderHTML('Generating complete guide with expert detail...');
 
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const context = {
@@ -1679,46 +1666,18 @@ async function generateFullDetailedGuide(button) {
     const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
 
     try {
-        let initialDraftSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Initial Draft)");
-        initialDraftSections5to12 = initialDraftSections5to12 ? initialDraftSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        let generatedSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Integrated)");
+        generatedSections5to12 = generatedSections5to12 ? generatedSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-        if (!initialDraftSections5to12) {
+        if (!generatedSections5to12) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Auto-refining implementation steps for clarity...');
-
-        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.)/;
-        const section5Match = initialDraftSections5to12.match(section5Regex);
-        const originalSection5 = section5Match ? section5Match[1].trim() : '';
-
-        let finalSections5to12 = initialDraftSections5to12;
-
-        if (originalSection5) {
-            const refinementPrompt = `
-            Persona: You are a Master Technical Editor.
-            Task: The following "Detailed Implementation Guide" is too abstract. Your job is to rewrite it to be highly practical and actionable for an IT administrator.
-            //-- ORIGINAL ABSTRACT GUIDE --//
-            ${originalSection5}
-            //-- REWRITING INSTRUCTIONS --//
-            1.  **Add GUI Specifics:** For each step, describe the visual elements. What is the exact name of the menu? What is the button label (e.g., "Create Virtual Disk," "Add Physical Disks")?
-            2.  **Provide Click-Paths:** Give the user a clear, step-by-step navigation path (e.g., "From the main dashboard, navigate to Storage > Controllers > Array A > Logical Drives.").
-            3.  **Include Concrete Examples:** Use markdown blockquotes to show example text the user might see in a dialog box, a confirmation message, or a value they might need to enter.
-            4.  **Add Placeholders for Visuals:** Where a visual would be most helpful, insert a placeholder like: "[Screenshot of the 'Select Physical Disks' dialog, showing three available drives highlighted.]"
-            5.  **Maintain Structure:** Keep the original step-by-step structure, but replace the abstract descriptions with your new, detailed instructions.
-            Return ONLY the rewritten, highly-detailed "Detailed Implementation Guide" section. Do not include the "### 5. ..." header in your response.
-            `;
-            const refinedSection5 = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
-            if (refinedSection5) {
-                finalSections5to12 = initialDraftSections5to12.replace(originalSection5, refinedSection5.trim());
-            }
-        }
-        
-        // [NEW] Use the hybrid search approach to get verified resources.
-        detailedContentEl.innerHTML = getLoaderHTML('Searching the web for helpful resources...');
+        detailedContentEl.innerHTML = getLoaderHTML('Searching the web for verified helpful resources...');
         const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
         const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch);
 
+        let finalSections5to12 = generatedSections5to12;
         if (helpfulResourcesMarkdown) {
             finalSections5to12 = finalSections5to12.replace(/(### 12\. Helpful Resources[\s\S]*)/, helpfulResourcesMarkdown.trim());
         }
@@ -1730,7 +1689,7 @@ async function generateFullDetailedGuide(button) {
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
         
         addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and auto-refined successfully!';
+        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and verified successfully!';
 
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -1878,8 +1837,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
     
-    // [FIX] This function is now simplified. It no longer needs to handle the
-    // fullHierarchyPath, as the new delegated listener gets this from the card.
     buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>`;
     
     container.appendChild(buttonBar);
@@ -1888,9 +1845,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
         if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
     });
-
-    // The direct event listener for '.explore-button' has been removed to prevent the bug.
-    // All clicks are now handled by the single, reliable delegated listener in setupEventListeners.
 }
 
 async function handleCustomVisualThemeGeneration() {
