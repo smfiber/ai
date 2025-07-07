@@ -1048,8 +1048,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
 
-    // The check for MAX_TOPICS has been removed from here.
-
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating (Attempt ${attempt})...</span>`;
 
@@ -1066,10 +1064,9 @@ async function handleGenerateMoreClick(button, attempt = 1) {
     }
 
     const existingTitles = allThemeData[categoryId].map(item => item.title);
-    
-    // The topicsToRequest is now always 8.
     const topicsToRequest = 8;
     
+    // [FIX] The prompt now explicitly demands a JSON array as the output.
     const prompt = `
         Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
         ---
@@ -1080,6 +1077,7 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         - ${existingTitles.join('\n- ')}
         
         For each new topic, provide a "title" and a short one-sentence "description".
+        IMPORTANT: Your response MUST be a JSON array of objects, where each object has a "title" and a "description" key.
     `;
 
     try {
@@ -1087,6 +1085,13 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         if (!jsonText) throw new Error("AI did not return any new items.");
         
         const newItems = parseJsonWithCorrections(jsonText);
+
+        // [FIX] Add a check to ensure the parsed response is an array.
+        if (!Array.isArray(newItems)) {
+            console.error("The AI response was not a valid array.", jsonText);
+            throw new Error("The AI returned data in an unexpected format. Please try again.");
+        }
+
         const addedItems = [];
 
         newItems.forEach(newItem => {
