@@ -1066,7 +1066,6 @@ async function handleGenerateMoreClick(button, attempt = 1) {
         - ${existingTitles.join('\n- ')}
         
         For each new topic, provide a "title" and a short one-sentence "description".
-        ${jsonInstruction}
     `;
 
     try {
@@ -1287,7 +1286,7 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
 
             //-- INSTRUCTIONS --//
             For each of the 8 topics, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description".
-            Return the response as a valid JSON array of objects. ${jsonInstruction}
+            Return the response as a valid JSON array of objects.
         `;
 
         const jsonText = await callGeminiAPI(topicGenerationPrompt, true, "Generate Topic Card");
@@ -1365,18 +1364,25 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
         throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
     }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
-    const payload = { contents: [{ parts: [{ text: prompt }] }] };
+    
+    // Check if JSON is expected and append the instruction if not already present
+    let finalPrompt = prompt;
+    if (isJson && !prompt.includes(jsonInstruction)) {
+        finalPrompt += jsonInstruction;
+    }
+
+    const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
     if (isJson) {
         payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
     }
     const result = await callApi(apiUrl, payload);
     const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    logAiInteraction(prompt, responseText, logType);
+    logAiInteraction(finalPrompt, responseText, logType); // Log the final prompt
     return responseText;
 }
 
 async function callColorGenAPI(prompt) {
-    const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
+    const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light).`;
     const jsonText = await callGeminiAPI(fullPrompt, true, "Generate Color Theme");
     if (jsonText) return parseJsonWithCorrections(jsonText);
     throw new Error("Could not parse a valid color theme from API response.");
