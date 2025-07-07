@@ -1570,10 +1570,10 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 }
 
 /**
- * [MODIFIED] This function now includes an automated self-refinement step.
- * After generating the initial guide, it extracts the "Detailed Implementation Guide"
- * and sends it back to the AI with a specific prompt to add more practical,
- * actionable details, making the final guide more robust automatically.
+ * [MODIFIED] This function now includes an automated self-refinement step and a
+ * new, dedicated research step to find and include real, helpful links.
+ * After generating the initial guide, it refines the implementation steps and then
+ * performs a separate AI call to generate a high-quality "Helpful Resources" section.
  */
 async function generateFullDetailedGuide(button) {
     const firstModalFooter = document.getElementById('inDepthModalFooter');
@@ -1651,6 +1651,38 @@ async function generateFullDetailedGuide(button) {
             }
         }
         
+        // --- [NEW] Step 2: Dedicated AI call to find and verify helpful resources ---
+        detailedContentEl.innerHTML = getLoaderHTML('Finding and verifying helpful resources...');
+        const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+        const resourcesPrompt = `
+            Persona: You are an expert IT Research Assistant.
+            Task: Your sole job is to find real, high-quality, and relevant online resources for the following IT topic.
+
+            //-- TOPIC --//
+            "${coreTopicForSearch}"
+
+            //-- INSTRUCTIONS --//
+            1.  **Find 3-5 Links:** Search for and provide between 3 and 5 genuinely helpful resources.
+            2.  **Prioritize Sources:** Focus on official documentation (e.g., Microsoft Learn, VMware Docs, vendor knowledge bases), highly respected community blogs, and detailed technical articles.
+            3.  **Verify URLs:** Ensure the URLs are correct and lead to the expected content.
+            4.  **Format as Markdown:** Structure your response as a complete "Helpful Resources" markdown section. Start with the "### 12. Helpful Resources" header. For each resource, provide a bullet point with a linked title and a brief, one-sentence description of what it contains.
+
+            //-- EXAMPLE OUTPUT FORMAT --//
+            ### 12. Helpful Resources
+            * [Official SNMP Documentation](https://docs.microsoft.com/...) - The definitive guide from Microsoft on SNMP services.
+            * [Step-by-Step SCOM Configuration Guide](https://community.spiceworks.com/...) - A detailed community-written tutorial with screenshots for configuring SCOM monitoring.
+
+            Return ONLY the complete markdown for this section.
+        `;
+        
+        const helpfulResourcesMarkdown = await callGeminiAPI(resourcesPrompt, false, "Generate Helpful Resources");
+
+        // [NEW] Replace the generic resources section with the new, high-quality one.
+        if (helpfulResourcesMarkdown) {
+            // This regex finds the original H3 header and all content after it, and replaces it.
+            finalSections5to12 = finalSections5to12.replace(/(### 12\. Helpful Resources[\s\S]*)/, helpfulResourcesMarkdown.trim());
+        }
+
         const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
         originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
 
