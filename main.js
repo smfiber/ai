@@ -648,8 +648,8 @@ async function getDriveFolderId() {
 
 /**
  * [FIX] This function now correctly identifies the active modal's data.
- * It uses `button.closest('.modal-footer')` to reliably find the correct
- * footer and its associated data attributes, preventing duplicate filenames.
+ * It uses a robust selector to find the correct footer element based on its ID,
+ * preventing errors when saving from different modals.
  */
 async function handleSaveToDriveClick(button) {
     const modal = button.closest('.card');
@@ -665,14 +665,14 @@ async function handleSaveToDriveClick(button) {
         statusEl = document.getElementById('search-modal-status-message');
         finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
-        // [FIX] Get the footer directly from the clicked button's parent hierarchy.
-        // This is more reliable than checking body classes and avoids ambiguity when
-        // one modal is open on top of another.
-        modalFooter = button.closest('.modal-footer');
+        // [FIX] Changed selector from '.modal-footer' to '[id$="ModalFooter"]' to correctly find the footer div,
+        // as the class does not exist in the HTML. This targets elements like 'inDepthModalFooter'.
+        modalFooter = button.closest('[id$="ModalFooter"]');
 
         if (!modalFooter) {
             console.error("Save to Drive Error: Could not find the modal footer for the clicked button.");
-            const anyStatusEl = button.closest('.modal-footer')?.querySelector('p[id$="status-message"]');
+            // [FIX] Corrected the selector here as well to find the status message within the now-correctly-identified footer.
+            const anyStatusEl = modalFooter?.querySelector('p[id$="status-message"]');
             if (anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
             return;
         }
