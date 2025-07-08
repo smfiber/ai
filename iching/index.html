@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I Ching Divination with Firebase</title>
+    <title>AI Oracle with Gemini & Firebase</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,65 +12,79 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        .hex-line { height: 12px; margin: 8px auto; position: relative; display: flex; justify-content: center; align-items: center; }
-        .solid-line { background-color: #334155; width: 100px; border-radius: 4px; height: 12px; }
-        .broken-line { width: 100px; display: flex; justify-content: space-between; }
-        .broken-line-part { background-color: #334155; width: 45%; height: 12px; border-radius: 4px; }
-        .changing-marker { width: 10px; height: 10px; background-color: #ca8a04; border-radius: 50%; position: absolute; left: calc(50% + 60px); }
-        .fade-in { animation: fadeIn 1s ease-in-out; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .hidden { display: none; }
+        /* Simple spinner for loading states */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Firebase Config Modal -->
-    <div id="firebaseConfigModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
-            <h2 class="text-2xl font-bold mb-4">Firebase Configuration</h2>
-            <p class="mb-4 text-slate-600">Please paste your entire Firebase config object below to connect to your database. This is only required once.</p>
-            <textarea id="firebaseConfigInput" class="w-full h-48 p-2 border rounded-md font-mono text-sm" placeholder="const firebaseConfig = { ... };"></textarea>
-            <button id="saveFirebaseConfig" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Save and Initialize</button>
+    <!-- API Keys & Config Modal -->
+    <div id="configModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl">
+            <h2 class="text-2xl font-bold mb-4">Initial Configuration</h2>
+            <p class="mb-6 text-slate-600">Please provide your API keys and configuration to start the application. These will be stored in your browser's local storage.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="geminiApiKeyInput" class="block text-sm font-medium text-slate-700">Gemini API Key</label>
+                    <input type="password" id="geminiApiKeyInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" placeholder="Enter your Gemini API Key">
+                </div>
+                <div>
+                    <label for="googleClientIdInput" class="block text-sm font-medium text-slate-700">Google Cloud OAuth Client ID</label>
+                    <input type="text" id="googleClientIdInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" placeholder="Enter your Google Cloud Client ID">
+                </div>
+                <div>
+                    <label for="firebaseConfigInput" class="block text-sm font-medium text-slate-700">Firebase Config Object</label>
+                    <textarea id="firebaseConfigInput" class="w-full h-40 p-2 border rounded-md font-mono text-sm mt-1" placeholder="Paste your entire Firebase config object here..."></textarea>
+                </div>
+            </div>
+
+            <button id="saveConfigButton" class="mt-6 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Save and Initialize</button>
         </div>
     </div>
 
     <div id="app" class="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 hidden">
         
-        <header class="flex justify-between items-center mb-6">
+        <header class="flex justify-between items-start mb-6">
             <div class="text-left">
-                <h1 class="text-3xl font-bold text-slate-700">I Ching Divination</h1>
-                <p class="text-slate-500 mt-1">Consult the Book of Changes for guidance.</p>
+                <h1 class="text-3xl font-bold text-slate-700">AI Oracle</h1>
+                <p class="text-slate-500 mt-1">Ask a question to receive insight.</p>
             </div>
-            <div id="authContainer" class="text-right">
-                <!-- Auth buttons will be injected here -->
+            <div id="authContainer" class="text-right flex items-center space-x-3">
+                <!-- Auth UI will be injected here -->
             </div>
         </header>
 
         <div id="mainContent">
             <div id="controls" class="text-center mb-6">
-                <textarea id="questionInput" class="w-full p-2 border rounded-md mb-4" placeholder="Enter your question here..."></textarea>
-                <button id="castButton" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed" disabled>
-                    Cast Coins
+                <textarea id="questionInput" class="w-full p-3 border rounded-md mb-4 focus:ring-2 focus:ring-sky-500" rows="3" placeholder="Enter a question for the oracle..."></textarea>
+                <button id="askButton" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed">
+                    Ask Gemini
                 </button>
             </div>
 
-            <div id="resultsContainer" class="hidden fade-in">
-                <div id="primaryHexagram"></div>
-                <div id="changingLines" class="my-6"></div>
-                <div id="relatingHexagram"></div>
-                <div class="text-center mt-8 space-x-4">
-                    <button id="saveReadingButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        Save Reading
-                    </button>
-                    <button id="resetButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        Ask Another Question
-                    </button>
-                </div>
+            <div id="resultsContainer" class="hidden fade-in p-6 bg-slate-50 rounded-lg border">
+                <!-- Gemini's response will be shown here -->
             </div>
         </div>
 
         <div id="pastReadings" class="mt-12 border-t pt-6 hidden">
-            <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">Your Past Readings</h2>
+            <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">Your Past Questions</h2>
             <div id="readingsList" class="space-y-4">
                 <!-- Past readings will be injected here -->
             </div>
@@ -79,268 +93,255 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- App State ---
         let db, auth;
-        let currentReading = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let geminiApiKey, googleClientId, firebaseConfig;
+        let currentUser = null;
 
         // --- DOM Elements ---
-        const firebaseConfigModal = document.getElementById('firebaseConfigModal');
+        const configModal = document.getElementById('configModal');
+        const saveConfigButton = document.getElementById('saveConfigButton');
+        const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+        const googleClientIdInput = document.getElementById('googleClientIdInput');
         const firebaseConfigInput = document.getElementById('firebaseConfigInput');
-        const saveFirebaseConfigBtn = document.getElementById('saveFirebaseConfig');
+        
         const appDiv = document.getElementById('app');
         const authContainer = document.getElementById('authContainer');
-        const castButton = document.getElementById('castButton');
-        const resetButton = document.getElementById('resetButton');
-        const saveReadingButton = document.getElementById('saveReadingButton');
-        const controlsDiv = document.getElementById('controls');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const primaryHexagramDiv = document.getElementById('primaryHexagram');
-        const changingLinesDiv = document.getElementById('changingLines');
-        const relatingHexagramDiv = document.getElementById('relatingHexagram');
         const questionInput = document.getElementById('questionInput');
+        const askButton = document.getElementById('askButton');
+        const resultsContainer = document.getElementById('resultsContainer');
         const pastReadingsDiv = document.getElementById('pastReadings');
         const readingsListDiv = document.getElementById('readingsList');
 
-        // --- I CHING DATA (unchanged) ---
-        const iChingData = {
-            "111111": {num: 1, name: "乾 Qián / The Creative", judgment: "The creative works sublime success, Furthering through perseverance.", image: "The movement of heaven is full of power. Thus the superior man makes himself strong and untiring.", lines: ["Nine at the beginning: Hidden dragon. Do not act.", "Nine in the second place: Dragon appearing in the field. It furthers one to see the great man.", "Nine in the third place: All day long the superior man is creatively active. At nightfall his mind is still beset with cares. Danger. No blame.", "Nine in the fourth place: Wavering flight over the depths. No blame.", "Nine in the fifth place: Flying dragon in the heavens. It furthers one to see the great man.", "Nine at the top: Arrogant dragon will have cause to repent."]},
-            "000000": {num: 2, name: "坤 Kūn / The Receptive", judgment: "The receptive brings about sublime success, furthering through the perseverance of a mare. If the superior man undertakes something and tries to lead, He goes astray; But if he follows, he finds guidance.", image: "The earth's condition is receptive devotion. Thus the superior man of broad character carries the outer world.", lines: ["Six at the beginning: When there is hoarfrost underfoot, Solid ice is not far off.", "Six in the second place: Straight, square, great. Without purpose, Yet nothing remains unfurthered.", "Six in the third place: Hidden lines. One is able to remain persevering. If by chance you are in the service of a king, Seek not works, but bring to completion.", "Six in the fourth place: A tied-up sack. No blame, no praise.", "Six in the fifth place: A yellow lower garment brings supreme good fortune.", "Six at the top: Dragons fight in the meadow. Their blood is black and yellow."]},
-            "100010": {num: 3, name: "屯 Zhūn / Difficulty at the Beginning", judgment: "Difficulty at the beginning works supreme success, Furthering through perseverance. Nothing should be undertaken. It furthers one to appoint helpers.", image: "Clouds and thunder. Thus the superior man brings order out of confusion.", lines: ["Nine at the beginning: Hindrance and hesitation. It furthers one to remain persevering. It furthers one to appoint helpers.", "Six in the second place: Difficulties pile up. Horse and wagon part. He is not a robber; He will woo her in due time. The maiden is chaste, She does not pledge herself. Ten years--then she pledges herself.", "Six in the third place: Whoever hunts deer without the forester Only loses his way in the forest. The superior man understands the signs of the time And prefers to desist. To go on brings humiliation.", "Six in the fourth place: Horse and wagon part. Strive for union. To go brings good fortune. Everything acts to further.", "Nine in the fifth place: Difficulties in blessing. A little perseverance brings good fortune. Great perseverance brings misfortune.", "Six at the top: Horse and wagon part. Bloody tears flow."]},
-            "010001": {num: 4, name: "蒙 Méng / Youthful Folly", judgment: "Youthful folly has success. It is not I who seek the young fool; The young fool seeks me. At the first oracle I inform him. If he asks two or three times, it is importunity. If he is importunate, I give him no information. Perseverance furthers.", image: "A spring wells up at the foot of the mountain. Thus the superior man fosters his character by thoroughness in all that he does.", lines: ["Six at the beginning: To make a fool develop, It is useful to use restraints. The removal of the fetters Brings humiliation.", "Nine in the second place: To bear with fools in kindness brings good fortune. To know how to take women brings good fortune. The son is capable of taking charge of the household.", "Six in the third place: Take not a maiden who, when she sees a man of bronze, Loses possession of herself. Nothing furthers.", "Six in the fourth place: Entangled folly brings humiliation.", "Six in the fifth place: Childlike folly brings good fortune.", "Nine at the top: In punishing folly, It does not further one to commit transgressions. The only thing that furthers is to prevent transgressions."]},
-            "111010": {num: 5, name: "需 Xū / Waiting (Nourishment)", judgment: "Waiting. If you are sincere, You have light and success. Perseverance brings good fortune. It furthers one to cross the great water.", image: "Clouds rise up to the heavens. Thus the superior man eats and drinks, is joyous and of good cheer.", lines: ["Nine at the beginning: Waiting in the meadow. It furthers one to abide in what is constant. No blame.", "Nine in the second place: Waiting on the sand. There is some gossip. The end comes to good fortune.", "Nine in the third place: Waiting in the mud Brings about the arrival of the enemy.", "Six in the fourth place: Waiting in blood. Get out of the pit.", "Nine in the fifth place: Waiting at table. Perseverance brings good fortune.", "Six at thetop: One falls into the pit. Three uninvited guests arrive. Honor them, and in the end there will be good fortune."]},
-            "010111": {num: 6, name: "訟 Sòng / Conflict", judgment: "Conflict. You are sincere And are being obstructed. A cautious halt halfway brings good fortune. Going through to the end brings misfortune. It furthers one to see the great man. It does not further one to cross the great water.", image: "Heaven and water go their opposite ways. Thus the superior man, in all his transactions, gives consideration to the beginning.", lines: ["Six at the beginning: If one does not perpetuate the affair, There is a little gossip. In the end, good fortune comes.", "Nine in the second place: One cannot engage in conflict; One returns home, gives way. The people of his town, three hundred households, Remain free of guilt.", "Six in the third place: To nourish oneself on ancient virtue induces perseverance. Danger. In the end, good fortune comes. If by chance you are in the service of a king, Seek not works.", "Nine in the fourth place: One cannot engage in conflict. One turns back and submits to fate, Changes one's attitude, And finds peace in perseverance. Good fortune.", "Nine in the fifth place: To contend before the arbitrator brings supreme good fortune.", "Nine at the top: If by chance a leather belt is bestowed on one, By the end of a morning it will have been snatched away three times."]},
-            "010000": {num: 7, name: "師 Shī / The Army", judgment: "The army. The army needs perseverance And a strong man. Good fortune without blame.", image: "In the middle of the earth is water. Thus the superior man increases his masses by generosity toward the people.", lines: ["Six at the beginning: An army must set forth in proper order. If the order is not good, misfortune threatens.", "Nine in the second place: In the midst of the army. Good fortune. No blame. The king bestows a triple decoration.", "Six in the third place: The army marches with corpses in the wagon. Misfortune.", "Six in the fourth place: The army retreats. No blame.", "Six in the fifth place: There is game in the field. It is advantageous to seize it. Without blame. Let the eldest lead the army. The younger transports corpses; Then perseverance brings misfortune.", "Six at the top: The great prince issues commands, Founds states, vests families with fiefs. Inferior people should not be employed."]},
-            "000010": {num: 8, name: "比 Bǐ / Holding Together", judgment: "Holding together brings good fortune. Inquire of the oracle once again Whether you possess sublimity, constancy, and perseverance; Then there is no blame. Those who are uncertain gradually join. Whoever comes too late meets with misfortune.", image: "On the earth is water. Thus the kings of antiquity bestowed the different states as fiefs and cultivated friendly relations with the feudal lords.", lines: ["Six at the beginning: Hold to him in truth and loyalty; This is without blame. Truth, like a full earthen bowl: Thus in the end good fortune comes from elsewhere.", "Six in the second place: Hold to him inwardly. Perseverance brings good fortune.", "Six in the third place: You hold together with the wrong people.", "Six in the fourth place: Hold to him outwardly also. Perseverance brings good fortune.", "Nine in the fifth place: Manifestation of holding together. In the hunt the king uses beaters on three sides only and forgoes game that runs off in front. The citizens need no warning. Good fortune.", "Six at the top: He finds no head for holding together. Misfortune."]},
-            "111011": {num: 9, name: "小畜 Xiǎo Xù / The Taming Power of the Small", judgment: "The taming power of the small has success. Dense clouds, no rain from our western region.", image: "The wind drives over heaven. Thus the superior man refines the outward aspect of his nature.", lines: ["Nine at the beginning: Return to the way. How could there be blame in this? Good fortune.", "Nine in the second place: He is led to return. Good fortune.", "Nine in the third place: The spokes of the wagon wheel fall out. Man and wife look at each other with angry eyes.", "Six in the fourth place: If you are sincere, blood vanishes and fear gives way. No blame.", "Nine in the fifth place: If you are sincere and loyally attached, You are rich in your neighbor.", "Nine at the top: The rain comes, there is rest. This is due to the lasting effect of character. Perseverance brings the woman into danger. The moon is nearly full. If the superior man persists, misfortune comes."]},
-            "110111": {num: 10, name: "履 Lǚ / Treading", judgment: "Treading upon the tail of the tiger. It does not bite the man. Success.", image: "Heaven above, the lake below. Thus the superior man discriminates between high and low, and thereby fortifies the thinking of the people.", lines: ["Nine at the beginning: Simple conduct. Progress without blame.", "Nine in the second place: Treading a smooth, level course. The perseverance of a dark man brings good fortune.", "Six in the third place: A one-eyed man is able to see, A lame man is able to tread. He treads on the tail of the tiger. The tiger bites the man. Misfortune. Thus does a warrior act on behalf of his great prince.", "Nine in the fourth place: He treads on the tail of the tiger. Caution and circumspection lead ultimately to good fortune.", "Nine in the fifth place: Resolute conduct. Perseverance with awareness of danger.", "Nine at the top: Look to your conduct and weigh the favorable signs. If all is correct, supreme good fortune comes."]},
-            "111000": {num: 11, name: "泰 Tài / Peace", judgment: "Peace. The small departs, The great approaches. Good fortune. Success.", image: "Heaven and earth unite. Thus the ruler fashions and completes the Tao of heaven and earth, and sets up standards for the people.", lines: ["Nine at the beginning: When ribbon grass is pulled up, the sod comes with it. Each according to his kind. Undertakings bring good fortune.", "Nine in the second place: Bearing with the uncultured in gentleness, Fording the river with resolution, Not neglecting what is distant, Not regarding one's companions: Thus one may manage to walk in the middle.", "Nine in the third place: No plain not followed by a slope. No going not followed by a return. He who remains persevering in danger is without blame. Do not complain about this truth; enjoy the good fortune you still possess.", "Six in the fourth place: He flutters down, not boasting of his wealth, Together with his neighbor, Guileless and sincere.", "Six in the fifth place: The sovereign I gives his daughter in marriage. This brings blessing and supreme good fortune.", "Six at the top: The wall falls back into the moat. Use of the army is not advisable. Announce your commands in your own town. Perseverance brings humiliation."]},
-            "000111": {num: 12, name: "否 Pǐ / Standstill (Stagnation)", judgment: "Standstill. Evil people do not further The perseverance of the superior man. The great departs; the small approaches.", image: "Heaven and earth do not unite. Thus the superior man falls back on his inner worth in order to escape the difficulties. He does not permit himself to be honored with revenue.", lines: ["Six at the beginning: When ribbon grass is pulled up, the sod comes with it. Each according to his kind. Perseverance brings good fortune and success.", "Six in the second place: They bear and endure; This means good fortune for inferior people. The standstill serves to help the great man to attain success.", "Six in the third place: They bear shame.", "Nine in the fourth place: He who acts at the command of the highest remains without blame. Those of like mind partake of the blessing.", "Nine in the fifth place: Standstill is giving way. Good fortune for the great man. 'What if it should fail, what if it should fail?' In this way he ties it to a cluster of mulberry shoots.", "Nine at the top: The standstill comes to an end. First standstill, then good fortune."]},
-            "101111": {num: 13, name: "同人 Tóng Rén / Fellowship with Men", judgment: "Fellowship with men in the open. Success. It furthers one to cross the great water. The perseverance of the superior man furthers.", image: "Heaven together with fire. Thus the superior man organizes the clans and distinguishes things.", lines: ["Nine at the beginning: Fellowship with men at the gate. No blame.", "Six in the second place: Fellowship with men in the clan. Humiliation.", "Nine in the third place: He hides weapons in the thicket; He climbs the high hill in front of it. For three years he does not rise up.", "Nine in the fourth place: He climbs up on his wall; he cannot attack. Good fortune.", "Nine in the fifth place: Men bound in fellowship first weep and lament, but afterward they laugh. After great struggles they succeed in meeting.", "Nine at the top: Fellowship with men in the meadow. No remorse."]},
-            "111101": {num: 14, name: "大有 Dà Yǒu / Possession in Great Measure", judgment: "Possession in great measure. Supreme success.", image: "Fire in heaven above. Thus the superior man curbs evil and furthers good, and thereby obeys the benevolent will of heaven.", lines: ["Nine at the beginning: No relationship with what is harmful; there is no blame in this. If one remains conscious of difficulty, one remains without blame.", "Nine in the second place: A big wagon for loading. One may undertake something. No blame.", "Nine in the third place: A prince offers it to the Son of Heaven. A petty man cannot do this.", "Nine in the fourth place: He makes a difference between himself and his neighbor. No blame.", "Six in the fifth place: He whose truth is accessible, yet dignified, has good fortune.", "Nine at the top: He is blessed by heaven. Good fortune. Nothing that does not further."]},
-            "001000": {num: 15, name: "謙 Qiān / Modesty", judgment: "Modesty creates success. The superior man carries things through.", image: "Within the earth, a mountain. Thus the superior man reduces that which is too much, and augments that which is too little. He weighs things and makes them equal.", lines: ["Six at the beginning: A superior man of modesty and humility may cross the great water. Good fortune.", "Six in the second place: Modesty that comes to expression. Perseverance brings good fortune.", "Nine in the third place: A superior man of modesty and merit carries things to conclusion. Good fortune.", "Six in the fourth place: Nothing that would not be furthered by modesty in movement.", "Six in the fifth place: No boasting of wealth before one's neighbor. It is favorable to attack with force. Nothing that would not be furthered.", "Six at the top: Modesty that comes to expression. It is favorable to set armies marching to chastise one's own city and one's country."]},
-            "000100": {num: 16, name: "豫 Yù / Enthusiasm", judgment: "Enthusiasm. It furthers one to install helpers and to set armies marching.", image: "Thunder comes resounding out of the earth. Thus the ancient kings made music in order to honor merit, and offered it with splendor to the Supreme Deity, inviting their ancestors to be present.", lines: ["Six at the beginning: Enthusiasm that expresses itself brings misfortune.", "Six in the second place: Firm as a rock. Not a whole day. Perseverance brings good fortune.", "Six in the third place: Enthusiasm that looks upward creates remorse. Hesitation brings remorse.", "Nine in the fourth place: The source of enthusiasm. He achieves great things. Doubt not. You gather friends around you as a hair clasp gathers the hair.", "Six in the fifth place: Persistently ill, and still does not die.", "Six at the top: Deluded enthusiasm. But if one changes when one has come to the top, there is no blame."]},
-            "100110": {num: 17, name: "隨 Suí / Following", judgment: "Following has supreme success. Perseverance furthers. No blame.", image: "Thunder in the middle of the lake. Thus the superior man at nightfall goes indoors for rest and recuperation.", lines: ["Nine at the beginning: The standard is changing. Perseverance brings good fortune. To go out of the door in fellowship produces deeds.", "Six in the second place: If one clings to the little boy, one loses the strong man.", "Six in the third place: If one clings to the strong man, one loses the little boy. Through following one finds what one seeks. It is favorable to remain persevering.", "Nine in the fourth place: Following creates success. Perseverance brings misfortune. To be sincere in the way brings clarity. How could there be blame in this?", "Nine in the fifth place: Sincere in the good. Good fortune.", "Six at the top: He meets with devotion. Entangled, he is followed. The king introduces him to the Western Mountain."]},
-            "011001": {num: 18, name: "蠱 Gǔ / Work on What Has Been Spoiled", judgment: "Work on what has been spoiled has supreme success. It furthers one to cross the great water. Before the starting point, three days. After the starting point, three days.", image: "The wind blows low on the mountain. Thus the superior man stirs up the people and strengthens their spirit.", lines: ["Six at the beginning: Setting right what has been spoiled by the father. If there is a son, no blame rests upon the departed father. Danger. In the end good fortune.", "Nine in the second place: Setting right what has been spoiled by the mother. One must not be too persevering.", "Nine in the third place: Setting right what has been spoiled by the father. There will be a little remorse. No great blame.", "Six in the fourth place: Tolerating what has been spoiled by the father. In continuing one sees humiliation.", "Six in the fifth place: Setting right what has been spoiled by the father. One meets with praise.", "Nine at the top: He does not serve kings and princes, sets himself higher aims."]},
-            "110000": {num: 19, name: "臨 Lín / Approach", judgment: "Approach has supreme success. Perseverance furthers. When the eighth month comes, there will be misfortune.", image: "The earth above the lake. Thus the superior man is tireless in his teaching, and without limits in his tolerance and protection of the people.", lines: ["Nine at the beginning: Joint approach. Perseverance brings good fortune.", "Nine in the second place: Joint approach. Good fortune. Everything furthers.", "Six in the third place: Comfortable approach. Nothing that would further. If one is induced to grieve over it, one becomes free of blame.", "Six in the fourth place: Complete approach. No blame.", "Six in the fifth place: Wise approach. This is right for a great prince. Good fortune.", "Six at the top: Great-hearted approach. Good fortune. No blame."]},
-            "000011": {num: 20, name: "觀 Guān / Contemplation (View)", judgment: "Contemplation. The ablution has been made, but not yet the offering. Full of trust they look up to him.", image: "The wind blows over the earth. Thus the ancient kings visited the regions of the world, contemplated the people, and gave them instruction.", lines: ["Six at the beginning: Boylike contemplation. For an inferior man, no blame. For a superior man, humiliation.", "Six in the second place: Contemplation through the crack of the door. Furthering for the perseverance of a woman.", "Six in the third place: Contemplation of my own life decides the choice between advance and retreat.", "Six in the fourth place: Contemplation of the light of the kingdom. It furthers one to exert influence as the guest of a king.", "Nine in the fifth place: Contemplation of my own life. The superior man is without blame.", "Nine at the top: Contemplation of his character. The superior man is without blame."]},
-            "101001": {num: 21, name: "噬嗑 Shì Kè / Biting Through", judgment: "Biting through has success. It is favorable to let justice be administered.", image: "Thunder and lightning. Thus the kings of old laid down penalties and so enforced the laws.", lines: ["Nine at the beginning: His feet are fastened in the stocks, So that his toes disappear. No blame.", "Six in the second place: Bites through tender meat, So that his nose disappears. No blame.", "Six in the third place: Bites on old dried meat And strikes on something poisonous. Slight humiliation. No blame.", "Nine in the fourth place: Bites on dried gristly meat. Receives metal arrows. It furthers one to be mindful of difficulties And to be persevering. Good fortune.", "Six in the fifth place: Bites on dried lean meat. Receives yellow gold. Perseveringly aware of danger. No blame.", "Nine at the top: His neck is fastened in the wooden cangue, So that his ears disappear. Misfortune."]},
-            "100101": {num: 22, name: "賁 Bì / Grace", judgment: "Grace has success. In small matters It is favorable to undertake something.", image: "Fire at the foot of the mountain. Thus the superior man proceeds when clearing up current affairs. But he does not dare to decide controversial issues in this way.", lines: ["Nine at the beginning: He lends grace to his toes, leaves the carriage, and walks.", "Six in the second place: Lends grace to the beard on his chin.", "Nine in the third place: Graceful and moist. Eternal perseverance brings good fortune.", "Six in the fourth place: Grace or simplicity? A white horse comes as if on wings. He is not a robber, He will woo in due time.", "Six in the fifth place: Grace in the hills and gardens. The roll of silk is meager and small. Humiliation, but in the end good fortune.", "Nine at the top: Simple grace. No blame."]},
-            "000001": {num: 23, name: "剝 Bō / Splitting Apart", judgment: "Splitting apart. It does not further one to go anywhere.", image: "The mountain rests on the earth. Thus the high-mindedness of the people is consolidated by a generous and broad foundation.", lines: ["Six at the beginning: The leg of the bed is split. Those who persevere are destroyed. Misfortune.", "Six in the second place: The bed is split at the edge. Those who persevere are destroyed. Misfortune.", "Six in the third place: He splits with them. No blame.", "Six in the fourth place: The bed is split up to the skin. Misfortune.", "Six in the fifth place: A shoal of fishes. Favor comes through the court ladies. Everything is favorable.", "Nine at the top: There is a large fruit still uneaten. The superior man receives a carriage. The house of the inferior man is split apart."]},
-            "100000": {num: 24, name: "復 Fù / Return (The Turning Point)", judgment: "Return. Success. Going out and coming in without error. Friends come without blame. To and fro goes the way. On the seventh day comes return. It is favorable to have somewhere to go.", image: "Thunder within the earth. Thus the ancient kings closed the passes at the time of solstice. Merchants and strangers did not go about, And the ruler did not travel through the provinces.", lines: ["Nine at the beginning: Return from a short distance. No need for remorse. Great good fortune.", "Six in the second place: Quiet return. Good fortune.", "Six in the third place: Repeated return. Danger. No blame.", "Six in the fourth place: Walking in the midst of others, One returns alone.", "Six in the fifth place: Noble-hearted return. No remorse.", "Six at the top: Missing the return. Misfortune. Misfortune from within and without. If armies are set marching in this way, one will in the end suffer a great defeat, disastrous for the ruler of the country. For ten years it will not be possible to attack again."]},
-            "100111": {num: 25, name: "無妄 Wú Wàng / Innocence (The Unexpected)", judgment: "Innocence. Supreme success. Perseverance furthers. If someone is not as he should be, He has misfortune, And it does not further him to undertake anything.", image: "Under heaven thunder rolls. All things attain the state of innocence. Thus the ancient kings, rich in virtue and in harmony with the time, fostered and nourished all beings.", lines: ["Nine at the beginning: Innocent behavior brings good fortune.", "Six in the second place: If one does not count on the harvest while plowing, Nor on the use of the ground while clearing it, It furthers one to undertake something.", "Six in the third place: Undeserved misfortune. The cow that was tethered by someone is the wanderer's gain, the citizen's loss.", "Nine in the fourth place: He who can be persevering will be without blame.", "Nine in the fifth place: Use no medicine in an illness Incurred through no fault of your own. It will pass of itself.", "Nine at the top: Innocent action brings misfortune."]},
-            "111001": {num: 26, name: "大畜 Dà Chù / The Taming Power of the Great", judgment: "The taming power of the great. Perseverance furthers. Not eating at home brings good fortune. It furthers one to cross the great water.", image: "Heaven within the mountain. Thus the superior man acquaints himself with many sayings of antiquity And many deeds of the past, In order to strengthen his character thereby.", lines: ["Nine at the beginning: Danger is at hand. It is favorable to desist.", "Nine in the second place: The axles of the wagon are removed.", "Nine in the third place: A good horse that follows others. Awareness of danger, with perseverance, furthers. Practice chariot driving and armed defense daily. It is favorable to have somewhere to go.", "Six in the fourth place: The headboard of a young bull. Great good fortune.", "Six in the fifth place: The tusk of a gelded boar. Good fortune.", "Nine at the top: One attains the way of heaven. Success."]},
-            "100001": {num: 27, name: "頤 Yí / The Corners of the Mouth (Providing Nourishment)", judgment: "The corners of the mouth. Perseverance brings good fortune. Pay heed to the providing of nourishment And to what a man seeks To fill his own mouth with.", image: "At the foot of the mountain, thunder. Thus the superior man is careful of his words And temperate in eating and drinking.", lines: ["Nine at the beginning: You let your magic tortoise go, And look at me with the corners of your mouth drooping. Misfortune.", "Six in the second place: Turning to the summit for nourishment, Deviating from the path to seek nourishment from the hill. Continuing to do this brings misfortune.", "Six in the third place: Turning away from nourishment. Perseverance brings misfortune. For ten years do not act. Nothing furthers.", "Six in the fourth place: Turning to the summit for provision of nourishment brings good fortune. Spying about with sharp eyes like a tiger with an insatiable appetite. No blame.", "Six in the fifth place: Turning away from the path. To remain persevering brings good fortune. One should not cross the great water.", "Nine at the top: The source of nourishment. Awareness of danger brings good fortune. It furthers one to cross the great water."]},
-            "011110": {num: 28, name: "大過 Dà Guò / Preponderance of the Great", judgment: "Preponderance of the great. The ridgepole sags to the breaking point. It is favorable to have somewhere to go. Success.", image: "The lake rises above the trees. Thus the superior man, when he stands alone, is unconcerned, and if he has to renounce the world, he is undaunted.", lines: ["Six at the beginning: To spread white rushes underneath. No blame.", "Nine in the second place: A withered poplar puts forth a shoot. An older man takes a young wife. Everything furthers.", "Nine in the third place: The ridgepole sags to the breaking point. Misfortune.", "Nine in the fourth place: The ridgepole is braced. Good fortune. If there are ulterior motives, it is humiliating.", "Nine in the fifth place: A withered poplar puts forth flowers. An older woman takes a husband. No blame, no praise.", "Six at the top: One must go through the water. It goes over one's head. Misfortune. No blame."]},
-            "010010": {num: 29, name: "坎 Kǎn / The Abysmal (Water)", judgment: "The abysmal repeated. If you are sincere, you have success in your heart, And whatever you do succeeds.", image: "Water flows on uninterruptedly. Thus the superior man walks in lasting virtue and carries on the business of teaching.", lines: ["Six at the beginning: Repetition of the abysmal. In the abyss one falls into a pit. Misfortune.", "Nine in the second place: Danger in the abyss. One should strive to attain small things only.", "Six in the third place: Forward and backward, abyss on abyss. In danger like this, pause at first and wait, Otherwise you will fall into a pit in the abyss. Do not act in this way.", "Six in the fourth place: A jug of wine, a bowl of rice with it; Earthen vessels simply handed in through the window. There is certainly no blame in this.", "Nine in the fifth place: The abyss is not filled to overflowing, It is filled only to the rim. No blame.", "Six at the top: Bound with cords and ropes, Shut in between thorn-hedged prison walls: For three years one does not find the way. Misfortune."]},
-            "101101": {num: 30, name: "離 Lí / The Clinging, Fire", judgment: "The clinging. Perseverance furthers. It brings success. Care of the cow brings good fortune.", image: "That which is bright rises twice. Thus the great man, by perpetuating this brightness, illuminates the four quarters of the world.", lines: ["Nine at the beginning: The footprints are confused. If one is seriously intent, no blame.", "Six in the second place: Yellow light. Supreme good fortune.", "Nine in the third place: In the light of the setting sun, Men either beat the pot and sing Or loudly bewail the approach of old age. Misfortune.", "Nine in the fourth place: Its coming is sudden; It flames up, dies down, is thrown away.", "Six in the fifth place: Tears in floods, sighing and lamenting. Good fortune.", "Nine at the top: The king uses him to march forth and chastise. Then it is best to kill the leaders And take captive the followers. No blame."]},
-            "001110": {num: 31, name: "咸 Xián / Influence (Wooing)", judgment: "Influence. Success. Perseverance furthers. To take a maiden to wife brings good fortune.", image: "A lake on the mountain. Thus the superior man encourages people to approach him by his readiness to receive them.", lines: ["Six at the beginning: The influence shows itself in the big toe.", "Six in the second place: The influence shows itself in the calves of the legs. Misfortune. Tarrying brings good fortune.", "Nine in the third place: The influence shows itself in the thighs. Holds to that which follows it. To continue is humiliating.", "Nine in the fourth place: Perseverance brings good fortune. Remorse disappears. If a man is agitated in mind, and his thoughts go hither and thither, only those friends on whom he fixes his conscious thoughts will follow.", "Nine in the fifth place: The influence shows itself in the back of the neck. No remorse.", "Six at the top: The influence shows itself in the jaws, cheeks, and tongue."]},
-            "011100": {num: 32, name: "恆 Héng / Duration", judgment: "Duration. Success. No blame. Perseverance furthers. It is favorable to have somewhere to go.", image: "Thunder and wind. Thus the superior man stands firm and does not change his direction.", lines: ["Six at the beginning: Seeking duration too hastily brings misfortune persistently. Nothing that would further.", "Nine in the second place: Remorse disappears.", "Nine in the third place: He who does not give duration to his character meets with disgrace. Persistent humiliation.", "Nine in the fourth place: No game in the field.", "Six in the fifth place: Giving duration to one's character through perseverance. This is good fortune for a woman, misfortune for a man.", "Six at the top: Restlessness as an lasting condition brings misfortune."]},
-            "001111": {num: 33, name: "遯 Dùn / Retreat", judgment: "Retreat. Success. In what is small, perseverance furthers.", image: "Mountain under heaven. Thus the superior man keeps the inferior man at a distance, not in anger but with dignity.", lines: ["Six at the beginning: Retreating tail. This is dangerous. One must not wish to undertake anything.", "Six in the second place: He holds him fast with yellow oxhide. No one can tear him loose.", "Nine in the third place: A halted retreat is nerve-wracking and dangerous. To retain people as men- and maidservants brings good fortune.", "Nine in the fourth place: Voluntary retreat brings good fortune to the superior man and downfall to the inferior man.", "Nine in the fifth place: Friendly retreat. Perseverance brings good fortune.", "Nine at the top: Cheerful retreat. Everything serves to further."]},
-            "111100": {num: 34, name: "大壯 Dà Zhuàng / The Power of the Great", judgment: "The power of the great. Perseverance furthers.", image: "Thunder in heaven above. Thus the superior man does not tread upon paths that do not accord with established order.", lines: ["Nine at thebeginning: Power in the toes. To continue brings misfortune. This is certainly true.", "Nine in the second place: Perseverance brings good fortune.", "Nine in the third place: The inferior man works through power. The superior man does not act thus. To continue is dangerous. A goat butts against a hedge and gets its horns entangled.", "Nine in the fourth place: Perseverance brings good fortune. Remorse disappears. The hedge opens; there is no entanglement. Power depends upon the axle of a big cart.", "Six in the fifth place: Loses the goat with ease. No remorse.", "Six at the top: The goat butts against a hedge. It cannot go backward, it cannot go forward. Nothing serves to further. If one notes the difficulty, this brings good fortune."]},
-            "000101": {num: 35, name: "晉 Jìn / Progress", judgment: "Progress. The powerful prince is honored with horses in large numbers. In a single day he is granted audience three times.", image: "The sun rises over the earth. Thus the superior man himself brightens his bright virtue.", lines: ["Six at the beginning: Progressing, but turned back. Perseverance brings good fortune. If one meets with no confidence, one should remain calm. No blame.", "Six in the second place: Progressing, but in sorrow. Perseverance brings good fortune. Then one receives great happiness from one's ancestress.", "Six in the third place: All are in accord. Remorse disappears.", "Nine in the fourth place: Progress like a hamster. Perseverance brings danger.", "Six in the fifth place: Remorse disappears. Take not gain and loss to heart. Undertakings bring good fortune. Everything serves to further.", "Nine at the top: Making progress with the horns. One is aware of one's mistakes. To chastise one's own city. Danger. Good fortune. No blame. Perseverance brings humiliation."]},
-            "101000": {num: 36, name: "明夷 Míng Yí / Darkening of the Light", judgment: "Darkening of the light. In adversity it furthers one to be persevering.", image: "The light has sunk into the earth. Thus the superior man lives with the great mass; He veils his light, yet still shines.", lines: ["Nine at the beginning: Darkening of the light during flight. He lowers his wings. The superior man is a wanderer; For three days he does not eat. But he has a place to go. The host has occasion to gossip about him.", "Six in the second place: Darkening of the light, injured in the left thigh. He gives aid with the strength of a horse. Good fortune.", "Nine in the third place: Darkening of the light during the hunt in the south. Their great leader is captured. One must not expect perseverance too soon.", "Six in the fourth place: He penetrates the left side of the belly. One gets at the heart of the darkening of the light, And leaves gate and courtyard.", "Six in the fifth place: Darkening of the light as with Prince Chi. Perseverance furthers.", "Six at the top: Not light but darkness. First he climbed up to heaven, Then he plunged into the depths of the earth."]},
-            "101011": {num: 37, name: "家人 Jiā Rén / The Family (The Clan)", judgment: "The family. The perseverance of the woman furthers.", image: "Wind comes forth from fire. Thus the superior man has substance in his words and duration in his way of life.", lines: ["Nine at the beginning: Firm seclusion within the family. Remorse disappears.", "Six in the second place: She should not follow her whims. She must attend within to the food. Perseverance brings good fortune.", "Nine in the third place: When tempers flare up in the family, Too great severity brings remorse. Good fortune, nevertheless. When woman and child dally and laugh, It leads in the end to humiliation.", "Six in the fourth place: She is the treasure of the house. Great good fortune.", "Nine in the fifth place: As a king he approaches his family. Fear not. Good fortune.", "Nine at the top: His work commands respect. In the end good fortune comes."]},
-            "110101": {num: 38, name: "睽 Kuí / Opposition", judgment: "Opposition. In small matters, good fortune.", image: "Above, fire; below, the lake. Thus the superior man, in the midst of fellowship, retains his individuality.", lines: ["Nine at the beginning: Remorse disappears. If you lose your horse, do not run after it; it will come back of its own accord. When you see evil people, guard yourself against mistakes.", "Nine in the second place: One meets one's lord in a narrow street. No blame.", "Six in the third place: One sees the wagon dragged back, The oxen halted, A man's hair and nose cut off. Not a good beginning, but a good end.", "Nine in the fourth place: Isolated through opposition, One meets a like-minded man With whom one can associate in good faith. Despite the danger, no blame.", "Six in the fifth place: Remorse disappears. The companion bites his way through the wrappings. If one goes to him, How could it be a mistake?", "Nine at the top: Isolated through opposition, One sees one's companion as a pig covered with dirt, As a wagon full of devils. First one draws a bow against him, Then one lays the bow aside. He is not a robber; he will woo at the right time. As one goes, rain falls; then good fortune comes."]},
-            "001010": {num: 39, name: "蹇 Jiǎn / Obstruction", judgment: "Obstruction. The southwest furthers. The northeast does not further. It furthers one to see the great man. Perseverance brings good fortune.", image: "Water on the mountain. Thus the superior man turns his attention to himself and molds his character.", lines: ["Six at the beginning: Going leads to obstructions, Coming meets with praise.", "Six in the second place: The king's servant is beset by obstruction upon obstruction, But it is not his own fault.", "Nine in the third place: Going leads to obstructions; Hence he comes back.", "Six in the fourth place: Going leads to obstructions, Coming leads to union.", "Nine in the fifth place: In the midst of the greatest obstructions, Friends come.", "Six at the top: Going leads to obstructions, Coming leads to great things. Good fortune. It furthers one to see the great man."]},
-            "010100": {num: 40, name: "解 Xiè / Deliverance", judgment: "Deliverance. The southwest furthers. If there is no longer anything where one has to go, Return brings good fortune. If there is still something where one has to go, Hastening brings good fortune.", image: "Thunder and rain set in. Thus the superior man pardons mistakes and forgives guilt.", lines: ["Six at the beginning: Without blame.", "Nine in the second place: One kills three foxes in the field And receives a yellow arrow. Perseverance brings good fortune.", "Six in the third place: If a man carries a burden on his back And nonetheless rides in a carriage, He thereby encourages robbers to draw near. Perseverance leads to humiliation.", "Nine in the fourth place: Deliver yourself from your big toe. Then the companion comes, And him you can trust.", "Six in the fifth place: If the superior man can deliver himself, It brings good fortune. Thus he proves to inferior men that he is in earnest.", "Six at the top: The prince shoots at a hawk on a high wall. He kills it. Everything serves to further."]},
-            "110001": {num: 41, name: "損 Sǔn / Decrease", judgment: "Decrease combined with sincerity Brings supreme good fortune Without blame. One may be persevering in this. It is favorable to undertake something. How is this to be carried out? One may use two small bowls for the sacrifice.", image: "At the foot of the mountain, the lake. Thus the superior man controls his anger and restrains his instincts.", lines: ["Nine at the beginning: Going quickly when one's tasks are finished is without blame. But one must reflect on how much one may decrease others.", "Nine in the second place: Perseverance furthers. To undertake something brings misfortune. Without decreasing oneself, one is able to bring increase to others.", "Six in the third place: When three people journey together, Their number decreases by one. When one man journeys alone, He finds a companion.", "Six in the fourth place: If a man decreases his faults, It makes the other hasten to rejoice. No blame.", "Six in the fifth place: Someone increases him. Ten pairs of tortoises cannot oppose it. Supreme good fortune.", "Nine at the top: If one increases others without decreasing oneself, there is no blame. Perseverance brings good fortune. It is favorable to undertake something. One obtains servants, but no longer has a separate home."]},
-            "100011": {num: 42, name: "益 Yì / Increase", judgment: "Increase. It is favorable to undertake something. It is favorable to cross the great water.", image: "Wind and thunder. Thus the superior man: If he sees good, he imitates it; If he has faults, he rids himself of them.", lines: ["Nine at the beginning: It is favorable to perform great deeds. Supreme good fortune. No blame.", "Six in the second place: Someone does indeed increase him; Ten pairs of tortoises cannot oppose it. Constant perseverance brings good fortune. The king presents him before God. Good fortune.", "Six in the third place: One is enriched through unfortunate events. No blame, if you are sincere And walk in the middle, And report with a seal to the prince.", "Six in the fourth place: If you walk in the middle And report to the prince, He will follow. It is favorable to be used In the removal of the capital.", "Nine in the fifth place: If you are sincere and benevolent in heart, ask no questions: supreme good fortune. Benevolence will be recognized as your virtue.", "Nine at the top: He brings increase to no one. Indeed, someone strikes him. He does not keep his heart constantly steady. Misfortune."]},
-            "111110": {num: 43, name: "夬 Guài / Break-through (Resoluteness)", judgment: "Break-through. One must resolutely make the matter known at the court of the king. It must be announced truthfully. Danger. It is necessary to notify one's own city. It does not further to resort to arms. It furthers one to undertake something.", image: "The lake has risen up to heaven. Thus the superior man dispenses riches downward and refrains from resting on his virtue.", lines: ["Nine at the beginning: Mighty in the forward-striding toes. When one goes and is not equal to the task, one makes a mistake.", "Nine in the second place: A cry of alarm. Arms at evening and at night. Fear nothing.", "Nine in the third place: To be powerful in the cheekbones brings misfortune. The superior man is firmly resolved. He walks alone and is caught in the rain. He is bespattered, and people murmur against him. No blame.", "Nine in the fourth place: There is no skin on his thighs, and walking is difficult. If one lets oneself be led like a sheep, remorse disappears. But if these words are heard, they will not be believed.", "Nine in the fifth place: In dealing with weeds, firm resolution is necessary. Walking in the middle remains free of blame.", "Six at the top: No cry. In the end misfortune comes."]},
-            "011111": {num: 44, name: "姤 Gòu / Coming to Meet", judgment: "Coming to meet. The maiden is powerful. One should not marry such a maiden.", image: "Under heaven, wind. Thus the prince issues his commands and proclaims them to the four quarters of the world.", lines: ["Six at the beginning: It must be checked with a brake of bronze. Perseverance brings good fortune. If one lets it take its course, one experiences misfortune. Even a lean pig has it in him to rage.", "Nine in the second place: There is a fish in the tank. No blame. Does not further guests.", "Nine in the third place: There is no skin on his thighs, and walking is difficult. If one is mindful of the danger, no great mistake is made.", "Nine in the fourth place: No fish in the tank. This leads to misfortune.", "Nine in the fifth place: A melon covered with willow leaves. Hidden lines. Then it drops down to one from heaven.", "Nine at the top: He comes to meet with his horns. Humiliation. No blame."]},
-            "000110": {num: 45, name: "萃 Cuì / Gathering Together (Massing)", judgment: "Gathering together. Success. The king approaches his temple. It furthers one to see the great man. This brings success. Perseverance furthers. To make great offerings creates good fortune. It is favorable to undertake something.", image: "The lake on the earth. Thus the superior man renews his weapons in order to meet the unforeseen.", lines: ["Six at the beginning: If you are sincere, but not to the end, there will sometimes be confusion, sometimes gathering together. If you call out, then after a grasp of the hand you can laugh again. Regret not. Going is without blame.", "Six in the second place: Letting oneself be drawn brings good fortune and remains without blame. If one is sincere, it is furthered to use even a small offering.", "Six in the third place: Gathering together amidst sighs. Nothing that would further. Going is without blame. Slight humiliation.", "Nine in the fourth place: Great good fortune. No blame.", "Nine in the fifth place: If in gathering together one has position, this brings no blame. If there are some who are not yet sincerely in accord, sublime and lasting perseverance is needed. Then remorse disappears.", "Six at the top: Lamenting and sighing, floods of tears. No blame."]},
-            "011000": {num: 46, name: "升 Shēng / Pushing Upward", judgment: "Pushing upward has supreme success. One must see the great man. Fear not. Departure toward the south brings good fortune.", image: "Within the earth, wood grows. Thus the superior man of devoted character heaps up small things in order to achieve something high and great.", lines: ["Six at the beginning: Pushing upward that meets with confidence brings great good fortune.", "Nine in the second place: If one is sincere, it is favorable to present a small offering. No blame.", "Nine in the third place: One pushes upward into an empty city.", "Six in the fourth place: The king offers him sacrifices on Mount Ch'i. Good fortune. No blame.", "Six in the fifth place: Perseverance brings good fortune. One pushes upward by steps.", "Six at the top: Pushing upward in darkness. It is favorable to be unremittingly persevering."]},
-            "010110": {num: 47, name: "困 Kùn / Oppression (Exhaustion)", judgment: "Oppression. Success. Perseverance. The great man brings good fortune. No blame. When one has something to say, it is not believed.", image: "There is no water in the lake. Thus the superior man stakes his life on following his will.", lines: ["Six at the beginning: One sits oppressed under a bare tree and strays into a gloomy valley. For three years one sees nothing.", "Nine in the second place: One is oppressed while at meat and drink. The man with the scarlet knee bands is just coming. It is favorable to make offerings. To set forth brings misfortune. No blame.", "Six in the third place: A man is oppressed by stone, and leans on thorns and thistles. He enters his house and does not see his wife. Misfortune.", "Nine in the fourth place: He comes very slowly, oppressed in a golden carriage. Humiliation, but the end is reached.", "Nine in the fifth place: His nose and feet are cut off. Oppression at the hands of the man with the purple knee bands. Joy comes slowly. It is favorable to make offerings and libations.", "Six at the top: He is oppressed by creeping vines. He moves uncertainly and says, 'Movement brings remorse.' If one feels remorse for this and sets forth, good fortune comes."]},
-            "011010": {num: 48, name: "井 Jǐng / The Well", judgment: "The well. The town may be changed, but the well cannot be changed. It neither decreases nor increases. They come and go and draw from the well. If one gets down almost to the water and the rope does not go all the way, or the jug breaks, it brings misfortune.", image: "Water over wood. Thus the superior man encourages the people at their work and exhorts them to help one another.", lines: ["Six at the beginning: One does not drink the mud of the well. No animals come to an old well.", "Nine in the second place: In the well shaft one shoots at fishes. The jug is broken and leaks.", "Nine in the third place: The well is cleaned, but no one drinks from it. This is my heart's sorrow, for one might draw from it. If the king were clear-minded, good fortune might be enjoyed in common.", "Six in the fourth place: The well is being lined. No blame.", "Nine in the fifth place: In the well there is a clear, cold spring from which one can drink.", "Six at the top: One draws from the well without hindrance. It is dependable. Supreme good fortune."]},
-            "101110": {num: 49, name: "革 Gé / Revolution (Molting)", judgment: "Revolution. On your own day you are believed. Supreme success, furthering through perseverance. Remorse disappears.", image: "Fire in the lake. Thus the superior man sets the calendar in order and makes the seasons clear.", lines: ["Nine at the beginning: Wrapped in the hide of a yellow cow.", "Six in the second place: When one's own day comes, one may create revolution. Starting brings good fortune. No blame.", "Nine in the third place: Starting brings misfortune. Perseverance brings danger. When the talk of revolution has gone the rounds three times, one may commit himself, and people will believe him.", "Nine in the fourth place: Remorse disappears. Men believe him. Changing the form of government brings good fortune.", "Nine in the fifth place: The great man changes like a tiger. Even before he questions the oracle he is believed.", "Six at the top: The superior man changes like a panther. The inferior man molts in the face. Starting brings misfortune. To remain persevering brings good fortune."]},
-            "011101": {num: 50, name: "鼎 Dǐng / The Cauldron", judgment: "The cauldron. Supreme good fortune. Success.", image: "Fire over wood. Thus the superior man consolidates his fate by making his position correct.", lines: ["Six at the beginning: A cauldron with legs upturned. Furthers removal of stagnant stuff. One takes a concubine for the sake of her son. No blame.", "Nine in the second place: There is food in the cauldron. My comrades are envious, but they cannot harm me. Good fortune.", "Nine in the third place: The handle of the cauldron is altered. One is impeded in his way of life. The fat of the pheasant is not eaten. Once rain falls, remorse is spent. Good fortune comes in the end.", "Nine in the fourth place: The legs of the cauldron are broken. The prince's meal is spilled and his person is soiled. Misfortune.", "Six in the fifth place: The cauldron has yellow handles, golden carrying rings. Perseverance furthers.", "Nine at the top: The cauldron has rings of jade. Great good fortune. Nothing that would not act to further."]},
-            "100100": {num: 51, name: "震 Zhèn / The Arousing (Shock, Thunder)", judgment: "Shock brings success. Shock comes—oh, oh! Laughing words—ha, ha! The shock terrifies for a hundred miles, And he does not let fall the sacrificial spoon and chalice.", image: "Thunder repeated. Thus the superior man sets his life in order and examines himself.", lines: ["Nine at the beginning: Shock comes—oh, oh! Then follow laughing words—ha, ha! Good fortune.", "Six in the second place: Shock comes bringing danger. A hundred thousand times you lose your treasures and must climb the nine hills. Do not go in pursuit of them. After seven days you will get them back.", "Six in the third place: Shock is coming and makes one distraught. If shock stimulates to action, one remains free of misfortune.", "Nine in the fourth place: Shock is buried in mud.", "Six in the fifth place: Shock goes hither and thither. Danger. However, nothing is lost. Yet there are things to be done.", "Six at the top: Shock brings ruin and terrified gazing around. Going ahead brings misfortune. If it has not yet touched one's own body but has touched one's neighbor, there is no blame. One's comrades have something to talk about."]},
-            "001001": {num: 52, name: "艮 Gèn / Keeping Still, Mountain", judgment: "Keeping still. Keeping his back still so that he no longer feels his body. He goes into his courtyard and does not see his people. No blame.", image: "Mountains standing close together. Thus the superior man does not permit his thoughts to go beyond his situation.", lines: ["Six at the beginning: Keeping his toes still. No blame. Continued perseverance.", "Six in the second place: Keeping his calves still. He cannot rescue him whom he follows. His heart is not glad.", "Nine in the third place: Keeping his hips still. Making his sacrum stiff. Dangerous. The heart suffocates.", "Six in the fourth place: Keeping his trunk still. No blame.", "Six in the fifth place: Keeping his jaws still. The words have order. Remorse disappears.", "Nine at the top: Noble-hearted keeping still. Good fortune."]},
-            "001011": {num: 53, name: "漸 Jiàn / Development (Gradual Progress)", judgment: "Development. The maiden is given in marriage. Good fortune. Perseverance furthers.", image: "On the mountain, a tree. Thus the superior man abides in dignity and virtue, in order to improve the mores.", lines: ["Six at the beginning: The wild goose gradually draws near the shore. The young son is in danger. There is talk. No blame.", "Six in the second place: The wild goose gradually draws near the cliff. Eating and drinking in peace and concord. Good fortune.", "Nine in the third place: The wild goose gradually draws near the plateau. The husband goes forth and does not return. The wife is pregnant, but does not give birth. Misfortune. It is favorable to ward off robbers.", "Six in the fourth place: The wild goose gradually draws near the tree. Perhaps it will find a flat branch. No blame.", "Nine in the fifth place: The wild goose gradually draws near the summit. For three years the wife has no child. In the end nothing can hinder her. Good fortune.", "Nine at the top: The wild goose gradually draws near the clouds heights. Its feathers can be used for the sacred dance. Good fortune."]},
-            "110100": {num: 54, name: "歸妹 Guī Mèi / The Marrying Maiden", judgment: "The marrying maiden. Undertakings bring misfortune. Nothing that would further.", image: "Thunder over the lake. Thus the superior man understands the transitory in the light of the eternity of the end.", lines: ["Nine at the beginning: The marrying maiden as a concubine. A lame man who is able to tread. Undertakings bring good fortune.", "Nine in the second place: A one-eyed man who is able to see. The perseverance of a solitary man furthers.", "Six in the third place: The marrying maiden as a slave. She marries as a concubine.", "Nine in the fourth place: The marrying maiden draws out the allotted time. A late marriage comes in due course.", "Six in the fifth place: The sovereign I gave his daughter in marriage. The embroidered garments of the princess were not as gorgeous as those of the serving maid. The moon that is nearly full brings good fortune.", "Six at the top: The woman holds the basket, but there are no fruits in it. The man stabs the sheep, but no blood flows. Nothing that furthers."]},
-            "101100": {num: 55, name: "豐 Fēng / Abundance (Fullness)", judgment: "Abundance has success. The king attains abundance. Be not sad. Be like the sun at midday.", image: "Both thunder and lightning come. Thus the superior man decides lawsuits and carries out punishments.", lines: ["Nine at the beginning: When a man meets his destined ruler, they can be together for ten days, and it is not a mistake. Going meets with recognition.", "Six in the second place: The curtain is of such fullness that the polestars can be seen at noon. Through going one meets with mistrust and hate. If one rouses him through truth, good fortune comes.", "Nine in the third place: The screen is of such fullness that the small stars can be seen at noon. He breaks his right arm. No blame.", "Nine in the fourth place: The curtain is of such fullness that the polestars can be seen at noon. He meets his ruler, who is of like kind. Good fortune.", "Six in the fifth place: He brings helpers. This is a blessing. Good fortune.", "Six at the top: His house is in a state of abundance. He screens off his family. He peers through the gate and no longer perceives anyone. For three years he sees nothing. Misfortune."]},
-            "001101": {num: 56, name: "旅 Lǚ / The Wanderer", judgment: "The wanderer. Success through smallness. Perseverance brings good fortune to the wanderer.", image: "Fire on the mountain. Thus the superior man is clear-minded and cautious in imposing penalties, and does not protract lawsuits.", lines: ["Six at the beginning: If the wanderer busies himself with trivial things, he draws down misfortune upon himself.", "Six in the second place: The wanderer comes to an inn. He has his property with him. He wins the steadfastness of a young servant.", "Nine in the third place: The wanderer's inn burns down. He loses the steadfastness of his young servant. Danger.", "Nine in the fourth place: The wanderer rests in a shelter. He obtains his property and an ax. My heart is not glad.", "Six in the fifth place: He shoots a pheasant. It drops with the first arrow. In the end this brings both praise and office.", "Nine at the top: The bird's nest burns up. The wanderer laughs at first, then must needs lament and weep. Through carelessness he loses his cow. Misfortune."]},
-            "011011": {num: 57, name: "巽 Xùn / The Gentle (The Penetrating, Wind)", judgment: "The gentle. Success through what is small. It is favorable to have somewhere to go. It is favorable to see the great man.", image: "Winds following one upon the other. Thus the superior man spreads his commands abroad and carries out his undertakings.", lines: ["Six at the beginning: In advancing and in retreating, the perseverance of a warrior furthers.", "Nine in the second place: Penetration under the bed. Priests and magicians are used in great number. Good fortune. No blame.", "Nine in the third place: Repeated penetration. Humiliation.", "Six in the fourth place: Remorse vanishes. In the hunt three kinds of game are caught.", "Nine in the fifth place: Perseverance brings good fortune. Remorse vanishes. Nothing that does not further. No beginning, but an end. Before the change, three days. After the change, three days. Good fortune.", "Nine at the top: Penetration under the bed. He loses his property and his ax. Perseverance brings misfortune."]},
-            "110110": {num: 58, name: "兌 Duì / The Joyous, Lake", judgment: "The joyous. Success. Perseverance is favorable.", image: "Lakes resting one on the other. Thus the superior man joins with his friends for discussion and practice.", lines: ["Nine at the beginning: Contented joyousness. Good fortune.", "Nine in the second place: Sincere joyousness. Good fortune. Remorse disappears.", "Six in the third place: Coming joyousness. Misfortune.", "Nine in the fourth place: Joyousness that is weighed is not at peace. After ridding himself of his mistakes, a man has joy.", "Nine in the fifth place: Sincerity toward disintegrating influences is dangerous.", "Six at the top: Seductive joyousness."]},
-            "010011": {num: 59, name: "渙 Huàn / Dispersion (Dissolution)", judgment: "Dispersion. Success. The king approaches his temple. It furthers one to cross the great water. Perseverance furthers.", image: "The wind drives over the water. Thus the ancient kings made offerings to God and built temples.", lines: ["Six at the beginning: He brings help with the strength of a horse. Good fortune.", "Nine in the second place: In the midst of dispersion, he hurries to his support. Remorse disappears.", "Six in the third place: He disperses his self. No remorse.", "Six in the fourth place: He disperses his group. Supreme good fortune. Dispersion leads in turn to accumulation. This is something that ordinary men do not think of.", "Nine in the fifth place: His loud cries are as dissolving as sweat. Dispersion. A king abides without blame.", "Nine at the top: He disperses his blood. Departing, keeping at a distance, going out, is without blame."]},
-            "110010": {num: 60, name: "節 Jié / Limitation", judgment: "Limitation. Success. Galling limitation must not be persevered in.", image: "Water over lake. Thus the superior man creates number and measure, and examines the nature of virtue and correct conduct.", lines: ["Nine at the beginning: Not going out of the door and the courtyard is without blame.", "Nine in the second place: Not going out of the gate and the courtyard brings misfortune.", "Six in the third place: He who knows no limitation will have cause to lament. No blame.", "Six in the fourth place: Contented limitation. Success.", "Nine in the fifth place: Sweet limitation brings good fortune. Going brings esteem.", "Six at the top: Galling limitation. Perseverance brings misfortune. Remorse disappears."]},
-            "110011": {num: 61, name: "中孚 Zhōng Fú / Inner Truth", judgment: "Inner truth. Pigs and fishes. Good fortune. It furthers one to cross the great water. Perseverance furthers.", image: "Wind over lake. Thus the superior man discusses criminal cases in order to delay executions.", lines: ["Nine at the beginning: Being prepared brings good fortune. If there are secret designs, it is disquieting.", "Nine in the second place: A crane calling in the shade. Its young answers it. I have a good goblet. I will share it with you.", "Six in the third place: He finds a comrade. Now he beats the drum, now he stops. Now he weeps, now he sings.", "Six in the fourth place: The moon is nearly full. The team horse goes astray. No blame.", "Nine in the fifth place: He has truth on his side, bound together. No blame.", "Nine at the top: The crowing of a cock penetrates to heaven. Perseverance brings misfortune."]},
-            "001100": {num: 62, name: "小過 Xiǎo Guò / Preponderance of the Small", judgment: "Preponderance of the small. Success. Perseverance furthers. Small things may be done; great things should not be done. The flying bird brings the message: It is not well to strive upward, it is well to remain below. Great good fortune.", image: "Thunder on the mountain. Thus the superior man in his conduct lays stress on reverence, in bereavement on grief, in his expenditures on modesty.", lines: ["Six at the beginning: The bird meets with misfortune through flying.", "Six in the second place: She passes by her ancestor and meets her ancestress. He does not reach his prince and meets the official. No blame.", "Nine in the third place: If one is not extremely careful, somebody may come from behind and strike him. Misfortune.", "Nine in the fourth place: No blame. He meets him without passing by. Going brings danger. One must be on guard. Do not act. Be constantly persevering.", "Six in the fifth place: Dense clouds, no rain from our western region. The prince shoots and hits him who is in the cave.", "Six at the top: He passes him by, not meeting him. The flying bird leaves him. Misfortune. This means bad luck and injury."]},
-            "101010": {num: 63, name: "既濟 Jì Jì / After Completion", judgment: "After completion. Success in small matters. Perseverance furthers. At the beginning good fortune, at the end disorder.", image: "Water over fire. Thus the superior man takes thought of misfortune and arms himself against it in advance.", lines: ["Nine at the beginning: He brakes his wheels. He gets his tail in the water. No blame.", "Six in the second place: The woman loses the curtain of her carriage. Do not run after it; on the seventh day you will get it.", "Nine in the third place: The Illustrious Ancestor disciplines the Devil's Country. After three years he conquers it. Inferior people must not be employed.", "Six in the fourth place: The finest clothes turn to rags. Be careful all day long.", "Nine in the fifth place: The neighbor in the east who slaughters an ox does not attain as much real happiness as the neighbor in the west with his small offering.", "Six at the top: He gets his head in the water. Danger."]},
-            "010101": {num: 64, name: "未濟 Wèi Jì / Before Completion", judgment: "Before completion. Success. But if the little fox, after nearly completing the crossing, gets his tail in the water, there is nothing that would further.", image: "Fire over water. Thus the superior man is careful in the differentiation of things, so that each finds its place.", lines: ["Six at the beginning: He gets his tail in the water. Humiliating.", "Nine in the second place: He brakes his wheels. Perseverance brings good fortune.", "Six in the third place: Before completion, attack brings misfortune. It is favorable to cross the great water.", "Nine in the fourth place: Perseverance brings good fortune. Remorse disappears. Shock, in order to chastise the Devil's Country. For three years, great realms are awarded.", "Six in the fifth place: Perseverance brings good fortune. No remorse. The light of the superior man is true. Good fortune.", "Nine at the top: He drinks wine in genuine confidence. No blame. But if he wets his head, he loses it, in truth."]}
-        };
-        
-        // --- DOM Elements ---
-        const castButton = document.getElementById('castButton');
-        const resetButton = document.getElementById('resetButton');
-        const controlsDiv = document.getElementById('controls');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const primaryHexagramDiv = document.getElementById('primaryHexagram');
-        const changingLinesDiv = document.getElementById('changingLines');
-        const relatingHexagramDiv = document.getElementById('relatingHexagram');
+        // --- Configuration & Initialization ---
 
-        // --- Core Logic ---
+        function loadConfigAndInit() {
+            geminiApiKey = localStorage.getItem('geminiApiKey');
+            googleClientId = localStorage.getItem('googleClientId');
+            const storedFirebaseConfig = localStorage.getItem('firebaseConfig');
 
-        /**
-         * Simulates tossing three coins and returns the sum.
-         * Heads = 3, Tails = 2
-         * @returns {number} 6, 7, 8, or 9
-         */
-        function tossCoins() {
-            let sum = 0;
-            for (let i = 0; i < 3; i++) {
-                sum += (Math.random() < 0.5) ? 2 : 3;
-            }
-            return sum;
-        }
-
-        /**
-         * Generates the six lines for the hexagram.
-         */
-        function castHexagram() {
-            controlsDiv.classList.add('hidden');
-            resultsContainer.classList.remove('hidden');
-
-            const lineValues = [];
-            for (let i = 0; i < 6; i++) {
-                lineValues.push(tossCoins());
-            }
-            
-            interpretAndDisplay(lineValues);
-        }
-
-        /**
-         * Interprets the line values and displays the results.
-         * @param {number[]} lineValues - An array of 6 numbers (6,7,8,9).
-         */
-        function interpretAndDisplay(lineValues) {
-            const primaryLines = []; // e.g. [1, 0, 1, 0, 1, 0]
-            const relatingLines = [];
-            const changingLineIndices = [];
-
-            lineValues.forEach((val, index) => {
-                if (val === 6) { // Changing Yin
-                    primaryLines.push(0);
-                    relatingLines.push(1);
-                    changingLineIndices.push(index);
-                } else if (val === 7) { // Stable Yang
-                    primaryLines.push(1);
-                    relatingLines.push(1);
-                } else if (val === 8) { // Stable Yin
-                    primaryLines.push(0);
-                    relatingLines.push(0);
-                } else if (val === 9) { // Changing Yang
-                    primaryLines.push(1);
-                    relatingLines.push(0);
-                    changingLineIndices.push(index);
-                }
-            });
-
-            const primaryKey = primaryLines.slice().reverse().join('');
-            const primaryHexagram = iChingData[primaryKey];
-
-            displayHexagram(primaryHexagramDiv, "Primary Hexagram", primaryHexagram, primaryLines, lineValues);
-
-            if (changingLineIndices.length > 0) {
-                const relatingKey = relatingLines.slice().reverse().join('');
-                const relatingHexagram = iChingData[relatingKey];
-                
-                displayChangingLines(changingLineIndices, primaryHexagram);
-                displayHexagram(relatingHexagramDiv, "Relating Hexagram", relatingHexagram, relatingLines);
+            if (!geminiApiKey || !googleClientId || !storedFirebaseConfig) {
+                configModal.classList.remove('hidden');
             } else {
-                changingLinesDiv.innerHTML = '';
-                relatingHexagramDiv.innerHTML = '';
+                try {
+                    firebaseConfig = JSON.parse(storedFirebaseConfig);
+                    initializeAppAndAuth();
+                } catch (e) {
+                    console.error("Failed to parse Firebase config from localStorage", e);
+                    localStorage.clear(); // Clear corrupted config
+                    configModal.classList.remove('hidden');
+                }
             }
         }
-        
-        /**
-         * Renders a hexagram to the specified div.
-         * @param {HTMLElement} element - The container to render into.
-         * @param {string} title - The title for this section.
-         * @param {object} hexagramData - The data object for the hexagram.
-         * @param {number[]} lineStructure - The hexagram's line structure [1,0,1,0,1,0]
-         * @param {number[]} [lineValues] - Optional cast values [6,7,8,9] to show changing markers.
-         */
-        function displayHexagram(element, title, hexagramData, lineStructure, lineValues) {
-            if (!hexagramData) {
-                element.innerHTML = `<div class="text-center p-4 border-l-4 border-red-500 bg-red-100 text-red-700">
-                    <h3 class="font-bold">${title}</h3>
-                    <p>An unexpected error occurred. Please try again.</p>
-                </div>`;
+
+        function saveConfig() {
+            const geminiKey = geminiApiKeyInput.value.trim();
+            const clientId = googleClientIdInput.value.trim();
+            const fbConfigStr = firebaseConfigInput.value.trim();
+
+            if (!geminiKey || !clientId || !fbConfigStr) {
+                alert("Please fill out all fields.");
                 return;
             }
 
-            let hexagramLinesHTML = '';
-            // Draw lines from top (index 5) to bottom (index 0)
-            for (let i = 5; i >= 0; i--) {
-                const isSolid = lineStructure[i] === 1;
-                const val = lineValues ? lineValues[i] : null;
-                const isChanging = (val === 6 || val === 9);
+            try {
+                // Test parsing the config before saving
+                JSON.parse(fbConfigStr);
+                localStorage.setItem('geminiApiKey', geminiKey);
+                localStorage.setItem('googleClientId', clientId);
+                localStorage.setItem('firebaseConfig', fbConfigStr);
+                configModal.classList.add('hidden');
+                loadConfigAndInit();
+            } catch (e) {
+                alert("The Firebase config is not valid JSON. Please check and paste it again.");
+            }
+        }
+
+        function initializeAppAndAuth() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
                 
-                let lineHTML = '<div class="hex-line">';
-                if (isSolid) {
-                    lineHTML += '<div class="solid-line"></div>';
-                } else {
-                    lineHTML += '<div class="broken-line"><div class="broken-line-part"></div><div class="broken-line-part"></div></div>';
-                }
-                if(isChanging) {
-                    lineHTML += '<div class="changing-marker"></div>';
-                }
-                lineHTML += '</div>';
-                hexagramLinesHTML += lineHTML;
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    updateUIForAuthState(user);
+                    if (user) {
+                        loadPastReadings(user.uid);
+                    }
+                });
+
+                appDiv.classList.remove('hidden');
+                appDiv.classList.add('fade-in');
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                alert("Firebase initialization failed. Please check your config.");
+                localStorage.clear();
+                configModal.classList.remove('hidden');
+            }
+        }
+
+        // --- Authentication ---
+
+        function updateUIForAuthState(user) {
+            authContainer.innerHTML = '';
+            if (user) {
+                authContainer.innerHTML = `
+                    <div class="text-right">
+                        <p class="text-sm font-medium">${user.displayName}</p>
+                        <p class="text-xs text-slate-500">${user.email}</p>
+                    </div>
+                    <img src="${user.photoURL}" alt="User photo" class="w-10 h-10 rounded-full">
+                    <button id="logoutButton" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Logout</button>
+                `;
+                document.getElementById('logoutButton').addEventListener('click', handleSignOut);
+                askButton.disabled = false;
+            } else {
+                authContainer.innerHTML = `
+                    <button id="loginButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Login with Google</button>
+                `;
+                document.getElementById('loginButton').addEventListener('click', handleSignIn);
+                askButton.disabled = true;
+                pastReadingsDiv.classList.add('hidden');
+            }
+        }
+
+        async function handleSignIn() {
+            const provider = new GoogleAuthProvider();
+            // Important: Set the custom OAuth client ID
+            provider.setCustomParameters({
+                'client_id': googleClientId
+            });
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Google Sign-In Error", error);
+                alert(`Could not sign in with Google. Error: ${error.message}`);
+            }
+        }
+
+        async function handleSignOut() {
+            try {
+                await signOut(auth);
+                readingsListDiv.innerHTML = ''; // Clear readings on logout
+            } catch (error) {
+                console.error("Sign Out Error", error);
+            }
+        }
+
+        // --- Gemini API Interaction ---
+
+        async function askGemini() {
+            const question = questionInput.value.trim();
+            if (!question) {
+                alert("Please enter a question.");
+                return;
             }
 
-            element.innerHTML = `
-                <div class="border-t pt-6 mt-6 first:mt-0 first:border-t-0 first:pt-0">
-                    <h2 class="text-xl font-bold text-center text-slate-600 mb-4">${title}</h2>
-                    <div class="flex flex-col md:flex-row gap-6 items-center">
-                        <div class="w-32 flex-shrink-0">${hexagramLinesHTML}</div>
-                        <div class="w-full">
-                            <h3 class="text-2xl font-bold">${hexagramData.num}. ${hexagramData.name}</h3>
-                            <p class="mt-2 text-lg italic">"${hexagramData.judgment}"</p>
-                            <p class="mt-4 text-slate-600"><strong class="font-semibold">The Image:</strong> ${hexagramData.image}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        /**
-         * Displays the text for the changing lines.
-         * @param {number[]} indices - Array of indices for the changing lines.
-         * @param {object} hexagramData - The primary hexagram's data.
-         */
-        function displayChangingLines(indices, hexagramData) {
-            if (!hexagramData) return;
-            let content = '<h3 class="text-xl font-bold text-center text-slate-600 mb-2">Changing Lines</h3>';
-            content += '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg space-y-2">';
-            indices.forEach(index => {
-                // Line numbers are 1-6 from bottom up.
-                content += `<p><strong class="font-semibold">Line ${index + 1}:</strong> ${hexagramData.lines[index]}</p>`;
-            });
-            content += '</div>';
-            changingLinesDiv.innerHTML = content;
+            askButton.disabled = true;
+            askButton.innerHTML = '<div class="spinner !w-6 !h-6 mx-auto"></div>';
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.innerHTML = '<div class="spinner"></div><p class="text-center text-slate-500">The oracle is contemplating...</p>';
+
+            try {
+                const prompt = `You are a wise and ancient oracle. A person has come to you with a question. Provide a thoughtful, insightful, and slightly mystical response. The question is: "${question}"`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `API request failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+                const text = data.candidates[0].content.parts[0].text;
+                
+                // Simple markdown-to-HTML
+                let formattedText = text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
+
+                resultsContainer.innerHTML = `<p>${formattedText}</p>`;
+                await saveReading(question, text);
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                resultsContainer.innerHTML = `<p class="text-red-500">An error occurred: ${error.message}</p>`;
+            } finally {
+                askButton.disabled = false;
+                askButton.textContent = 'Ask Gemini';
+            }
         }
 
-        /**
-         * Resets the application to its initial state.
-         */
-        function resetApp() {
-            resultsContainer.classList.add('hidden');
-            primaryHexagramDiv.innerHTML = '';
-            changingLinesDiv.innerHTML = '';
-            relatingHexagramDiv.innerHTML = '';
-            controlsDiv.classList.remove('hidden');
+        // --- Firestore Data Persistence ---
+
+        async function saveReading(question, answer) {
+            if (!currentUser) return;
+            try {
+                await addDoc(collection(db, "users", currentUser.uid, "readings"), {
+                    question: question,
+                    answer: answer,
+                    createdAt: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error saving reading to Firestore: ", error);
+            }
+        }
+
+        function loadPastReadings(uid) {
+            const readingsCol = collection(db, "users", uid, "readings");
+            const q = query(readingsCol, where("question", "!=", "")); // Basic query, can be ordered by timestamp
+
+            onSnapshot(q, (querySnapshot) => {
+                if (querySnapshot.empty) {
+                    pastReadingsDiv.classList.add('hidden');
+                    return;
+                }
+                
+                readingsListDiv.innerHTML = '';
+                const readings = [];
+                querySnapshot.forEach((doc) => {
+                    readings.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort by date client-side to avoid composite index requirement
+                readings.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+
+                readings.forEach(data => {
+                    const date = data.createdAt ? data.createdAt.toDate().toLocaleString() : 'Just now';
+                    const readingEl = document.createElement('div');
+                    readingEl.className = 'bg-white p-4 rounded-lg border border-slate-200';
+                    readingEl.innerHTML = `
+                        <p class="text-xs text-slate-400 mb-2">${date}</p>
+                        <p class="font-semibold text-slate-700">${data.question}</p>
+                        <p class="text-sm text-slate-600 mt-2 truncate">${data.answer}</p>
+                    `;
+                    readingsListDiv.appendChild(readingEl);
+                });
+                pastReadingsDiv.classList.remove('hidden');
+            }, (error) => {
+                console.error("Error loading past readings:", error);
+            });
         }
 
         // --- Event Listeners ---
-        castButton.addEventListener('click', castHexagram);
-        resetButton.addEventListener('click', resetApp);
+        window.addEventListener('load', loadConfigAndInit);
+        saveConfigButton.addEventListener('click', saveConfig);
+        askButton.addEventListener('click', askGemini);
 
     </script>
 </body>
