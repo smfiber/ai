@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Ching Divination</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for the hexagram lines */
+        .hex-line {
+            height: 12px;
+            margin: 8px auto;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .solid-line {
+            background-color: #334155; /* slate-700 */
+            width: 100px;
+            border-radius: 4px;
+        }
+        .broken-line {
+            width: 100px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .broken-line-part {
+            background-color: #334155; /* slate-700 */
+            width: 45%;
+            height: 12px;
+            border-radius: 4px;
+        }
+        .changing-marker {
+            width: 10px;
+            height: 10px;
+            background-color: #ca8a04; /* yellow-500 */
+            border-radius: 50%;
+            position: absolute;
+            left: calc(50% + 60px);
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+        
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-slate-700">I Ching Divination</h1>
+            <p class="text-slate-500 mt-2">Consult the Book of Changes for guidance and wisdom.</p>
+        </header>
+
+        <div id="controls" class="text-center mb-6">
+            <p id="instruction" class="mb-4 text-lg">Focus on your question, then cast the coins.</p>
+            <button id="castButton" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Cast Coins
+            </button>
+        </div>
+
+        <div id="resultsContainer" class="hidden fade-in">
+            <!-- Hexagram results will be injected here -->
+            <div id="primaryHexagram"></div>
+            <div id="changingLines" class="my-6"></div>
+            <div id="relatingHexagram"></div>
+
+            <div class="text-center mt-8">
+                <button id="resetButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                    Ask Another Question
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA: All 64 Hexagrams ---
+        // This is a simplified dataset. A full implementation would have more detailed text.
+        const iChingData = {
+            "111111": { num: 1, name: "乾 Qián / The Creative", judgment: "The creative works sublime success, furthering through perseverance.", image: "Heaven over Heaven. The movement of heaven is full of power. Thus the superior man makes himself strong and untiring." },
+            "000000": { num: 2, name: "坤 Kūn / The Receptive", judgment: "The receptive brings about sublime success, furthering through the perseverance of a mare.", image: "Earth over Earth. The earth's condition is receptive devotion. Thus the superior man of broad character carries the outer world." },
+            "100010": { num: 3, name: "屯 Zhūn / Difficulty at the Beginning", judgment: "Difficulty at the beginning works supreme success, furthering through perseverance. Nothing should be undertaken. It furthers one to appoint helpers.", image: "Water over Thunder. Thus the superior man brings order out of confusion." },
+            "010001": { num: 4, name: "蒙 Méng / Youthful Folly", judgment: "Youthful folly has success. It is not I who seek the young fool; the young fool seeks me. At the first oracle I inform him. If he asks two or three times, it is importunity. If he is importunate, I give him no information.", image: "Mountain over Water. Thus the superior man fosters his character by thoroughness in all that he does." },
+            "111010": { num: 5, name: "需 Xū / Waiting (Nourishment)", judgment: "Waiting. If you are sincere, you have light and success. Perseverance brings good fortune. It furthers one to cross the great water.", image: "Water over Heaven. Thus the superior man eats and drinks, is joyous and of good cheer." },
+            "010111": { num: 6, name: "訟 Sòng / Conflict", judgment: "Conflict. You are sincere and are being obstructed. A cautious halt halfway brings good fortune. Going through to the end brings misfortune. It furthers one to see the great man. It does not further one to cross the great water.", image: "Heaven over Water. Thus the superior man, in all his transactions, gives consideration to the beginning." },
+            "010000": { num: 7, name: "師 Shī / The Army", judgment: "The army. The army needs perseverance and a strong man. Good fortune without blame.", image: "Earth over Water. Thus the superior man increases his masses by generosity toward the people." },
+            "000010": { num: 8, name: "比 Bǐ / Holding Together (Union)", judgment: "Holding together brings good fortune. Inquire of the oracle once again whether you possess sublimity, constancy, and perseverance; then there is no blame. Those who are uncertain gradually join. Whoever comes too late meets with misfortune.", image: "Water over Earth. Thus the kings of antiquity bestowed the different states as fiefs and cultivated friendly relations with the feudal lords." },
+            "111011": { num: 9, name: "小畜 Xiǎo Xù / The Taming Power of the Small", judgment: "The taming power of the small has success. Dense clouds, no rain from our western region.", image: "Wind over Heaven. Thus the superior man refines the outward aspect of his nature." },
+            "110111": { num: 10, name: "履 Lǚ / Treading (Conduct)", judgment: "Treading upon the tail of the tiger. It does not bite the man. Success.", image: "Heaven over Lake. Thus the superior man discriminates between high and low, and thereby fortifies the thinking of the people." },
+            "111000": { num: 11, name: "泰 Tài / Peace", judgment: "Peace. The small departs, the great approaches. Good fortune. Success.", image: "Earth over Heaven. Thus the ruler fashions and completes the Tao of heaven and earth, and sets up standards for the people." },
+            "000111": { num: 12, name: "否 Pǐ / Standstill (Stagnation)", judgment: "Standstill. Evil people do not further the perseverance of the superior man. The great departs; the small approaches.", image: "Heaven over Earth. Thus the superior man falls back on his inner worth in order to escape the difficulties. He does not permit himself to be honored with revenue." },
+            "101111": { num: 13, name: "同人 Tóng Rén / Fellowship with Men", judgment: "Fellowship with men in the open. Success. It furthers one to cross the great water. The perseverance of the superior man furthers.", image: "Heaven over Fire. Thus the superior man organizes the clans and distinguishes things." },
+            "111101": { num: 14, name: "大有 Dà Yǒu / Possession in Great Measure", judgment: "Possession in great measure. Supreme success.", image: "Fire over Heaven. Thus the superior man curbs evil and furthers good, and thereby obeys the benevolent will of heaven." },
+            "001000": { num: 15, name: "謙 Qiān / Modesty", judgment: "Modesty creates success. The superior man carries things through.", image: "Earth over Mountain. Thus the superior man reduces that which is too much, and augments that which is too little. He weighs things and makes them equal." },
+            "000100": { num: 16, name: "豫 Yù / Enthusiasm", judgment: "Enthusiasm. It furthers one to install helpers and to set armies marching.", image: "Thunder over Earth. Thus the ancient kings made music in order to honor merit, and offered it with splendor to the Supreme Deity, inviting their ancestors to be present." },
+            // ... for brevity, only a subset of hexagrams are included here.
+            // A full implementation would list all 64.
+            "100110": { num: 17, name: "隨 Suí / Following", judgment: "Following has supreme success. Perseverance furthers. No blame.", image: "Lake over Thunder. Thus at nightfall the superior man goes indoors for rest and recuperation." },
+            "011001": { num: 18, name: "蠱 Gǔ / Work on What Has Been Spoiled", judgment: "Work on what has been spoiled has supreme success. It furthers one to cross the great water. Before the starting point, three days. After the starting point, three days.", image: "Mountain over Wind. Thus the superior man stirs up the people and strengthens their spirit." },
+            "110000": { num: 19, name: "臨 Lín / Approach", judgment: "Approach has supreme success. Perseverance furthers. When the eighth month comes, there will be misfortune.", image: "Earth over Lake. Thus the superior man is tireless in his teaching, and without limits in his tolerance and protection of the people." },
+            "000011": { num: 20, name: "觀 Guān / Contemplation (View)", judgment: "Contemplation. The ablution has been made, but not yet the offering. Full of trust they look up to him.", image: "Wind over Earth. Thus the ancient kings visited the regions of the world, contemplated the people, and gave them instruction." }
+            // ... and so on for all 64.
+        };
+        // Add line meanings to data (simplified)
+        Object.keys(iChingData).forEach(key => {
+            iChingData[key].lines = [
+                `Meaning for line 1 of ${iChingData[key].name}`,
+                `Meaning for line 2 of ${iChingData[key].name}`,
+                `Meaning for line 3 of ${iChingData[key].name}`,
+                `Meaning for line 4 of ${iChingData[key].name}`,
+                `Meaning for line 5 of ${iChingData[key].name}`,
+                `Meaning for line 6 of ${iChingData[key].name}`,
+            ];
+        });
+
+
+        // --- DOM Elements ---
+        const castButton = document.getElementById('castButton');
+        const resetButton = document.getElementById('resetButton');
+        const controlsDiv = document.getElementById('controls');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const primaryHexagramDiv = document.getElementById('primaryHexagram');
+        const changingLinesDiv = document.getElementById('changingLines');
+        const relatingHexagramDiv = document.getElementById('relatingHexagram');
+
+        // --- Core Logic ---
+
+        /**
+         * Simulates tossing three coins and returns the sum.
+         * Heads = 3, Tails = 2
+         * @returns {number} 6, 7, 8, or 9
+         */
+        function tossCoins() {
+            let sum = 0;
+            for (let i = 0; i < 3; i++) {
+                // Math.random() < 0.5 for tails (2), otherwise heads (3)
+                sum += (Math.random() < 0.5) ? 2 : 3;
+            }
+            return sum;
+        }
+
+        /**
+         * Generates the six lines for the hexagram.
+         */
+        function castHexagram() {
+            controlsDiv.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+
+            const lineValues = [];
+            for (let i = 0; i < 6; i++) {
+                lineValues.push(tossCoins());
+            }
+            
+            interpretAndDisplay(lineValues);
+        }
+
+        /**
+         * Interprets the line values and displays the results.
+         * @param {number[]} lineValues - An array of 6 numbers (6,7,8,9).
+         */
+        function interpretAndDisplay(lineValues) {
+            const primaryLines = [];
+            const relatingLines = [];
+            const changingLineIndices = [];
+
+            lineValues.forEach((val, index) => {
+                if (val === 6) { // Changing Yin
+                    primaryLines.push(0);
+                    relatingLines.push(1);
+                    changingLineIndices.push(index);
+                } else if (val === 7) { // Stable Yang
+                    primaryLines.push(1);
+                    relatingLines.push(1);
+                } else if (val === 8) { // Stable Yin
+                    primaryLines.push(0);
+                    relatingLines.push(0);
+                } else if (val === 9) { // Changing Yang
+                    primaryLines.push(1);
+                    relatingLines.push(0);
+                    changingLineIndices.push(index);
+                }
+            });
+
+            // The I Ching is built from the bottom up, so we reverse the array for lookup
+            const primaryKey = primaryLines.slice().reverse().join('');
+            const primaryHexagram = iChingData[primaryKey];
+
+            displayHexagram(primaryHexagramDiv, "Primary Hexagram", primaryHexagram, lineValues);
+
+            if (changingLineIndices.length > 0) {
+                const relatingKey = relatingLines.slice().reverse().join('');
+                const relatingHexagram = iChingData[relatingKey];
+                
+                displayChangingLines(changingLineIndices, primaryHexagram);
+                displayHexagram(relatingHexagramDiv, "Relating Hexagram", relatingHexagram);
+            } else {
+                changingLinesDiv.innerHTML = '';
+                relatingHexagramDiv.innerHTML = '';
+            }
+        }
+        
+        /**
+         * Renders a hexagram to the specified div.
+         * @param {HTMLElement} element - The container to render into.
+         * @param {string} title - The title for this section.
+         * @param {object} hexagramData - The data object for the hexagram.
+         * @param {number[]} [lineValues] - Optional line values to show changing markers.
+         */
+        function displayHexagram(element, title, hexagramData, lineValues) {
+            if (!hexagramData) {
+                element.innerHTML = `<div class="text-center p-4 border-l-4 border-red-500 bg-red-100 text-red-700">
+                    <h3 class="font-bold">${title}</h3>
+                    <p>Hexagram data not found. The dataset is currently incomplete.</p>
+                </div>`;
+                return;
+            }
+
+            let hexagramLinesHTML = '';
+            // Draw lines from top (index 5) to bottom (index 0)
+            for (let i = 5; i >= 0; i--) {
+                const val = lineValues ? lineValues[i] : null;
+                const isChanging = (val === 6 || val === 9);
+                const isSolid = (val === 7 || val === 9 || (hexagramData.num > 0 && hexagramData.num <= 64 && iChingData[Object.keys(iChingData)[hexagramData.num-1]].lines[i] === 1)); // fallback for relating hex
+                
+                let lineHTML = '<div class="hex-line">';
+                if (isSolid || (val === null && hexagramData.lines[i] === 1)) {
+                    lineHTML += '<div class="solid-line"></div>';
+                } else {
+                    lineHTML += '<div class="broken-line"><div class="broken-line-part"></div><div class="broken-line-part"></div></div>';
+                }
+                if(isChanging) {
+                    lineHTML += '<div class="changing-marker"></div>';
+                }
+                lineHTML += '</div>';
+                hexagramLinesHTML += lineHTML;
+            }
+
+            element.innerHTML = `
+                <div class="border-t pt-4">
+                    <h2 class="text-xl font-bold text-center text-slate-600 mb-4">${title}</h2>
+                    <div class="flex flex-col md:flex-row gap-6 items-center">
+                        <div class="w-2/5 md:w-1/4">${hexagramLinesHTML}</div>
+                        <div class="w-full md:w-3/4">
+                            <h3 class="text-2xl font-bold">${hexagramData.num}. ${hexagramData.name}</h3>
+                            <p class="mt-2 text-lg italic">"${hexagramData.judgment}"</p>
+                            <p class="mt-4 text-slate-600"><strong class="font-semibold">The Image:</strong> ${hexagramData.image}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Displays the text for the changing lines.
+         * @param {number[]} indices - Array of indices for the changing lines.
+         * @param {object} hexagramData - The primary hexagram's data.
+         */
+        function displayChangingLines(indices, hexagramData) {
+            let content = '<h3 class="text-xl font-bold text-center text-slate-600 mb-2">Changing Lines</h3>';
+            content += '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">';
+            indices.forEach(index => {
+                // Line numbers are 1-6 from bottom up.
+                content += `<p class="mb-2"><strong class="font-semibold">Line ${index + 1}:</strong> ${hexagramData.lines[index]}</p>`;
+            });
+            content += '</div>';
+            changingLinesDiv.innerHTML = content;
+        }
+
+        /**
+         * Resets the application to its initial state.
+         */
+        function resetApp() {
+            resultsContainer.classList.add('hidden');
+            primaryHexagramDiv.innerHTML = '';
+            changingLinesDiv.innerHTML = '';
+            relatingHexagramDiv.innerHTML = '';
+            controlsDiv.classList.remove('hidden');
+        }
+
+        // --- Event Listeners ---
+        castButton.addEventListener('click', castHexagram);
+        resetButton.addEventListener('click', resetApp);
+
+    </script>
+</body>
+</html>
