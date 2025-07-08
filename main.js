@@ -1424,11 +1424,6 @@ function showThemeLoading(isLoading) {
     document.getElementById('header-loader').classList.toggle('flex', isLoading);
 }
 
-/**
- * [FIXED] Constructs and retrieves the application's master prompts.
- * Passes a valid, structured array for fullHierarchyPath to prevent TypeErrors.
- * @returns {object} An object containing the application's core prompts.
- */
 function getAppPrompts() {
     const prompts = {};
     const blueprintContext = {
@@ -1472,140 +1467,109 @@ function getRefinementPrompt(originalText = '{original_text}', refinementRequest
 }
 
 /**
- * [FIXED] Constructs the master prompt for generating guide content.
- * It now combines the main category with the core task to create a more specific `fullSubject`,
- * ensuring the AI generates content with the proper context.
- * @param {string} type - The type of guide to generate ('blueprint' or 'fullGuide').
- * @param {object} context - An object containing the necessary data for prompt construction.
- * @returns {string} The fully constructed prompt for the AI.
+ * [ENHANCED] Constructs master prompts with improved specificity and quality control.
+ * @param {string} type - 'blueprint' or 'fullGuide'.
+ * @param {object} context - Data for prompt construction.
+ * @returns {string} The fully constructed prompt.
  */
 function getMasterGuidePrompt(type, context) {
     const {
         blueprintMarkdown = '',
         coreTask = '',
-        persona = '', // For workshop
-        tone = '', // For workshop
-        additionalContext = '', // For workshop
-        fullHierarchyPath = [] // For hierarchy-based generation
+        persona = '', 
+        tone = '', 
+        additionalContext = '', 
+        fullHierarchyPath = []
     } = context;
 
     let personaAndObjective;
-    let fullSubject = coreTask; // Default subject is the core task
+    let fullSubject = coreTask;
 
-    // Logic for generating from the hierarchy.
     if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
         const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
         const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
-
-        // [FIX] Create a more specific subject by combining the main category and the final topic.
         if (fullHierarchyPath.length > 1) {
             fullSubject = `${coreTask} for ${fullHierarchyPath[0].title}`;
         }
         
-        let personaDescription = "an expert IT Administrator"; // Default persona
+        let personaDescription = "an expert IT Administrator";
         if (finalCategory && finalCategory.initialPrompt) {
             const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
             if (match && match[1]) {
                 personaDescription = match[1].trim();
             }
         }
-
         personaAndObjective = `
 //-- PERSONA & CONTEXT (Derived from Hierarchy) --//
 Persona: You are ${personaDescription}.
-Your writing should be professional, technical, and authoritative, suitable for your defined role.
-The guide is part of a larger knowledge base structured as follows: ${pathString}.
-`;
-    }
-    // Logic for generating from the Prompt Workshop.
-    else {
+Your writing should be professional, technical, and authoritative.
+The guide is part of a knowledge base: ${pathString}.`;
+    } else {
         personaAndObjective = `
 //-- PERSONA & OBJECTIVE (FROM WORKSHOP) --//
 Persona: You are an expert ${persona}.
-Audience & Tone: The guide should be written for a "${tone}" audience.
+Audience & Tone: The guide is for a "${tone}" audience.
 Additional Context: ${additionalContext || 'None'}`;
     }
-
 
     if (type === 'blueprint') {
         return `
         //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
-        Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
-
+        Generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for an IT guide.
         //-- PRIMARY SUBJECT (MANDATORY) --//
-        The Primary Subject of this guide is exclusively: "${fullSubject}".
-        **CRITICAL RULE: You MUST NOT deviate from this Primary Subject.** Your entire focus is on "${fullSubject}".
-
+        The Primary Subject is exclusively: "${fullSubject}". You MUST NOT deviate from this.
         ${personaAndObjective}
-        
         //-- REQUIRED OUTPUT --//
-        1.  **Generate Four Sections Only:** Create detailed content exclusively for:
-            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${fullSubject}". You MUST clearly state the guide's scope (e.g., GUI, PowerShell, API) within this section.
+        1.  **Generate Four Sections:**
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${fullSubject}". State the guide's scope (e.g., GUI, PowerShell, API).
             * ### 2. Architectural Overview: Describe the architecture relevant to "${fullSubject}".
-            * ### 3. Key Concepts & Terminology: Define terms and concepts essential for understanding "${fullSubject}".
-            * ### 4. Prerequisites: List the skills and access required to perform tasks related to "${fullSubject}".
-        2.  **Professional & Accurate:** Content must be technically accurate and professionally written.
-        3.  **Markdown Format:** Use '###' for section headers. Return ONLY markdown for these four sections.`;
+            * ### 3. Key Concepts & Terminology: Define terms essential for "${fullSubject}".
+            * ### 4. Prerequisites: List skills and access required for "${fullSubject}".
+        2.  **Format:** Use '###' for headers. Return ONLY markdown for these four sections.`;
     }
 
     if (type === 'fullGuide') {
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
-        You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4), provided below. Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide, following all instructions with expert-level detail.
-
+        You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
         //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
         ${blueprintMarkdown}
-
         ${personaAndObjective}
-
-        //-- CRITICAL INSTRUCTION: ADHERE TO THE BLUEPRINT'S SCOPE --//
-        The "Introduction" (Section 1) of the blueprint is the master plan. All content you generate for sections 5-12 MUST be about the main topic ("${fullSubject}") and adhere to the scope defined within that introduction. For example, if the intro specifies a GUI-based approach for HPE iLO, do not provide CLI commands unless they are supplementary.
-
-        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH SPECIFIC INSTRUCTIONS --//
-        Generate all of the following sections.
-
+        //-- CRITICAL INSTRUCTION: ADHERE TO SCOPE --//
+        The "Introduction" (Section 1) is the master plan. All content you generate MUST adhere to the scope defined within it.
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
+        
         ### 5. Detailed Implementation Guide
-        **CRITICAL:** This section must be highly practical and actionable. Do NOT be abstract.
-        - For each step, describe the visual elements. What is the exact name of the menu? What is the button label (e.g., "Create Virtual Disk," "Add Physical Disks")?
-        - Provide clear, step-by-step click-paths (e.g., "From the main dashboard, navigate to Storage > Controllers > Array A > Logical Drives.").
-        - Use markdown blockquotes to show example text the user might see in a dialog box, a confirmation message, or a value they might need to enter.
-        - Where a visual would be most helpful, insert a placeholder like: "[Screenshot of the 'Select Physical Disks' dialog, showing three available drives highlighted.]"
-
+        **CRITICAL:** This section must be highly practical.
+        - For every step involving a GUI, it is **mandatory** to add a descriptive screenshot placeholder immediately after the instruction. **This is not optional.** Example: After describing login fields, you **must** add '[Screenshot of the AHS login screen showing Username and Password fields.]'
+        - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+        
         ### 6. Verification and Validation
-        - Provide specific commands (e.g., \`wmic qfe list\`, \`Get-Hotfix\`) or GUI steps to confirm the update/patch was successful.
-        - Describe what a successful output should look like.
-
+        - Provide specific commands or GUI steps to confirm success. Describe the expected successful output.
+        
         ### 7. Best Practices
-        - List at least 3-5 actionable best practices directly related to the specific topic, not generic advice.
-
+        - List 3-5 actionable best practices directly related to the topic.
+        
         ### 8. Automation Techniques
-        - Provide a practical PowerShell or Bash script example to automate a key part of the process described in the guide. The script must be complete and enclosed in a markdown blockquote.
-
+        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        
         ### 9. Security Considerations
-        - Detail specific security hardening steps related to the topic. For example, which policies to enable, which ports to check, or what permissions to verify.
-
+        - Detail specific security hardening steps (e.g., policies to enable, ports to check).
+        
         ### 10. Advanced Use Cases & Scenarios
-        - Describe at least two advanced or non-obvious scenarios where this knowledge could be applied.
-
+        - Describe at least two advanced scenarios where this knowledge could be applied.
+        
         ### 11. Troubleshooting
-        - List at least three common, specific error messages or failure symptoms and their corresponding solutions.
-
+        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and the logical process for isolating the true root cause.
+        
         ### 12. Helpful Resources
-        - Provide a list of 3-4 placeholder links to high-quality, relevant resources like official documentation or deep technical articles. This section will be replaced later by a live web search, but provide realistic-looking placeholders for now.
-
-        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".
-        `;
+        - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
+        
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
     }
-    return ''; // Should not be reached
+    return '';
 }
 
-
-/**
- * [FIXED] Kicks off the generation of the initial guide blueprint (sections 1-4).
- * It now displays the full hierarchy path as a breadcrumb in the modal title.
- * @param {string} topicId - The ID of the selected topic.
- * @param {Array} fullHierarchyPath - The full path array from the root to the selected topic.
- */
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
     const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) || userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
@@ -1618,7 +1582,6 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 
     const fullTitle = `In-Depth: ${item.title}`;
     
-    // [FIX] Create and display breadcrumbs in the modal title
     const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
     const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
     titleEl.innerHTML = `${breadcrumbHtml}${fullTitle}`;
@@ -1651,67 +1614,81 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
+/**
+ * [ENHANCED] Performs a "Search, Validate, and Format" process for generating helpful resources.
+ * @param {string} topic The core topic of the guide.
+ * @param {Array} fullHierarchyPath The hierarchical path of the topic.
+ * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
+ */
 async function generateVerifiedResources(topic, fullHierarchyPath) {
     if (!GOOGLE_SEARCH_ENGINE_ID) {
-        console.warn("Google Search Engine ID is not configured. Skipping real-time resource search.");
+        console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
         return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
 
-    let helpfulResourcesMarkdown = '';
+    const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
     const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic].join(' ');
 
     try {
+        // 1. Search
         const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
-            console.error("Google Search API Error:", errorData);
             throw new Error(`Google Search API request failed: ${errorData.error.message}`);
         }
         const searchResults = await searchResponse.json();
-        const searchItems = searchResults.items?.slice(0, 5) || [];
+        const searchItems = searchResults.items?.slice(0, 8) || []; // Get more results to filter
 
-        if (searchItems.length > 0) {
-            const verifiedLinksContext = searchItems.map(item =>
-                `- Title: ${item.title}\n- URL: ${item.link}\n- Snippet: ${item.snippet}`
-            ).join('\n\n');
-
-            const resourcesPrompt = `
-                Persona: You are an expert IT Technical Writer.
-                Task: Your job is to format the following list of verified search results into a clean, professional "Helpful Resources" section for a technical guide.
-
-                //-- VERIFIED SEARCH RESULTS --//
-                ${verifiedLinksContext}
-
-                //-- INSTRUCTIONS --//
-                1.  **Select the Best 3-4 Links:** From the provided list, choose the most relevant and high-quality links. Prioritize official documentation or deep technical articles.
-                2.  **Use Provided Title and URL:** You MUST use the exact URL provided for each link. Use the provided Title as the linked text.
-                3.  **Write a New Description:** Based on the title and snippet, write a concise, one-sentence description for each resource explaining its value. Do not just copy the snippet.
-                4.  **Format as Markdown:** Structure your response as a complete markdown section, starting with the "### 12. Helpful Resources" header.
-
-                Return ONLY the complete markdown for this section.
-            `;
-
-            helpfulResourcesMarkdown = await callGeminiAPI(resourcesPrompt, false, "Format Helpful Resources");
-        } else {
-             helpfulResourcesMarkdown = `### 12. Helpful Resources\n*No relevant online resources were found for "${contextualTopic}".*`;
+        if (searchItems.length === 0) {
+            return `### 12. Helpful Resources\n*No relevant online resources were found for "${contextualTopic}".*`;
         }
 
-    } catch (searchError) {
-        console.error("Could not fetch or format helpful resources:", searchError);
-        helpfulResourcesMarkdown = `### 12. Helpful Resources\n*An error occurred while trying to find real-time resources: ${searchError.message}*`;
+        // 2. Validate
+        const validationPrompt = `
+            Persona: You are a senior ${mainCategory} expert.
+            Task: Review the following list of web search results. Your job is to critique and filter this list to find the most relevant, authoritative, and up-to-date resources for a technical guide about "${contextualTopic}".
+            
+            //-- SEARCH RESULTS --//
+            ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
+
+            //-- INSTRUCTIONS --//
+            1.  **Critically Evaluate:** Discard any links that are irrelevant (e.g., about different products), severely outdated (e.g., for hardware more than two generations old or deprecated software), or low-quality (e.g., forum posts with no clear answer, marketing pages).
+            2.  **Select the Best:** Choose the top 3-4 most valuable links. Prioritize official documentation, deep-dive technical articles from reputable sources, and official certification guides.
+            3.  **Return JSON:** Your response MUST be a valid JSON array containing only the objects of the approved links. Do not add any other text.
+        `;
+        const validatedLinksJson = await callGeminiAPI(validationPrompt, true, "Validate Search Results");
+        const validatedLinks = parseJsonWithCorrections(validatedLinksJson);
+
+        if (!validatedLinks || validatedLinks.length === 0) {
+            return `### 12. Helpful Resources\n*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
+        }
+        
+        // 3. Format
+        const formattingPrompt = `
+            Persona: You are an expert IT Technical Writer.
+            Task: Format the following list of expert-validated search results into a clean, professional "Helpful Resources" section.
+
+            //-- VALIDATED SEARCH RESULTS --//
+            ${JSON.stringify(validatedLinks)}
+
+            //-- INSTRUCTIONS --//
+            1.  **Use Provided Data:** You MUST use the exact URL and Title provided for each link.
+            2.  **Write New Descriptions:** Based on the title and snippet, write a concise, one-sentence description for each resource explaining its value. Do not just copy the snippet.
+            3.  **Format as Markdown:** Structure your response as a complete markdown section, starting with the "### 12. Helpful Resources" header, followed by a bulleted list.
+
+            Return ONLY the complete markdown for this section.
+        `;
+        return await callGeminiAPI(formattingPrompt, false, "Format Helpful Resources");
+
+    } catch (error) {
+        console.error("Could not fetch, validate, or format helpful resources:", error);
+        return `### 12. Helpful Resources\n*An error occurred while trying to find real-time resources: ${error.message}*`;
     }
-    
-    return helpfulResourcesMarkdown;
 }
 
-/**
- * [FIXED] Implements the complete multi-step guide generation workflow.
- * Now correctly displays the full hierarchy path as a breadcrumb in the modal title.
- * @param {HTMLButtonElement} button The button that triggered the function.
- */
+
 async function generateFullDetailedGuide(button) {
-    // --- 0. Initial Setup ---
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
     const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
@@ -1730,10 +1707,9 @@ async function generateFullDetailedGuide(button) {
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
     const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
     
-    // [FIX] Create and display breadcrumbs in the detailed modal title
     const detailedModalTitleText = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
     const mainTitle = `Complete Guide: ${detailedModalTitleText}`;
-    const detailedModalTitleKey = mainTitle; // Use this as the consistent key
+    const detailedModalTitleKey = mainTitle;
     
     const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
     const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
@@ -1746,7 +1722,6 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
 
     try {
-        // --- 1. Write the First Draft (Sections 5-12) ---
         detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
         const coreTopic = detailedModalTitleText.trim();
         
@@ -1763,7 +1738,7 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        // --- 2. Extract Section 5 for Auto-Refinement ---
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
         const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
         const section5Match = firstDraftMarkdown.match(section5Regex);
         const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
@@ -1772,8 +1747,6 @@ async function generateFullDetailedGuide(button) {
             throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
         }
         
-        // --- 3. Perform Auto-Refinement on Section 5 ---
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
         const refinementPrompt = `
             Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
             
@@ -1781,21 +1754,15 @@ async function generateFullDetailedGuide(button) {
             ${implementationGuideDraft}
         `;
         let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
-        // Ensure the header is present
         if (!refinedImplementationGuide.startsWith('### 5.')) {
             refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
         }
 
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching & validating web resources...');
+        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopic, fullHierarchyPath);
 
-        // --- 4. Conduct Link Research ---
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching the web for verified resources...');
-        const coreTopicForSearch = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
-        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopicForSearch, fullHierarchyPath);
-
-        // --- 5. Final Assembly ---
         detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
         
-        // Get sections 6-11 from the original draft
         const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
         const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
         const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
@@ -2182,16 +2149,8 @@ function getIconForTheme(categoryId, topicId) {
 
 function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
 
-/**
- * [MODIFIED] Sanitizes a title string for safe HTML rendering.
- * Removes leading/trailing special characters and trims whitespace.
- * Also removes angle brackets to prevent HTML injection.
- * @param {string} title The title to sanitize.
- * @returns {string} The sanitized title.
- */
 function sanitizeTitle(title) {
     if (typeof title !== 'string') return '';
-    // Remove angle brackets first, then trim other unwanted characters
     return title.replace(/<|>/g, '').replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
 }
 
