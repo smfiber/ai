@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I Ching Divination</title>
+    <title>I Ching Divination with Firebase</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,81 +12,102 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom styles for the hexagram lines */
-        .hex-line {
-            height: 12px;
-            margin: 8px auto;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .solid-line {
-            background-color: #334155; /* slate-700 */
-            width: 100px;
-            border-radius: 4px;
-        }
-        .broken-line {
-            width: 100px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .broken-line-part {
-            background-color: #334155; /* slate-700 */
-            width: 45%;
-            height: 12px;
-            border-radius: 4px;
-        }
-        .changing-marker {
-            width: 10px;
-            height: 10px;
-            background-color: #ca8a04; /* yellow-500 */
-            border-radius: 50%;
-            position: absolute;
-            left: calc(50% + 60px);
-        }
-        .fade-in {
-            animation: fadeIn 1s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .hex-line { height: 12px; margin: 8px auto; position: relative; display: flex; justify-content: center; align-items: center; }
+        .solid-line { background-color: #334155; width: 100px; border-radius: 4px; height: 12px; }
+        .broken-line { width: 100px; display: flex; justify-content: space-between; }
+        .broken-line-part { background-color: #334155; width: 45%; height: 12px; border-radius: 4px; }
+        .changing-marker { width: 10px; height: 10px; background-color: #ca8a04; border-radius: 50%; position: absolute; left: calc(50% + 60px); }
+        .fade-in { animation: fadeIn 1s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
 
-    <div id="app" class="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+    <!-- Firebase Config Modal -->
+    <div id="firebaseConfigModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-4">Firebase Configuration</h2>
+            <p class="mb-4 text-slate-600">Please paste your entire Firebase config object below to connect to your database. This is only required once.</p>
+            <textarea id="firebaseConfigInput" class="w-full h-48 p-2 border rounded-md font-mono text-sm" placeholder="const firebaseConfig = { ... };"></textarea>
+            <button id="saveFirebaseConfig" class="mt-4 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Save and Initialize</button>
+        </div>
+    </div>
+
+    <div id="app" class="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 hidden">
         
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-slate-700">I Ching Divination</h1>
-            <p class="text-slate-500 mt-2">Consult the Book of Changes for guidance and wisdom.</p>
+        <header class="flex justify-between items-center mb-6">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-slate-700">I Ching Divination</h1>
+                <p class="text-slate-500 mt-1">Consult the Book of Changes for guidance.</p>
+            </div>
+            <div id="authContainer" class="text-right">
+                <!-- Auth buttons will be injected here -->
+            </div>
         </header>
 
-        <div id="controls" class="text-center mb-6">
-            <p id="instruction" class="mb-4 text-lg">Focus on your question, then cast the coins.</p>
-            <button id="castButton" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                Cast Coins
-            </button>
+        <div id="mainContent">
+            <div id="controls" class="text-center mb-6">
+                <textarea id="questionInput" class="w-full p-2 border rounded-md mb-4" placeholder="Enter your question here..."></textarea>
+                <button id="castButton" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed" disabled>
+                    Cast Coins
+                </button>
+            </div>
+
+            <div id="resultsContainer" class="hidden fade-in">
+                <div id="primaryHexagram"></div>
+                <div id="changingLines" class="my-6"></div>
+                <div id="relatingHexagram"></div>
+                <div class="text-center mt-8 space-x-4">
+                    <button id="saveReadingButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        Save Reading
+                    </button>
+                    <button id="resetButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        Ask Another Question
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div id="resultsContainer" class="hidden fade-in">
-            <!-- Hexagram results will be injected here -->
-            <div id="primaryHexagram"></div>
-            <div id="changingLines" class="my-6"></div>
-            <div id="relatingHexagram"></div>
-
-            <div class="text-center mt-8">
-                <button id="resetButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                    Ask Another Question
-                </button>
+        <div id="pastReadings" class="mt-12 border-t pt-6 hidden">
+            <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">Your Past Readings</h2>
+            <div id="readingsList" class="space-y-4">
+                <!-- Past readings will be injected here -->
             </div>
         </div>
     </div>
 
-    <script>
-        // --- DATA: All 64 Hexagrams (Complete) ---
-        // Source: Wilhelm/Baynes Translation (Public Domain)
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- App State ---
+        let db, auth;
+        let currentReading = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- DOM Elements ---
+        const firebaseConfigModal = document.getElementById('firebaseConfigModal');
+        const firebaseConfigInput = document.getElementById('firebaseConfigInput');
+        const saveFirebaseConfigBtn = document.getElementById('saveFirebaseConfig');
+        const appDiv = document.getElementById('app');
+        const authContainer = document.getElementById('authContainer');
+        const castButton = document.getElementById('castButton');
+        const resetButton = document.getElementById('resetButton');
+        const saveReadingButton = document.getElementById('saveReadingButton');
+        const controlsDiv = document.getElementById('controls');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const primaryHexagramDiv = document.getElementById('primaryHexagram');
+        const changingLinesDiv = document.getElementById('changingLines');
+        const relatingHexagramDiv = document.getElementById('relatingHexagram');
+        const questionInput = document.getElementById('questionInput');
+        const pastReadingsDiv = document.getElementById('pastReadings');
+        const readingsListDiv = document.getElementById('readingsList');
+
+        // --- I CHING DATA (unchanged) ---
         const iChingData = {
             "111111": {num: 1, name: "乾 Qián / The Creative", judgment: "The creative works sublime success, Furthering through perseverance.", image: "The movement of heaven is full of power. Thus the superior man makes himself strong and untiring.", lines: ["Nine at the beginning: Hidden dragon. Do not act.", "Nine in the second place: Dragon appearing in the field. It furthers one to see the great man.", "Nine in the third place: All day long the superior man is creatively active. At nightfall his mind is still beset with cares. Danger. No blame.", "Nine in the fourth place: Wavering flight over the depths. No blame.", "Nine in the fifth place: Flying dragon in the heavens. It furthers one to see the great man.", "Nine at the top: Arrogant dragon will have cause to repent."]},
             "000000": {num: 2, name: "坤 Kūn / The Receptive", judgment: "The receptive brings about sublime success, furthering through the perseverance of a mare. If the superior man undertakes something and tries to lead, He goes astray; But if he follows, he finds guidance.", image: "The earth's condition is receptive devotion. Thus the superior man of broad character carries the outer world.", lines: ["Six at the beginning: When there is hoarfrost underfoot, Solid ice is not far off.", "Six in the second place: Straight, square, great. Without purpose, Yet nothing remains unfurthered.", "Six in the third place: Hidden lines. One is able to remain persevering. If by chance you are in the service of a king, Seek not works, but bring to completion.", "Six in the fourth place: A tied-up sack. No blame, no praise.", "Six in the fifth place: A yellow lower garment brings supreme good fortune.", "Six at the top: Dragons fight in the meadow. Their blood is black and yellow."]},
