@@ -106,7 +106,17 @@
                     </div>
                 </div>
             </div>
-             <div class="flex items-center justify-end gap-2 mt-3 w-full">
+            
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
+                <div class="flex justify-end items-center mt-2 gap-4">
+                    <button id="generate-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        <span id="btn-text">Generate Script</span>
+                        <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 mt-3 w-full">
                 <button id="copy-script-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Copy Script</button>
                 <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Clear</button>
             </div>
@@ -115,72 +125,8 @@
 
     <div id="app-container" class="min-h-dvh flex flex-col bg-gray-800 p-4 sm:p-6 max-w-4xl mx-auto shadow-lg rounded-lg my-8">
         <main id="script-display-area" class="w-full p-4 space-y-6 flex flex-col"></main>
-        
-        <footer class="mt-4 pt-4 border-t border-gray-700">
-            <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
-            <div class="flex justify-end items-center mt-2 gap-4">
-                <button id="generate-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                    <span id="btn-text">Generate Script</span>
-                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                </button>
-            </div>
-        </footer>
     </div>
     
-    <div id="instructions-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[80vh] flex flex-col">
-            <h2 class="text-2xl font-bold mb-4 text-white text-center">How to Use Yoga Nidra Creator</h2>
-            <div class="flex-grow overflow-y-auto pr-4 text-gray-300 space-y-4">
-                <div class="prose prose-invert">
-                    <p>Welcome! Generate personalized Yoga Nidra scripts with a layered approach for precise results.</p>
-                    <h3 class="font-semibold text-white mt-4">Getting Started: API Key</h3>
-                     <ul class="list-disc pl-5 space-y-1">
-                        <li>This tool requires a Google AI API key to function.</li>
-                        <li>On first use, you will be prompted to enter your key. You can also click the <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-key inline-block" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.707 0L6 9.207l-.646.647a.5.5 0 0 1-.708 0L4 9.207l-.646.647a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.647-.646a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0L7.465 6H8a4 4 0 1 1 0 4zM3.5 11.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg> icon to open the API key dialog at any time.</li>
-                        <li>Your key is stored only in your browser for this session.</li>
-                     </ul>
-                    <h3 class="font-semibold text-white mt-4">Generation Workflow</h3>
-                    <ol class="list-decimal pl-5 space-y-2">
-                        <li><strong>Enter Your Intention:</strong> Type the main goal or theme for your script in the text box. This is the only required step.</li>
-                        <li><strong>Select a Style (Optional):</strong> Choose a pre-defined theme from this dropdown to give the AI a strong starting point. Hover over an option to see its description.</li>
-                        <li><strong>Select an AI Persona (Optional):</strong> Choose a guiding voice. Click the 'i' icon next to a persona to see its detailed description in a popup. If none is chosen, a neutral guide is used.</li>
-                         <li><strong>Choose Length:</strong> Select the desired script length.</li>
-                        <li><strong>Generate Script:</strong> Click to create your unique Yoga Nidra script based on all your selections.</li>
-                    </ol>
-                    <h3 class="font-semibold text-white mt-4">Other Controls</h3>
-                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Copy Script & Clear:</strong> Use these buttons to copy the generated script to your clipboard or clear the display.</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="flex justify-end mt-6">
-                <button id="close-instructions-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="api-key-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md flex flex-col">
-            <h2 class="text-2xl font-bold mb-4 text-white">Enter Your API Key</h2>
-            <p class="text-gray-400 mb-4 text-sm">A Google AI API key is required to generate scripts. You can get a free key from Google AI Studio. This key is stored only in your browser for this session.</p>
-            <input type="password" id="api-key-input" class="w-full bg-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Paste your API key here">
-            <div class="flex justify-end gap-4">
-                 <button id="close-api-key-modal-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>
-                <button id="save-api-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="persona-detail-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col">
-            <h2 id="persona-modal-title" class="text-2xl font-bold mb-2 text-white"></h2>
-            <div id="persona-modal-content" class="text-gray-300 space-y-2 text-sm"></div>
-            <div class="flex justify-end mt-6">
-                <button id="close-persona-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
-            </div>
-        </div>
-    </div>
-
     <div id="disclaimer-footer" class="bg-gray-900 text-gray-500 text-xs text-center py-4 mt-8 w-full">
         <p>Disclaimer: This tool generates Yoga Nidra scripts using AI and is for informational and personal use only. It is not a substitute for professional medical or therapeutic advice. Always consult with a qualified healthcare professional before beginning any new practice, especially if you have underlying health conditions or concerns. The effectiveness of the generated scripts may vary. By using this tool, you agree to assume full responsibility for your use of the generated content.</p>
     </div>
@@ -798,9 +744,6 @@
                 }
             }
             
-            // populateScriptTypeSelect (old function) was removed and replaced by populateStyleSelect
-            // which is now the custom dropdown population function.
-
             function populateScriptLengthSelect() {
                 scriptLengthSelect.innerHTML = '';
                 lengthOptions.forEach((option) => {
