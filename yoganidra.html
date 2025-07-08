@@ -384,6 +384,37 @@
                 "description": "Guides the practitioner through a gentle review of the day, releasing what no longer serves."
               }
             ];
+            
+            personas = [
+                {
+                    "name": "None (Default Guide)",
+                    "description": "A standard, calming guide with a neutral and reassuring tone. Focuses on clear, direct instructions for relaxation.",
+                    "vocal_quality": "Clear, gentle, and evenly paced.",
+                    "imagery": "Simple, universal imagery (e.g., light, warmth).",
+                    "theme": "General relaxation and stress reduction."
+                },
+                {
+                    "name": "The Nurturer",
+                    "description": "A warm, maternal presence offering comfort and deep compassion.",
+                    "vocal_quality": "Soft, loving, and gentle.",
+                    "imagery": "Cozy blankets, warm embraces, a safe and loving space.",
+                    "theme": "Self-compassion and inner child healing."
+                },
+                {
+                    "name": "The Storyteller",
+                    "description": "An imaginative guide who weaves enchanting narratives and vivid journeys.",
+                    "vocal_quality": "Engaging, gentle, and melodic.",
+                    "imagery": "Mythical landscapes, magical forests, cosmic journeys.",
+                    "theme": "Inspiration and subconscious exploration."
+                },
+                {
+                    "name": "The Sage",
+                    "description": "A wise, ancient voice that speaks with authority and philosophical depth.",
+                    "vocal_quality": "Calm, resonant, and deliberate.",
+                    "imagery": "Ancient temples, vast libraries, quiet mountaintops.",
+                    "theme": "Wisdom and self-inquiry."
+                }
+            ];
 
 
             // This re-generates the systemPrompt for all personas on load,
@@ -783,7 +814,7 @@
             }
 
             async function getAIResponse(prompt) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 try {
                     const response = await fetch(apiUrl, {
