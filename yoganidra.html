@@ -11,7 +11,7 @@
         textarea::-webkit-scrollbar, .custom-dropdown-content::-webkit-scrollbar { width: 8px; }
         textarea::-webkit-scrollbar-track, .custom-dropdown-content::-webkit-scrollbar-track { background: #1f2937; }
         textarea::-webkit-scrollbar-thumb, .custom-dropdown-content::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        textarea::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        textarea::-webkit-scrollbar-thumb:hover, .custom-dropdown-content::-webkit-dropdown-content::-webkit-scrollbar-thumb:hover { background: #6b7280; }
         
         .generated-script {
             background-image: linear-gradient(to right, #1e293b, #1a222f);
@@ -107,7 +107,6 @@
                 </div>
             </div>
             
-            <!-- Moved Prompt Input and Generate Button Here -->
             <div class="mt-4 pt-4 border-t border-gray-700">
                 <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
                 <div class="flex justify-end items-center mt-2 gap-4">
@@ -117,9 +116,7 @@
                     </button>
                 </div>
             </div>
-            <!-- End Moved Content -->
-
-             <div class="flex items-center justify-end gap-2 mt-3 w-full">
+            <div class="flex items-center justify-end gap-2 mt-3 w-full">
                 <button id="copy-script-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Copy Script</button>
                 <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Clear</button>
             </div>
@@ -130,8 +127,6 @@
         <main id="script-display-area" class="w-full p-4 space-y-6 flex flex-col"></main>
     </div>
     
-    <!-- Original footer content removed, moved into header -->
-
     <div id="disclaimer-footer" class="bg-gray-900 text-gray-500 text-xs text-center py-4 mt-8 w-full">
         <p>Disclaimer: This tool generates Yoga Nidra scripts using AI and is for informational and personal use only. It is not a substitute for professional medical or therapeutic advice. Always consult with a qualified healthcare professional before beginning any new practice, especially if you have underlying health conditions or concerns. The effectiveness of the generated scripts may vary. By using this tool, you agree to assume full responsibility for your use of the generated content.</p>
     </div>
@@ -140,9 +135,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Element References (initialized with let for later assignment) ---
             const scriptDisplayArea = document.getElementById('script-display-area');
-            let promptInput; 
-            let generateBtn; 
-            let loadingSpinner; 
+            // Initializing these variables directly here to ensure they are not null when addEventListeners is called.
+            let promptInput = document.getElementById('prompt-input'); 
+            let generateBtn = document.getElementById('generate-btn'); 
+            let loadingSpinner = document.getElementById('loading-spinner'); 
             const scriptLengthSelect = document.getElementById('script-length-select');
             const styleDropdownButton = document.getElementById('style-dropdown-button');
             const styleDropdownContent = document.getElementById('style-dropdown-content');
@@ -529,7 +525,7 @@
                 populateStyleSelect(); 
                 populateScriptLengthSelect();
                 populatePersonaSelect();
-                addEventListeners(); // This is where the error occurs
+                addEventListeners(); 
                 resetApp(); 
                 checkAndPromptForKey();
             }
@@ -674,11 +670,7 @@
 
 
             function addEventListeners() {
-                // Assign DOM elements here to ensure they are loaded immediately before use
-                promptInput = document.getElementById('prompt-input');
-                generateBtn = document.getElementById('generate-btn');
-                loadingSpinner = document.getElementById('loading-spinner');
-
+                // promptInput, generateBtn, loadingSpinner are now initialized outside this function
                 generateBtn.addEventListener('click', handleGenerateScript);
                 promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerateScript(); } });
                 resetAppBtn.addEventListener('click', resetApp);
