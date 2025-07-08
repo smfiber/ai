@@ -894,7 +894,8 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     listenForUserAddedTopics(finalCategory.id);
 
     try {
-        const defaultPrompt = `Generate 8 common topics for "${finalCategory.title}". For each topic, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description". Return a valid JSON array of objects.`;
+        // MODIFICATION: Improved prompt to generate better, more self-contained topics.
+        const defaultPrompt = `Generate 8 common administrative tasks or areas of focus for "${finalCategory.title}". Avoid generic numbered 'steps'. For each topic, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description". Return a valid JSON array of objects.`;
         const prompt = finalCategory.initialPrompt || defaultPrompt;
         
         const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
@@ -1529,14 +1530,19 @@ Additional Context: ${additionalContext || 'None'}`;
     }
 
     if (type === 'fullGuide') {
+        // MODIFICATION: Enhanced prompt for full guide generation with quality control.
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
         You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
+        
         //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
         ${blueprintMarkdown}
         ${personaAndObjective}
-        //-- CRITICAL INSTRUCTION: ADHERE TO SCOPE --//
-        The "Introduction" (Section 1) is the master plan. All content you generate MUST adhere to the scope defined within it.
+        
+        //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
+        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
+        - **Actionable Content:** All instructions must be practical and clear for a technical audience.
+
         //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
         
         ### 5. Detailed Implementation Guide
@@ -1545,7 +1551,9 @@ Additional Context: ${additionalContext || 'None'}`;
         - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
         
         ### 6. Verification and Validation
-        - Provide specific commands or GUI steps to confirm success. Describe the expected successful output.
+        **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
+        - Give specific commands (e.g., \`ping <server>\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Describe the exact expected output or visual confirmation of success.
         
         ### 7. Best Practices
         - List 3-5 actionable best practices directly related to the topic.
@@ -1654,7 +1662,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 
             //-- INSTRUCTIONS --//
             1.  **Critically Evaluate:** Discard any links that are irrelevant (e.g., about different products), severely outdated (e.g., for hardware more than two generations old or deprecated software), or low-quality (e.g., forum posts with no clear answer, marketing pages).
-            2.  **Select the Best:** Choose the top 3-4 most valuable links. Prioritize official documentation, deep-dive technical articles from reputable sources, and official certification guides.
+            2.  **Select the Best:** Choose the top 3-4 most valuable links.
             3.  **Return JSON:** Your response MUST be a valid JSON array containing only the objects of the approved links. Do not add any other text.
         `;
         const validatedLinksJson = await callGeminiAPI(validationPrompt, true, "Validate Search Results");
@@ -1722,7 +1730,7 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
 
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/5: Writing first draft...');
         const coreTopic = detailedModalTitleText.trim();
         
         const context = {
@@ -1738,9 +1746,13 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/5: Auto-embedding screenshots...');
+        // NEW: Call the screenshot embedding function
+        const markdownWithScreenshots = await findAndEmbedScreenshots(firstDraftMarkdown, fullHierarchyPath);
+
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/5: Performing auto-refinement...');
         const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
-        const section5Match = firstDraftMarkdown.match(section5Regex);
+        const section5Match = markdownWithScreenshots.match(section5Regex);
         const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
 
         if (!implementationGuideDraft) {
@@ -1758,13 +1770,13 @@ async function generateFullDetailedGuide(button) {
             refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching & validating web resources...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 4/5: Searching & validating web resources...');
         const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopic, fullHierarchyPath);
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 5/5: Assembling the final document...');
         
         const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
-        const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
+        const sections6to11Match = markdownWithScreenshots.match(sections6to11Regex);
         const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
 
         const finalCompleteGuideMarkdown = [
@@ -2007,6 +2019,70 @@ function copyElementTextToClipboard(element, button) {
     document.body.removeChild(textarea);
 }
 
+/**
+ * NEW FUNCTION: Finds and embeds screenshots from Google Image Search.
+ * @param {string} markdownText The markdown content of the guide.
+ * @param {Array} fullHierarchyPath The hierarchical path for context.
+ * @returns {Promise<string>} Markdown with image tags embedded.
+ */
+async function findAndEmbedScreenshots(markdownText, fullHierarchyPath) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
+        console.warn("Google Search Engine ID not configured. Skipping screenshot search.");
+        return markdownText;
+    }
+
+    // Regex to find placeholders like [Screenshot of...] or (Screenshot: ...)
+    const placeholderRegex = /(\[Screenshot of:?\s*(.*?)\]|\(Screenshot:?\s*(.*?)\))/g;
+    const matches = [...markdownText.matchAll(placeholderRegex)];
+
+    if (matches.length === 0) {
+        return markdownText;
+    }
+
+    let processedMarkdown = markdownText;
+
+    for (const match of matches) {
+        const fullPlaceholder = match[0];
+        // Extract description from either capture group 2 or 3
+        const description = match[2] || match[3];
+        
+        if (description) {
+            // Add context from the guide's hierarchy to the search query
+            const contextualQuery = `${fullHierarchyPath.map(p => p.title).join(' ')} ${description}`;
+            
+            try {
+                const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualQuery)}&searchType=image&num=1`;
+                
+                const response = await fetch(searchApiUrl);
+                if (!response.ok) {
+                    console.error(`Image search failed for "${contextualQuery}" with status ${response.status}`);
+                    continue; // Skip this placeholder on failure
+                }
+                
+                const results = await response.json();
+                const imageUrl = results.items?.[0]?.link;
+
+                if (imageUrl) {
+                    // Replace the placeholder with an actual markdown image tag
+                    const imageMarkdown = `\n<img src="${imageUrl}" alt="${description}" class="embedded-screenshot">\n`;
+                    processedMarkdown = processedMarkdown.replace(fullPlaceholder, imageMarkdown);
+                } else {
+                    console.warn(`No image found for query: "${contextualQuery}"`);
+                }
+            } catch (error) {
+                console.error(`Error fetching image for "${contextualQuery}":`, error);
+            }
+        }
+    }
+
+    return processedMarkdown;
+}
+
+/**
+ * MODIFIED FUNCTION: Now also handles styling of leftover screenshot placeholders.
+ * @param {string} markdownText The markdown content.
+ * @param {HTMLElement} containerElement The element to render into.
+ */
 function renderAccordionFromMarkdown(markdownText, containerElement) {
     containerElement.innerHTML = '';
     if (!markdownText || !markdownText.trim()) {
@@ -2016,6 +2092,18 @@ function renderAccordionFromMarkdown(markdownText, containerElement) {
     const fullHtml = convertMarkdownToHtml(markdownText);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = fullHtml;
+
+    // NEW LOGIC: Find and style any remaining text-based placeholders
+    const placeholderRegex = /(\[Screenshot of:?\s*(.*?)\]|\(Screenshot:?\s*(.*?)\))/g;
+    tempDiv.querySelectorAll('p').forEach(p => {
+        if (placeholderRegex.test(p.textContent)) {
+            const placeholderDiv = document.createElement('div');
+            placeholderDiv.className = 'screenshot-placeholder';
+            placeholderDiv.textContent = p.textContent.replace(/[\[\]()]/g, '').replace('Screenshot of', '').replace('Screenshot:', '').trim();
+            p.replaceWith(placeholderDiv);
+        }
+    });
+
     const nodes = Array.from(tempDiv.childNodes);
     let currentAccordionItem = null;
     let introContent = document.createElement('div');
