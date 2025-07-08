@@ -33,7 +33,7 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-let GOOGLE_SEARCH_ENGINE_ID = '';
+let Google Search_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 let oauthToken = null;
@@ -134,7 +134,7 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
-    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
+    Google Search_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -152,7 +152,7 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
+        if (Google Search_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = Google Search_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -488,7 +488,9 @@ function setupEventListeners() {
         createPicker('open', folderId);
     });
     
-    document.getElementById('prompts-button')?.addEventListener('click', displayPromptsInModal);
+    // MODIFICATION: Changed to call the new function
+    document.getElementById('prompts-button')?.addEventListener('click', displayAppInternalsModal);
+    
     document.getElementById('real-time-log-button')?.addEventListener('click', displayAiLog);
     document.getElementById('theme-changer-button')?.addEventListener('click', () => {
         if(!geminiApiKey) { openModal('apiKeyModal'); return; }
@@ -779,7 +781,6 @@ function createPicker(mode, startInFolderId = null) {
         const builder = new google.picker.PickerBuilder()
             .setOAuthToken(token)
             .setDeveloperKey(geminiApiKey); 
-
         if (mode === 'open') {
             const view = new google.picker.View(google.picker.ViewId.DOCS);
             view.setMimeTypes("text/markdown,text/plain,.md");
@@ -1466,21 +1467,198 @@ function getAppPrompts() {
     return prompts;
 }
 
-function displayPromptsInModal() {
+// --- NEW AND MODIFIED FUNCTIONS START HERE ---
+
+/**
+ * Creates a curated list of key prompt engineering functions and their source code for display.
+ * Note: Add other prompt-related functions here as needed by following the same pattern.
+ * @returns {object} An object where keys are function names and values are their source code as a string.
+ */
+function getAppFunctionsForDisplay() {
+    const functions = {
+        'getMasterGuidePrompt': `
+function getMasterGuidePrompt(type, context) {
+    const {
+        blueprintMarkdown = '',
+        coreTask = '',
+        persona = '',
+        tone = '',
+        additionalContext = '',
+        fullHierarchyPath = []
+    } = context;
+
+    let personaAndObjective;
+    let fullSubject = coreTask;
+
+    if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
+        const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
+        const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        if (fullHierarchyPath.length > 1) {
+            fullSubject = \`\${coreTask} for \${fullHierarchyPath[0].title}\`;
+        }
+        
+        let personaDescription = "an expert IT Administrator";
+        if (finalCategory && finalCategory.initialPrompt) {
+            const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
+            if (match && match[1]) {
+                personaDescription = match[1].trim();
+            }
+        }
+        personaAndObjective = \`
+//-- PERSONA & CONTEXT (Derived from Hierarchy) --//
+Persona: You are \${personaDescription}.
+Your writing should be professional, technical, and authoritative.
+The guide is part of a knowledge base: \${pathString}.\`;
+    } else {
+        personaAndObjective = \`
+//-- PERSONA & OBJECTIVE (FROM WORKSHOP) --//
+Persona: You are an expert \${persona}.
+Audience & Tone: The guide is for a "\${tone}" audience.
+Additional Context: \${additionalContext || 'None'}\`;
+    }
+
+    if (type === 'blueprint') {
+        return \`
+        //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
+        Generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for an IT guide.
+        //-- PRIMARY SUBJECT (MANDATORY) --//
+        The Primary Subject is exclusively: "\${fullSubject}". You MUST NOT deviate from this.
+        \${personaAndObjective}
+        //-- REQUIRED OUTPUT --//
+        1.  **Generate Four Sections:**
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "\${fullSubject}". State the guide's scope (e.g., GUI, PowerShell, API).
+            * ### 2. Architectural Overview: Describe the architecture relevant to "\${fullSubject}".
+            * ### 3. Key Concepts & Terminology: Define terms essential for "\${fullSubject}".
+            * ### 4. Prerequisites: List skills and access required for "\${fullSubject}".
+        2.  **Format:** Use '###' for headers. Return ONLY markdown for these four sections.\`;
+    }
+
+    if (type === 'fullGuide') {
+        return \`
+        //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
+        You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
+        
+        //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
+        \${blueprintMarkdown}
+        \${personaAndObjective}
+        
+        //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
+        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
+        - **Actionable Content:** All instructions must be practical and clear for a technical audience.
+
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
+        
+        ### 5. Detailed Implementation Guide
+        **CRITICAL:** This section must be highly practical.
+        - To request a screenshot, it is **mandatory** to use the machine-readable format: {{IMG: A search query for a specific, photorealistic screenshot of a user interface.}}
+        - **CRITICAL RULE:** You MUST NOT generate HTML <img> tags directly. The ONLY way to request an image is by using the exact format {{IMG:Your search query here}}. Any other format will be ignored.
+        - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+
+        //-- EXAMPLES OF HOW TO REQUEST IMAGES (FEW-SHOT LEARNING) --//
+        - **GOOD QUERY:** {{IMG: HPE iLO 5 firmware update screen showing the 'Browse' button to select a file.}}
+        - **GOOD QUERY:** {{IMG: Windows command prompt showing a successful ping to an IP address.}}
+        - **BAD (DO NOT DO THIS):** {{IMG: A diagram of the update process.}}
+        - **BAD (DO NOT DO THIS):** <img src="some description">
+        
+        ### 6. Verification and Validation
+        **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
+        - Give specific commands (e.g., \\\`ping <server>\\\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Describe the exact expected output or visual confirmation of success.
+        
+        ### 7. Best Practices
+        - List 3-5 actionable best practices directly related to the topic.
+        
+        ### 8. Automation Techniques
+        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        
+        ### 9. Security Considerations
+        - Detail specific security hardening steps (e.g., policies to enable, ports to check).
+        
+        ### 10. Advanced Use Cases & Scenarios
+        - Describe at least two advanced scenarios where this knowledge could be applied.
+        
+        ### 11. Troubleshooting
+        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and a logical process for isolating the true root cause.
+        
+        ### 12. Helpful Resources
+        - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
+        
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".\`;
+    }
+    return '';
+}`,
+        'getRefinementPrompt': `
+function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
+    return \`Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// \${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// \${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.\`;
+}`,
+        'callGeminiAPI': `
+async function callGeminiAPI(prompt, isJson = false, logType = "General") {
+    if (!geminiApiKey) {
+        throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
+    }
+    const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=\${geminiApiKey}\`;
+    
+    let finalPrompt = prompt;
+    if (isJson && !prompt.includes(jsonInstruction)) {
+        finalPrompt += jsonInstruction;
+    }
+
+    const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
+    if (isJson) {
+        payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
+    }
+    const result = await callApi(apiUrl, payload);
+    const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    logAiInteraction(finalPrompt, responseText, logType);
+    return responseText;
+}`
+    };
+    return functions;
+}
+
+/**
+ * Displays both AI prompts and the source code of key prompt engineering functions in a modal.
+ * This function replaces the old displayPromptsInModal.
+ */
+function displayAppInternalsModal() {
     const contentEl = document.getElementById('promptsModalContent');
-    contentEl.innerHTML = '';
+    contentEl.innerHTML = ''; // Clear previous content
+
+    // Section for AI Prompts
+    const promptsContainer = document.createElement('div');
+    promptsContainer.innerHTML = '<h2 class="text-2xl font-bold themed-text-primary mb-4 border-b pb-2">Key AI Prompts</h2>';
     const prompts = getAppPrompts();
     for (const [title, promptText] of Object.entries(prompts)) {
-        const promptContainer = document.createElement('div');
-        promptContainer.className = 'mb-6';
-        promptContainer.innerHTML = `
+        const promptEl = document.createElement('div');
+        promptEl.className = 'mb-6';
+        promptEl.innerHTML = `
             <h3 class="text-lg font-semibold themed-text-accent mb-2">${title}</h3>
             <div class="code-block-container !mt-0">
                 <div class="code-block-header"><span>Prompt</span><button class="copy-code-button">Copy</button></div>
                 <pre class="text-sm" style="color: var(--code-text);">${promptText}</pre>
             </div>`;
-        contentEl.appendChild(promptContainer);
+        promptsContainer.appendChild(promptEl);
     }
+    contentEl.appendChild(promptsContainer);
+
+    // Section for Prompt Engineering Functions
+    const functionsContainer = document.createElement('div');
+    functionsContainer.innerHTML = '<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-4 border-b pb-2">Prompt Engineering Functions</h2>';
+    const functions = getAppFunctionsForDisplay();
+    for (const [name, code] of Object.entries(functions)) {
+        const functionEl = document.createElement('div');
+        functionEl.className = 'mb-6';
+        // Use <pre> and <code> for proper code formatting and styling
+        functionEl.innerHTML = `
+            <h3 class="text-lg font-semibold themed-text-accent mb-2">${name}</h3>
+            <div class="code-block-container !mt-0">
+                <div class="code-block-header"><span>JavaScript</span><button class="copy-code-button">Copy</button></div>
+                <pre><code class="language-javascript text-sm" style="color: var(--code-text);">${code.trim()}</code></pre>
+            </div>`;
+        functionsContainer.appendChild(functionEl);
+    }
+    contentEl.appendChild(functionsContainer);
+
     openModal('promptsModal');
 }
 
@@ -1656,7 +1834,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
  */
 async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
+    if (!Google Search_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
         return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
@@ -1666,7 +1844,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 
     try {
         // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
@@ -1969,8 +2147,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     
     buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>`;
     
-    container.appendChild(buttonBar);
-    
     buttonBar.querySelector('.copy-button').addEventListener('click', e => {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
         if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
@@ -2053,7 +2229,7 @@ function copyElementTextToClipboard(element, button) {
  * @returns {Promise<string>} Markdown with image tags embedded.
  */
 async function findAndEmbedScreenshots(markdownText, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
+    if (!Google Search_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping screenshot search.");
         return markdownText;
     }
@@ -2082,7 +2258,7 @@ async function findAndEmbedScreenshots(markdownText, fullHierarchyPath) {
             const contextualQuery = `${fullHierarchyPath.map(p => p.title).join(' ')} ${description}`;
             
             try {
-                const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualQuery)}&searchType=image&num=1`;
+                const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualQuery)}&searchType=image&num=1`;
                 
                 const response = await fetch(searchApiUrl);
                 if (!response.ok) {
