@@ -63,7 +63,8 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
-    <div class="w-full bg-gray-900 py-4 sm:py-6"> <header class="max-w-4xl mx-auto flex flex-col w-full mb-4 pb-4 border-b border-gray-700 px-4 sm:px-0">
+    <div class="w-full bg-gray-900 py-4 sm:py-6"> 
+        <header class="max-w-4xl mx-auto flex flex-col w-full mb-4 pb-4 border-b border-gray-700 px-4 sm:px-0">
             <div class="flex flex-wrap justify-between items-start w-full mb-4 gap-y-4">
                  <div class="flex-shrink-0">
                     <h1 class="text-2xl font-bold text-white flex items-baseline gap-2">
@@ -80,8 +81,14 @@
                 </div>
                 <div class="flex items-end gap-4">
                     <div class="w-72 relative">
-                        <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Style (Optional):</label>
-                        <select id="script-type-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
+                        <label for="style-dropdown-button" class="block mb-1 text-gray-400 text-sm">Style (Optional):</label>
+                        <button id="style-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
+                            <span>Select a Style (Optional)</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="style-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                            <div id="style-list-area" class="max-h-96 overflow-y-auto custom-dropdown-content"></div>
+                        </div>
                     </div>
                     <div class="w-72 relative">
                         <label class="block mb-1 text-gray-400 text-sm">AI Persona (Optional):</label>
@@ -90,7 +97,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="persona-dropdown-content" class="hidden absolute z-20 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
-                           <div id="persona-list-area" class="max-h-56 overflow-y-auto custom-dropdown-content"></div>
+                           <div id="persona-list-area" class="max-h-96 overflow-y-auto custom-dropdown-content"></div>
                         </div>
                     </div>
                     <div class="w-72">
@@ -186,7 +193,11 @@
             const generateBtn = document.getElementById('generate-btn');
             const loadingSpinner = document.getElementById('loading-spinner');
             const scriptLengthSelect = document.getElementById('script-length-select');
-            const scriptTypeSelect = document.getElementById('script-type-select'); // Renamed from scriptTypeSelect to align with ID
+            // Old scriptTypeSelect is now styleDropdownButton/Content/ListArea
+            const styleDropdownButton = document.getElementById('style-dropdown-button');
+            const styleDropdownContent = document.getElementById('style-dropdown-content');
+            const styleListArea = document.getElementById('style-list-area');
+
             const resetAppBtn = document.getElementById('reset-app-btn');
             const copyScriptBtn = document.getElementById('copy-script-btn');
             const personaDropdownButton = document.getElementById('persona-dropdown-button');
@@ -212,6 +223,7 @@
             let isGenerating = false;
             let currentGeneratedScript = '';
             let selectedPersonaIndex = null; // Use null for no selection
+            let selectedStyleName = ""; // New state variable for custom style dropdown
             let yogaNidraStyles = []; 
             let personas = [];
             
@@ -283,11 +295,11 @@
               },
               {
                 "style": "Unlocking Creativity",
-                "description": "Aims to dissolve creative blocks and awaken inspiration via symbolic imagery."
+                "description": "By tapping into the subconscious mind, this script aims to dissolve creative blocks and awaken inspiration through symbolic imagery and open-ended suggestions."
               },
               {
                 "style": "Building Self-Compassion",
-                "description": "Uses affirmations and heart-centered visualizations to nurture self-love and acceptance."
+                "description": "Uses affirmations and heart-centered visualizations to nurture a sense of self-love, acceptance, and kindness."
               },
               {
                 "style": "Yoga Nidra for a New Beginning",
@@ -427,7 +439,7 @@
               }
             ];
 
-            // --- Mainstream Yoga Nidra Personas (NEW data) ---
+            // --- Mainstream Yoga Nidra Personas ---
             personas = [
               {
                 "name": "Default Yoga Nidra Guide",
@@ -560,15 +572,71 @@
 
             function initializeApp() {
                 initializePersonaSystemPrompts(); 
-                populateScriptTypeSelect(); 
+                populateStyleSelect(); // Calls the new custom style dropdown population function
                 populateScriptLengthSelect();
                 populatePersonaSelect();
                 addEventListeners();
-                resetApp();
+                resetApp(); // Calls reset after all initializations
                 checkAndPromptForKey();
             }
             
             // --- UI Population Functions ---
+
+            function populateStyleSelect() { // NEW function for custom style dropdown
+                styleListArea.innerHTML = ''; // Clear previous content
+
+                // Add "None (Optional)" option
+                const noneLabel = document.createElement('label');
+                noneLabel.className = 'dropdown-label';
+                noneLabel.innerHTML = `
+                    <input type="radio" name="style" value="" class="accent-indigo-500">
+                    <span>None (Optional)</span>
+                `;
+                noneLabel.title = "Select no specific style, allowing the AI to choose a general approach.";
+                if (selectedStyleName === "") {
+                    noneLabel.querySelector('input').checked = true;
+                }
+                noneLabel.querySelector('input').addEventListener('change', () => {
+                    selectedStyleName = "";
+                    updateStyleButton("");
+                    styleDropdownContent.classList.add('hidden'); // Hide dropdown after selection
+                });
+                styleListArea.appendChild(noneLabel);
+
+                // Populate other styles
+                yogaNidraStyles.forEach(style => {
+                    const label = document.createElement('label');
+                    label.className = 'dropdown-label';
+                    label.title = style.description; // Tooltip for style description
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'style';
+                    radio.value = style.style;
+                    radio.className = 'accent-indigo-500';
+                    if (selectedStyleName === style.style) {
+                        radio.checked = true;
+                    }
+
+                    radio.addEventListener('change', () => {
+                        selectedStyleName = radio.value;
+                        updateStyleButton(selectedStyleName);
+                        styleDropdownContent.classList.add('hidden'); // Hide dropdown after selection
+                    });
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = style.style;
+                    
+                    label.appendChild(radio);
+                    label.appendChild(nameSpan);
+                    styleListArea.appendChild(label);
+                });
+            }
+
+            function updateStyleButton(styleName) { // NEW helper for custom style dropdown button text
+                const buttonSpan = styleDropdownButton.querySelector('span');
+                buttonSpan.textContent = styleName || "Select a Style (Optional)";
+            }
 
             function populatePersonaSelect() {
                 personaListArea.innerHTML = '';
@@ -662,9 +730,24 @@
                 closeApiKeyModalBtn.addEventListener('click', () => apiKeyModal.classList.add('hidden'));
                 saveApiKeyBtn.addEventListener('click', saveApiKey);
                 closePersonaModalBtn.addEventListener('click', () => personaDetailModal.classList.add('hidden'));
-                scriptTypeSelect.addEventListener('change', () => promptInput.focus());
+
+                // Style Dropdown Event Listeners (NEW)
+                styleDropdownButton.addEventListener('click', () => styleDropdownContent.classList.toggle('hidden'));
+
+                // Persona Dropdown Event Listeners (Existing)
                 personaDropdownButton.addEventListener('click', () => personaDropdownContent.classList.toggle('hidden'));
-                document.addEventListener('click', (event) => { if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) { personaDropdownContent.classList.add('hidden'); } });
+                
+                // Global click listener to close dropdowns when clicking outside
+                document.addEventListener('click', (event) => { 
+                    // Close Style dropdown if click is outside
+                    if (!styleDropdownButton.contains(event.target) && !styleDropdownContent.contains(event.target)) {
+                        styleDropdownContent.classList.add('hidden');
+                    }
+                    // Close Persona dropdown if click is outside
+                    if (!personaDropdownButton.contains(event.target) && !personaDropdownContent.contains(event.target)) { 
+                        personaDropdownContent.classList.add('hidden'); 
+                    }
+                });
                 
                 // Event delegation for persona info buttons
                 personaListArea.addEventListener('click', (event) => {
@@ -683,11 +766,16 @@
                 scriptDisplayArea.innerHTML = '';
                 promptInput.value = '';
                 currentGeneratedScript = '';
-                scriptLengthSelect.value = "15 minutes"; // Changed default length
-                scriptTypeSelect.value = ""; 
+                scriptLengthSelect.value = "15 minutes"; // Default length set to 15 minutes
+                
+                selectedStyleName = ""; // Reset custom style dropdown state
+                updateStyleButton(""); // Update button text
+                populateStyleSelect(); // Re-populate to reflect reset state
+
                 selectedPersonaIndex = 0; 
                 updatePersonaButton(0); 
                 populatePersonaSelect(); 
+                
                 updateButtonStates();
                 displaySystemMessage("Enter an intention, or select a style to begin.");
             }
@@ -710,16 +798,8 @@
                 }
             }
             
-            function populateScriptTypeSelect() { 
-                scriptTypeSelect.innerHTML = '<option value="">Select a Style (Optional)</option>';
-                yogaNidraStyles.forEach(style => {
-                    const option = document.createElement('option');
-                    option.value = style.style;
-                    option.textContent = style.style;
-                    option.title = style.description; 
-                    scriptTypeSelect.appendChild(option);
-                });
-            }
+            // populateScriptTypeSelect (old function) was removed and replaced by populateStyleSelect
+            // which is now the custom dropdown population function.
 
             function populateScriptLengthSelect() {
                 scriptLengthSelect.innerHTML = '';
@@ -746,8 +826,10 @@
                     return;
                 }
                 const customIntention = promptInput.value.trim();
-                const selectedStyleName = scriptTypeSelect.value; 
-                if (!selectedStyleName && !customIntention) {
+                // Get selected style name from the state variable, not a select element
+                const currentSelectedStyleName = selectedStyleName; 
+
+                if (!currentSelectedStyleName && !customIntention) {
                     displaySystemMessage("Please enter an intention, or select a style.", 'error-message');
                     return;
                 }
@@ -763,7 +845,8 @@
                     const personaInstruction = personas[finalPersonaIndex].systemPrompt;
 
                     let themeInstruction = '';
-                    const selectedStyle = yogaNidraStyles.find(style => style.style === selectedStyleName);
+                    // Use currentSelectedStyleName from the state variable
+                    const selectedStyle = yogaNidraStyles.find(style => style.style === currentSelectedStyleName); 
                     if (selectedStyle) {
                         themeInstruction = `The core theme is **${selectedStyle.style}**. Description: *${selectedStyle.description}*`;
                     }
@@ -773,6 +856,7 @@
                         intentionInstruction = `Please weave in this specific user intention: **"${customIntention}"**.`;
                     }
 
+                    // If no style selected but custom intention exists, use intention as theme
                     if (!selectedStyle && customIntention) { 
                         themeInstruction = `The core theme is the user's intention: **"${customIntention}"**.`;
                         intentionInstruction = '';
@@ -785,7 +869,8 @@
                     const titlePrompt = `Based on the following Yoga Nidra script, provide a short, creative title. Respond with only the title text, no quotes.\nScript: ${aiResponseText}`;
                     const generatedTitle = await getAIResponse(titlePrompt);
 
-                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedStyleName); 
+                    // Pass currentSelectedStyleName to displayGeneratedScript
+                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, currentSelectedStyleName); 
                 } catch (error) {
                     console.error("Error generating script:", error);
                     displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
