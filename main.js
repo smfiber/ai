@@ -1567,14 +1567,15 @@ Additional Context: ${additionalContext || 'None'}`;
         
         ### 5. Detailed Implementation Guide
         **CRITICAL:** This section must be highly practical.
-        - To request a screenshot, it is **mandatory** to use the machine-readable format: {{IMG: A search query for a specific, photorealistic screenshot of a user interface.}} This query will be used to find an existing image. **Do not request abstract diagrams or concepts.**
+        - To request a screenshot, it is **mandatory** to use the machine-readable format: {{IMG: A search query for a specific, photorealistic screenshot of a user interface.}}
+        - **CRITICAL RULE:** You MUST NOT generate HTML <img> tags directly. The ONLY way to request an image is by using the exact format {{IMG:Your search query here}}. Any other format will be ignored.
         - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
 
         //-- EXAMPLES OF HOW TO REQUEST IMAGES (FEW-SHOT LEARNING) --//
         - **GOOD QUERY:** {{IMG: HPE iLO 5 firmware update screen showing the 'Browse' button to select a file.}}
         - **GOOD QUERY:** {{IMG: Windows command prompt showing a successful ping to an IP address.}}
-        - **BAD QUERY (DO NOT DO THIS):** {{IMG: A diagram of the update process.}}
-        - **BAD QUERY (DO NOT DO THIS):** {{IMG: A concept map of server management.}}
+        - **BAD (DO NOT DO THIS):** {{IMG: A diagram of the update process.}}
+        - **BAD (DO NOT DO THIS):** <img src="some description">
         
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
