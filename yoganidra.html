@@ -59,7 +59,43 @@
             margin-top: 0.75rem;
             margin-bottom: 0.25rem;
         }
-
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-container {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            color: #e5e7eb;
+            position: relative;
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .modal-close-btn:hover {
+            color: #ffffff;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white antialiased">
@@ -74,7 +110,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
                         </button>
                          <button id="api-key-btn" title="Set API Key">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.707 0L6 9.207l-.646.647a.5.5 0 0 1-.708 0L4 9.207l-.646.647a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.647-.646a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0L7.465 6H8a4 4 0 1 1 0 4zM3.5 11.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key text-gray-400 hover:text-white" viewBox="0 0 16 16"><path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 9.5a.5.5 0 0 1-.354-.146L7.293 9 6.95 9.343a.5.5 0 0 1-.707 0L6 9.207l-.646.647a.5.5 0 0 1-.708 0L4 9.207l-.646.647a.5.5 0 0 1-.708 0l-.646-.647a.5.5 0 0 1 0-.708l.647-.646a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0L7.465 6H8a4 4 0 1 1 0 4zM3.5 11.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
                         </button>
                     </h1>
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
@@ -131,6 +167,46 @@
         <p>Disclaimer: This tool generates Yoga Nidra scripts using AI and is for informational and personal use only. It is not a substitute for professional medical or therapeutic advice. Always consult with a qualified healthcare professional before beginning any new practice, especially if you have underlying health conditions or concerns. The effectiveness of the generated scripts may vary. By using this tool, you agree to assume full responsibility for your use of the generated content.</p>
     </div>
 
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <button id="close-instructions-modal-btn" class="modal-close-btn">&times;</button>
+            <h2 class="text-xl font-bold mb-4">How to Use Yoga Nidra Creator</h2>
+            <div class="text-gray-300 space-y-3">
+                <p>This tool helps you generate personalized Yoga Nidra scripts using AI.</p>
+                <p><strong>1. Enter your Intention:</strong> Type what you want your Yoga Nidra session to focus on in the text box. This could be "deep sleep," "stress relief," "creative inspiration," or anything else you desire.</p>
+                <p><strong>2. Select a Style (Optional):</strong> Choose a specific style of Yoga Nidra from the dropdown menu. This will guide the AI to generate a script with a particular focus or theme (e.g., "Chakra Nidra," "Nature Nidra"). If you leave this blank, the AI will use a general approach.</p>
+                <p><strong>3. Select AI Persona (Optional):</strong> Choose an AI persona to guide your session. This will influence the tone, vocal quality, and imagery used in the script. If left blank, a "Default Guide" will be used.</p>
+                <p><strong>4. Choose Length:</strong> Select the desired duration for your script (15 minutes, 30 minutes, or 1 hour).</p>
+                <p><strong>5. Generate Script:</strong> Click the "Generate Script" button. The AI will create a unique Yoga Nidra script based on your inputs.</p>
+                <p><strong>6. Copy and Use:</strong> Once generated, you can copy the script to your clipboard and use it for your personal practice.</p>
+                <p><strong>7. Clear:</strong> Click "Clear" to reset all inputs and start a new script.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <button id="close-api-key-modal-btn" class="modal-close-btn">&times;</button>
+            <h2 class="text-xl font-bold mb-4">Enter Your Gemini API Key</h2>
+            <p class="text-gray-300 mb-4">To use this tool, you need to provide your Google Gemini API key. You can get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Google AI Studio</a>.</p>
+            <input type="password" id="api-key-input" class="w-full p-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter your API key here...">
+            <button id="save-api-key-btn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save API Key</button>
+        </div>
+    </div>
+
+    <!-- Persona Detail Modal -->
+    <div id="persona-detail-modal" class="modal-overlay hidden">
+        <div class="modal-container">
+            <button id="close-persona-modal-btn" class="modal-close-btn">&times;</button>
+            <h2 id="persona-modal-title" class="text-xl font-bold mb-2"></h2>
+            <div id="persona-modal-content" class="text-gray-300 space-y-2">
+                <!-- Persona details will be loaded here by JS -->
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Element References (initialized with let for later assignment) ---
@@ -181,239 +257,808 @@
                 { name: "1 hour", promptSuffix: "Produce a very detailed and expansive script, approximately 1 hour long (around 1200-1800 words)." }
             ];
 
-            // --- Yoga Nidra Styles Data (formerly scriptTypesData) ---
+            // --- Yoga Nidra Styles Data ---
             yogaNidraStyles = [
               {
-                "style": "Classic Body Scan",
-                "description": "Systematic awareness guided through each body part, promoting deep physical relaxation."
+                "style": "Traditional Nidra",
+                "description": "Classic rotation of consciousness through body parts, breath awareness, and opposing sensations."
               },
               {
-                "style": "Breath Awareness",
-                "description": "Focuses on the natural rhythm and sensation of the breath to calm the nervous system."
+                "style": "Chakra Nidra",
+                "description": "Focus on each of the seven main chakras, visualizing their colors and attributes."
               },
               {
-                "style": "Sankalpa (Intention) Focused",
-                "description": "Emphasizes the repetition and planting of a heartfelt resolve or intention into the subconscious."
+                "style": "Elemental Nidra",
+                "description": "Journey through the five elements (earth, water, fire, air, ether) and their qualities."
               },
               {
-                "style": "Journey Through the Koshas",
-                "description": "Guides awareness through the five layers of being (physical, energetic, mental, wisdom, bliss) for holistic integration."
+                "style": "Nature Nidra",
+                "description": "Immerse yourself in a natural landscape (forest, ocean, mountains), engaging all senses."
               },
               {
-                "style": "Chakra Balancing",
-                "description": "Focuses on cleansing, balancing, and awakening the seven main energy centers."
+                "style": "Cosmic Nidra",
+                "description": "Explore the vastness of space, stars, planets, and the universe."
               },
               {
-                "style": "Exploring the Five Elements",
-                "description": "Connects the practitioner to the qualities of Earth, Water, Fire, Air, and Ether within themselves."
+                "style": "Color Nidra",
+                "description": "Visualize different colors and experience their energetic effects throughout the body."
               },
               {
-                "style": "Working with Opposites (Dvandvas)",
-                "description": "Explores pairs of opposite sensations or emotions to cultivate equanimity."
+                "style": "Sound Nidra",
+                "description": "Focus on internal and external sounds, moving from gross to subtle."
               },
               {
-                "style": "Enchanted Forest Journey",
-                "description": "Imaginative journey through a magical forest with calming natural and symbolic imagery."
+                "style": "Mantra Nidra",
+                "description": "Repetition of a specific mantra or affirmation throughout the practice."
               },
               {
-                "style": "Cosmic Journey and Stargazing",
-                "description": "Visualizes floating in space, observing celestial bodies to expand consciousness."
+                "style": "Healing Nidra",
+                "description": "Directing healing energy and intention to specific areas of the body or mind."
               },
               {
-                "style": "Oceanic Relaxation",
-                "description": "Uses imagery and sounds of the ocean to cultivate cleansing, release, and profound calm."
+                "style": "Gratitude Nidra",
+                "description": "Cultivating feelings of appreciation and thankfulness for various aspects of life."
               },
               {
-                "style": "Inner Sanctuary/Safe Space",
-                "description": "Guides creation of a detailed mental sanctuary for peace and solace."
+                "style": "Forgiveness Nidra",
+                "description": "Practicing self-forgiveness and forgiveness towards others."
               },
               {
-                "style": "Meeting a Wise Guide",
-                "description": "Facilitates a visualization to meet an inner guide for insight and reassurance."
+                "style": "Inner Child Nidra",
+                "description": "Connecting with and nurturing the younger self, addressing past experiences."
               },
               {
-                "style": "Cultivating Gratitude",
-                "description": "Focuses on appreciating life's aspects to foster a positive mindset."
+                "style": "Dream Nidra",
+                "description": "Exploring the subconscious mind and enhancing dream recall or lucid dreaming."
               },
               {
-                "style": "Forgiveness and Letting Go",
-                "description": "Guides the release of emotional burdens through self and other forgiveness."
+                "style": "Goal Manifestation Nidra",
+                "description": "Focusing on a specific goal and visualizing its successful achievement."
               },
               {
-                "style": "Unlocking Creativity",
-                "description": "By tapping into the subconscious mind, this script aims to dissolve creative blocks and awaken inspiration through symbolic imagery and open-ended suggestions."
+                "style": "Abundance Nidra",
+                "description": "Cultivating a mindset of prosperity and attracting abundance in all forms."
               },
               {
-                "style": "Building Self-Compassion",
-                "description": "Uses affirmations and heart-centered visualizations to nurture a sense of self-love, acceptance, and kindness."
+                "style": "Creativity Nidra",
+                "description": "Unlocking creative potential and fostering innovative ideas."
               },
               {
-                "style": "Yoga Nidra for a New Beginning",
-                "description": "Releases the old and sets clear, positive intentions for renewal and purpose."
+                "style": "Self-Love Nidra",
+                "description": "Developing deeper self-acceptance, compassion, and love."
               },
               {
-                "style": "Traditional Sanskrit Phrases",
-                "description": "Incorporates classic Sanskrit terms and traditional yogic philosophy for deep connection to ancient roots."
+                "style": "Peace Nidra",
+                "description": "Cultivating profound inner peace and tranquility."
               },
               {
-                "style": "Nature's Embrace",
-                "description": "Uses vivid imagery of natural landscapes (forests, oceans, mountains) for peace and expansion."
+                "style": "Joy Nidra",
+                "description": "Invoking feelings of pure joy and lightheartedness."
               },
               {
-                "style": "Pre-Sleep Induction",
-                "description": "Specifically designed to promote deep relaxation and ease the transition into restful sleep."
+                "style": "Courage Nidra",
+                "description": "Building inner strength and overcoming fears."
               },
               {
-                "style": "Morning Awakening",
-                "description": "Helps gently awaken the body and mind, setting a positive tone for the day."
+                "style": "Confidence Nidra",
+                "description": "Enhancing self-esteem and belief in one's abilities."
               },
               {
-                "style": "Stress Reduction",
-                "description": "Targets common stress points and offers techniques for releasing tension and promoting calm."
+                "style": "Release Nidra",
+                "description": "Letting go of tension, stress, negative emotions, and limiting beliefs."
               },
               {
-                "style": "Anxiety Relief",
-                "description": "Provides soothing language and guided imagery to alleviate anxiety and promote peace."
+                "style": "Grounding Nidra",
+                "description": "Connecting with the earth's energy for stability and security."
               },
               {
-                "style": "Pain Management",
-                "description": "Offers techniques for shifting focus away from pain and promoting comfort."
+                "style": "Energetic Balance Nidra",
+                "description": "Harmonizing the body's energy centers and flows."
               },
               {
-                "style": "Inner Child Healing",
-                "description": "Focuses on connecting with and nurturing the inner child, addressing past wounds."
+                "style": "Sleep Preparation Nidra",
+                "description": "A soothing practice to prepare the mind and body for deep, restorative sleep."
               },
               {
-                "style": "Affirmation-Based",
-                "description": "Uses positive affirmations and Sankalpa repetition to empower the subconscious."
+                "style": "Morning Awakening Nidra",
+                "description": "A gentle practice to ease into wakefulness and set a positive intention for the day."
               },
               {
-                "style": "Dream State Induction",
-                "description": "Guides into a liminal state between waking and dreaming, fostering creativity and insight."
+                "style": "Breath Awareness Nidra",
+                "description": "Deep focus on the natural rhythm and sensation of the breath."
               },
               {
-                "style": "Sensory Immersion",
-                "description": "Engages all five senses through imagined scenarios, enhancing vividness and immersion."
+                "style": "Body Scan Nidra",
+                "description": "Systematic awareness of different parts of the body, releasing tension."
               },
               {
-                "style": "Color Therapy",
-                "description": "Invokes specific colors and their associated qualities to promote healing and balance."
+                "style": "Sensory Journey Nidra",
+                "description": "Exploring the five senses individually and collectively."
               },
               {
-                "style": "Animal Spirit Guide",
-                "description": "Invites the presence of a symbolic animal for guidance, wisdom, and strength."
+                "style": "Yoga Nidra for Stress Relief",
+                "description": "Specific techniques to calm the nervous system and reduce stress."
               },
               {
-                "style": "Abstract Imagery",
-                "description": "Uses non-representational concepts and feelings to guide the mind, allowing personal interpretation."
+                "style": "Yoga Nidra for Anxiety Reduction",
+                "description": "Practices designed to soothe anxious thoughts and feelings."
               },
               {
-                "style": "Gentle Past Life Regression",
-                "description": "Offers a gentle approach to exploring past life memories or ancestral patterns, focusing on healing."
+                "style": "Yoga Nidra for Pain Management",
+                "description": "Focusing on sensation and detachment to alleviate physical discomfort."
               },
               {
-                "style": "Future Pacing/Goal Manifestation",
-                "description": "Visualizes future successes and desired outcomes to impress them upon the subconscious."
+                "style": "Yoga Nidra for Emotional Regulation",
+                "description": "Learning to observe and manage emotions without being overwhelmed."
               },
               {
-                "style": "Sound Healing Integration",
-                "description": "Incorporates descriptions of specific sounds (e.g., singing bowls, chimes, nature sounds) for auditory relaxation."
+                "style": "Yoga Nidra for Focus & Concentration",
+                "description": "Exercises to improve mental clarity and sustained attention."
               },
               {
-                "style": "Self-Inquiry/Philosophical",
-                "description": "Poses open-ended questions for introspection, encouraging deeper self-understanding."
+                "style": "Yoga Nidra for Intuition Development",
+                "description": "Tuning into inner wisdom and gut feelings."
               },
               {
-                "style": "Release and Let Go",
-                "description": "Focuses on identifying and releasing physical and emotional tension, promoting lightness."
+                "style": "Yoga Nidra for Past Life Regression",
+                "description": "Exploring potential past life memories or karmic patterns."
               },
               {
-                "style": "Energizing/Revitalizing",
-                "description": "Aims to leave the practitioner feeling refreshed and re-energized while deeply relaxed."
+                "style": "Yoga Nidra for Future Self Visualization",
+                "description": "Connecting with and embodying the highest future version of oneself."
               },
               {
-                "style": "Grounding and Centering",
-                "description": "Emphasizes connecting with the earth and finding a sense of stability and inner calm."
+                "style": "Yoga Nidra for Inner Wisdom",
+                "description": "Accessing deeper insights and understanding from within."
               },
               {
-                "style": "Heart-Centered Compassion",
-                "description": "Focuses on opening the heart space and cultivating compassion for oneself and others."
+                "style": "Yoga Nidra with Mudras",
+                "description": "Incorporating specific hand gestures (mudras) for added energetic benefit."
               },
               {
-                "style": "Digital Detox",
-                "description": "Guides the practitioner to release attachment to technology and reconnect with inner stillness."
+                "style": "Yoga Nidra with Aromatherapy",
+                "description": "Using essential oils to enhance the relaxation and focus."
               },
               {
-                "style": "Traveler's Serenity",
-                "description": "Designed for finding peace and calm amidst travel stress."
+                "style": "Yoga Nidra with Crystal Healing",
+                "description": "Placing crystals on or around the body to support specific intentions."
               },
               {
-                "style": "Student Focus/Concentration",
-                "description": "Aids in improving focus, memory, and reducing academic stress."
+                "style": "Narrative Journey Nidra",
+                "description": "Following a guided story or imaginative scenario."
               },
               {
-                "style": "Artist's Inspiration",
-                "description": "Specifically crafted to spark imagination and artistic vision."
+                "style": "Symbolic Visualization Nidra",
+                "description": "Working with archetypes and symbols for personal growth."
               },
               {
-                "style": "Musician's Flow",
-                "description": "Helps musicians connect with their inner rhythm and enhance performance."
+                "style": "Quantum Nidra",
+                "description": "Exploring the interconnectedness of all things and infinite possibilities."
               },
               {
-                "style": "Writer's Clarity",
-                "description": "Assists writers in finding mental clarity and overcoming writer's block."
+                "style": "Metta (Loving-Kindness) Nidra",
+                "description": "Cultivating feelings of goodwill and kindness towards self and others."
               },
               {
-                "style": "Athlete's Recovery",
-                "description": "Promotes physical and mental recovery, enhancing performance and preventing burnout."
+                "style": "Yoga Nidra for Grief Support",
+                "description": "A gentle space to process loss and find comfort."
               },
               {
-                "style": "Pre-Performance Nerves",
-                "description": "Helps calm nerves and build confidence before public speaking or performances."
+                "style": "Yoga Nidra for Performance Enhancement",
+                "description": "Mental rehearsal for improved athletic, artistic, or professional performance."
               },
               {
-                "style": "Post-Workout Release",
-                "description": "Aids in muscle relaxation and mental unwinding after physical exertion."
+                "style": "Yoga Nidra for Spiritual Connection",
+                "description": "Deepening one's connection to a higher power or universal consciousness."
               },
               {
-                "style": "Morning Intention Setting",
-                "description": "Combines relaxation with setting clear intentions for the day ahead."
+                "style": "Shadow Work Nidra",
+                "description": "Safely exploring and integrating repressed or undesirable aspects of the self."
               },
               {
-                "style": "Evening Reflection",
-                "description": "Guides the practitioner through a gentle review of the day, releasing what no longer serves."
+                "style": "Ecological Nidra",
+                "description": "Connecting with the natural world and fostering environmental awareness."
+              },
+              {
+                "style": "Ancestral Healing Nidra",
+                "description": "Connecting with ancestral wisdom and healing generational patterns."
+              },
+              {
+                "style": "Divine Feminine Nidra",
+                "description": "Embracing and balancing feminine energies within."
+              },
+              {
+                "style": "Divine Masculine Nidra",
+                "description": "Embracing and balancing masculine energies within."
+              },
+              {
+                "style": "Inner Sanctuary Nidra",
+                "description": "Creating and retreating to a safe, peaceful inner space."
+              },
+              {
+                "style": "Compassion Nidra",
+                "description": "Extending empathy and understanding to self and others."
+              },
+              {
+                "style": "Equanimity Nidra",
+                "description": "Cultivating inner peace and stability amidst life's fluctuations."
+              },
+              {
+                "style": "Non-Attachment Nidra",
+                "description": "Practicing the art of letting go and trusting the flow of life."
+              },
+              {
+                "style": "Boundaries Nidra",
+                "description": "Strengthening personal boundaries and protecting one's energy."
+              },
+              {
+                "style": "Discernment Nidra",
+                "description": "Enhancing the ability to see clearly and make wise choices."
+              },
+              {
+                "style": "Detox Nidra",
+                "description": "Releasing physical, mental, and emotional toxins."
+              },
+              {
+                "style": "Immune Boost Nidra",
+                "description": "Visualizing and strengthening the body's natural defense system."
+              },
+              {
+                "style": "Digestive Harmony Nidra",
+                "description": "Promoting healthy digestion and gut well-being."
+              },
+              {
+                "style": "Circulatory Flow Nidra",
+                "description": "Visualizing healthy blood flow and cardiovascular wellness."
+              },
+              {
+                "style": "Nervous System Reset Nidra",
+                "description": "Calming and rebalancing the nervous system."
+              },
+              {
+                "style": "Cellular Regeneration Nidra",
+                "description": "Imagining healthy cell growth and repair throughout the body."
+              },
+              {
+                "style": "Spinal Alignment Nidra",
+                "description": "Visualizing a healthy and aligned spine, releasing tension."
+              },
+              {
+                "style": "Joint Health Nidra",
+                "description": "Focusing on flexibility and lubrication in the joints."
+              },
+              {
+                "style": "Organ Health Nidra",
+                "description": "Directing healing energy to specific organs for optimal function."
+              },
+              {
+                "style": "Lymphatic Flow Nidra",
+                "description": "Supporting the body's natural detoxification and immune system."
+              },
+              {
+                "style": "Hormonal Balance Nidra",
+                "description": "Visualizing harmony within the endocrine system."
+              },
+              {
+                "style": "Reproductive Health Nidra",
+                "description": "Promoting well-being and balance in the reproductive system."
+              },
+              {
+                "style": "Skin Radiance Nidra",
+                "description": "Visualizing healthy, glowing skin from within."
+              },
+              {
+                "style": "Hair & Nail Strength Nidra",
+                "description": "Focusing on vitality and growth of hair and nails."
+              },
+              {
+                "style": "Eye Health Nidra",
+                "description": "Relaxing eye muscles and promoting clear vision."
+              },
+              {
+                "style": "Ear Health Nidra",
+                "description": "Releasing tension in the jaw and ears, promoting clear hearing."
+              },
+              {
+                "style": "Throat Chakra Expression Nidra",
+                "description": "Opening the throat chakra for authentic communication."
+              },
+              {
+                "style": "Third Eye Awakening Nidra",
+                "description": "Activating the third eye for enhanced intuition and perception."
+              },
+              {
+                "style": "Crown Chakra Connection Nidra",
+                "description": "Deepening spiritual connection and universal consciousness."
+              },
+              {
+                "style": "Root Chakra Stability Nidra",
+                "description": "Grounding oneself and fostering feelings of security."
+              },
+              {
+                "style": "Sacral Chakra Flow Nidra",
+                "description": "Enhancing creativity, pleasure, and emotional balance."
+              },
+              {
+                "style": "Solar Plexus Power Nidra",
+                "description": "Strengthening personal power, willpower, and confidence."
+              },
+              {
+                "style": "Heart Chakra Expansion Nidra",
+                "description": "Opening to love, compassion, and connection."
+              },
+              {
+                "style": "Akashic Records Nidra",
+                "description": "Accessing the energetic record of all universal events and knowledge."
+              },
+              {
+                "style": "Parallel Lives Nidra",
+                "description": "Exploring the concept of simultaneous existences or dimensions."
+              },
+              {
+                "style": "Spirit Guide Connection Nidra",
+                "description": "Opening to communication with benevolent spirit guides."
+              },
+              {
+                "style": "Angelic Realm Nidra",
+                "description": "Connecting with angelic energies for guidance and support."
+              },
+              {
+                "style": "Faerie Realm Nidra",
+                "description": "Exploring the magic and whimsy of the elemental fae."
+              },
+              {
+                "style": "Star Seed Nidra",
+                "description": "Connecting with cosmic origins and higher dimensions for star seeds."
+              },
+              {
+                "style": "Meridian Line Balancing Nidra",
+                "description": "Harmonizing the energetic pathways in the body."
+              },
+              {
+                "style": "Aura Cleansing Nidra",
+                "description": "Clearing and strengthening the energetic field around the body."
+              },
+              {
+                "style": "Past Trauma Release Nidra",
+                "description": "Gently releasing energetic imprints of past difficult experiences."
+              },
+              {
+                "style": "Future Planning Nidra",
+                "description": "Visualizing and setting intentions for future events and endeavors."
+              },
+              {
+                "style": "Inner Teacher Nidra",
+                "description": "Connecting with the innate wisdom and guidance within."
+              },
+              {
+                "style": "Archetype Integration Nidra",
+                "description": "Working with archetypal energies for personal growth and understanding."
+              },
+              {
+                "style": "Mirror Work Nidra",
+                "description": "Reflecting on self-image and cultivating self-acceptance."
+              },
+              {
+                "style": "Inner Critic Release Nidra",
+                "description": "Softening and transforming the voice of self-judgment."
+              },
+              {
+                "style": "Inner Advocate Nidra",
+                "description": "Strengthening the voice of self-support and encouragement."
+              },
+              {
+                "style": "Playfulness Nidra",
+                "description": "Invoking a sense of lightheartedness, joy, and inner child freedom."
+              },
+              {
+                "style": "Resilience Nidra",
+                "description": "Building mental and emotional toughness to bounce back from adversity."
+              },
+              {
+                "style": "Humor Nidra",
+                "description": "Finding lightness and laughter within, even in challenging situations."
+              },
+              {
+                "style": "Adventure Nidra",
+                "description": "Embarking on imaginative journeys and exploring new possibilities."
+              },
+              {
+                "style": "Silence Nidra",
+                "description": "A deep dive into pure silence and stillness of mind."
+              },
+              {
+                "style": "Void Nidra",
+                "description": "Exploring the concept of emptiness and ultimate potential."
+              },
+              {
+                "style": "Oneness Nidra",
+                "description": "Experiencing the interconnectedness of all beings and the universe."
+              },
+              {
+                "style": "Surrender Nidra",
+                "description": "Practicing the art of letting go and trusting the flow of life."
+              },
+              {
+                "style": "Acceptance Nidra",
+                "description": "Cultivating radical acceptance of what is, without judgment."
+              },
+              {
+                "style": "Presence Nidra",
+                "description": "Deepening awareness of the present moment, fully embodied."
+              },
+              {
+                "style": "Intention Setting Nidra",
+                "description": "Clearly defining and imprinting conscious desires and goals."
+              },
+              {
+                "style": "Sankalpa Refinement Nidra",
+                "description": "Clarifying and strengthening one's deepest heartfelt desire or resolve."
+              },
+              {
+                "style": "Energy Blockage Release Nidra",
+                "description": "Identifying and dissolving stagnant energy within the body and mind."
               }
             ];
-            
+
             personas = [
-                {
-                    "name": "None (Default Guide)",
-                    "description": "A standard, calming guide with a neutral and reassuring tone. Focuses on clear, direct instructions for relaxation.",
-                    "vocal_quality": "Clear, gentle, and evenly paced.",
-                    "imagery": "Simple, universal imagery (e.g., light, warmth).",
-                    "theme": "General relaxation and stress reduction."
-                },
-                {
-                    "name": "The Nurturer",
-                    "description": "A warm, maternal presence offering comfort and deep compassion.",
-                    "vocal_quality": "Soft, loving, and gentle.",
-                    "imagery": "Cozy blankets, warm embraces, a safe and loving space.",
-                    "theme": "Self-compassion and inner child healing."
-                },
-                {
-                    "name": "The Storyteller",
-                    "description": "An imaginative guide who weaves enchanting narratives and vivid journeys.",
-                    "vocal_quality": "Engaging, gentle, and melodic.",
-                    "imagery": "Mythical landscapes, magical forests, cosmic journeys.",
-                    "theme": "Inspiration and subconscious exploration."
-                },
-                {
-                    "name": "The Sage",
-                    "description": "A wise, ancient voice that speaks with authority and philosophical depth.",
-                    "vocal_quality": "Calm, resonant, and deliberate.",
-                    "imagery": "Ancient temples, vast libraries, quiet mountaintops.",
-                    "theme": "Wisdom and self-inquiry."
-                }
+              {
+                "name": "Default Guide",
+                "description": "A calm, neutral, and reassuring guide, focusing on traditional Yoga Nidra principles.",
+                "vocal_quality": "Smooth, even-toned, and gentle.",
+                "imagery": "General calming imagery, like a peaceful meadow or still lake.",
+                "theme": "Relaxation and inner peace."
+              },
+              {
+                "name": "The Vinyasa Flow Enthusiast",
+                "description": "Practices dynamic yoga and seeks deep relaxation to balance high-energy flows and recover muscles.",
+                "vocal_quality": "Clear, steady, with an underlying sense of fluidity.",
+                "imagery": "References to energy flow, spaciousness, releasing tension from active muscles.",
+                "theme": "Recovery, balance, and dynamic stillness."
+              },
+              {
+                "name": "The Yin Yoga Lover",
+                "description": "Already appreciates stillness and seeks to deepen their meditative practice and release fascial tension through Yoga Nidra.",
+                "vocal_quality": "Soft, slow, and deeply grounding.",
+                "imagery": "Deep roots, melting sensations, release, gentle lengthening.",
+                "theme": "Deep release, stillness, and inner exploration."
+              },
+              {
+                "name": "The Aspiring Yogi/Yogini",
+                "description": "New to yoga and seeking an accessible way to experience the mental benefits and deeper states of yoga.",
+                "vocal_quality": "Encouraging, clear, and reassuring.",
+                "imagery": "Simple, universal calming images like clouds drifting, a gentle breeze.",
+                "theme": "Gentle introduction, curiosity, and foundational well-being."
+              },
+              {
+                "name": "The Yoga Teacher",
+                "description": "Constantly giving to others and needs a powerful tool for self-care, energetic replenishment, and to deepen their own practice.",
+                "vocal_quality": "Supportive, empathetic, with a knowing calm.",
+                "imagery": "Replenishing light, quiet sanctuary, open space for self-nurturing.",
+                "theme": "Self-care, replenishment, and authentic presence."
+              },
+              {
+                "name": "The Ashtanga Practitioner",
+                "description": "Engaged in a rigorous practice and needs intense mental and physical recovery to support their discipline.",
+                "vocal_quality": "Focused, disciplined yet deeply soothing.",
+                "imagery": "Deep rest for muscles, quietening the active mind, restorative coolness.",
+                "theme": "Profound recovery, mental stillness, and disciplined ease."
+              },
+              {
+                "name": "The Restorative Yoga Seeker",
+                "description": "Draws comfort from supported poses and wants to extend that deep relaxation and healing into Yoga Nidra.",
+                "vocal_quality": "Gentle, compassionate, and deeply comforting.",
+                "imagery": "Soft blankets, gentle support, warmth, melting into ease.",
+                "theme": "Nurturing, healing, and absolute surrender."
+              },
+              {
+                "name": "The Hatha Yogi",
+                "description": "Practices foundational poses and seeks to integrate mental and emotional balance with their physical practice.",
+                "vocal_quality": "Balanced, steady, and clear.",
+                "imagery": "Harmony, equilibrium, calm within the body and mind.",
+                "theme": "Balance, integration, and holistic well-being."
+              },
+              {
+                "name": "The Meditator Seeking Deeper States",
+                "description": "Has a meditation practice but wants to explore the unique profound relaxation and subconscious access offered by Yoga Nidra.",
+                "vocal_quality": "Subtle, guiding, with an emphasis on inner landscape.",
+                "imagery": "Deepening awareness, subtle energy, expanding consciousness.",
+                "theme": "Inner exploration, subconscious access, and expanded awareness."
+              },
+              {
+                "name": "The Kirtan & Bhakti Yogi",
+                "description": "Loves devotional practices and wants to integrate the emotional and spiritual depth of Bhakti with conscious relaxation.",
+                "vocal_quality": "Heart-centered, melodious, and full of devotion.",
+                "imagery": "Opening the heart, divine love, sacred sounds, flowing devotion.",
+                "theme": "Devotion, love, and spiritual connection through rest."
+              },
+              {
+                "name": "The Pranayama Student",
+                "description": "Dedicated to breathwork and seeks to deepen their understanding and control of prana through Yoga Nidra.",
+                "vocal_quality": "Rhythmic, spacious, and breath-focused.",
+                "imagery": "Flow of vital energy, expansion, lightness, subtle currents.",
+                "theme": "Pranic awareness, energetic control, and vital life force."
+              },
+              {
+                "name": "The Chakra Balancer",
+                "description": "Focuses on energetic centers and wants to use Yoga Nidra to harmonize and activate their chakras.",
+                "vocal_quality": "Clear, focused, with energetic precision.",
+                "imagery": "Vibrant colors, spinning wheels of light, ascending and descending energy.",
+                "theme": "Energetic alignment, balance, and activation."
+              },
+              {
+                "name": "The Mudra Enthusiast",
+                "description": "Integrates hand gestures into their practice and seeks to combine these with the deep relaxation of Nidra.",
+                "vocal_quality": "Precise, intentional, with an emphasis on energetic seals.",
+                "imagery": "Interlocking energies, symbolic forms, subtle currents through the hands.",
+                "theme": "Symbolic connection, energetic sealing, and focused intention."
+              },
+              {
+                "name": "The Mantra Chantist",
+                "description": "Uses sound and repetition in their yoga and wants to experience the profound effects of mantra within Nidra.",
+                "vocal_quality": "Resonant, vibrational, and rhythmic.",
+                "imagery": "Echoing sounds, vibrating silence, sacred syllables.",
+                "theme": "Internal resonance, sacred sound, and vibrational healing."
+              },
+              {
+                "name": "The Yoga Therapist",
+                "description": "Working with clients and seeking a powerful, accessible tool for emotional regulation and healing to integrate into their sessions.",
+                "vocal_quality": "Calm, empathetic, and therapeutically grounded.",
+                "imagery": "Safe harbor, gentle release, building inner resources.",
+                "theme": "Healing, emotional well-being, and gentle transformation."
+              },
+              {
+                "name": "The Yoga Retreat Participant",
+                "description": "On a retreat and seeking to fully immerse themselves in the transformative potential of deep rest and introspection.",
+                "vocal_quality": "Expansive, immersive, and serene.",
+                "imagery": "Tranquil landscapes, open horizons, deep silence, spaciousness.",
+                "theme": "Deep immersion, introspection, and retreat from the mundane."
+              },
+              {
+                "name": "The Yogi with a Home Practice",
+                "description": "Practices yoga independently and wants a structured, guided way to enhance their at-home relaxation and meditative experiences.",
+                "vocal_quality": "Clear, self-contained, and encouraging of self-reliance.",
+                "imagery": "Personal sanctuary, inner journey, cultivating self-awareness.",
+                "theme": "Self-guidance, personal discipline, and intimate practice."
+              },
+              {
+                "name": "The Yogi Seeking Spiritual Growth",
+                "description": "Uses yoga as a path to self-discovery and seeks Yoga Nidra to access deeper layers of consciousness and inner wisdom.",
+                "vocal_quality": "Mystical, inspiring, and profound.",
+                "imagery": "Divine light, universal consciousness, ancient wisdom, inner guru.",
+                "theme": "Spiritual evolution, self-realization, and wisdom."
+              },
+              {
+                "name": "The Yogi with Physical Limitations",
+                "description": "Has injuries or physical challenges that limit asana practice and finds solace and profound benefit in accessible Yoga Nidra.",
+                "vocal_quality": "Gentle, adaptable, and deeply compassionate.",
+                "imagery": "Weightlessness, floating, healing light, comfort, ease.",
+                "theme": "Comfort, healing beyond the physical, and gentle acceptance."
+              },
+              {
+                "name": "The Yoga Philosophy Student",
+                "description": "Studies the philosophical aspects of yoga and wants to experience the practical application of concepts like pratyahara and dharana.",
+                "vocal_quality": "Intellectual yet soothing, clear and precise.",
+                "imagery": "Inner space, focusing the mind, withdrawal of senses, clarity of thought.",
+                "theme": "Practical philosophy, mental discipline, and experiential understanding."
+              },
+              {
+                "name": "The Yogi with Sleep Issues",
+                "description": "Finds yoga helps with general well-being but still struggles with sleep, seeking Yoga Nidra specifically for insomnia.",
+                "vocal_quality": "Extremely soothing, monotonous, and gentle.",
+                "imagery": "Drifting, soft clouds, deep night, restorative darkness.",
+                "theme": "Deep rest, peaceful sleep, and nervous system calm."
+              },
+              {
+                "name": "The Yogi Battling Burnout",
+                "description": "Feels depleted despite their yoga practice and needs the profound rest and nervous system reset that Yoga Nidra offers.",
+                "vocal_quality": "Restorative, deeply calming, and replenishing.",
+                "imagery": "Cool springs, gentle rain, energetic refill, quiet stillness.",
+                "theme": "Restoration, energy renewal, and nervous system regulation."
+              },
+              {
+                "name": "The Post-Class Relaxation Seeker",
+                "description": "Loves Savasana and wants to extend and deepen that state of relaxation and integration beyond the regular class.",
+                "vocal_quality": "Soft, lingering, and integrative.",
+                "imagery": "Melting, dissolving, absorption, unified stillness.",
+                "theme": "Deep integration, sustained relaxation, and afterglow."
+              },
+              {
+                "name": "The Yogi Preparing for a Big Event",
+                "description": "Needs to manage pre-event anxiety, enhance focus, and visualize success through guided relaxation.",
+                "vocal_quality": "Calmly empowering, focused, and positive.",
+                "imagery": "Clear path, bright light, successful outcome, inner strength.",
+                "theme": "Confidence, clarity, and successful manifestation."
+              },
+              {
+                "name": "The Yogi on a Cleansing Journey",
+                "description": "Engaged in a detox or cleanse and seeks Yoga Nidra to support physical release and mental clarity.",
+                "vocal_quality": "Clean, refreshing, and purifying.",
+                "imagery": "Flowing water, clear light, release of burdens, renewed energy.",
+                "theme": "Purification, release, and clarity."
+              },
+              {
+                "name": "The Yogi Cultivating Self-Compassion",
+                "description": "Uses yoga to foster self-love and wants to deepen this connection through the gentle, nurturing space of Nidra.",
+                "vocal_quality": "Tender, unconditionally kind, and gentle.",
+                "imagery": "Warm embrace, soft light around the heart, nurturing touch.",
+                "theme": "Self-love, acceptance, and gentle kindness."
+              },
+              {
+                "name": "The Yogi Exploring Samskaras",
+                "description": "Interested in releasing deep-seated patterns and impressions (samskaras) through subconscious work in Nidra.",
+                "vocal_quality": "Observational, non-judgmental, and insightful.",
+                "imagery": "Fading footprints, dissolving shadows, seeds transforming into light.",
+                "theme": "Pattern release, subconscious healing, and inner freedom."
+              },
+              {
+                "name": "The Yogi Seeking Clarity",
+                "description": "Feels clouded or overwhelmed and wants to use Nidra to gain insight and clear decision-making ability.",
+                "vocal_quality": "Crisp, insightful, and illuminating.",
+                "imagery": "Clearing fog, bright light, still waters reflecting truth, a clear path.",
+                "theme": "Mental clarity, insight, and decisive action."
+              },
+              {
+                "name": "The Yogi Embracing Ahimsa",
+                "description": "Practices non-harming and wants to extend this principle to their inner world, fostering kindness to self.",
+                "vocal_quality": "Gentle, peaceful, and compassionate.",
+                "imagery": "Softness, tenderness, absence of struggle, loving presence.",
+                "theme": "Inner non-harming, peace, and self-kindness."
+              },
+              {
+                "name": "The Yogi Integrating Yamas & Niyamas",
+                "description": "Working on the ethical principles of yoga and seeks a practice to embody qualities like contentment (santosha) and truthfulness (satya).",
+                "vocal_quality": "Principled, steady, and embodying virtue.",
+                "imagery": "Inner strength, solid foundation, clear reflections of truth, radiant contentment.",
+                "theme": "Ethical living, inner virtue, and character development."
+              },
+              {
+                "name": "The Yogi with Hormonal Imbalance",
+                "description": "Seeking natural ways to balance hormones and reduce stress-related symptoms through deep relaxation.",
+                "vocal_quality": "Balancing, soothing, and harmonizing.",
+                "imagery": "Gentle flow, equilibrium, inner harmony, blossoming.",
+                "theme": "Hormonal balance, inner calm, and well-being."
+              },
+              {
+                "name": "The Yogi Preparing for Pregnancy/Birth",
+                "description": "Looking for relaxation techniques to ease anxiety, connect with their body, and prepare for childbirth.",
+                "vocal_quality": "Calm, nurturing, and empowering.",
+                "imagery": "Gentle waves, blooming flower, safe haven, inner strength for birth.",
+                "theme": "Connection, peace, and preparation for new life."
+              },
+              {
+                "name": "The Yogi Post-Childbirth",
+                "description": "A new parent needing profound rest, emotional support, and time for healing and integration.",
+                "vocal_quality": "Deeply compassionate, restful, and supportive.",
+                "imagery": "Warm cocoon, replenishing sleep, gentle healing light, unconditional love.",
+                "theme": "Restoration, healing, and self-nurturing for new parents."
+              },
+              {
+                "name": "The Yogi Seeking More Energy",
+                "description": "Feels sluggish and wants to tap into deeper reserves of vitality through conscious relaxation and energy awareness.",
+                "vocal_quality": "Invigorating yet relaxing, vibrant.",
+                "imagery": "Rising sun, fresh breeze, sparkling light, inner dynamo.",
+                "theme": "Vitality, energy cultivation, and radiant well-being."
+              },
+              {
+                "name": "The Yogi with Joint Stiffness",
+                "description": "Experiences discomfort in joints and seeks mental relaxation to complement physical flexibility work, potentially reducing perceived pain.",
+                "vocal_quality": "Soothing, freeing, and easing.",
+                "imagery": "Flowing water, lubrication, warmth, gentle expansion, ease of movement.",
+                "theme": "Flexibility, comfort, and release of stiffness."
+              },
+              {
+                "name": "The Yogi Exploring the Koshas",
+                "description": "Interested in the layered dimensions of self (koshas) and wants to journey through them during Nidra.",
+                "vocal_quality": "Layered, insightful, and progressively deepening.",
+                "imagery": "Unveiling layers, subtle bodies, light permeating through dimensions.",
+                "theme": "Holistic self-awareness, layered existence, and spiritual integration."
+              },
+              {
+                "name": "The Yogi Cultivating Inner Peace",
+                "description": "His or her ultimate goal in yoga is profound inner tranquility and seeks Nidra to achieve this state consistently.",
+                "vocal_quality": "Profoundly peaceful, still, and unwavering.",
+                "imagery": "Still lake, calm center, boundless blue sky, silent sanctuary.",
+                "theme": "Ultimate tranquility, profound peace, and inner stillness."
+              },
+              {
+                "name": "The Yogi Detaching from Outcomes",
+                "description": "Practices Karma Yoga (action without attachment) and wants to apply this to their personal life through Nidra.",
+                "vocal_quality": "Liberating, releasing, and non-attached.",
+                "imagery": "Flowing river, open hands, clouds drifting by, lightness of being.",
+                "theme": "Non-attachment, freedom, and inner liberation."
+              },
+              {
+                "name": "The Yogi Seeking Presence",
+                "description": "Struggles with being fully in the moment during daily life and uses Nidra to train their mind for greater presence.",
+                "vocal_quality": "Grounding, immediate, and attentive.",
+                "imagery": "Rooting down, sensory awareness, here and now, a single point of light.",
+                "theme": "Mindful presence, awareness, and embodied being."
+              },
+              {
+                "name": "The Yogi Visualizing Asana Improvement",
+                "description": "Wants to enhance their physical yoga practice by mentally rehearsing poses and improving body awareness during Nidra.",
+                "vocal_quality": "Directive, supportive, and precise in visualization.",
+                "imagery": "Perfect alignment, effortless movement, strong foundation, flexible grace.",
+                "theme": "Physical enhancement, mental rehearsal, and peak performance."
+              },
+              {
+                "name": "The Yogi Managing Chronic Illness",
+                "description": "Living with a long-term health condition and using Nidra for symptomatic relief, stress reduction, and emotional support.",
+                "vocal_quality": "Empathetic, soothing, and gently empowering.",
+                "imagery": "Healing light, comfort, gentle acceptance, inner resilience.",
+                "theme": "Symptom management, emotional support, and inner strength."
+              },
+              {
+                "name": "The Yogi on a Solo Journey",
+                "description": "Enjoys individual exploration and wants a guided yet deeply personal experience of inner discovery.",
+                "vocal_quality": "Intimate, reflective, and spacious.",
+                "imagery": "Personal pathway, inner landscape, solitary mountain peak, deep well of wisdom.",
+                "theme": "Self-discovery, introspection, and personal pilgrimage."
+              },
+              {
+                "name": "The Yogi Embracing Shadow Work",
+                "description": "Ready to explore deeper subconscious patterns and integrate less conscious aspects of themselves for wholeness.",
+                "vocal_quality": "Brave, accepting, and transformative.",
+                "imagery": "Illuminating shadows, embracing all parts of self, inner alchemy, integration.",
+                "theme": "Wholeness, integration, and courageous self-acceptance."
+              },
+              {
+                "name": "The Yogi Seeking Unconditional Love",
+                "description": "Wants to cultivate deeper love for themselves and others, opening the heart through guided relaxation.",
+                "vocal_quality": "Heart-opening, compassionate, and expansive.",
+                "imagery": "Warm light from the heart, infinite compassion, overflowing love, universal connection.",
+                "theme": "Unconditional love, heart expansion, and universal connection."
+              },
+              {
+                "name": "The Yogi Releasing Trapped Emotions",
+                "description": "Holds tension in the body from unexpressed emotions and seeks a safe space to release them.",
+                "vocal_quality": "Safe, gentle, and releasing.",
+                "imagery": "Flowing tears (metaphorical), melting ice, birds flying free, light dissipating darkness.",
+                "theme": "Emotional release, freedom, and lightness of being."
+              },
+              {
+                "name": "The Yogi Cultivating Resilience",
+                "description": "Aims to bounce back from life's challenges with greater ease and seeks Nidra to build inner strength.",
+                "vocal_quality": "Steadfast, empowering, and strengthening.",
+                "imagery": "Deep roots, flexible branches, unshakeable core, rising sun.",
+                "theme": "Inner strength, adaptability, and emotional fortitude."
+              },
+              {
+                "name": "The Yogi Exploring Dream States",
+                "description": "Intrigued by dreams and wants to use Nidra to enhance dream recall or lucid dreaming experiences.",
+                "vocal_quality": "Mysterious, fluid, and suggestive.",
+                "imagery": "Veil between worlds, swirling colors, symbolic landscapes, dream characters.",
+                "theme": "Dream exploration, subconscious insights, and lucid awareness."
+              },
+              {
+                "name": "The Yogi Seeking Anandamaya Kosha Experience",
+                "description": "Aims to touch the bliss body through deeper states of consciousness and relaxation.",
+                "vocal_quality": "Blissful, transcendent, and expansive.",
+                "imagery": "Pure light, infinite joy, boundless peace, cosmic embrace.",
+                "theme": "Bliss, transcendence, and ultimate peace."
+              },
+              {
+                "name": "The Yogi Working with Samyama",
+                "description": "Practicing concentration, meditation, and absorption (Dharana, Dhyana, Samadhi) and seeks Nidra as a path.",
+                "vocal_quality": "Focused, profound, and deeply guiding.",
+                "imagery": "Single point of light, vast emptiness, merging with awareness, infinite silence.",
+                "theme": "Deep concentration, meditative absorption, and ultimate union."
+              },
+              {
+                "name": "The Yogi Integrating Yoga Beyond the Mat",
+                "description": "Wants to bring the peace and insights gained on the yoga mat into their daily life.",
+                "vocal_quality": "Practical, relatable, and grounding the spiritual.",
+                "imagery": "Radiant presence in daily tasks, calm amidst chaos, flowing with life's rhythm.",
+                "theme": "Embodied presence, mindful living, and practical integration."
+              },
+              {
+                "name": "The Yogi Seeking Deeper Intuition",
+                "description": "Aims to strengthen their inner knowing and trust their gut feelings through quiet contemplation.",
+                "vocal_quality": "Subtle, perceptive, and trust-inspiring.",
+                "imagery": "Still inner voice, clear vision, knowing glance, quiet wisdom.",
+                "theme": "Intuitive wisdom, inner guidance, and trusting oneself."
+              }
             ];
 
 
@@ -422,10 +1067,18 @@
             // It ensures consistency in prompt generation regardless of persona data source.
             function initializePersonaSystemPrompts() {
                 personas.forEach(p => {
+                    // Map 'Persona' to 'name' and 'short_description' to 'description' if they exist
+                    if (p.Persona && !p.name) {
+                        p.name = p.Persona;
+                    }
+                    if (p.short_description && !p.description) {
+                        p.description = p.short_description;
+                    }
+
                     if (!p.systemPrompt) {
                         p.systemPrompt = `You are an AI assistant creating a Yoga Nidra script. Adopt the persona of **${p.name}**.
                         **Detailed Persona Profile:**
-                        - **Description:** ${p.description}
+                        - **Description:** ${p.description || 'No description provided.'}
                         - **Vocal Quality:** ${p.vocal_quality || 'A calming voice.'}
                         - **Imagery Style:** ${p.imagery || 'General calming imagery.'}
                         - **Core Theme:** ${p.theme || 'Relaxation and inner peace.'}
@@ -814,7 +1467,7 @@
             }
 
             async function getAIResponse(prompt) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
                 try {
                     const response = await fetch(apiUrl, {
