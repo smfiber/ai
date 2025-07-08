@@ -107,6 +107,7 @@
                 </div>
             </div>
             
+            <!-- Moved Prompt Input and Generate Button Here -->
             <div class="mt-4 pt-4 border-t border-gray-700">
                 <textarea id="prompt-input" class="w-full bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none" rows="3" placeholder="Enter your script intention here..."></textarea>
                 <div class="flex justify-end items-center mt-2 gap-4">
@@ -116,7 +117,9 @@
                     </button>
                 </div>
             </div>
-            <div class="flex items-center justify-end gap-2 mt-3 w-full">
+            <!-- End Moved Content -->
+
+             <div class="flex items-center justify-end gap-2 mt-3 w-full">
                 <button id="copy-script-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Copy Script</button>
                 <button id="reset-app-btn" class="bg-red-700 hover:bg-red-600 text-white text-xs py-1 px-3 rounded-lg transition-colors">Clear</button>
             </div>
@@ -127,19 +130,20 @@
         <main id="script-display-area" class="w-full p-4 space-y-6 flex flex-col"></main>
     </div>
     
+    <!-- Original footer content removed, moved into header -->
+
     <div id="disclaimer-footer" class="bg-gray-900 text-gray-500 text-xs text-center py-4 mt-8 w-full">
         <p>Disclaimer: This tool generates Yoga Nidra scripts using AI and is for informational and personal use only. It is not a substitute for professional medical or therapeutic advice. Always consult with a qualified healthcare professional before beginning any new practice, especially if you have underlying health conditions or concerns. The effectiveness of the generated scripts may vary. By using this tool, you agree to assume full responsibility for your use of the generated content.</p>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Element References ---
+            // --- DOM Element References (initialized with let for later assignment) ---
             const scriptDisplayArea = document.getElementById('script-display-area');
-            const promptInput = document.getElementById('prompt-input');
-            const generateBtn = document.getElementById('generate-btn');
-            const loadingSpinner = document.getElementById('loading-spinner');
+            let promptInput; 
+            let generateBtn; 
+            let loadingSpinner; 
             const scriptLengthSelect = document.getElementById('script-length-select');
-            // Old scriptTypeSelect is now styleDropdownButton/Content/ListArea
             const styleDropdownButton = document.getElementById('style-dropdown-button');
             const styleDropdownContent = document.getElementById('style-dropdown-content');
             const styleListArea = document.getElementById('style-list-area');
@@ -517,19 +521,23 @@
             }
 
             function initializeApp() {
+                // Assign DOM elements here to ensure they are loaded
+                // Moved promptInput, generateBtn, loadingSpinner assignment to addEventListeners
+                // as they were causing issues when assigned here.
+
                 initializePersonaSystemPrompts(); 
-                populateStyleSelect(); // Calls the new custom style dropdown population function
+                populateStyleSelect(); 
                 populateScriptLengthSelect();
                 populatePersonaSelect();
-                addEventListeners();
-                resetApp(); // Calls reset after all initializations
+                addEventListeners(); // This is where the error occurs
+                resetApp(); 
                 checkAndPromptForKey();
             }
             
             // --- UI Population Functions ---
 
-            function populateStyleSelect() { // NEW function for custom style dropdown
-                styleListArea.innerHTML = ''; // Clear previous content
+            function populateStyleSelect() { 
+                styleListArea.innerHTML = ''; 
 
                 // Add "None (Optional)" option
                 const noneLabel = document.createElement('label');
@@ -545,7 +553,7 @@
                 noneLabel.querySelector('input').addEventListener('change', () => {
                     selectedStyleName = "";
                     updateStyleButton("");
-                    styleDropdownContent.classList.add('hidden'); // Hide dropdown after selection
+                    styleDropdownContent.classList.add('hidden'); 
                 });
                 styleListArea.appendChild(noneLabel);
 
@@ -553,7 +561,7 @@
                 yogaNidraStyles.forEach(style => {
                     const label = document.createElement('label');
                     label.className = 'dropdown-label';
-                    label.title = style.description; // Tooltip for style description
+                    label.title = style.description; 
                     
                     const radio = document.createElement('input');
                     radio.type = 'radio';
@@ -567,7 +575,7 @@
                     radio.addEventListener('change', () => {
                         selectedStyleName = radio.value;
                         updateStyleButton(selectedStyleName);
-                        styleDropdownContent.classList.add('hidden'); // Hide dropdown after selection
+                        styleDropdownContent.classList.add('hidden'); 
                     });
                     
                     const nameSpan = document.createElement('span');
@@ -579,7 +587,7 @@
                 });
             }
 
-            function updateStyleButton(styleName) { // NEW helper for custom style dropdown button text
+            function updateStyleButton(styleName) { 
                 const buttonSpan = styleDropdownButton.querySelector('span');
                 buttonSpan.textContent = styleName || "Select a Style (Optional)";
             }
@@ -666,6 +674,11 @@
 
 
             function addEventListeners() {
+                // Assign DOM elements here to ensure they are loaded immediately before use
+                promptInput = document.getElementById('prompt-input');
+                generateBtn = document.getElementById('generate-btn');
+                loadingSpinner = document.getElementById('loading-spinner');
+
                 generateBtn.addEventListener('click', handleGenerateScript);
                 promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerateScript(); } });
                 resetAppBtn.addEventListener('click', resetApp);
@@ -677,11 +690,17 @@
                 saveApiKeyBtn.addEventListener('click', saveApiKey);
                 closePersonaModalBtn.addEventListener('click', () => personaDetailModal.classList.add('hidden'));
 
-                // Style Dropdown Event Listeners (NEW)
-                styleDropdownButton.addEventListener('click', () => styleDropdownContent.classList.toggle('hidden'));
+                // Style Dropdown Event Listeners
+                styleDropdownButton.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent click from bubbling to document
+                    styleDropdownContent.classList.toggle('hidden');
+                });
 
-                // Persona Dropdown Event Listeners (Existing)
-                personaDropdownButton.addEventListener('click', () => personaDropdownContent.classList.toggle('hidden'));
+                // Persona Dropdown Event Listeners
+                personaDropdownButton.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent click from bubbling to document
+                    personaDropdownContent.classList.toggle('hidden');
+                });
                 
                 // Global click listener to close dropdowns when clicking outside
                 document.addEventListener('click', (event) => { 
