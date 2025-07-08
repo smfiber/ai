@@ -78,12 +78,12 @@
                     </h1>
                      <p class="text-sm text-gray-400 mt-1 max-w-xs">Generate calming Yoga Nidra scripts.</p>
                 </div>
-                <div class="flex flex-wrap items-end gap-4">
-                    <div class="w-96 relative">
+                <div class="flex items-end gap-4">
+                    <div class="w-72 relative">
                         <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Style (Optional):</label>
                         <select id="script-type-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
-                    <div class="w-96 relative">
+                    <div class="w-72 relative">
                         <label class="block mb-1 text-gray-400 text-sm">AI Persona (Optional):</label>
                         <button id="persona-dropdown-button" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base text-left focus:ring-indigo-500 focus:border-indigo-500 flex justify-between items-center truncate">
                             <span>Select Persona</span>
@@ -93,7 +93,7 @@
                            <div id="persona-list-area" class="max-h-56 overflow-y-auto custom-dropdown-content"></div>
                         </div>
                     </div>
-                     <div class="w-40">
+                    <div class="w-72">
                         <label for="script-length-select" class="block mb-1 text-gray-400 text-sm">Length:</label>
                         <select id="script-length-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
@@ -212,16 +212,15 @@
             let isGenerating = false;
             let currentGeneratedScript = '';
             let selectedPersonaIndex = null; // Use null for no selection
-            let yogaNidraStyles = []; // Renamed from scriptTypesData to yogaNidraStyles
+            let yogaNidraStyles = []; 
             let personas = [];
             
             // --- Data Definitions ---
 
             const lengthOptions = [
-                { name: "Short", promptSuffix: "Make it a concise script, around 300-500 words." },
-                { name: "Medium", promptSuffix: "Generate a moderately detailed script, approximately 700-1000 words." },
-                { name: "Long", promptSuffix: "Produce a very detailed and expansive script, about 1200-1800 words." },
-                { name: "Unlimited", promptSuffix: "Generate a comprehensive script without a specific word limit." }
+                { name: "15 minutes", promptSuffix: "Make it a concise script, approximately 15 minutes long (around 300-500 words)." },
+                { name: "30 minutes", promptSuffix: "Generate a moderately detailed script, approximately 30 minutes long (around 700-1000 words)." },
+                { name: "1 hour", promptSuffix: "Produce a very detailed and expansive script, approximately 1 hour long (around 1200-1800 words)." }
             ];
 
             // --- Yoga Nidra Styles Data (formerly scriptTypesData) ---
@@ -339,7 +338,7 @@
                 "description": "Engages all five senses through imagined scenarios, enhancing vividness and immersion."
               },
               {
-                ""style": "Color Therapy",
+                "style": "Color Therapy",
                 "description": "Invokes specific colors and their associated qualities to promote healing and balance."
               },
               {
@@ -440,7 +439,7 @@
               {
                 "name": "The Calming Voice",
                 "description": "A neutral, clear, and reassuring voice, focusing on general relaxation and a gentle presence.",
-                "vocal_quality": "", "imagery": "", "theme": "" // Added for structural consistency
+                "vocal_quality": "", "imagery": "", "theme": "" 
               },
               {
                 "name": "The Serene Guide",
@@ -540,11 +539,6 @@
             ];
 
 
-            // --- Data Parsing and Loading ---
-
-            // Removed: function parsePersonaData() { ... } (No longer needed)
-
-
             // This re-generates the systemPrompt for all personas on load,
             // which is necessary if the source JSON for 'personas' doesn't include it.
             // It ensures consistency in prompt generation regardless of persona data source.
@@ -564,12 +558,9 @@
                 });
             }
 
-            // Removed: function parseAndLoadScriptTypes() { ... } (No longer needed)
-
             function initializeApp() {
-                // parseAndLoadScriptTypes(); // No longer needed
-                initializePersonaSystemPrompts(); // New step to ensure system prompts are generated
-                populateScriptTypeSelect(); // This function now populates styles
+                initializePersonaSystemPrompts(); 
+                populateScriptTypeSelect(); 
                 populateScriptLengthSelect();
                 populatePersonaSelect();
                 addEventListeners();
@@ -582,7 +573,7 @@
             function populatePersonaSelect() {
                 personaListArea.innerHTML = '';
                 // Add the "None (Default Guide)" option explicitly at the top
-                const defaultPersona = personas[0]; // Assuming default is always the first one
+                const defaultPersona = personas[0]; 
                 const noneLabel = document.createElement('label');
                 noneLabel.className = 'dropdown-label flex justify-between items-center';
                 noneLabel.innerHTML = `
@@ -591,16 +582,15 @@
                         <span>None (Default Guide)</span>
                     </div>
                 `;
-                // Set the title for the default guide for consistency, although description is generic
                 noneLabel.title = defaultPersona.description; 
 
                 if (selectedPersonaIndex === null || selectedPersonaIndex === 0) {
                     noneLabel.querySelector('input').checked = true;
-                    selectedPersonaIndex = 0; // Ensure default is selected if null
+                    selectedPersonaIndex = 0; 
                     updatePersonaButton(0);
                 }
                 noneLabel.querySelector('input').addEventListener('change', () => {
-                    selectedPersonaIndex = 0; // Set to the default persona's index
+                    selectedPersonaIndex = 0; 
                     updatePersonaButton(0);
                     personaDropdownContent.classList.add('hidden');
                 });
@@ -608,13 +598,12 @@
 
 
                 // Populate the rest of the personas (from index 1 onwards in the new array)
-                // No categories needed for the new flat list of personas
                 for (let i = 1; i < personas.length; i++) {
                     const persona = personas[i];
-                    const personaIndex = i; // The actual index in the personas array
+                    const personaIndex = i; 
                     const label = document.createElement('label');
                     label.className = 'dropdown-label flex justify-between items-center';
-                    label.title = persona.description; // Tooltip for persona description
+                    label.title = persona.description; 
                     
                     const contentDiv = document.createElement('div');
                     const radio = document.createElement('input');
@@ -681,7 +670,7 @@
                 personaListArea.addEventListener('click', (event) => {
                     const infoButton = event.target.closest('.info-btn');
                     if (infoButton) {
-                        event.stopPropagation(); // prevent the dropdown from closing
+                        event.stopPropagation(); 
                         const personaIndex = parseInt(infoButton.dataset.index);
                         if (!isNaN(personaIndex) && personas[personaIndex]) {
                             showPersonaDetailModal(personas[personaIndex]);
@@ -694,11 +683,11 @@
                 scriptDisplayArea.innerHTML = '';
                 promptInput.value = '';
                 currentGeneratedScript = '';
-                scriptLengthSelect.value = "Short";
-                scriptTypeSelect.value = ""; // Resetting to default option
-                selectedPersonaIndex = 0; // Reset to the default persona (index 0)
-                updatePersonaButton(0); // Update button to reflect default
-                populatePersonaSelect(); // Re-populate to ensure default is checked
+                scriptLengthSelect.value = "15 minutes"; // Changed default length
+                scriptTypeSelect.value = ""; 
+                selectedPersonaIndex = 0; 
+                updatePersonaButton(0); 
+                populatePersonaSelect(); 
                 updateButtonStates();
                 displaySystemMessage("Enter an intention, or select a style to begin.");
             }
@@ -721,14 +710,13 @@
                 }
             }
             
-            function populateScriptTypeSelect() { // This function now populates 'styles'
+            function populateScriptTypeSelect() { 
                 scriptTypeSelect.innerHTML = '<option value="">Select a Style (Optional)</option>';
-                // No categories for the new styles data, iterate directly
                 yogaNidraStyles.forEach(style => {
                     const option = document.createElement('option');
                     option.value = style.style;
                     option.textContent = style.style;
-                    option.title = style.description; // Tooltip on hover
+                    option.title = style.description; 
                     scriptTypeSelect.appendChild(option);
                 });
             }
@@ -744,11 +732,9 @@
             }
 
             function updatePersonaButton(index) {
-                // Ensure index is valid before attempting to access personas[index]
                 if (personas[index]) {
                    personaDropdownButton.querySelector('span').textContent = personas[index].name;
                 } else {
-                   // Fallback if somehow an invalid index is passed, though should not happen with current logic
                    personaDropdownButton.querySelector('span').textContent = 'Select Persona (Optional)';
                 }
             }
@@ -760,7 +746,7 @@
                     return;
                 }
                 const customIntention = promptInput.value.trim();
-                const selectedStyleName = scriptTypeSelect.value; // Changed from selectedTypeName
+                const selectedStyleName = scriptTypeSelect.value; 
                 if (!selectedStyleName && !customIntention) {
                     displaySystemMessage("Please enter an intention, or select a style.", 'error-message');
                     return;
@@ -773,12 +759,10 @@
 
                 try {
                     const lengthInstruction = lengthOptions.find(opt => opt.name === scriptLengthSelect.value).promptSuffix;
-                    // Ensure selectedPersonaIndex is valid for array access
                     const finalPersonaIndex = (selectedPersonaIndex !== null && selectedPersonaIndex < personas.length) ? selectedPersonaIndex : 0;
                     const personaInstruction = personas[finalPersonaIndex].systemPrompt;
 
                     let themeInstruction = '';
-                    // Changed to yogaNidraStyles and style property
                     const selectedStyle = yogaNidraStyles.find(style => style.style === selectedStyleName);
                     if (selectedStyle) {
                         themeInstruction = `The core theme is **${selectedStyle.style}**. Description: *${selectedStyle.description}*`;
@@ -789,7 +773,7 @@
                         intentionInstruction = `Please weave in this specific user intention: **"${customIntention}"**.`;
                     }
 
-                    if (!selectedStyle && customIntention) { // Changed from selectedType
+                    if (!selectedStyle && customIntention) { 
                         themeInstruction = `The core theme is the user's intention: **"${customIntention}"**.`;
                         intentionInstruction = '';
                     }
@@ -801,7 +785,7 @@
                     const titlePrompt = `Based on the following Yoga Nidra script, provide a short, creative title. Respond with only the title text, no quotes.\nScript: ${aiResponseText}`;
                     const generatedTitle = await getAIResponse(titlePrompt);
 
-                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedStyleName); // Passed selectedStyleName
+                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedStyleName); 
                 } catch (error) {
                     console.error("Error generating script:", error);
                     displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
@@ -811,13 +795,12 @@
                 }
             }
             
-            // Changed scriptType parameter to scriptStyle
             function displayGeneratedScript(scriptText, customIntention, aiTitle, personaName, scriptStyle) {
                 scriptDisplayArea.innerHTML = '';
                 const titleElement = document.createElement('h2');
                 titleElement.classList.add('script-title');
                 let promptHTML = '';
-                if (scriptStyle) { // Changed from scriptType
+                if (scriptStyle) { 
                     promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Style: <span class="text-white">${scriptStyle}</span></div>`;
                 }
                 if (customIntention) {
