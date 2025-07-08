@@ -1498,9 +1498,9 @@ function getMasterGuidePrompt(type, context) {
     const {
         blueprintMarkdown = '',
         coreTask = '',
-        persona = '', 
-        tone = '', 
-        additionalContext = '', 
+        persona = '',
+        tone = '',
+        additionalContext = '',
         fullHierarchyPath = []
     } = context;
 
@@ -1551,7 +1551,6 @@ Additional Context: ${additionalContext || 'None'}`;
     }
 
     if (type === 'fullGuide') {
-        // ** CHANGE STARTS HERE **
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
         You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
@@ -1568,8 +1567,14 @@ Additional Context: ${additionalContext || 'None'}`;
         
         ### 5. Detailed Implementation Guide
         **CRITICAL:** This section must be highly practical.
-        - For every step involving a GUI, it is **mandatory** to add a descriptive screenshot placeholder using the machine-readable format: {{IMG: A concise description of the screenshot's content.}} **This is not optional.** Example: After describing login fields, you **must** add '{{IMG: AHS login screen showing Username and Password fields.}}'
+        - To request a screenshot, it is **mandatory** to use the machine-readable format: {{IMG: A search query for a specific, photorealistic screenshot of a user interface.}} This query will be used to find an existing image. **Do not request abstract diagrams or concepts.**
         - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+
+        //-- EXAMPLES OF HOW TO REQUEST IMAGES (FEW-SHOT LEARNING) --//
+        - **GOOD QUERY:** {{IMG: HPE iLO 5 firmware update screen showing the 'Browse' button to select a file.}}
+        - **GOOD QUERY:** {{IMG: Windows command prompt showing a successful ping to an IP address.}}
+        - **BAD QUERY (DO NOT DO THIS):** {{IMG: A diagram of the update process.}}
+        - **BAD QUERY (DO NOT DO THIS):** {{IMG: A concept map of server management.}}
         
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
@@ -1595,7 +1600,6 @@ Additional Context: ${additionalContext || 'None'}`;
         - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
         
         Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
-        // ** CHANGE ENDS HERE **
     }
     return '';
 }
