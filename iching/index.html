@@ -234,8 +234,12 @@
             }
 
             try {
-                // Now, fbConfigStr should be a clean JSON string or just the object part
-                const parsedConfig = JSON.parse(fbConfigStr); 
+                // The config from Firebase might have unquoted keys, which is not valid JSON.
+                // This regex will find keys that are not in double quotes and add them.
+                let jsonFriendlyStr = fbConfigStr.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
+        
+                // Now, jsonFriendlyStr should be a valid JSON string.
+                const parsedConfig = JSON.parse(jsonFriendlyStr);
                 const cleanFbConfigStr = JSON.stringify(parsedConfig); // Re-stringify to ensure it's clean JSON
                 
                 // Save credentials with profile prefix
