@@ -385,117 +385,6 @@
               }
             ];
 
-            // --- Mainstream Yoga Nidra Personas ---
-            personas = [
-              {
-                "name": "Default Yoga Nidra Guide",
-                "description": "A neutral, clear, and calming guide for a general Yoga Nidra practice.",
-                "vocal_quality": "A clear and calm voice.",
-                "imagery": "Simple and accessible, focusing on breath and body sensations.",
-                "theme": "General relaxation and stillness."
-              },
-              {
-                "name": "The Calming Voice",
-                "description": "A neutral, clear, and reassuring voice, focusing on general relaxation and a gentle presence.",
-                "vocal_quality": "", "imagery": "", "theme": "" 
-              },
-              {
-                "name": "The Serene Guide",
-                "description": "A peaceful and soft voice that encourages deep tranquility and inner stillness.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Nurturing Presence",
-                "description": "A warm and compassionate voice that offers comfort, safety, and a sense of being held.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Grounding Anchor",
-                "description": "A steady and stable voice that helps the listener feel deeply connected to the earth and present moment.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Expansive Whisper",
-                "description": "A light and airy voice that inspires a sense of spaciousness, freedom, and openness.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Mindful Observer",
-                "description": "A detached yet kind voice that encourages non-judgmental awareness of thoughts and sensations.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Healing Touch",
-                "description": "A gentle and empathetic voice that guides the listener towards self-healing and restoration.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Creative Muse",
-                "description": "An inspiring and imaginative voice that sparks creativity and intuitive insight.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Sleep Inducer",
-                "description": "A deeply soothing voice specifically designed to ease the transition into restful and restorative sleep.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Stress Reliever",
-                "description": "A calming voice focused on releasing tension and melting away the burdens of stress and anxiety.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Inner Explorer",
-                "description": "A curious and encouraging voice that invites exploration of inner landscapes and deeper consciousness.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Heart-Centered Friend",
-                "description": "A voice filled with loving-kindness and compassion, fostering connection and self-acceptance.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Peaceful Warrior",
-                "description": "A firm yet gentle voice that builds inner strength and resilience amidst calm.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Gentle Awakener",
-                "description": "A soft and subtle voice designed to gently bring awareness back to the present, feeling refreshed.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Intuitive Guide",
-                "description": "A voice that trusts inner wisdom and encourages the listener to connect with their own intuition.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Release Facilitator",
-                "description": "A voice that aids in the conscious letting go of emotional and physical burdens.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Focused Mind",
-                "description": "A clear and precise voice that helps cultivate concentration and mental clarity.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Restorative Presence",
-                "description": "A voice that emphasizes deep rest and rejuvenation for both body and mind.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Symbolic Storyteller",
-                "description": "A narrative voice that uses gentle metaphors and archetypal imagery for deeper insight.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              },
-              {
-                "name": "The Tranquil Breathwork Guide",
-                "description": "A voice centered on the subtleties of breath, guiding through various calming breath techniques.",
-                "vocal_quality": "", "imagery": "", "theme": ""
-              }
-            ];
-
 
             // This re-generates the systemPrompt for all personas on load,
             // which is necessary if the source JSON for 'personas' doesn't include it.
@@ -517,10 +406,6 @@
             }
 
             function initializeApp() {
-                // Assign DOM elements here to ensure they are loaded
-                // Moved promptInput, generateBtn, loadingSpinner assignment to addEventListeners
-                // as they were causing issues when assigned here.
-
                 initializePersonaSystemPrompts(); 
                 populateStyleSelect(); 
                 populateScriptLengthSelect();
@@ -670,7 +555,6 @@
 
 
             function addEventListeners() {
-                // promptInput, generateBtn, loadingSpinner are now initialized outside this function
                 generateBtn.addEventListener('click', handleGenerateScript);
                 promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerateScript(); } });
                 resetAppBtn.addEventListener('click', resetApp);
@@ -682,15 +566,15 @@
                 saveApiKeyBtn.addEventListener('click', saveApiKey);
                 closePersonaModalBtn.addEventListener('click', () => personaDetailModal.classList.add('hidden'));
 
-                // Style Dropdown Event Listeners
-                styleDropdownButton.addEventListener('click', (event) => {
-                    event.stopPropagation(); // Prevent click from bubbling to document
+                // Style Dropdown Event Listeners - CORRECTED
+                styleDropdownButton.addEventListener('click', (event) => { // Attach to the button
+                    event.stopPropagation(); 
                     styleDropdownContent.classList.toggle('hidden');
                 });
 
-                // Persona Dropdown Event Listeners
-                personaDropdownButton.addEventListener('click', (event) => {
-                    event.stopPropagation(); // Prevent click from bubbling to document
+                // Persona Dropdown Event Listeners - CORRECTED
+                personaDropdownButton.addEventListener('click', (event) => { // Attach to the button
+                    event.stopPropagation(); 
                     personaDropdownContent.classList.toggle('hidden');
                 });
                 
