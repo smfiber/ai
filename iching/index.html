@@ -215,20 +215,33 @@
 
             const geminiKey = geminiApiKeyInput.value.trim();
             const clientId = googleClientIdInput.value.trim();
-            const fbConfigStr = firebaseConfigInput.value.trim();
+            let fbConfigStr = firebaseConfigInput.value.trim();
 
             if (!geminiKey || !clientId || !fbConfigStr) {
                 alert("Please fill out all credential fields.");
                 return;
             }
 
+            // Check if the user pasted the whole const declaration and extract the object.
+            if (fbConfigStr.includes('const firebaseConfig =')) {
+                const match = fbConfigStr.match(/=\s*({[\s\S]*?});?/);
+                if (match && match[1]) {
+                    fbConfigStr = match[1];
+                } else {
+                    alert("Could not extract the config object. Please paste just the object part, like { apiKey: '...', ... }");
+                    return;
+                }
+            }
+
             try {
-                JSON.parse(fbConfigStr); // Validate JSON
+                // Now, fbConfigStr should be a clean JSON string or just the object part
+                const parsedConfig = JSON.parse(fbConfigStr); 
+                const cleanFbConfigStr = JSON.stringify(parsedConfig); // Re-stringify to ensure it's clean JSON
                 
                 // Save credentials with profile prefix
                 localStorage.setItem(`${profileName}_geminiApiKey`, geminiKey);
                 localStorage.setItem(`${profileName}_googleClientId`, clientId);
-                localStorage.setItem(`${profileName}_firebaseConfig`, fbConfigStr);
+                localStorage.setItem(`${profileName}_firebaseConfig`, cleanFbConfigStr);
 
                 // Update profiles list
                 let profiles = getProfiles();
@@ -243,7 +256,8 @@
                 loadConfigAndInit();
 
             } catch (e) {
-                alert("The Firebase config is not valid JSON. Please check and paste it again.");
+                console.error("Parsing Error:", e);
+                alert("The Firebase config is not valid JSON, even after cleaning. Please check the format and paste it again.");
             }
         }
 
