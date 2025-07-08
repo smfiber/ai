@@ -80,7 +80,7 @@
                 </div>
                 <div class="flex flex-wrap items-end gap-4">
                     <div class="w-96 relative">
-                        <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Script Type (Optional):</label>
+                        <label for="script-type-select" class="block mb-1 text-gray-400 text-sm">Style (Optional):</label>
                         <select id="script-type-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-base focus:ring-indigo-500 focus:border-indigo-500"></select>
                     </div>
                     <div class="w-96 relative">
@@ -135,7 +135,7 @@
                     <h3 class="font-semibold text-white mt-4">Generation Workflow</h3>
                     <ol class="list-decimal pl-5 space-y-2">
                         <li><strong>Enter Your Intention:</strong> Type the main goal or theme for your script in the text box. This is the only required step.</li>
-                        <li><strong>Select a Script Type (Optional):</strong> Choose a pre-defined theme from this dropdown to give the AI a strong starting point. Hover over an option to see its description.</li>
+                        <li><strong>Select a Style (Optional):</strong> Choose a pre-defined theme from this dropdown to give the AI a strong starting point. Hover over an option to see its description.</li>
                         <li><strong>Select an AI Persona (Optional):</strong> Choose a guiding voice. Click the 'i' icon next to a persona to see its detailed description in a popup. If none is chosen, a neutral guide is used.</li>
                          <li><strong>Choose Length:</strong> Select the desired script length.</li>
                         <li><strong>Generate Script:</strong> Click to create your unique Yoga Nidra script based on all your selections.</li>
@@ -186,7 +186,7 @@
             const generateBtn = document.getElementById('generate-btn');
             const loadingSpinner = document.getElementById('loading-spinner');
             const scriptLengthSelect = document.getElementById('script-length-select');
-            const scriptTypeSelect = document.getElementById('script-type-select');
+            const scriptTypeSelect = document.getElementById('script-type-select'); // Renamed from scriptTypeSelect to align with ID
             const resetAppBtn = document.getElementById('reset-app-btn');
             const copyScriptBtn = document.getElementById('copy-script-btn');
             const personaDropdownButton = document.getElementById('persona-dropdown-button');
@@ -212,7 +212,7 @@
             let isGenerating = false;
             let currentGeneratedScript = '';
             let selectedPersonaIndex = null; // Use null for no selection
-            let scriptTypesData = [];
+            let yogaNidraStyles = []; // Renamed from scriptTypesData to yogaNidraStyles
             let personas = [];
             
             // --- Data Definitions ---
@@ -223,6 +223,211 @@
                 { name: "Long", promptSuffix: "Produce a very detailed and expansive script, about 1200-1800 words." },
                 { name: "Unlimited", promptSuffix: "Generate a comprehensive script without a specific word limit." }
             ];
+
+            // --- Yoga Nidra Styles Data (formerly scriptTypesData) ---
+            yogaNidraStyles = [
+              {
+                "style": "Classic Body Scan",
+                "description": "Systematic awareness guided through each body part, promoting deep physical relaxation."
+              },
+              {
+                "style": "Breath Awareness",
+                "description": "Focuses on the natural rhythm and sensation of the breath to calm the nervous system."
+              },
+              {
+                "style": "Sankalpa (Intention) Focused",
+                "description": "Emphasizes the repetition and planting of a heartfelt resolve or intention into the subconscious."
+              },
+              {
+                "style": "Journey Through the Koshas",
+                "description": "Guides awareness through the five layers of being (physical, energetic, mental, wisdom, bliss) for holistic integration."
+              },
+              {
+                "style": "Chakra Balancing",
+                "description": "Focuses on cleansing, balancing, and awakening the seven main energy centers."
+              },
+              {
+                "style": "Exploring the Five Elements",
+                "description": "Connects the practitioner to the qualities of Earth, Water, Fire, Air, and Ether within themselves."
+              },
+              {
+                "style": "Working with Opposites (Dvandvas)",
+                "description": "Explores pairs of opposite sensations or emotions to cultivate equanimity."
+              },
+              {
+                "style": "Enchanted Forest Journey",
+                "description": "Imaginative journey through a magical forest with calming natural and symbolic imagery."
+              },
+              {
+                "style": "Cosmic Journey and Stargazing",
+                "description": "Visualizes floating in space, observing celestial bodies to expand consciousness."
+              },
+              {
+                "style": "Oceanic Relaxation",
+                "description": "Uses imagery and sounds of the ocean to cultivate cleansing, release, and profound calm."
+              },
+              {
+                "style": "Inner Sanctuary/Safe Space",
+                "description": "Guides creation of a detailed mental sanctuary for peace and solace."
+              },
+              {
+                "style": "Meeting a Wise Guide",
+                "description": "Facilitates a visualization to meet an inner guide for insight and reassurance."
+              },
+              {
+                "style": "Cultivating Gratitude",
+                "description": "Focuses on appreciating life's aspects to foster a positive mindset."
+              },
+              {
+                "style": "Forgiveness and Letting Go",
+                "description": "Guides the release of emotional burdens through self and other forgiveness."
+              },
+              {
+                "style": "Unlocking Creativity",
+                "description": "Aims to dissolve creative blocks and awaken inspiration via symbolic imagery."
+              },
+              {
+                "style": "Building Self-Compassion",
+                "description": "Uses affirmations and heart-centered visualizations to nurture self-love and acceptance."
+              },
+              {
+                "style": "Yoga Nidra for a New Beginning",
+                "description": "Releases the old and sets clear, positive intentions for renewal and purpose."
+              },
+              {
+                "style": "Traditional Sanskrit Phrases",
+                "description": "Incorporates classic Sanskrit terms and traditional yogic philosophy for deep connection to ancient roots."
+              },
+              {
+                "style": "Nature's Embrace",
+                "description": "Uses vivid imagery of natural landscapes (forests, oceans, mountains) for peace and expansion."
+              },
+              {
+                "style": "Pre-Sleep Induction",
+                "description": "Specifically designed to promote deep relaxation and ease the transition into restful sleep."
+              },
+              {
+                "style": "Morning Awakening",
+                "description": "Helps gently awaken the body and mind, setting a positive tone for the day."
+              },
+              {
+                "style": "Stress Reduction",
+                "description": "Targets common stress points and offers techniques for releasing tension and promoting calm."
+              },
+              {
+                "style": "Anxiety Relief",
+                "description": "Provides soothing language and guided imagery to alleviate anxiety and promote peace."
+              },
+              {
+                "style": "Pain Management",
+                "description": "Offers techniques for shifting focus away from pain and promoting comfort."
+              },
+              {
+                "style": "Inner Child Healing",
+                "description": "Focuses on connecting with and nurturing the inner child, addressing past wounds."
+              },
+              {
+                "style": "Affirmation-Based",
+                "description": "Uses positive affirmations and Sankalpa repetition to empower the subconscious."
+              },
+              {
+                "style": "Dream State Induction",
+                "description": "Guides into a liminal state between waking and dreaming, fostering creativity and insight."
+              },
+              {
+                "style": "Sensory Immersion",
+                "description": "Engages all five senses through imagined scenarios, enhancing vividness and immersion."
+              },
+              {
+                "style": "Color Therapy",
+                "description": "Invokes specific colors and their associated qualities to promote healing and balance."
+              },
+              {
+                "style": "Animal Spirit Guide",
+                "description": "Invites the presence of a symbolic animal for guidance, wisdom, and strength."
+              },
+              {
+                "style": "Abstract Imagery",
+                "description": "Uses non-representational concepts and feelings to guide the mind, allowing personal interpretation."
+              },
+              {
+                "style": "Gentle Past Life Regression",
+                "description": "Offers a gentle approach to exploring past life memories or ancestral patterns, focusing on healing."
+              },
+              {
+                "style": "Future Pacing/Goal Manifestation",
+                "description": "Visualizes future successes and desired outcomes to impress them upon the subconscious."
+              },
+              {
+                "style": "Sound Healing Integration",
+                "description": "Incorporates descriptions of specific sounds (e.g., singing bowls, chimes, nature sounds) for auditory relaxation."
+              },
+              {
+                "style": "Self-Inquiry/Philosophical",
+                "description": "Poses open-ended questions for introspection, encouraging deeper self-understanding."
+              },
+              {
+                "style": "Release and Let Go",
+                "description": "Focuses on identifying and releasing physical and emotional tension, promoting lightness."
+              },
+              {
+                "style": "Energizing/Revitalizing",
+                "description": "Aims to leave the practitioner feeling refreshed and re-energized while deeply relaxed."
+              },
+              {
+                "style": "Grounding and Centering",
+                "description": "Emphasizes connecting with the earth and finding a sense of stability and inner calm."
+              },
+              {
+                "style": "Heart-Centered Compassion",
+                "description": "Focuses on opening the heart space and cultivating compassion for oneself and others."
+              },
+              {
+                "style": "Digital Detox",
+                "description": "Guides the practitioner to release attachment to technology and reconnect with inner stillness."
+              },
+              {
+                "style": "Traveler's Serenity",
+                "description": "Designed for finding peace and calm amidst travel stress."
+              },
+              {
+                "style": "Student Focus/Concentration",
+                "description": "Aids in improving focus, memory, and reducing academic stress."
+              },
+              {
+                "style": "Artist's Inspiration",
+                "description": "Specifically crafted to spark imagination and artistic vision."
+              },
+              {
+                "style": "Musician's Flow",
+                "description": "Helps musicians connect with their inner rhythm and enhance performance."
+              },
+              {
+                "style": "Writer's Clarity",
+                "description": "Assists writers in finding mental clarity and overcoming writer's block."
+              },
+              {
+                "style": "Athlete's Recovery",
+                "description": "Promotes physical and mental recovery, enhancing performance and preventing burnout."
+              },
+              {
+                "style": "Pre-Performance Nerves",
+                "description": "Helps calm nerves and build confidence before public speaking or performances."
+              },
+              {
+                "style": "Post-Workout Release",
+                "description": "Aids in muscle relaxation and mental unwinding after physical exertion."
+              },
+              {
+                "style": "Morning Intention Setting",
+                "description": "Combines relaxation with setting clear intentions for the day ahead."
+              },
+              {
+                "style": "Evening Reflection",
+                "description": "Guides the practitioner through a gentle review of the day, releasing what no longer serves."
+              }
+            ];
+
 
             // --- Data Parsing and Loading ---
 
@@ -425,58 +630,12 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
                 });
             }
 
-            function parseAndLoadScriptTypes() {
-                 const rawScriptTypesText = `
-Foundational & Restorative Scripts
-Classic Body Scan for Deep Relaxation: This foundational script meticulously guides awareness to each part of the body, from the toes to the head. Its primary goal is to release physical tension and cultivate a profound sense of physical relaxation.
-Breath and Energy Awareness: Focusing on the natural rhythm of the breath and the flow of prana (life force energy), this script helps to calm the nervous system and deepen the connection between mind and body.
-Yoga Nidra for Restful Sleep: Specifically designed to be practiced before bed, this script often incorporates visualizations of serene landscapes and gentle suggestions for letting go of the day's thoughts to encourage a smooth transition into deep and restful sleep.
-Stress and Anxiety Relief: This script utilizes calming imagery, affirmations, and the exploration of opposite sensations (e.g., tension and release) to soothe an anxious mind and release accumulated stress from the body.
-Healing and Recovery: With a focus on directing healing energy to areas of the body that are injured, ill, or in pain, this script supports the body's natural healing processes and promotes a sense of wholeness.
-Thematic & Intentional Scripts
-Sankalpa (Intention) Focused: This script places a strong emphasis on the formulation and repetition of a sankalpa, a heartfelt resolve or intention. The deep state of relaxation is used to plant this intention into the subconscious mind for manifestation.
-Journey Through the Koshas: Based on yogic philosophy, this script guides the practitioner through the five layers of being (the koshas): the physical, energetic, mental/emotional, wisdom, and bliss bodies, fostering a holistic sense of integration.
-Chakra Balancing and Awakening: This script focuses on the seven main energy centers (chakras) in the body. Through visualization and focused awareness, it aims to cleanse, balance, and awaken these vital energy points.
-Exploring the Five Elements (Pancha Maha Bhutas): Practitioners are guided to connect with the qualities of Earth, Water, Fire, Air, and Ether within their own bodies and consciousness, fostering a sense of connection to the natural world.
-Working with Opposites (Dvandvas): This script intentionally brings up pairs of opposite sensations or emotions (e.g., hot/cold, heavy/light, joy/sorrow) to cultivate equanimity and the understanding that all experiences are transient.
-Creative & Visualization-Based Scripts
-Enchanted Forest Journey: A highly imaginative script that leads the practitioner on a walk through a magical forest, encountering calming natural elements and symbolic imagery to foster a sense of peace and wonder.
-Cosmic Journey and Stargazing: This script invites the practitioner to visualize floating in space, observing the stars and galaxies. It's designed to expand consciousness and create a feeling of connection to the vastness of the universe.
-Oceanic Relaxation: Using the imagery and sounds of the ocean—waves, tides, and the deep blue—this script cultivates a sense of cleansing, release, and profound calm.
-Inner Sanctuary or Safe Space: This script guides the practitioner in creating a detailed mental sanctuary, a place of perfect safety and peace that they can return to anytime they need solace.
-Meeting a Wise Guide: A creative visualization that facilitates a meeting with an inner wise guide or mentor to receive guidance, insight, and reassurance.
-Scripts for Personal Growth & Transformation
-Cultivating Gratitude: This script focuses on bringing to mind and feeling gratitude for various aspects of one's life, fostering a positive mindset and emotional upliftment.
-Forgiveness and Letting Go: A gentle yet powerful script that guides the practitioner through the process of forgiving themselves and others, releasing emotional burdens and creating space for healing.
-Unlocking Creativity: By tapping into the subconscious mind, this script aims to dissolve creative blocks and awaken inspiration through symbolic imagery and open-ended suggestions.
-Building Self-Compassion and Love: This script uses affirmations and heart-centered visualizations to nurture a sense of self-love, acceptance, and kindness.
-Yoga Nidra for a New Beginning: Often used at the start of a new year, season, or life phase, this script helps to release the old and set clear, positive intentions for the future, instilling a sense of renewal and purpose.
-`;
-                const lines = rawScriptTypesText.trim().split('\n');
-                let currentCategory = 'Uncategorized';
-                scriptTypesData = [];
-                lines.forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-                    const hasColon = line.includes(':');
-                    const isHeader = !hasColon && line.endsWith('Scripts');
-                    if (isHeader) {
-                        currentCategory = line;
-                    } else if (hasColon) {
-                        const parts = line.split(/:(.*)/s);
-                        const name = parts[0].trim();
-                        const description = parts[1] ? parts[1].trim() : '';
-                        if (name && description) {
-                            scriptTypesData.push({ category: currentCategory, name, description });
-                        }
-                    }
-                });
-            }
+            // Removed: function parseAndLoadScriptTypes() { ... } (No longer needed)
 
             function initializeApp() {
-                parseAndLoadScriptTypes();
+                // parseAndLoadScriptTypes(); // No longer needed
                 parsePersonaData();
-                populateScriptTypeSelect();
+                populateScriptTypeSelect(); // This function now populates styles
                 populateScriptLengthSelect();
                 populatePersonaSelect();
                 addEventListeners();
@@ -600,12 +759,12 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                 promptInput.value = '';
                 currentGeneratedScript = '';
                 scriptLengthSelect.value = "Short";
-                scriptTypeSelect.value = "";
+                scriptTypeSelect.value = ""; // Resetting to default option
                 selectedPersonaIndex = null;
                 updatePersonaButton(null);
                 populatePersonaSelect();
                 updateButtonStates();
-                displaySystemMessage("Enter an intention, or select a script type to begin.");
+                displaySystemMessage("Enter an intention, or select a style to begin.");
             }
 
             function checkAndPromptForKey() {
@@ -626,21 +785,15 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                 }
             }
             
-            function populateScriptTypeSelect() {
-                scriptTypeSelect.innerHTML = '<option value="">Select a Script Type (Optional)</option>';
-                const categories = [...new Set(scriptTypesData.map(item => item.category))];
-                categories.forEach(category => {
-                    const optgroup = document.createElement('optgroup');
-                    optgroup.label = category;
-                    const typesInCategory = scriptTypesData.filter(item => item.category === category);
-                    typesInCategory.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type.name;
-                        option.textContent = type.name;
-                        option.title = type.description;
-                        optgroup.appendChild(option);
-                    });
-                    scriptTypeSelect.appendChild(optgroup);
+            function populateScriptTypeSelect() { // This function now populates 'styles'
+                scriptTypeSelect.innerHTML = '<option value="">Select a Style (Optional)</option>';
+                // No categories for the new styles data, iterate directly
+                yogaNidraStyles.forEach(style => {
+                    const option = document.createElement('option');
+                    option.value = style.style;
+                    option.textContent = style.style;
+                    option.title = style.description; // Tooltip on hover
+                    scriptTypeSelect.appendChild(option);
                 });
             }
 
@@ -669,9 +822,9 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                     return;
                 }
                 const customIntention = promptInput.value.trim();
-                const selectedTypeName = scriptTypeSelect.value;
-                if (!selectedTypeName && !customIntention) {
-                    displaySystemMessage("Please enter an intention, or select a script type.", 'error-message');
+                const selectedStyleName = scriptTypeSelect.value; // Changed from selectedTypeName
+                if (!selectedStyleName && !customIntention) {
+                    displaySystemMessage("Please enter an intention, or select a style.", 'error-message');
                     return;
                 }
                 if (isGenerating) return;
@@ -686,9 +839,10 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                     const personaInstruction = personas[finalPersonaIndex].systemPrompt;
 
                     let themeInstruction = '';
-                    const selectedType = scriptTypesData.find(type => type.name === selectedTypeName);
-                    if (selectedType) {
-                        themeInstruction = `The core theme is **${selectedType.name}**. Description: *${selectedType.description}*`;
+                    // Changed to yogaNidraStyles and style property
+                    const selectedStyle = yogaNidraStyles.find(style => style.style === selectedStyleName);
+                    if (selectedStyle) {
+                        themeInstruction = `The core theme is **${selectedStyle.style}**. Description: *${selectedStyle.description}*`;
                     }
 
                     let intentionInstruction = '';
@@ -696,7 +850,7 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                         intentionInstruction = `Please weave in this specific user intention: **"${customIntention}"**.`;
                     }
 
-                    if (!selectedType && customIntention) {
+                    if (!selectedStyle && customIntention) { // Changed from selectedType
                         themeInstruction = `The core theme is the user's intention: **"${customIntention}"**.`;
                         intentionInstruction = '';
                     }
@@ -708,7 +862,7 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                     const titlePrompt = `Based on the following Yoga Nidra script, provide a short, creative title. Respond with only the title text, no quotes.\nScript: ${aiResponseText}`;
                     const generatedTitle = await getAIResponse(titlePrompt);
 
-                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedTypeName);
+                    displayGeneratedScript(currentGeneratedScript, customIntention, generatedTitle, personas[finalPersonaIndex].name, selectedStyleName); // Passed selectedStyleName
                 } catch (error) {
                     console.error("Error generating script:", error);
                     displaySystemMessage(`Failed to generate script: ${error.message}. Please try again.`, 'error-message');
@@ -718,13 +872,14 @@ Yoga Nidra for a New Beginning: Often used at the start of a new year, season, o
                 }
             }
             
-            function displayGeneratedScript(scriptText, customIntention, aiTitle, personaName, scriptType) {
+            // Changed scriptType parameter to scriptStyle
+            function displayGeneratedScript(scriptText, customIntention, aiTitle, personaName, scriptStyle) {
                 scriptDisplayArea.innerHTML = '';
                 const titleElement = document.createElement('h2');
                 titleElement.classList.add('script-title');
                 let promptHTML = '';
-                if (scriptType) {
-                    promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Theme: <span class="text-white">${scriptType}</span></div>`;
+                if (scriptStyle) { // Changed from scriptType
+                    promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Style: <span class="text-white">${scriptStyle}</span></div>`;
                 }
                 if (customIntention) {
                     promptHTML += `<div style="font-size: 1.2rem; color: #9ca3af;">Custom Intention: <span class="text-white">${customIntention}</span></div>`;
