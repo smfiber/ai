@@ -339,7 +339,7 @@
                 "description": "Engages all five senses through imagined scenarios, enhancing vividness and immersion."
               },
               {
-                "style": "Color Therapy",
+                ""style": "Color Therapy",
                 "description": "Invokes specific colors and their associated qualities to promote healing and balance."
               },
               {
@@ -428,201 +428,135 @@
               }
             ];
 
+            // --- Mainstream Yoga Nidra Personas (NEW data) ---
+            personas = [
+              {
+                "name": "Default Yoga Nidra Guide",
+                "description": "A neutral, clear, and calming guide for a general Yoga Nidra practice.",
+                "vocal_quality": "A clear and calm voice.",
+                "imagery": "Simple and accessible, focusing on breath and body sensations.",
+                "theme": "General relaxation and stillness."
+              },
+              {
+                "name": "The Calming Voice",
+                "description": "A neutral, clear, and reassuring voice, focusing on general relaxation and a gentle presence.",
+                "vocal_quality": "", "imagery": "", "theme": "" // Added for structural consistency
+              },
+              {
+                "name": "The Serene Guide",
+                "description": "A peaceful and soft voice that encourages deep tranquility and inner stillness.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Nurturing Presence",
+                "description": "A warm and compassionate voice that offers comfort, safety, and a sense of being held.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Grounding Anchor",
+                "description": "A steady and stable voice that helps the listener feel deeply connected to the earth and present moment.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Expansive Whisper",
+                "description": "A light and airy voice that inspires a sense of spaciousness, freedom, and openness.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Mindful Observer",
+                "description": "A detached yet kind voice that encourages non-judgmental awareness of thoughts and sensations.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Healing Touch",
+                "description": "A gentle and empathetic voice that guides the listener towards self-healing and restoration.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Creative Muse",
+                "description": "An inspiring and imaginative voice that sparks creativity and intuitive insight.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Sleep Inducer",
+                "description": "A deeply soothing voice specifically designed to ease the transition into restful and restorative sleep.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Stress Reliever",
+                "description": "A calming voice focused on releasing tension and melting away the burdens of stress and anxiety.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Inner Explorer",
+                "description": "A curious and encouraging voice that invites exploration of inner landscapes and deeper consciousness.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Heart-Centered Friend",
+                "description": "A voice filled with loving-kindness and compassion, fostering connection and self-acceptance.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Peaceful Warrior",
+                "description": "A firm yet gentle voice that builds inner strength and resilience amidst calm.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Gentle Awakener",
+                "description": "A soft and subtle voice designed to gently bring awareness back to the present, feeling refreshed.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Intuitive Guide",
+                "description": "A voice that trusts inner wisdom and encourages the listener to connect with their own intuition.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Release Facilitator",
+                "description": "A voice that aids in the conscious letting go of emotional and physical burdens.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Focused Mind",
+                "description": "A clear and precise voice that helps cultivate concentration and mental clarity.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Restorative Presence",
+                "description": "A voice that emphasizes deep rest and rejuvenation for both body and mind.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Symbolic Storyteller",
+                "description": "A narrative voice that uses gentle metaphors and archetypal imagery for deeper insight.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              },
+              {
+                "name": "The Tranquil Breathwork Guide",
+                "description": "A voice centered on the subtleties of breath, guiding through various calming breath techniques.",
+                "vocal_quality": "", "imagery": "", "theme": ""
+              }
+            ];
+
 
             // --- Data Parsing and Loading ---
 
-            function parsePersonaData() {
-                const rawPersonaText = `
-The Traditional & Serene
-1. The Sage (Traditional Guru)
-Description: Generate a Yoga Nidra script with the persona of a wise, ancient sage. The tone should be calm, profound, and deeply reassuring. Use traditional Sanskrit terms (like Sankalpa, Savasana) with brief, clear explanations. The pacing is slow and deliberate, with ample space for silence.
-Vocal Quality: A deep, resonant male or female voice with a gentle, slow cadence.
-Imagery: Focus on timeless, universal symbols: a silent mountain, a still lake at dawn, the vast expanse of the cosmos.
-Theme: Stillness, timelessness, and connection to the universal consciousness.
-2. The Nurturing Mother (The Caregiver)
-Description: Create a script from the perspective of a loving, maternal figure. The language should be gentle, comforting, and filled with affirmations of safety and unconditional acceptance. The focus is on deep physical and emotional rest.
-Vocal Quality: A soft, warm, and soothing female voice.
-Imagery: Evoke feelings of being held, swaddled, and protected. Use images of a cozy hearth, a gentle embrace, or a peaceful, sunlit garden.
-Theme: Deep rest, emotional healing, and self-compassion.
-3. The Yogi (The Balanced Practitioner)
-Description: The persona is a seasoned yoga practitioner leading a fellow yogi through practice. The script should be clear, and precise, and follow a classical structure. It can include subtle references to chakras or energy channels (nadis) without being overly esoteric.
-Vocal Quality: A clear, calm, and centered voice, either male or female.
-Imagery: Focus on the internal landscape of the body: the flow of breath, the release of tension in the muscles, and a sense of inner alignment.
-Theme: Balance, integration, and mindful awareness of the body.
-The Natural & Elemental
-4. The Gardener (The Creator)
-Description: Generate a script with the theme of planting, nurturing, and harvesting. The persona is a patient gardener guiding the listener to cultivate their inner landscape. The Sankalpa is framed as planting a seed of intention.
-Vocal Quality: A gentle, earthy, and patient voice.
-Imagery: A lush garden, a seed sprouting, roots growing deep into the earth, flowers blossoming.
-Theme: Growth, manifestation, and patience.
-5. The Oceanographer (The Explorer)
-Description: Create a script that takes the listener on a journey into the depths of the ocean. The persona is a calm and knowledgeable oceanographer. The body scan becomes a descent into deeper, quieter levels of consciousness.
-Vocal Quality: A calm, steady voice that conveys a sense of wonder.
-Imagery: The sunlit surface of the water, coral reefs, bioluminescent creatures in the deep, and the profound silence of the ocean floor.
-Theme: Exploring the subconscious, deep relaxation, and surrender.
-6. The Stargazer (The Visionary)
-Description: The persona is an astronomer or stargazer, guiding the listener on a cosmic journey. The script should evoke a sense of awe, expansion, and connection to the vastness of space.
-Vocal Quality: A clear, wondrous, and expansive voice.
-Imagery: Constellations, shooting stars, nebulae, the Milky Way, and the feeling of floating in space.
-Theme: Expanded consciousness, letting go of small worries, and connecting to a larger perspective.
-7. The Forest Spirit (The Wild One)
-Description: Create a script from the perspective of an ancient forest spirit. The language is earthy and sensory, focusing on the sights, sounds, and smells of a deep, old-growth forest.
-Vocal Quality: A textured, grounding voice, with a hint of wildness.
-Imagery: Sunlight filtering through a dense canopy, the feeling of moss underfoot, the scent of pine and damp earth, the sounds of unseen creatures.
-Theme: Grounding, connection to nature's cycles, and wild, untamed peace.
-The Modern & Innovative
-8. The Neuroscientist (The Scientist)
-Description: Generate a script with a modern, scientific approach. The persona is a calm and reassuring neuroscientist explaining the physiological benefits of each stage of Yoga Nidra (e.g., "As we scan the body, we are calming the nervous system...").
-Vocal Quality: A clear, articulate, and trustworthy voice.
-Imagery: The gentle firing of neurons, the release of calming brainwaves (alpha and theta), and the harmonious functioning of the body's systems.
-Theme: Brain optimization, stress reduction, and the science of relaxation.
-9. The AI Companion (The Guide)
-Description: The persona is a benevolent and highly intelligent AI designed for optimal human wellness. The language is precise, soothing, and subtly futuristic. The script could incorporate soft, ambient electronic soundscapes.
-Vocal Quality: A smooth, perfectly modulated, and calming synthesized voice.
-Imagery: Geometric patterns of light, data streams flowing harmoniously, and the visualization of the body's energy field as a coherent light grid.
-Theme: Digital detox, mental clarity, and harmonizing with technology.
-10. The Minimalist (The Purist)
-Description: Create a script that is sparse, direct, and free of excessive imagery or flowery language. The focus is on pure awareness of the body, breath, and sensations. The persona is a minimalist who values clarity and simplicity.
-Vocal Quality: A clean, clear, and direct voice.
-Imagery: Simple geometric shapes, the color white, and the concept of empty space.
-Theme: Decluttering the mind, simplicity, and pure awareness.
-11. The Bio-Hacker (The Optimizer)
-Description: The persona is a friendly and enthusiastic bio-hacker, focused on upgrading the human experience. The script is framed as a "system reset" or "neural upgrade." The tone is positive and empowering.
-Vocal Quality: An upbeat, confident, and encouraging voice.
-Imagery: Visualizing cellular regeneration, optimizing energy flow, and clearing mental "cache."
-Theme: Self-improvement, enhanced performance, and mindful optimization.
-The Mystical & Magical
-12. The Alchemist (The Magician)
-Description: Create a script with the theme of inner alchemy – transforming a base state (stress, fatigue) into a golden state (peace, vitality). The persona is a wise and mysterious alchemist.
-Vocal Quality: A measured, slightly theatrical, and wise voice.
-Imagery: A bubbling cauldron, lead turning to gold, the distillation of pure energy, and symbols of transformation like the phoenix.
-Theme: Transformation, purification, and the creation of inner gold.
-13. The Dream Weaver (The Artist)
-Description: The persona is a weaver of dreams, guiding the listener into the liminal space between waking and sleeping. The language is poetic, lyrical, and surreal.
-Vocal Quality: A soft, ethereal, and mesmerizing voice.
-Imagery: Shifting landscapes, colors that can be heard, sounds that can be seen, and other dream-like synesthetic experiences.
-Theme: Creativity, accessing the subconscious, and lucid dreaming.
-14. The Storyteller (The Bard)
-Description: Generate a script that subtly weaves a gentle, archetypal story into the Yoga Nidra framework. The body scan might follow the path of a character on a peaceful journey. The persona is a captivating storyteller.
-Vocal Quality: A warm, engaging, and melodic voice.
-Imagery: The imagery will be dictated by the gentle narrative – a walk through an enchanted forest, a sail across a calm sea, a climb to a peaceful mountain hermitage.
-Theme: The power of narrative, life as a journey, and finding peace in the story.
-15. The Mystic (The Oracle)
-Description: The persona is a mystic who speaks in profound, yet simple, truths. The script is less about detailed guidance and more about creating a space for personal insight and revelation.
-Vocal Quality: A calm, knowing, and slightly detached voice.
-Imagery: Focus on abstract concepts like light, shadow, silence, and emptiness. The visualization might involve looking into a still pool of water to see one's own inner wisdom.
-Theme: Inner wisdom, intuition, and direct experience of the self.
-The Whimsical & Playful
-16. The Inner Child (The Innocent)
-Description: Create a script that invites a sense of childlike wonder and simplicity. The persona is the listener's own inner child, speaking with gentleness and purity.
-Vocal Quality: A soft, gentle, and innocent voice.
-Imagery: Floating on a soft cloud, being rocked in a gentle swing, the feeling of warm sunshine on the face.
-Theme: Reclaiming innocence, joy, and simple being.
-17. The Jester (The Playful Spirit)
-Description: A more unconventional persona, the Jester guides a Yoga Nidra with a lighthearted and playful touch. The script uses gentle humor and unexpected, delightful imagery to release tension. The aim is to smile into relaxation.
-Vocal Quality: A warm, chuckling, and friendly voice.
-Imagery: The feeling of fizzing bubbles of joy, a gentle breeze tickling the skin, the image of worries as small, silly cartoons that float away.
-Theme: Joyful release, not taking things too seriously, and the healing power of laughter.
-The Healing & Therapeutic
-18. The Healer (The Empath)
-Description: The persona is a compassionate healer, guiding the listener to activate their own inner healing resources. The language is gentle, permissive, and deeply validating of the listener's experience.
-Vocal Quality: A very soft, gentle, and empathetic voice.
-Imagery: A soft, healing light (in a color of the listener's choosing) that flows through the body, mending and soothing. The visualization could be a peaceful healing sanctuary.
-Theme: Self-healing, restoration, and deep, compassionate rest.
-19. The Peace Ambassador (The Diplomat)
-Description: Create a script with the theme of inner peace and reconciliation. The persona is a calm and centered peace ambassador, guiding the listener to negotiate a truce between different parts of the self (e.g., a an anxious mind and a tired body).
-Vocal Quality: A calm, balanced, and diplomatic voice.
-Imagery: A round table where all parts of the self are welcome, a treaty of peace being signed, a gentle rain washing away conflict.
-Theme: Inner harmony, conflict resolution, and equanimity.
-20. The Ancestor (The Guardian)
-Description: The persona is a wise and loving ancestor, speaking from a place of deep time and collective wisdom. The script evokes a sense of belonging and connection to one's lineage.
-Vocal Quality: A deep, resonant voice that carries the weight of time and wisdom.
-Imagery: The roots of a great tree, a long line of ancestors standing in support, the stars as the eyes of those who came before.
-Theme: Ancestral healing, deep roots, and a sense of belonging.
-The Abstract & Expansive
-21. The Geometrician (The Architect)
-Description: The persona is a being of pure consciousness that perceives the world in terms of sacred geometry. The script guides the listener to experience their body and consciousness as patterns of light and form.
-Vocal Quality: A precise, melodic, and almost mathematical voice.
-Imagery: The Flower of Life, Platonic solids, mandalas, and the body as a temple of living geometry.
-Theme: Order from chaos, universal patterns, and the architecture of being.
-22. The Musician (The Harmonizer)
-Description: The persona is a musician or composer who guides the listener to experience their body as an instrument and their breath as the music. The script uses musical metaphors.
-Vocal Quality: A melodic, rhythmic, and soothing voice.
-Imagery: The body as a string instrument being gently tuned, the breath as a melody, and sensations as harmonies. The visualization could be a symphony of light and sound.
-Theme: Inner harmony, resonance, and the vibration of life.
-23. The Poet (The Romantic)
-Description: Create a script that is rich in poetic language and beautiful metaphors. The persona is a poet who sees the beauty in every sensation and breath.
-Vocal Quality: A soft, expressive, and heartfelt voice.
-Imagery: Evocative and sensory metaphors: breath like the tide, thoughts like clouds drifting across the sky, peace like a soft blanket of snow.
-Theme: Beauty, grace, and a poetic appreciation for the present moment.
-24. The Librarian of the Akashic Records (The Chronicler)
-Description: The persona is the keeper of the Akashic Records, a vast library of all knowledge and experience. The script guides the listener to a state of deep stillness where they can access their own inner book of wisdom.
-Vocal Quality: A hushed, reverent, and knowledgeable voice.
-Imagery: A vast, silent library, ancient scrolls and books, a single, glowing page that holds a personal message of insight.
-Theme: Accessing inner wisdom, understanding one's life path, and deep, quiet knowing.
-25. The Silent Witness (The Observer)
-Description: This persona is the epitome of pure, non-judgmental awareness. The script uses minimal language, with long pauses to allow the listener to simply be with their own experience. The guidance is very simple and direct, pointing awareness to different aspects of being.
-Vocal Quality: A calm, neutral, and unobtrusive voice.
-Imagery: The primary "image" is that of a vast, open, and aware space in which all sensations, thoughts, and feelings can arise and pass away without disturbance.
-Theme: Pure awareness, detachment, and the nature of consciousness itself.
-`;
-                const lines = rawPersonaText.trim().split('\n');
-                let currentCategory = 'Uncategorized';
-                let currentPersona = null;
+            // Removed: function parsePersonaData() { ... } (No longer needed)
 
-                personas = [];
 
-                lines.forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-
-                    const isCategoryHeader = line.toUpperCase() === line && !line.includes(':') && !/^\d+\./.test(line);
-
-                    if (isCategoryHeader) {
-                        if (currentPersona) personas.push(currentPersona);
-                        currentCategory = line;
-                        currentPersona = null;
-                    } else if (/^\d+\./.test(line)) {
-                        if (currentPersona) personas.push(currentPersona);
-                        currentPersona = {
-                            category: currentCategory,
-                            name: line.replace(/^\d+\.\s*/, ''),
-                            description: '',
-                            vocal_quality: '',
-                            imagery: '',
-                            theme: ''
-                        };
-                    } else if (currentPersona) {
-                        if (line.startsWith('Description:')) {
-                            currentPersona.description = line.substring('Description:'.length).trim();
-                        } else if (line.startsWith('Vocal Quality:')) {
-                            currentPersona.vocal_quality = line.substring('Vocal Quality:'.length).trim();
-                        } else if (line.startsWith('Imagery:')) {
-                            currentPersona.imagery = line.substring('Imagery:'.length).trim();
-                        } else if (line.startsWith('Theme:')) {
-                            currentPersona.theme = line.substring('Theme:'.length).trim();
-                        }
-                    }
-                });
-                if (currentPersona) personas.push(currentPersona);
-                
-                personas.unshift({
-                    name: 'Default Yoga Nidra Guide',
-                    description: 'A neutral, clear, and calming guide for a general Yoga Nidra practice.',
-                    vocal_quality: 'A clear and calm voice.',
-                    imagery: 'Simple and accessible, focusing on breath and body sensations.',
-                    theme: 'General relaxation and stillness.',
-                    systemPrompt: `You are a neutral, clear, and calming AI assistant creating a general Yoga Nidra script. Your script must include traditional Yoga Nidra stages.`
-                });
-
+            // This re-generates the systemPrompt for all personas on load,
+            // which is necessary if the source JSON for 'personas' doesn't include it.
+            // It ensures consistency in prompt generation regardless of persona data source.
+            function initializePersonaSystemPrompts() {
                 personas.forEach(p => {
                     if (!p.systemPrompt) {
                         p.systemPrompt = `You are an AI assistant creating a Yoga Nidra script. Adopt the persona of **${p.name}**.
                         **Detailed Persona Profile:**
                         - **Description:** ${p.description}
-                        - **Vocal Quality:** ${p.vocal_quality}
-                        - **Imagery Style:** ${p.imagery}
-                        - **Core Theme:** ${p.theme}
+                        - **Vocal Quality:** ${p.vocal_quality || 'A calming voice.'}
+                        - **Imagery Style:** ${p.imagery || 'General calming imagery.'}
+                        - **Core Theme:** ${p.theme || 'Relaxation and inner peace.'}
                         
                         Your script must include traditional Yoga Nidra stages (inner stillness, sankalpa, rotation of consciousness, breath, sensations, visualization, final sankalpa, externalization).
                         Adapt the length based on user's preference.`;
@@ -634,7 +568,7 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
 
             function initializeApp() {
                 // parseAndLoadScriptTypes(); // No longer needed
-                parsePersonaData();
+                initializePersonaSystemPrompts(); // New step to ensure system prompts are generated
                 populateScriptTypeSelect(); // This function now populates styles
                 populateScriptLengthSelect();
                 populatePersonaSelect();
@@ -647,80 +581,82 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
 
             function populatePersonaSelect() {
                 personaListArea.innerHTML = '';
+                // Add the "None (Default Guide)" option explicitly at the top
+                const defaultPersona = personas[0]; // Assuming default is always the first one
                 const noneLabel = document.createElement('label');
                 noneLabel.className = 'dropdown-label flex justify-between items-center';
                 noneLabel.innerHTML = `
                     <div>
-                        <input type="radio" name="persona" value="none" class="accent-indigo-500">
+                        <input type="radio" name="persona" value="0" class="accent-indigo-500">
                         <span>None (Default Guide)</span>
                     </div>
                 `;
-                if (selectedPersonaIndex === null) {
+                // Set the title for the default guide for consistency, although description is generic
+                noneLabel.title = defaultPersona.description; 
+
+                if (selectedPersonaIndex === null || selectedPersonaIndex === 0) {
                     noneLabel.querySelector('input').checked = true;
+                    selectedPersonaIndex = 0; // Ensure default is selected if null
+                    updatePersonaButton(0);
                 }
                 noneLabel.querySelector('input').addEventListener('change', () => {
-                    selectedPersonaIndex = null;
-                    updatePersonaButton(null);
+                    selectedPersonaIndex = 0; // Set to the default persona's index
+                    updatePersonaButton(0);
                     personaDropdownContent.classList.add('hidden');
                 });
                 personaListArea.appendChild(noneLabel);
 
 
-                const categories = [...new Set(personas.filter(p => p.name !== 'Default Yoga Nidra Guide').map(p => p.category))];
+                // Populate the rest of the personas (from index 1 onwards in the new array)
+                // No categories needed for the new flat list of personas
+                for (let i = 1; i < personas.length; i++) {
+                    const persona = personas[i];
+                    const personaIndex = i; // The actual index in the personas array
+                    const label = document.createElement('label');
+                    label.className = 'dropdown-label flex justify-between items-center';
+                    label.title = persona.description; // Tooltip for persona description
+                    
+                    const contentDiv = document.createElement('div');
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'persona';
+                    radio.value = personaIndex;
+                    radio.className = 'accent-indigo-500';
+                     if (personaIndex === selectedPersonaIndex) {
+                        radio.checked = true;
+                    }
 
-                categories.forEach(category => {
-                    const optgroupHeader = document.createElement('div');
-                    optgroupHeader.className = 'px-4 py-2 text-xs font-bold text-gray-400 uppercase';
-                    optgroupHeader.textContent = category;
-                    personaListArea.appendChild(optgroupHeader);
-
-                    const personasInCategory = personas.filter(p => p.category === category);
-                    personasInCategory.forEach(persona => {
-                        const personaIndex = personas.indexOf(persona);
-                        const label = document.createElement('label');
-                        label.className = 'dropdown-label flex justify-between items-center';
-                        
-                        const contentDiv = document.createElement('div');
-                        const radio = document.createElement('input');
-                        radio.type = 'radio';
-                        radio.name = 'persona';
-                        radio.value = personaIndex;
-                        radio.className = 'accent-indigo-500';
-                         if (personaIndex === selectedPersonaIndex) {
-                            radio.checked = true;
-                        }
-
-                        radio.addEventListener('change', () => {
-                            selectedPersonaIndex = parseInt(radio.value);
-                            updatePersonaButton(selectedPersonaIndex);
-                            personaDropdownContent.classList.add('hidden');
-                        });
-                        
-                        const nameSpan = document.createElement('span');
-                        nameSpan.textContent = persona.name;
-                        
-                        contentDiv.appendChild(radio);
-                        contentDiv.appendChild(nameSpan);
-
-                        const infoButton = document.createElement('button');
-                        infoButton.className = 'info-btn';
-                        infoButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle text-gray-400" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.25.25 0 0 1-.288-.469l.738-3.468a.25.25 0 0 1 .469-.288zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
-                        infoButton.dataset.index = personaIndex;
-
-                        label.appendChild(contentDiv);
-                        label.appendChild(infoButton);
-                        personaListArea.appendChild(label);
+                    radio.addEventListener('change', () => {
+                        selectedPersonaIndex = parseInt(radio.value);
+                        updatePersonaButton(selectedPersonaIndex);
+                        personaDropdownContent.classList.add('hidden');
                     });
-                });
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = persona.name;
+                    
+                    contentDiv.appendChild(radio);
+                    contentDiv.appendChild(nameSpan);
+
+                    const infoButton = document.createElement('button');
+                    infoButton.className = 'info-btn';
+                    infoButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle text-gray-400" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.064.293.006.399.287.47l.45.082.082-.38-.45-.083a.25.25 0 0 1-.288-.469l.738-3.468a.25.25 0 0 1 .469-.288zM8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+                    infoButton.dataset.index = personaIndex;
+
+                    label.appendChild(contentDiv);
+                    label.appendChild(infoButton);
+                    personaListArea.appendChild(label);
+                }
             }
 
             function showPersonaDetailModal(persona) {
                 personaModalTitle.textContent = persona.name;
+                // Safely access properties, providing fallback if they don't exist
                 personaModalContent.innerHTML = `
-                    <div class="modal-content-title">Description:</div><p>${persona.description}</p>
-                    <div class="modal-content-title">Vocal Quality:</div><p>${persona.vocal_quality}</p>
-                    <div class="modal-content-title">Imagery:</div><p>${persona.imagery}</p>
-                    <div class="modal-content-title">Theme:</div><p>${persona.theme}</p>
+                    <div class="modal-content-title">Description:</div><p>${persona.description || 'No description provided.'}</p>
+                    <div class="modal-content-title">Vocal Quality:</div><p>${persona.vocal_quality || 'Not specified.'}</p>
+                    <div class="modal-content-title">Imagery:</div><p>${persona.imagery || 'Not specified.'}</p>
+                    <div class="modal-content-title">Theme:</div><p>${persona.theme || 'Not specified.'}</p>
                 `;
                 personaDetailModal.classList.remove('hidden');
             }
@@ -760,9 +696,9 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
                 currentGeneratedScript = '';
                 scriptLengthSelect.value = "Short";
                 scriptTypeSelect.value = ""; // Resetting to default option
-                selectedPersonaIndex = null;
-                updatePersonaButton(null);
-                populatePersonaSelect();
+                selectedPersonaIndex = 0; // Reset to the default persona (index 0)
+                updatePersonaButton(0); // Update button to reflect default
+                populatePersonaSelect(); // Re-populate to ensure default is checked
                 updateButtonStates();
                 displaySystemMessage("Enter an intention, or select a style to begin.");
             }
@@ -808,9 +744,11 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
             }
 
             function updatePersonaButton(index) {
-                if (index !== null && personas[index]) {
+                // Ensure index is valid before attempting to access personas[index]
+                if (personas[index]) {
                    personaDropdownButton.querySelector('span').textContent = personas[index].name;
                 } else {
+                   // Fallback if somehow an invalid index is passed, though should not happen with current logic
                    personaDropdownButton.querySelector('span').textContent = 'Select Persona (Optional)';
                 }
             }
@@ -835,7 +773,8 @@ Theme: Pure awareness, detachment, and the nature of consciousness itself.
 
                 try {
                     const lengthInstruction = lengthOptions.find(opt => opt.name === scriptLengthSelect.value).promptSuffix;
-                    const finalPersonaIndex = selectedPersonaIndex === null ? 0 : selectedPersonaIndex;
+                    // Ensure selectedPersonaIndex is valid for array access
+                    const finalPersonaIndex = (selectedPersonaIndex !== null && selectedPersonaIndex < personas.length) ? selectedPersonaIndex : 0;
                     const personaInstruction = personas[finalPersonaIndex].systemPrompt;
 
                     let themeInstruction = '';
