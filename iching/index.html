@@ -40,10 +40,26 @@
     <!-- API Keys & Config Modal -->
     <div id="configModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl">
-            <h2 class="text-2xl font-bold mb-4">Initial Configuration</h2>
-            <p class="mb-6 text-slate-600">Please provide your API keys and configuration to start the application. These will be stored in your browser's local storage.</p>
+            <h2 class="text-2xl font-bold mb-2">Configuration Profile</h2>
+            <p class="mb-6 text-slate-600">Save and load credential profiles to switch between different projects.</p>
             
+            <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                 <label for="profileSelector" class="block text-sm font-medium text-slate-700">Load Existing Profile</label>
+                 <div class="flex items-center space-x-2 mt-1">
+                    <select id="profileSelector" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+                        <option value="">-- Select a Profile --</option>
+                    </select>
+                    <button id="loadProfileButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Load</button>
+                    <button id="deleteProfileButton" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Delete</button>
+                 </div>
+            </div>
+    
+            <h3 class="text-lg font-semibold mb-3">Create or Update a Profile</h3>
             <div class="space-y-4">
+                <div>
+                    <label for="profileNameInput" class="block text-sm font-medium text-slate-700">Profile Name</label>
+                    <input type="text" id="profileNameInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" placeholder="e.g., My Personal Project">
+                </div>
                 <div>
                     <label for="geminiApiKeyInput" class="block text-sm font-medium text-slate-700">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" placeholder="Enter your Gemini API Key">
@@ -57,8 +73,8 @@
                     <textarea id="firebaseConfigInput" class="w-full h-40 p-2 border rounded-md font-mono text-sm mt-1" placeholder="Paste your entire Firebase config object here..."></textarea>
                 </div>
             </div>
-
-            <button id="saveConfigButton" class="mt-6 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Save and Initialize</button>
+    
+            <button id="saveConfigButton" class="mt-6 w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Save and Initialize Profile</button>
         </div>
     </div>
 
@@ -74,7 +90,7 @@
             </div>
         </header>
 
-        <div id="mainContent">
+        <main id="mainContent">
             <div id="controls" class="mb-6">
                 <h3 class="text-lg font-semibold text-center mb-4 text-slate-700">Enter Your Coin Toss Results (6, 7, 8, or 9)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 items-start">
@@ -97,7 +113,7 @@
             <div id="resultsContainer" class="hidden fade-in p-6 bg-slate-50 rounded-lg border">
                 <!-- Gemini's response will be shown here -->
             </div>
-        </div>
+        </main>
 
         <div id="pastReadings" class="mt-12 border-t pt-6 hidden">
             <h2 class="text-2xl font-bold text-center text-slate-700 mb-4">Your Past Readings</h2>
@@ -105,6 +121,10 @@
                 <!-- Past readings will be injected here -->
             </div>
         </div>
+
+        <footer class="text-center text-xs text-slate-400 mt-8">
+            <p>Interpretations are based on the Richard Wilhelm/Cary F. Baynes translation of the <em>I Ching, or Book of Changes</em>.</p>
+        </footer>
     </div>
 
     <!-- Firebase SDK -->
@@ -117,6 +137,7 @@
         let db, auth;
         let geminiApiKey, googleClientId, firebaseConfig;
         let currentUser = null;
+        let currentProfileName = null;
 
         // --- DOM Elements ---
         const configModal = document.getElementById('configModal');
@@ -124,6 +145,10 @@
         const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
         const googleClientIdInput = document.getElementById('googleClientIdInput');
         const firebaseConfigInput = document.getElementById('firebaseConfigInput');
+        const profileNameInput = document.getElementById('profileNameInput');
+        const profileSelector = document.getElementById('profileSelector');
+        const loadProfileButton = document.getElementById('loadProfileButton');
+        const deleteProfileButton = document.getElementById('deleteProfileButton');
         
         const appDiv = document.getElementById('app');
         const authContainer = document.getElementById('authContainer');
@@ -134,48 +159,135 @@
         const lineEntryContainer = document.getElementById('line-entry-container');
         const hexagramVisualizer = document.getElementById('hexagram-visualizer');
 
-        // --- Configuration & Initialization ---
+        // --- Profile & Config Management ---
+
+        function getProfiles() {
+            const profiles = localStorage.getItem('iChingAppProfiles');
+            return profiles ? JSON.parse(profiles) : [];
+        }
+
+        function saveProfiles(profiles) {
+            localStorage.setItem('iChingAppProfiles', JSON.stringify(profiles));
+        }
+
+        function populateProfileSelector() {
+            const profiles = getProfiles();
+            profileSelector.innerHTML = '<option value="">-- Select a Profile --</option>';
+            profiles.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                profileSelector.appendChild(option);
+            });
+        }
 
         function loadConfigAndInit() {
-            geminiApiKey = localStorage.getItem('geminiApiKey');
-            googleClientId = localStorage.getItem('googleClientId');
-            const storedFirebaseConfig = localStorage.getItem('firebaseConfig');
+            populateProfileSelector();
+            currentProfileName = localStorage.getItem('currentIChingProfile');
 
-            if (!geminiApiKey || !googleClientId || !storedFirebaseConfig) {
-                configModal.classList.remove('hidden');
-            } else {
-                try {
-                    firebaseConfig = JSON.parse(storedFirebaseConfig);
-                    initializeAppAndAuth();
-                } catch (e) {
-                    console.error("Failed to parse Firebase config from localStorage", e);
-                    localStorage.clear(); // Clear corrupted config
-                    configModal.classList.remove('hidden');
+            if (currentProfileName) {
+                geminiApiKey = localStorage.getItem(`${currentProfileName}_geminiApiKey`);
+                googleClientId = localStorage.getItem(`${currentProfileName}_googleClientId`);
+                const storedFirebaseConfig = localStorage.getItem(`${currentProfileName}_firebaseConfig`);
+                
+                if (geminiApiKey && googleClientId && storedFirebaseConfig) {
+                     try {
+                        firebaseConfig = JSON.parse(storedFirebaseConfig);
+                        initializeAppAndAuth();
+                        return; // Success, exit function
+                    } catch (e) {
+                        console.error("Failed to parse Firebase config from profile", e);
+                        // Corrupted profile, force re-config
+                    }
                 }
             }
+            
+            // If we reach here, no valid profile was loaded
+            configModal.classList.remove('hidden');
         }
 
         function saveConfig() {
+            const profileName = profileNameInput.value.trim();
+            if (!profileName) {
+                alert("Please enter a Profile Name.");
+                return;
+            }
+
             const geminiKey = geminiApiKeyInput.value.trim();
             const clientId = googleClientIdInput.value.trim();
             const fbConfigStr = firebaseConfigInput.value.trim();
 
             if (!geminiKey || !clientId || !fbConfigStr) {
-                alert("Please fill out all fields.");
+                alert("Please fill out all credential fields.");
                 return;
             }
 
             try {
-                JSON.parse(fbConfigStr);
-                localStorage.setItem('geminiApiKey', geminiKey);
-                localStorage.setItem('googleClientId', clientId);
-                localStorage.setItem('firebaseConfig', fbConfigStr);
+                JSON.parse(fbConfigStr); // Validate JSON
+                
+                // Save credentials with profile prefix
+                localStorage.setItem(`${profileName}_geminiApiKey`, geminiKey);
+                localStorage.setItem(`${profileName}_googleClientId`, clientId);
+                localStorage.setItem(`${profileName}_firebaseConfig`, fbConfigStr);
+
+                // Update profiles list
+                let profiles = getProfiles();
+                if (!profiles.includes(profileName)) {
+                    profiles.push(profileName);
+                    saveProfiles(profiles);
+                }
+                
+                // Set as current profile and initialize
+                localStorage.setItem('currentIChingProfile', profileName);
                 configModal.classList.add('hidden');
                 loadConfigAndInit();
+
             } catch (e) {
                 alert("The Firebase config is not valid JSON. Please check and paste it again.");
             }
         }
+
+        function loadProfile() {
+            const profileName = profileSelector.value;
+            if (!profileName) return;
+
+            profileNameInput.value = profileName;
+            geminiApiKeyInput.value = localStorage.getItem(`${profileName}_geminiApiKey`) || '';
+            googleClientIdInput.value = localStorage.getItem(`${profileName}_googleClientId`) || '';
+            firebaseConfigInput.value = localStorage.getItem(`${profileName}_firebaseConfig`) || '';
+        }
+
+        function deleteProfile() {
+            const profileName = profileSelector.value;
+            if (!profileName) {
+                alert("Please select a profile to delete.");
+                return;
+            }
+
+            // Remove keys
+            localStorage.removeItem(`${profileName}_geminiApiKey`);
+            localStorage.removeItem(`${profileName}_googleClientId`);
+            localStorage.removeItem(`${profileName}_firebaseConfig`);
+
+            // Remove from profile list
+            let profiles = getProfiles();
+            profiles = profiles.filter(p => p !== profileName);
+            saveProfiles(profiles);
+
+            // If it was the current profile, clear it
+            if (localStorage.getItem('currentIChingProfile') === profileName) {
+                localStorage.removeItem('currentIChingProfile');
+            }
+
+            // Reset form and reload selector
+            profileNameInput.value = '';
+            geminiApiKeyInput.value = '';
+            googleClientIdInput.value = '';
+            firebaseConfigInput.value = '';
+            populateProfileSelector();
+            alert(`Profile "${profileName}" has been deleted.`);
+        }
+
 
         function initializeAppAndAuth() {
             try {
@@ -197,8 +309,6 @@
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                alert("Firebase initialization failed. Please check your config.");
-                localStorage.clear();
                 configModal.classList.remove('hidden');
             }
         }
@@ -231,7 +341,6 @@
                     hexagramVisualizer.innerHTML += drawLine(value);
                     hasContent = true;
                 } else {
-                    // Add a placeholder for empty lines to maintain structure
                     hexagramVisualizer.innerHTML += '<div class="hex-line h-[28px]"></div>';
                 }
             });
@@ -285,7 +394,6 @@
                 await signInWithPopup(auth, provider);
             } catch (error) {
                 console.error("Google Sign-In Error", error);
-                alert(`Could not sign in with Google. Error: ${error.message}`);
             }
         }
 
@@ -319,7 +427,7 @@
 
             try {
                 const prompt = `
-You are an expert in the I Ching, the ancient Chinese Book of Changes. A user has performed a divination by tossing coins and has generated a hexagram. Your task is to provide a complete and insightful interpretation.
+You are an expert in the I Ching, the ancient Chinese Book of Changes, specifically using the Richard Wilhelm/Cary F. Baynes translation as your primary source. A user has performed a divination by tossing coins and has generated a hexagram. Your task is to provide a complete and insightful interpretation based on this specific translation.
 
 The user's results for the six lines, from bottom (Line 1) to top (Line 6), are: ${JSON.stringify(lineValues)}
 
@@ -329,12 +437,12 @@ For your reference, the line values mean:
 - 9: A changing Yang line (solid, will change to broken).
 - 6: A changing Yin line (broken, will change to solid).
 
-Based on these lines, please provide the following in your response:
+Based on these lines and the Wilhelm/Baynes translation, please provide the following in your response:
 1.  **Primary Hexagram:** Identify its number and name.
 2.  **Judgment & Image:** Provide the classic Judgment and Image text for the Primary Hexagram.
 3.  **Changing Lines:** If there are any changing lines (6 or 9), list each one (e.g., "Line 3 (Nine in the third place):") and provide its specific line text and meaning.
 4.  **Relating Hexagram:** If there are changing lines, describe the hexagram that results from the changes. Give its number and name.
-5.  **Synthesized Interpretation:** Provide a final, holistic interpretation that combines all these elements into clear guidance for the user.
+5.  **Synthesized Interpretation:** Provide a final, holistic interpretation that combines all these elements into clear guidance for the user, in the spirit of the Wilhelm/Baynes translation.
 
 Please structure your response clearly.`;
 
@@ -421,6 +529,8 @@ Please structure your response clearly.`;
         window.addEventListener('load', loadConfigAndInit);
         saveConfigButton.addEventListener('click', saveConfig);
         interpretButton.addEventListener('click', interpretHexagram);
+        loadProfileButton.addEventListener('click', loadProfile);
+        deleteProfileButton.addEventListener('click', deleteProfile);
 
     </script>
 </body>
