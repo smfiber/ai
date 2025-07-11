@@ -39,15 +39,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         window.initializeApp = initializeApp;
     </script>
     <script type="module">
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         window.getAuth = getAuth; window.onAuthStateChanged = onAuthStateChanged; window.GoogleAuthProvider = GoogleAuthProvider; window.signInWithPopup = signInWithPopup; window.signOut = signOut;
     </script>
     <script type="module">
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc; window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy; window.writeBatch = writeBatch; window.getDoc = getDoc;
     </script>
 
@@ -235,7 +235,7 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
-                version: '9.0.0',
+                version: '9.0.1',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
