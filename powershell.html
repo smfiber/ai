@@ -133,6 +133,10 @@ Placeholders like `{{userPrompt}}` are replaced with your input.</p>
                             <summary class="font-semibold text-gray-200 cursor-pointer">Refactor Existing Script</summary>
                              <pre class="mt-2 text-gray-300 text-sm whitespace-pre-wrap code-font" id="modal-refactor-prompt"></pre>
                          </details>
+                        <details class="bg-gray-900 p-3 rounded-lg">
+                            <summary class="font-semibold text-gray-200 cursor-pointer">Script Validation and Refinement</summary>
+                            <pre class="mt-2 text-gray-300 text-sm whitespace-pre-wrap code-font" id="modal-validation-prompt"></pre>
+                        </details>
                     </div>
            
                 </div>
@@ -374,7 +378,7 @@ Google</button>
 
         // --- Main App Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = '6.11.0'; // Updated version number
+            const APP_VERSION = '6.12.0'; // Updated version number
 
             // --- Element References (Combined V6.2.2 and V6.2) ---
             const configModal = document.getElementById('config-modal');
@@ -480,6 +484,18 @@ Write code that can be reused.
 	• If the generated script requires non-standard PowerShell modules (e.g., Az, ActiveDirectory, PnP.PowerShell), include a commented-out section at the beginning of the script to \`Install-Module\` for those dependencies.
 
 By adhering to these principles, the generated PowerShell scripts will be reliable, efficient, and professional automation tools.`;
+
+            // New prompt for script validation and refinement
+            const validationMetaPrompt = `You are an expert PowerShell script validator and refactorer. Your task is to review a given PowerShell script for common issues, performance bottlenecks, security concerns, and adherence to best practices.
+
+Specifically:
+1.  **Identify Inefficient Cmdlets/Classes:** Replace known problematic WMI classes like \`Win32_Product\` with more efficient and reliable methods (e.g., querying registry for installed applications).
+2.  **Ensure Robust Error Handling:** Verify that \`Try...Catch...Finally\` blocks are used appropriately for critical operations and that \`$ErrorActionPreference = 'Stop'\` is considered.
+3.  **Check for Best Practices:** Confirm adherence to naming conventions, comment-based help, parameter validation, and pipeline support as outlined in the base meta prompt.
+4.  **Security Review:** Look for hardcoded credentials or other security vulnerabilities.
+5.  **Provide ONLY the corrected and improved PowerShell code.** Do not include any explanations or conversational text. The output must be a single markdown code block for PowerShell.
+
+Here is the script to validate and refine:`;
 
             // --- Config Modal Logic (V6.2.2) ---
             configForm.addEventListener('submit', async (e) => {
@@ -775,6 +791,38 @@ Present the explanation in clear, well-formatted markdown.`;
                 chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight; // Scroll to bottom
             };
  
+            // New function to validate and refine the script
+            const validateAndRefineScript = async (scriptToValidate) => {
+                const prompt = `${validationMetaPrompt}\n\n\`\`\`powershell\n${scriptToValidate}\n\`\`\``;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                const payload = { 
+                    contents: [{ parts: [{ text: prompt }] }] 
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error during validation: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const match = rawText.match(/```powershell\s*([\s\S]*?)\s*```/);
+                    return match ? match[1].trim() : rawText.trim();
+                } else {
+                    if (result.promptFeedback && result.promptFeedback.blockReason) {
+                        throw new Error(`Validation request blocked for safety reasons: ${result.promptFeedback.blockReason}`);
+                    }
+                    throw new Error('No content received from API for script validation.');
+                }
+            };
+
             const generateScriptWithGemini = async (userPrompt, environment) => {
                 // Add Environment Context to the prompt
                 const environmentContext = `Environment Context: The script should be compatible with: ${environment}\n\n`;
@@ -821,7 +869,7 @@ Provide only the PowerShell code within a single markdown code block. Do not inc
                     if (result.promptFeedback && result.promptFeedback.blockReason) {
                         throw new Error(`Request blocked for safety reasons: ${result.promptFeedback.blockReason}`);
                     }
-                    throw new Error('No content received from API for script generation.');
+                    throw new Error('No content received from API for initial script generation.');
                 }
             };
 
@@ -842,19 +890,26 @@ Provide only the PowerShell code within a single markdown code block. Do not inc
                 // Clear input
                 promptInput.value = '';
 
-                // Display a loading message
-                renderScript('Generating script... Please wait.');
+                // Display a loading message for initial generation
+                renderScript('Generating initial script... Please wait.');
                 
                 try {
-                    // Call the Gemini API to generate the script
-                    const generatedScript = await generateScriptWithGemini(userPrompt, targetEnvironment);
-                    currentScript = generatedScript;
-                    addMessageToHistory('ai', 'Script generated successfully.');
-                    renderScript(generatedScript);
+                    // Step 1: Generate the initial script
+                    let generatedScript = await generateScriptWithGemini(userPrompt, targetEnvironment);
+                    addMessageToHistory('ai', 'Initial script generated. Now validating and refining...');
+                    renderScript('Validating and refining script... This may take a moment.');
+
+                    // Step 2: Validate and refine the script
+                    const refinedScript = await validateAndRefineScript(generatedScript);
+                    
+                    currentScript = refinedScript; // Store the final, refined script
+                    addMessageToHistory('ai', 'Script validated and refined successfully.');
+                    renderScript(refinedScript);
+
                 } catch (error) {
-                    console.error('Error during generation:', error);
-                    renderScript(`Error: Failed to generate script. ${error.message}`);
-                    addMessageToHistory('error', 'Failed to generate script. Check console for details.');
+                    console.error('Error during script generation or validation:', error);
+                    renderScript(`Error: Failed to generate or validate script. ${error.message}`);
+                    addMessageToHistory('error', `Failed to generate or validate script. ${error.message}`);
                 }
             };
             promptForm.addEventListener('submit', handleFormSubmit);
@@ -882,6 +937,9 @@ User Input:
 
 Provide only the PowerShell code within a single markdown code block. Do not include explanations.`;
                 document.getElementById('modal-refactor-prompt').textContent = refactorPromptExample;
+
+                // Populate the new validation prompt example
+                document.getElementById('modal-validation-prompt').textContent = validationMetaPrompt;
             };
             // --- Initial UI setup ---
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
