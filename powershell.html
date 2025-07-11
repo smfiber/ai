@@ -105,6 +105,7 @@ window.serverTimestamp = serverTimestamp; window.query = query; window.where = w
             user-select: none;
             background-color: #111827; /* Darker bg */
             border-right: 1px solid #374151;
+            white-space: pre; /* Renders newlines correctly */
         }
         .code-display pre {
             margin: 0;
@@ -117,6 +118,12 @@ window.serverTimestamp = serverTimestamp; window.query = query; window.where = w
         }
         .output-content.flash-update > .prose {
              animation: flash-update 0.7s ease-out;
+        }
+        
+        #toast-container {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: flex-end;
         }
     </style>
 </head>
@@ -324,7 +331,7 @@ Login to save and load scripts from the cloud.</p>
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
  
-                version: '9.0.7',
+                version: '9.0.8',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
