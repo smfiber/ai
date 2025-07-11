@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Whiteboard 4.1 (3D Interactive)</title>
+    <title>Collaborative Whiteboard 4.2 (3D Primitives)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧊</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
@@ -40,12 +40,12 @@
             <button id="show-chat-btn"><i class="fa-solid fa-chevron-right"></i></button>
             <div id="app-container">
                 <header class="flex flex-col md:flex-row justify-between items-start mb-4">
-                     <div>
-                        <h1 id="whiteboard-title" class="text-2xl font-bold text-white rounded px-1">Whiteboard 3D</h1>
-                        <p id="whiteboard-description" class="text-sm text-gray-400 rounded px-1">Interactive 3D Mode</p>
+                    <div>
+                        <h1 id="whiteboard-title" class="text-2xl font-bold text-white rounded px-1"></h1>
+                        <p id="whiteboard-description" class="text-sm text-gray-400 rounded px-1"></p>
                     </div>
-                     <div class="flex flex-col items-end mt-2 md:mt-0 space-y-2">
-                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">4.1-3D-interactive</span></div>
+                    <div class="flex flex-col items-end mt-2 md:mt-0 space-y-2">
+                        <div class="text-xs text-gray-500">Version: <span id="version-number" class="font-mono bg-gray-700 px-2 py-1 rounded">4.2-3D-primitives</span></div>
                      </div>
                 </header>
                  <div id="toolbar" class="glass-ui">
@@ -57,6 +57,10 @@
                         <button data-mode="translate" id="translate-mode-btn" class="tool-btn p-2" title="Translate (W)"><i class="fa-solid fa-arrows-up-down-left-right"></i></button>
                         <button data-mode="rotate" id="rotate-mode-btn" class="tool-btn p-2" title="Rotate (E)"><i class="fa-solid fa-rotate"></i></button>
                         <button data-mode="scale" id="scale-mode-btn" class="tool-btn p-2" title="Scale (R)"><i class="fa-solid fa-expand"></i></button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="toolbar-group">
+                        <button id="add-cube-btn" class="tool-btn p-2" title="Add Cube"><i class="fa-solid fa-cube"></i></button>
                     </div>
                     <div class="divider"></div>
                      <div class="toolbar-group">
@@ -73,32 +77,28 @@
     </div>
     
     <script type="module">
-        // ==================================================================
-        // CORRECTED IMPORT STATEMENTS
-        // The error comes from not having the full https:// URLs here.
-        // ==================================================================
+        // --- Three.js Imports ---
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js';
         import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/controls/OrbitControls.js';
         import { TransformControls } from 'https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/controls/TransformControls.js';
-
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, onSnapshot, collection, doc, query, where, writeBatch, getDocs, setDoc, updateDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+        
         // DOM Elements
         const main_content = document.getElementById('main-content');
         const canvas = document.getElementById('whiteboard');
         const eventCaptureLayer = document.getElementById('event-capture-layer');
         const whiteboardId = 'whiteboard-00-default';
         
-        // Firebase & State Globals
+        // --- Firebase & State Globals ---
         let db, auth;
         let unsubscribeFromDrawings, unsubscribeFromState;
         const state = { allDrawings: new Map(), currentEpoch: 0, };
         const threeObjects = new Map();
-
-        // Three.js Globals
+        
+        // --- Three.js Globals ---
         let scene, camera, renderer, orbitControls, transformControls, raycaster, mouse;
         let selectedObject = null;
         
@@ -109,7 +109,7 @@
 
             camera = new THREE.PerspectiveCamera(75, rect.width / rect.height, 0.1, 5000);
             camera.position.set(0, 200, 500);
-
+            
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             renderer.setSize(rect.width, rect.height);
             renderer.setPixelRatio(window.devicePixelRatio);
@@ -123,7 +123,7 @@
             scene.add(directionalLight);
             
             scene.add(new THREE.GridHelper(2000, 100, 0x444444, 0x222222));
-
+            
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
@@ -155,61 +155,46 @@
             renderer.setSize(rect.width, rect.height);
         }
 
-        function updateSceneFromState(docChanges) {
-             docChanges.forEach(change => {
-                const id = change.doc.id;
-                const data = { id, ...change.doc.data() };
-
-                if (change.type === 'removed') {
-                    if (threeObjects.has(id)) {
-                        const objToRemove = threeObjects.get(id);
-                        scene.remove(objToRemove);
-                        threeObjects.delete(id);
-                        state.allDrawings.delete(id);
+        function updateSceneFromState() {
+             state.allDrawings.forEach((data, id) => {
+                if (!threeObjects.has(id)) {
+                    const threeObj = createThreeObject(data);
+                    if (threeObj) {
+                        threeObjects.set(id, threeObj);
+                        scene.add(threeObj);
                     }
-                } else if (change.type === 'added') {
-                    if (!threeObjects.has(id)) {
-                        const threeObj = createThreeObject(data);
-                        if (threeObj) {
-                            threeObjects.set(id, threeObj);
-                            scene.add(threeObj);
-                            state.allDrawings.set(id, data);
-                        }
-                    }
-                } else if (change.type === 'modified') {
-                    const objToUpdate = threeObjects.get(id);
-                    if (objToUpdate && selectedObject !== objToUpdate) { // Don't apply external updates to object being transformed
-                        objToUpdate.position.copy(data.position);
-                        objToUpdate.rotation.set(data.rotation._x, data.rotation._y, data.rotation._z);
-                        objToUpdate.scale.copy(data.scale);
-                        state.allDrawings.set(id, data);
-                    }
+                } else {
+                    const obj = threeObjects.get(id);
+                    if (obj.userData.firestoreId === selectedObject?.userData.firestoreId) return; // Don't update the object while it's selected
+                    if (data.position) obj.position.copy(data.position);
+                    if (data.rotation) obj.rotation.set(data.rotation._x, data.rotation._y, data.rotation._z);
+                    if (data.scale) obj.scale.copy(data.scale);
                 }
-             });
+            });
         }
 
         function createThreeObject(data) {
             if (!data) return null;
             let obj;
             const material = new THREE.MeshStandardMaterial({ color: data.color || 0xffffff, side: THREE.DoubleSide });
-
             const is3dData = data.position && data.rotation && data.scale;
 
             switch (data.type) {
                 case 'rectangle':
-                    const w = is3dData ? 1 : data.width;
-                    const h = is3dData ? 1 : data.height;
-                    obj = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+                    obj = new THREE.Mesh(new THREE.PlaneGeometry(data.width || 1, data.height || 1), material);
                     break;
                 case 'circle':
-                    const r = is3dData ? 0.5 : data.radius;
-                    obj = new THREE.Mesh(new THREE.CircleGeometry(r, 32), material);
+                    obj = new THREE.Mesh(new THREE.CircleGeometry(data.radius || 0.5, 32), material);
+                    break;
+                // +++ NEW CASE +++
+                case 'cube':
+                    obj = new THREE.Mesh(new THREE.BoxGeometry(data.size || 50, data.size || 50, data.size || 50), material);
                     break;
                 case 'path':
                      if (!data.points || data.points.length < 2) return null;
-                    const points = data.points.map(p => new THREE.Vector3(p.x, -p.y, 0));
-                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                    obj = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: data.color || 0xffffff }));
+                     const points = data.points.map(p => new THREE.Vector3(p.x, -p.y, 0));
+                     const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                     obj = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: data.color || 0xffffff }));
                     break;
                 default: return null;
             }
@@ -218,13 +203,14 @@
                 obj.position.copy(data.position);
                 obj.rotation.set(data.rotation._x, data.rotation._y, data.rotation._z);
                 obj.scale.copy(data.scale);
-            } else { // Legacy 2D positioning
+            } else {
+                // Legacy 2D object placement logic, can be removed later
                 const zPos = (data.timestamp?.seconds || 0) % 100;
                 let xPos=0, yPos=0;
-                if(data.type === 'rectangle') { xPos = data.x + data.width / 2; yPos = -(data.y + data.height / 2); }
-                else if (data.type === 'circle') { xPos = data.x; yPos = -data.y; }
-                obj.position.set(xPos, yPos, zPos);
-                obj.rotation.x = Math.PI / 2; // Correction: should be PI/2 to lay flat on the grid, not -PI/2
+                if(data.type === 'rectangle') { xPos = data.x + data.width / 2; yPos = data.y + data.height / 2; }
+                else if (data.type === 'circle') { xPos = data.x; yPos = data.y; }
+                obj.position.set(xPos, -yPos, zPos);
+                obj.rotation.x = -Math.PI / 2;
             }
             
             obj.userData.firestoreId = data.id;
@@ -247,17 +233,15 @@
 
         function onCanvasClick(event) {
             if (transformControls.dragging) return;
-        
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
             
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true); // Search recursively
-
+            const intersects = raycaster.intersectObjects(Array.from(threeObjects.values()), false);
             if (intersects.length > 0) {
                 const firstIntersected = intersects[0].object;
-                if (firstIntersected.userData.firestoreId && selectedObject !== firstIntersected) {
+                if (selectedObject !== firstIntersected) {
                     selectedObject = firstIntersected;
                     transformControls.attach(selectedObject);
                 }
@@ -268,15 +252,48 @@
                 }
             }
         }
+        
+        // +++ NEW FUNCTION +++
+        async function addPrimitive(type) {
+            if (!db || !state.currentEpoch) return;
+
+            // Calculate a position in front of the camera
+            const position = new THREE.Vector3();
+            const quaternion = new THREE.Quaternion();
+            camera.getWorldPosition(position);
+            camera.getWorldQuaternion(quaternion);
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
+            position.add(forward.multiplyScalar(250)); // Place it 250 units in front of camera
+
+            const newObjectData = {
+                type: type,
+                epoch: state.currentEpoch,
+                timestamp: serverTimestamp(),
+                position: { x: position.x, y: position.y, z: position.z },
+                rotation: { _x: 0, _y: 0, _z: 0, _order: 'XYZ' },
+                scale: { x: 1, y: 1, z: 1 },
+                color: Math.random() * 0xffffff, // Add a random color
+                size: 50 // Default size for primitives
+            };
+
+            try {
+                const collectionRef = collection(db, `artifacts/${whiteboardId}/public/data/drawings`);
+                await addDoc(collectionRef, newObjectData);
+            } catch (error) {
+                console.error("Error adding new primitive to Firestore:", error);
+            }
+        }
 
         function setupEventListeners() {
             window.addEventListener('resize', onWindowResize, { passive: true });
-            eventCaptureLayer.addEventListener('click', onCanvasClick);
+            eventCaptureLayer.addEventListener('click', onCanvasClick); // Use event capture layer for clicks
             
             document.getElementById('translate-mode-btn').addEventListener('click', () => transformControls.setMode('translate'));
             document.getElementById('rotate-mode-btn').addEventListener('click', () => transformControls.setMode('rotate'));
             document.getElementById('scale-mode-btn').addEventListener('click', () => transformControls.setMode('scale'));
             document.getElementById('clear-canvas-btn').addEventListener('click', clearAllDrawings);
+            // +++ NEW EVENT LISTENER +++
+            document.getElementById('add-cube-btn').addEventListener('click', () => addPrimitive('cube'));
         }
 
         function initializeAppLogic(fKey) {
@@ -286,38 +303,68 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
             } catch (error) { console.error("Firebase init failed:", error); return; }
+            
             initThree();
-            onAuthStateChanged(auth, async (user) => { if (user) { setupStateListener(); } });
+            onAuthStateChanged(auth, async (user) => { if (user) { setupStateListener(); setupDrawingsListener(); } });
             if (!auth.currentUser) { signInAnonymously(auth).catch(console.error); }
             setupEventListeners();
         }
         
-        function setupStateListener() { 
-            const stateDocRef = doc(db, `artifacts/${whiteboardId}/public/data/state/main`);
-            onSnapshot(stateDocRef, (docSnap) => {
-                const newEpoch = docSnap.data()?.epoch || Date.now();
-                if (state.currentEpoch !== newEpoch) {
-                    state.currentEpoch = newEpoch;
-                    setupDrawingsListener();
+        // --- Firebase Functions ---
+        function setupStateListener() {
+            if(unsubscribeFromState) unsubscribeFromState();
+            const stateRef = doc(db, `artifacts/${whiteboardId}/public/state`);
+            unsubscribeFromState = onSnapshot(stateRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if(data.currentEpoch && data.currentEpoch !== state.currentEpoch) {
+                        state.currentEpoch = data.currentEpoch;
+                        setupDrawingsListener();
+                    }
                 }
             });
         }
+        
         function setupDrawingsListener() {
-             if (unsubscribeFromDrawings) unsubscribeFromDrawings();
-             const q = query(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), where("epoch", "==", state.currentEpoch));
-             unsubscribeFromDrawings = onSnapshot(q, (snapshot) => {
-                 updateSceneFromState(snapshot.docChanges());
-             });
+            if (unsubscribeFromDrawings) unsubscribeFromDrawings();
+            
+            // Clear existing scene
+            threeObjects.forEach(obj => scene.remove(obj));
+            threeObjects.clear();
+            state.allDrawings.clear();
+            
+            if (state.currentEpoch === 0) { 
+                console.log("Waiting for epoch...");
+                return;
+            }
+
+            const q = query(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), where("epoch", "==", state.currentEpoch));
+            unsubscribeFromDrawings = onSnapshot(q, (snapshot) => {
+                 snapshot.docChanges().forEach((change) => {
+                    const docData = change.doc.data();
+                    const docId = change.doc.id;
+                    if (change.type === 'removed') { 
+                        state.allDrawings.delete(docId);
+                        if (threeObjects.has(docId)) {
+                            scene.remove(threeObjects.get(docId));
+                            threeObjects.delete(docId);
+                        }
+                    } else { 
+                        state.allDrawings.set(docId, { id: docId, ...docData }); 
+                    }
+                 });
+                 updateSceneFromState();
+            }, (error) => console.error("Snapshot listener error:", error));
         }
-        async function clearAllDrawings() { 
-            const drawingsQuery = query(collection(db, `artifacts/${whiteboardId}/public/data/drawings`), where("epoch", "==", state.currentEpoch));
-            const snapshot = await getDocs(drawingsQuery);
+
+        async function clearAllDrawings() {
+            const newEpoch = Date.now();
             const batch = writeBatch(db);
-            snapshot.forEach(doc => batch.delete(doc.ref));
+            const stateRef = doc(db, `artifacts/${whiteboardId}/public/state`);
+            batch.update(stateRef, { currentEpoch: newEpoch });
             await batch.commit();
-            // Create a new epoch to signal a clear event
-            await setDoc(doc(db, `artifacts/${whiteboardId}/public/data/state/main`), { epoch: Date.now() });
-         }
+            // Listeners will handle the cleanup
+        }
 
         window.addEventListener('load', () => {
              const storedFirebaseKey = localStorage.getItem('firebaseApiKey');
