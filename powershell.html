@@ -336,7 +336,7 @@ Login to save and load scripts from the cloud.</p>
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
  
-                version: '9.1.0',
+                version: '9.1.1',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -403,20 +403,20 @@ You have been given a draft PowerShell script. Your task is to review it against
 If the script is perfect, return it as is. Otherwise, fix all issues.
 The final output MUST ONLY be the corrected script in a \`\`\`powershell code block.
 **CRITICAL CHECKLIST:**
-1.  **Comment-Based Help Header:** The script MUST start with a Comment-Based Help block (\`<# ... #>\`).
-This header MUST be correctly formatted and include at least the .SYNOPSIS, .DESCRIPTION, .AUTHOR, .DATE, .VERSION, and .EXAMPLE sections. The content must be accurate and well-written.
-2.  **Action-Based Warning:** If the script contains any modifying verbs (e.g., Set, New, Remove, Stop, Disable, Add, Unregister), it MUST contain a prominent warning block in the .NOTES section.
-3.  **Modern & Efficient Cmdlets:** Replace any outdated cmdlets (e.g., \`Get-WmiObject\` with \`Get-CimInstance\`). Ensure efficient filtering is used (e.g., \`-Filter\` on the cmdlet, not piping to \`Where-Object\`).
-4.  **Robust Error Handling:** Wrap all potentially failing external commands in \`try/catch\` blocks. The script should start with \`$ErrorActionPreference = 'Stop'\`.
-5.  **Security:** There must be absolutely NO hardcoded credentials, API keys, or secrets.
-6.  **Parameter Validation:** Add appropriate validation attributes to parameters (e.g., \`[Parameter(Mandatory=$true)]\`, \`[ValidateSet(...)]\`) to prevent invalid input.
-7.  **Verbose Output:** Use \`Write-Verbose\` for progress messages and status updates, not \`Write-Host\`.
-8.  **Resource Management:** If a persistent connection is made (e.g., \`Connect-VIServer\`), ensure a corresponding \`Disconnect-*\` call exists, preferably in a \`finally\` block.
-9.  **Readability & Formatting:** The code must be properly indented and consistently formatted.
-10. **Correct Cmdlet Usage:** Use \`Get-ADUser\` for user objects and \`Get-ADComputer\` for computer objects. To get an IP address, the script must use \`Get-NetIPAddress\`, not \`Get-NetAdapter\`.
-11. **No \`Win32_Product\`:** The script MUST NOT use the \`Win32_Product\` WMI/CIM class for software inventory. It MUST query the Windows Uninstall registry keys instead.
-12. **Flat Object for Exports:** If the script exports data (e.g., to CSV), the final object piped to \`Export-Csv\` MUST be an array of flat objects (\`[PSCustomObject[]]\`). It MUST NOT be a single object with nested properties/arrays. All data must be consolidated into a flat structure first.
-13. **Logical Soundness:** Perform a final sanity check. Does the script's logic actually and correctly solve the original user request? Is it complete?
+1.  **Comment-Based Help Header:** The script MUST start with a Comment-Based Help block (\`<# ... #>\`). This header MUST be correctly formatted and include at least the .SYNOPSIS, .DESCRIPTION, .AUTHOR, .DATE, .VERSION, and .EXAMPLE sections. The content must be accurate and well-written.
+2.  **Script Structure:** The \`param()\` block, if present, MUST be the very first statement in the script, optionally preceded only by a comment-based help block (\`<#...#>\`). No other code or commands (like \`$ErrorActionPreference = 'Stop'\`) can come before the \`param()\` block.
+3.  **Action-Based Warning:** If the script contains any modifying verbs (e.g., Set, New, Remove, Stop, Disable, Add, Unregister), it MUST contain a prominent warning block in the .NOTES section.
+4.  **Modern & Efficient Cmdlets:** Replace any outdated cmdlets (e.g., \`Get-WmiObject\` with \`Get-CimInstance\`). Ensure efficient filtering is used (e.g., \`-Filter\` on the cmdlet, not piping to \`Where-Object\`).
+5.  **Robust Error Handling:** Wrap all potentially failing external commands in \`try/catch\` blocks. The script should start with \`$ErrorActionPreference = 'Stop'\` (but AFTER the param() block).
+6.  **Security:** There must be absolutely NO hardcoded credentials, API keys, or secrets.
+7.  **Parameter Validation:** Add appropriate validation attributes to parameters (e.g., \`[Parameter(Mandatory=$true)]\`, \`[ValidateSet(...)]\`) to prevent invalid input.
+8.  **Verbose Output:** Use \`Write-Verbose\` for progress messages and status updates, not \`Write-Host\`.
+9.  **Resource Management:** If a persistent connection is made (e.g., \`Connect-VIServer\`), ensure a corresponding \`Disconnect-*\` call exists, preferably in a \`finally\` block.
+10. **Readability & Formatting:** The code must be properly indented and consistently formatted.
+11. **Correct Cmdlet Usage:** Use \`Get-ADUser\` for user objects and \`Get-ADComputer\` for computer objects. To get an IP address, the script must use \`Get-NetIPAddress\`, not \`Get-NetAdapter\`.
+12. **No \`Win32_Product\`:** The script MUST NOT use the \`Win32_Product\` WMI/CIM class for software inventory. It MUST query the Windows Uninstall registry keys instead.
+13. **Flat Object for Exports:** If the script exports data (e.g., to CSV), the final object piped to \`Export-Csv\` MUST be an array of flat objects (\`[PSCustomObject[]]\`). It MUST NOT be a single object with nested properties/arrays. All data must be consolidated into a flat structure first.
+14. **Logical Soundness:** Perform a final sanity check. Does the script's logic actually and correctly solve the original user request? Is it complete?
 
 Review the following DRAFT SCRIPT and return ONLY the corrected, final version.`;
 const environmentRules = {
