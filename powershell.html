@@ -239,7 +239,7 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
-                version: '9.0.3',
+                version: '9.0.4',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -606,7 +606,8 @@ Review the following DRAFT SCRIPT and return ONLY the corrected, final version.`
                     // --- Step 1: Draft Generation ---
                     addMessageToHistory('model', 'Generating draft script...', true);
                     appState.lastGenerationPrompt = generationPrompt;
-                    const draftApiHistory = [...appState.conversationHistory.slice(0, -1), { role: 'user', parts: [{ text: generationPrompt }] }];
+                    // Send only the self-contained prompt, not the whole history, to prevent payload size issues.
+                    const draftApiHistory = [{ role: 'user', parts: [{ text: generationPrompt }] }];
                     const draftScriptResponse = await callGeminiAPI(draftApiHistory);
                     const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
 
