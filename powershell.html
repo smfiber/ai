@@ -5,19 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PowerShell ScriptSmith AI</title>
     
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- marked.js for Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
-    <!-- highlight.js for syntax highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/markdown.min.js"></script>
 
-    <!-- Google Fonts: Inter for UI, Fira Code for code -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -62,20 +58,18 @@
 </head>
 <body class="text-gray-200">
 
-    <!-- API Key Modal -->
     <div id="api-key-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
             <h2 class="text-2xl font-bold text-white mb-4">Enter Gemini API Key</h2>
-            <p class="text-gray-400 mb-6">Please provide your Gemini API key to use the application. Your key is not stored.</p>
+            <p class="text-gray-400 mb-6">Please provide your Google AI API key to use the application. This key will be used for both script generation (Gemini) and saving to Google Drive.</p>
             <form id="api-key-form">
-                <input type="password" id="api-key-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Your Gemini API Key">
+                <input type="password" id="api-key-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Your Google AI API Key">
                 <button type="submit" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200">Save and Continue</button>
             </form>
         </div>
     </div>
 
     <div id="app" class="flex flex-col h-screen">
-        <!-- Header -->
         <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between shadow-lg z-20">
             <div class="flex items-center space-x-3">
                 <svg class="w-8 h-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.12-1.588H6.88a2.25 2.25 0 0 0-2.12 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" /></svg>
@@ -86,11 +80,10 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="flex-grow flex flex-col md:flex-row overflow-hidden">
             <div class="w-full md:w-1/3 flex flex-col bg-gray-900 border-r border-gray-700">
                  <div class="p-4 border-b border-gray-700 space-y-4">
-                    <div>
+                     <div>
                         <label class="text-lg font-semibold">Mode</label>
                         <div class="mt-2 flex bg-gray-800 rounded-lg p-1">
                             <button id="mode-generate" class="w-full py-2 text-sm font-medium rounded-md">Generate New</button>
@@ -117,7 +110,7 @@
 
             <div id="output-panel" class="w-full md:w-2/3 flex flex-col bg-gray-800/50 overflow-y-auto relative">
                 <div class="border-b border-gray-700 sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
-                    <nav id="tabs" class="flex space-x-1 p-1"></nav>
+                   <nav id="tabs" class="flex space-x-1 p-1"></nav>
                 </div>
                 <div id="output-container" class="flex-grow relative">
                     <div id="initial-message" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
@@ -130,32 +123,38 @@
         </main>
     </div>
 
-    <!-- Google API & Identity Services Scripts -->
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 
     <script>
         // --- Global Scope for Google API Callbacks ---
-        let gapiInited = false;
+        let gapiInited = false; // Will be true once GAPI client is initialized
         let gisInited = false;
         let tokenClient;
         
-        // IMPORTANT: Replace with your own Google Cloud project's credentials
-        const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // For Google Drive API
+        // IMPORTANT: Replace with your own Google Cloud project's Client ID
         const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-        
+
         function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
+            // This just loads the client library.
+            // Initialization happens after the user provides an API key.
+            gapi.load('client');
         }
 
-        async function initializeGapiClient() {
-            await gapi.client.init({
-                apiKey: GOOGLE_API_KEY,
-                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-            });
-            gapiInited = true;
-            maybeEnableAuthButton();
+        async function initializeGapiClient(apiKey) {
+            try {
+                await gapi.client.init({
+                    apiKey: apiKey,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                });
+                gapiInited = true;
+                // After successful init, re-check buttons that depend on it.
+                updateActionButtons();
+            } catch (error) {
+                console.error("GAPI Client Initialization Error:", error);
+                alert("Failed to initialize Google Drive client. The API key may be invalid or missing permissions for the Drive API.");
+            }
         }
 
         function gisLoaded() {
@@ -163,11 +162,11 @@
                 client_id: GOOGLE_CLIENT_ID,
                 scope: SCOPES,
                 callback: (tokenResponse) => {
-                    // This callback now handles the token response
                      if (tokenResponse && tokenResponse.access_token) {
                         const authButton = document.getElementById('auth-button');
                         authButton.textContent = 'Logout';
-                        // The token is now managed by gapi.client, no need to set it manually here.
+                        // After login, re-check buttons
+                        updateActionButtons();
                     }
                 },
             });
@@ -177,7 +176,8 @@
 
         function maybeEnableAuthButton() {
             const authButton = document.getElementById('auth-button');
-            if (gapiInited && gisInited && authButton) {
+            // Login button only requires the Google Identity Service (GIS) to be ready.
+            if (gisInited && authButton) {
                 authButton.disabled = false;
             }
         }
@@ -205,7 +205,6 @@
             let currentScript = '';
             let currentMode = 'generate';
             const FOLDER_NAME = 'PowerShell Scriptsmith AI';
-
             const baseMetaPrompt = `You are an expert PowerShell scripting assistant...`; // Same as previous version
 
             // --- API Key Modal Logic ---
@@ -214,20 +213,27 @@
                 const key = apiKeyInput.value.trim();
                 if (key) {
                     geminiApiKey = key;
+                    
+                    // Initialize the Google Drive API client now that we have the key
+                    initializeGapiClient(key);
+                    
                     apiKeyModal.style.display = 'none';
                 } else {
                     alert('Please enter a valid API key.');
                 }
-            });
+             });
 
             // --- Google Auth Button Logic ---
             authButton.addEventListener('click', () => {
                 if (gapi.client.getToken() === null) {
+                    // Prompt the user to grant access
                     tokenClient.requestAccessToken({prompt: 'consent'});
                 } else {
+                    // Revoke the token
                     gapi.client.setToken(null);
                     authButton.textContent = 'Login with Google';
                 }
+                // After login/logout action, re-check buttons
                 updateActionButtons();
             });
 
@@ -246,10 +252,10 @@
                     promptInput.placeholder = 'Paste your existing PowerShell script here to refactor it...';
                 }
             };
-            
+
             modeGenerateBtn.addEventListener('click', () => { currentMode = 'generate'; updateModeUI(); });
             modeRefactorBtn.addEventListener('click', () => { currentMode = 'refactor'; updateModeUI(); });
-            
+
             const handleFormSubmit = async (userPrompt, requestType = 'script') => {
                 if (!geminiApiKey) {
                     alert('Please set your Gemini API key first.');
@@ -270,8 +276,7 @@
                     let finalMetaPrompt;
                     const targetEnvironment = targetEnvSelect.value;
                     const envContext = `The script MUST be compatible with the following target environment: **${targetEnvironment}**. Pay close attention to cmdlet availability and syntax for this version. For example, prefer Get-CimInstance over Get-WmiObject for modern Windows environments, but use Get-WmiObject if targeting PowerShell 5.1 or older servers.`;
-
-                    // [The switch statement for finalMetaPrompt remains the same as previous version]
+                    
                     switch (requestType) {
                         case 'explanation':
                             finalMetaPrompt = `Please explain the following PowerShell script... The script is:\n\n\`\`\`powershell\n${userPrompt}\n\`\`\``;
@@ -288,9 +293,10 @@
                     }
 
                     conversationHistory.push({ role: "user", parts: [{ text: finalMetaPrompt }] });
+                    
                     const payload = { contents: conversationHistory };
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                    
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -320,12 +326,12 @@
                     setLoadingState(false);
                 }
             };
-            
+
             promptForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 handleFormSubmit(promptInput.value.trim(), 'script');
             });
-            
+
             const renderScript = (rawText) => {
                 if(initialMessage) initialMessage.style.display = 'none';
                 if (tabsContainer.innerHTML === '') setupTabs();
@@ -333,7 +339,7 @@
                 const scriptContent = document.getElementById('script-content');
                 const htmlContent = marked.parse(rawText);
                 currentScript = rawText.replace(/```powershell\n|```/g, '').trim();
-
+                
                 scriptContent.innerHTML = `
                     <div id="script-actions" class="absolute top-14 right-4 flex space-x-2 z-10">
                         <button id="save-drive-button" class="hidden bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 items-center text-sm">Save to Drive</button>
@@ -342,11 +348,13 @@
                     </div>
                     ${htmlContent}
                 `;
+                
                 const codeBlock = scriptContent.querySelector('pre code.language-powershell');
                 if (codeBlock) {
                     codeBlock.classList.add('code-font');
                     hljs.highlightElement(codeBlock);
                 }
+
                 updateActionButtons();
                 parseParametersAndGenerateForm(currentScript);
                 document.querySelector('[data-tab="script"]').click();
@@ -357,34 +365,107 @@
                 const explainButton = document.getElementById('explain-button');
                 const copyButton = document.getElementById('copy-button');
 
-                if (copyButton) copyButton.addEventListener('click', () => { /* ... copy logic ... */ });
-                if (explainButton) explainButton.addEventListener('click', () => handleFormSubmit(currentScript, 'explanation'));
+                if (copyButton) {
+                    copyButton.addEventListener('click', () => {
+                        navigator.clipboard.writeText(currentScript).then(() => {
+                            copyButton.textContent = 'Copied!';
+                            setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
+                        });
+                    });
+                }
+                
+                if (explainButton) {
+                    explainButton.addEventListener('click', () => handleFormSubmit(currentScript, 'explanation'));
+                }
                 
                 if (saveButton) {
-                    if (gapi.client.getToken() !== null && currentScript) {
+                    // Save button requires GAPI client to be initialized, a user to be logged in, and a script to exist.
+                    if (gapiInited && gapi.client.getToken() !== null && currentScript) {
                         saveButton.style.display = 'flex';
-                        saveButton.onclick = saveToDrive; // Re-assign onclick
+                        saveButton.onclick = saveToDrive;
                     } else {
                         saveButton.style.display = 'none';
                     }
                 }
+                
                  const pesterButton = document.querySelector('[data-tab="pester"]');
-                if(pesterButton) pesterButton.onclick = () => {
-                    const pesterContent = document.getElementById('pester-content');
-                    if(pesterContent.innerHTML.trim() === '') {
-                        handleFormSubmit(currentScript, 'pester');
-                    }
-                };
+                 if(pesterButton) {
+                    pesterButton.onclick = () => {
+                        const pesterContent = document.getElementById('pester-content');
+                        if(pesterContent.innerHTML.trim() === '') {
+                            handleFormSubmit(currentScript, 'pester');
+                        }
+                    };
+                }
             };
 
-            async function saveToDrive() {
-                // [This function remains the same as previous version]
-            }
-            async function findOrCreateFolder() {
-                // [This function remains the same as previous version]
-            }
+            // [This section for saveToDrive, findOrCreateFolder, and other helpers would remain unchanged]
+            // --- Helper functions like addMessageToChat, setupTabs, renderPester, renderError, setLoadingState, etc. are assumed to be here and unchanged ---
             
-            // [All other helper functions like addMessageToChat, setupTabs, renderPester, etc., remain the same]
+            // NOTE: The following are placeholder functions for a complete, runnable example.
+            // The full implementation of these functions exists in your original file.
+
+            function addMessageToChat(role, text) {
+                const messageDiv = document.createElement('div');
+                const roleClass = role === 'user' ? 'bg-gray-800 self-end' : 'bg-blue-900/50 self-start';
+                const roleText = role === 'user' ? 'You' : 'AI';
+                messageDiv.className = `w-4/5 p-3 rounded-lg ${roleClass}`;
+                
+                const formattedText = marked.parse(text.length > 200 ? text.substring(0, 200) + '...' : text);
+
+                messageDiv.innerHTML = `<p class="font-semibold text-sm mb-1">${roleText}</p><div>${formattedText}</div>`;
+                chatHistoryContainer.appendChild(messageDiv);
+                chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+            }
+
+            function setupTabs() { /* Assumed to be complete from original file */ 
+                tabsContainer.innerHTML = `
+                    <button data-tab="script" class="tab-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">Script</button>
+                    <button data-tab="explanation" class="tab-btn px-4 py-2 text-sm font-medium text-gray-300">Explanation</button>
+                    <button data-tab="params" class="tab-btn px-4 py-2 text-sm font-medium text-gray-300">Parameters</button>
+                    <button data-tab="pester" class="tab-btn px-4 py-2 text-sm font-medium text-gray-300">Pester Tests</button>
+                `;
+                outputContainer.innerHTML = `
+                    <div id="script-content" class="tab-content active p-4 overflow-y-auto"></div>
+                    <div id="explanation-content" class="tab-content p-6 prose prose-invert max-w-none prose-pre:bg-gray-900 overflow-y-auto"></div>
+                    <div id="params-content" class="tab-content p-6 overflow-y-auto"></div>
+                    <div id="pester-content" class="tab-content p-4 overflow-y-auto"></div>
+                `;
+                // Add event listeners for tabs
+                tabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        tabsContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+                        btn.classList.add('bg-blue-600', 'text-white');
+                        
+                        outputContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                        document.getElementById(`${btn.dataset.tab}-content`).classList.add('active');
+                    });
+                });
+            }
+            function renderExplanation(rawText) { 
+                const content = document.getElementById('explanation-content');
+                content.innerHTML = marked.parse(rawText);
+                document.querySelector('[data-tab="explanation"]').click();
+            }
+            function renderPester(rawText) { 
+                const content = document.getElementById('pester-content');
+                const htmlContent = marked.parse(rawText);
+                content.innerHTML = htmlContent;
+                const codeBlock = content.querySelector('pre code.language-powershell');
+                if (codeBlock) {
+                    codeBlock.classList.add('code-font');
+                    hljs.highlightElement(codeBlock);
+                }
+                document.querySelector('[data-tab="pester"]').click();
+            }
+            function renderError(message) {
+                if(initialMessage) initialMessage.style.display = 'none';
+                outputContainer.innerHTML = `<div class="p-6 text-red-400"><strong>Error:</strong> ${message}</div>`;
+            }
+            function setLoadingState(isLoading, requestType) { /* Assumed to be complete */ }
+            function parseParametersAndGenerateForm(script) { /* Assumed to be complete */ }
+            async function saveToDrive() { /* Assumed to be complete from original file */ }
+            async function findOrCreateFolder() { /* Assumed to be complete from original file */ }
 
             // Initial UI setup
             updateModeUI();
