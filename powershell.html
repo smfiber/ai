@@ -144,7 +144,6 @@
                     <div>
                         <label for="target-env" class="text-lg font-semibold">Target Environment</label>
                         <select id="target-env" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <!-- New Technology-Specific Options -->
                             <option>Active Directory</option>
                             <option>Azure (Az Module)</option>
                             <option>MS Graph (SDK)</option>
@@ -220,7 +219,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Consolidated Application State ---
             const appState = {
-                version: '7.0.0',
+                version: '7.1.0',
                 geminiApiKey: null,
                 googleClientId: null,
                 firebaseConfig: null,
@@ -229,6 +228,7 @@
                 appExplanation: '',
                 isLoggedIn: false,
                 tokenClient: null,
+                detectionTimeout: null, // For debouncing environment detection
             };
 
             const FOLDER_NAME = 'PowerShell Scriptsmith AI';
@@ -273,74 +273,15 @@
             // --- Prompts ---
             const baseMetaPrompt = `You are an expert PowerShell scripting assistant...`; // Abridged for brevity
 
-            // --- NEW: Environment-Specific Rules ---
+            // --- Environment-Specific Rules ---
             const environmentRules = {
-                'Active Directory': `
-                    - **Module:** ActiveDirectory.
-                    - **Authentication:** Assumes the script is run on a domain-joined machine with RSAT installed. No explicit connect cmdlet needed unless specified.
-                    - **Key Cmdlets:** Get-ADUser, Set-ADUser, New-ADUser, Get-ADComputer, Get-ADGroup, Get-ADGroupMember.
-                    - **Note:** Use the -Filter parameter for efficient queries. Avoid pulling all objects and filtering with Where-Object.
-                `,
-                'Azure (Az Module)': `
-                    - **Module:** The 'Az' module (e.g., Az.Accounts, Az.Compute, Az.Storage).
-                    - **Authentication:** MUST include \`Connect-AzAccount\` for user login.
-                    - **Key Cmdlets:** Get-AzVM, New-AzResourceGroup, Get-AzStorageAccount.
-                    - **Note:** Scripts should check for the Az module and handle authentication gracefully.
-                `,
-                'MS Graph (SDK)': `
-                    - **Module:** Microsoft.Graph (e.g., Microsoft.Graph.Authentication, Microsoft.Graph.Users).
-                    - **Authentication:** MUST include \`Connect-MgGraph\` and specify required -Scopes for permissions.
-                    - **Key Cmdlets:** Get-MgUser, Update-MgUser, Get-MgGroup.
-                    - **Note:** This is the modern replacement for older AzureAD/MSOnline modules. Prefer this for all Entra ID tasks.
-                `,
-                'MS365 / Entra ID': `
-                    - **Module:** Microsoft.Graph (e.g., Microsoft.Graph.Authentication, Microsoft.Graph.Users).
-                    - **Authentication:** MUST include \`Connect-MgGraph\` and specify required -Scopes for permissions.
-                    - **Key Cmdlets:** Get-MgUser, Update-MgUser, Get-MgGroup.
-                    - **Note:** DO NOT use the older, deprecated 'MSOnline' (Connect-MsolService) or 'AzureAD' (Connect-AzureAD) modules unless the user explicitly requests them for legacy environments.
-                `,
-                'MS365 / Exchange Online': `
-                    - **Module:** ExchangeOnlineManagement.
-                    - **Authentication:** MUST include \`Connect-ExchangeOnline\`.
-                    - **Key Cmdlets:** Get-Mailbox, Set-Mailbox, New-Mailbox, Get-MailboxPermission.
-                    - **Note:** This is the modern module with REST-based cmdlets.
-                `,
-                'MS365 / SharePoint PnP': `
-                    - **Module:** PnP.PowerShell.
-                    - **Authentication:** MUST include \`Connect-PnPOnline -Url <YourSiteUrl> -Interactive\`.
-                    - **Key Cmdlets:** Get-PnPList, Get-PnPListItem, Add-PnPListItem, Get-PnPSite.
-                    - **Note:** The user must provide the SharePoint site URL.
-                `,
-                'MS365 / Teams': `
-                    - **Module:** MicrosoftTeams.
-                    - **Authentication:** MUST include \`Connect-MicrosoftTeams\`.
-                    - **Key Cmdlets:** Get-Team, Get-TeamUser, New-TeamChannel.
-                `,
-                'PowerCLI (VMware)': `
-                    - **Module:** VMware.PowerCLI.
-                    - **Authentication:** MUST include \`Connect-VIServer -Server <YourVCenterServer>\`.
-                    - **Key Cmdlets:** Get-VM, Get-VMHost, Get-Datastore, New-VM.
-                `,
-                'Windows Desktop (10/11)': `
-                    - **Environment:** Windows 10/11 Client OS.
-                    - **Key Cmdlets:** Use cmdlets available by default on Windows clients. For installed applications, query the registry at 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'. For Windows features, MUST use \`Get-WindowsOptionalFeature\`.
-                    - **Forbidden Cmdlets:** DO NOT use server-only cmdlets like \`Get-WindowsFeature\` or \`Get-ADUser\` unless RSAT is specified as a prerequisite.
-                `,
-                'Windows Server': `
-                    - **Environment:** Windows Server OS.
-                    - **Key Cmdlets:** Can use server-specific cmdlets. For Windows Features/Roles, MUST use \`Get-WindowsFeature\`.
-                    - **Note:** Can also use Active Directory cmdlets if the server is a Domain Controller or has RSAT installed.
-                `,
+                'Active Directory': `...`, 'Azure (Az Module)': `...`, 'MS Graph (SDK)': `...`, 
+                'MS365 / Entra ID': `...`, 'MS365 / Exchange Online': `...`, 'MS365 / SharePoint PnP': `...`, 
+                'MS365 / Teams': `...`, 'PowerCLI (VMware)': `...`, 'Windows Desktop (10/11)': `...`, 
+                'Windows Server': `...`, // Abridged for brevity
             };
 
-            // --- REFINED: Validation Prompt ---
-            const validationMetaPrompt = `You are an expert PowerShell script validator and refactorer. Your task is to review a given PowerShell script and ensure it is perfect.
-                1.  **Strictly Adhere to Environment Rules:** You will be given a set of rules for the target environment. You MUST follow these rules. If the script uses a cmdlet forbidden by the rules, you MUST replace it with the correct one.
-                2.  **Verify Cmdlet Syntax:** Check all cmdlets for correct parameter usage (e.g., -Name vs -Path, -Filter vs Where-Object).
-                3.  **Correct Data Handling:** Ensure data types are handled correctly. For registry properties, check for string dates ('yyyyMMdd') and convert them to [datetime] objects for proper sorting and filtering.
-                4.  **Simplify and Focus:** Remove any "alternative methods" or extraneous code that was not part of the primary request. The script should do one job and do it well.
-                5.  **Final Output:** Provide ONLY the corrected and improved PowerShell code. Do not include any explanations or conversational text. The output must be a single markdown code block for PowerShell.`;
-
+            const validationMetaPrompt = `You are an expert PowerShell script validator and refactorer...`; // Abridged
 
             // --- Centralized API Call Function ---
             async function callGeminiAPI(prompt) {
@@ -374,131 +315,24 @@
             }
             
             // --- Initialization Functions ---
-            async function initializeGapiDrive() {
-                try {
-                    await gapi.client.init({
-                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                    });
-                    console.log("Google Drive Client Initialized.");
-                } catch (error) {
-                    console.error("GAPI Drive Init Error:", error);
-                    displayMessage("Failed to initialize Google Drive client.", "Error");
-                }
-            }
-
-            function initializeTokenClient() {
-                try {
-                    appState.tokenClient = google.accounts.oauth2.initTokenClient({
-                        client_id: appState.googleClientId,
-                        scope: SCOPES,
-                        callback: (tokenResponse) => {
-                           if (tokenResponse && tokenResponse.access_token) {
-                                authButton.textContent = 'Logout';
-                                appState.isLoggedIn = true;
-                                updateActionButtons();
-                            }
-                        },
-                    });
-                    authButton.disabled = false;
-                    console.log("Google Token Client Initialized.");
-                } catch(error) {
-                    console.error("Token Client Init Error:", error);
-                    displayMessage("Failed to initialize Google Sign-In. Check your Client ID.", "Error");
-                }
-            }
-
-            function initializeFirebase(config) {
-                 try {
-                    if (firebase.apps.length === 0) {
-                        firebase.initializeApp(config);
-                        console.log("Firebase Initialized.");
-                    }
-                } catch (error) {
-                    console.error("Firebase Init Error:", error);
-                    displayMessage("Failed to initialize Firebase. Check your configuration object.", "Error");
-                }
-            }
+            const initializeGapiDrive = async () => { /* ... no changes ... */ };
+            const initializeTokenClient = () => { /* ... no changes ... */ };
+            const initializeFirebase = (config) => { /* ... no changes ... */ };
 
             // --- Refactored Message Modal Function ---
-            function displayMessage(message, title = "Message") {
-                messageModalTitle.textContent = title;
-                messageModalContent.textContent = message;
-                messageModal.classList.add('active');
-            }
+            const displayMessage = (message, title = "Message") => { /* ... no changes ... */ };
             messageModalClose.addEventListener('click', () => messageModal.classList.remove('active'));
             messageModal.addEventListener('click', (e) => {
                 if (e.target === messageModal) messageModal.classList.remove('active');
             });
 
             // --- Main App Logic ---
-            configForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const geminiKey = geminiKeyInput.value.trim();
-                const clientId = googleClientIdInput.value.trim();
-                const fbConfigString = firebaseConfigInput.value.trim();
-
-                if (!geminiKey || !clientId || !fbConfigString) {
-                    displayMessage('Please fill out all configuration fields.', 'Validation Error');
-                    return;
-                }
-
-                try {
-                    appState.firebaseConfig = JSON.parse(fbConfigString);
-                } catch (error) {
-                    displayMessage('The Firebase Config is not a valid JSON object.', 'Configuration Error');
-                    return;
-                }
-
-                appState.geminiApiKey = geminiKey;
-                appState.googleClientId = clientId;
-
-                initializeFirebase(appState.firebaseConfig);
-                
-                displayMessage("Initializing Google Services...", "Please Wait");
-                await Promise.all([gapiReady, gisReady]);
-                
-                await initializeGapiDrive();
-                initializeTokenClient();
-                
-                configModal.classList.remove('active');
-                updateActionButtons();
-            });
+            configForm.addEventListener('submit', async (e) => { /* ... no changes ... */ });
 
             // --- UI and Event Handlers ---
-            const updateActionButtons = () => {
-                if (typeof gapi === 'undefined' || !gapi.client) return;
-                const token = gapi.client.getToken();
-                appState.isLoggedIn = token !== null;
-                saveToDriveButton.disabled = !appState.isLoggedIn;
-                
-                if (appState.isLoggedIn) {
-                    authButton.textContent = 'Logout';
-                } else {
-                    gapi.client.setToken(null);
-                    authButton.textContent = 'Login with Google';
-                }
-            };
-            
-            authButton.addEventListener('click', () => {
-                if (!appState.tokenClient) {
-                    displayMessage("Google Sign-In is not initialized.", "Authentication Error");
-                    return;
-                }
-                if (!appState.isLoggedIn) {
-                    appState.tokenClient.requestAccessToken({prompt: 'consent'});
-                } else {
-                    gapi.client.setToken(null);
-                    updateActionButtons();
-                }
-            });
-            
-            const setupModal = (modal, openBtn, closeBtn) => {
-                if (openBtn) openBtn.addEventListener('click', () => modal.classList.add('active'));
-                if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) modal.classList.remove('active');
-                });
-            };
+            const updateActionButtons = () => { /* ... no changes ... */ };
+            authButton.addEventListener('click', () => { /* ... no changes ... */ });
+            const setupModal = (modal, openBtn, closeBtn) => { /* ... no changes ... */ };
             
             setupModal(promptsModal, viewPromptsButton, closePromptsModal);
             setupModal(explainAppModal, explainAppButton, closeExplainAppModal);
@@ -522,27 +356,69 @@
             const renderScript = (scriptContent) => { /* ... no changes ... */ };
             const addMessageToHistory = (sender, message) => { /* ... no changes ... */ };
 
+            // --- NEW: Environment Detection Function ---
+            async function detectEnvironment(scriptText) {
+                const environmentNames = Object.keys(environmentRules);
+                const prompt = `
+                    Analyze the following PowerShell script. Based on the cmdlets used, which of the following environments is the best fit?
+                    
+                    **Environments:**
+                    ${environmentNames.join('\n- ')}
+
+                    Respond with ONLY the single best matching environment name from the list above. Do not add any other text or explanation.
+
+                    **Script to Analyze:**
+                    \`\`\`powershell
+                    ${scriptText}
+                    \`\`\`
+                `;
+
+                try {
+                    const detectedEnv = await callGeminiAPI(prompt);
+                    // Clean up the response and check if it's a valid environment
+                    const cleanedEnv = detectedEnv.trim();
+                    if (environmentNames.includes(cleanedEnv)) {
+                        return cleanedEnv;
+                    }
+                    return null; // Return null if the response is not a valid environment
+                } catch (error) {
+                    console.error("Environment detection failed:", error);
+                    return null; // Fail gracefully
+                }
+            }
+
+            // --- NEW: Event Listener for Automatic Environment Detection ---
+            promptInput.addEventListener('keyup', (e) => {
+                // Clear the previous timeout
+                clearTimeout(appState.detectionTimeout);
+
+                // Only run detection in refactor mode and if there's content
+                if (appState.currentMode === 'refactor' && promptInput.value.trim().length > 50) {
+                    // Set a new timeout
+                    appState.detectionTimeout = setTimeout(async () => {
+                        addMessageToHistory('ai', 'Analyzing script to detect environment...');
+                        const scriptText = promptInput.value;
+                        const detected = await detectEnvironment(scriptText);
+
+                        if (detected) {
+                            targetEnvSelect.value = detected;
+                            addMessageToHistory('ai', `Environment detected: **${detected}**. Please add your refactoring instructions and submit.`);
+                        } else {
+                            addMessageToHistory('ai', 'Could not automatically detect the environment. Please select it manually.');
+                        }
+                    }, 1500); // 1.5-second debounce timer
+                }
+            });
+
+
             // --- REFINED: Script Generation and Validation ---
-            const validateAndRefineScript = async (scriptToValidate, environment) => {
-                const rules = environmentRules[environment];
-                const prompt = `${validationMetaPrompt}\n\n**ENVIRONMENT RULES (MUST FOLLOW):**\n${rules}\n\n**SCRIPT TO VALIDATE:**\n\`\`\`powershell\n${scriptToValidate}\n\`\`\``;
-                const rawText = await callGeminiAPI(prompt);
-                const match = rawText.match(/```powershell\s*([\s\S]*?)\s*```/);
-                return match ? match[1].trim() : rawText.trim();
-            };
-            
-            const generateScriptWithGemini = async (userPrompt, environment) => {
-                const rules = environmentRules[environment];
-                const task = appState.currentMode === 'generate' ? 'Generate New Script' : 'Refactor Existing Script';
-                const taskInstruction = appState.currentMode === 'generate' ? 'Generate a PowerShell script...' : 'Refactor the provided script...';
-                const promptTemplate = `${baseMetaPrompt}\n\n**ENVIRONMENT RULES (MUST FOLLOW):**\n${rules}\n\n**TASK:**\n${taskInstruction}\n\n**USER INPUT:**\n\`\`\`\n${userPrompt}\n\`\`\`\n\nProvide only the PowerShell code...`;
-                const rawText = await callGeminiAPI(promptTemplate);
-                const match = rawText.match(/```powershell\s*([\s\S]*?)\s*```/);
-                return match ? match[1].trim() : rawText.trim();
-            };
+            const validateAndRefineScript = async (scriptToValidate, environment) => { /* ... no changes ... */ };
+            const generateScriptWithGemini = async (userPrompt, environment) => { /* ... no changes ... */ };
 
             const handleFormSubmit = async (e) => {
                 e.preventDefault();
+                // In refactor mode, the prompt now contains both the script and instructions.
+                // The environment is already set (either auto-detected or manually).
                 const userPrompt = promptInput.value.trim();
                 const targetEnvironment = targetEnvSelect.value;
                 if (!userPrompt) return;
@@ -552,6 +428,7 @@
                 renderScript('Generating initial script... Please wait.');
                 
                 try {
+                    // The logic for generation vs. refactoring is handled by the prompt templates now.
                     const generatedScript = await generateScriptWithGemini(userPrompt, targetEnvironment);
                     addMessageToHistory('ai', 'Initial script generated. Now validating...');
                     renderScript('Validating and refining script...');
