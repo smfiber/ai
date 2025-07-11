@@ -139,6 +139,16 @@ Placeholders like `{{userPrompt}}` are replaced with your input.</p>
             </div>
         </div>
     </div>
+    <div id="explain-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl relative max-h-[80vh] flex flex-col">
+            <button id="close-explain-script-modal" class="modal-close-button absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+            <h2 class="text-2xl font-bold text-white mb-4 flex-shrink-0">Script Explanation (AI-Generated)</h2>
+            <div id="explain-script-content" class="prose prose-invert max-w-none prose-pre:bg-gray-900 overflow-y-auto pr-4">
+                <p>Explanation generating...</p>
+            </div>
+        </div>
+    </div>
+    
     <div id="explain-app-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl relative max-h-[80vh] flex flex-col">
             <button id="close-explain-app-modal" class="modal-close-button absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
@@ -213,12 +223,30 @@ Google</button>
             <div id="output-panel" class="w-full md:w-2/3 flex flex-col bg-gray-800/50 overflow-y-auto relative">
                 <div class="border-b border-gray-700 sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
                    <nav id="tabs" class="flex space-x-1 p-1"></nav>
-                
-</div>
+                   <div id="output-actions" class="p-2 flex justify-end space-x-2 border-t border-gray-700 hidden">
+                        <button id="copy-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v2a2 2 0 01-2 2h-2m-6 0H6a2 2 0 00-2 2v2a2 2 0 002 2h2" />
+                            </svg>
+                            Copy
+                        </button>
+                        <button id="download-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download (.ps1)
+                        </button>
+                        <button id="explain-script-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Explain Script
+                        </button>
+                   </div>
+                </div>
                 <div id="output-container" class="flex-grow relative">
                     <div id="initial-message" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
-                        <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 
-0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
+                        <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
                         <h3 class="text-xl font-semibold text-gray-400">Your generated script will appear here</h3>
                         <p class="mt-2 max-w-md">Select a mode, describe your needs or paste a script, and send.</p>
                   
@@ -312,7 +340,7 @@ let gisInited = false;
 
         // --- Main App Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = '6.6.0'; // Updated version number
+            const APP_VERSION = '6.9.0'; // Updated version number
 
             // --- Element References (Combined V6.2.2 and V6.2) ---
             const configModal = document.getElementById('config-modal');
@@ -327,6 +355,10 @@ let gisInited = false;
  
            const explainAppModal = document.getElementById('explain-app-modal');
             const closeExplainAppModal = document.getElementById('close-explain-app-modal');
+            const explainScriptModal = document.getElementById('explain-script-modal');
+            const closeExplainScriptModal = document.getElementById('close-explain-script-modal');
+            const explainScriptContent = document.getElementById('explain-script-content');
+
  const explainAppButton = document.getElementById('explain-app-button');
             const explainAppContent = document.getElementById('explain-app-content');
             const viewPromptsButton = document.getElementById('view-prompts-button');
@@ -340,6 +372,11 @@ let gisInited = false;
  const tabsContainer = document.getElementById('tabs');
             const initialMessage = document.getElementById('initial-message');
             const outputContainer = document.getElementById('output-container');
+            const outputActions = document.getElementById('output-actions');
+            const copyScriptButton = document.getElementById('copy-script-button');
+            const downloadScriptButton = document.getElementById('download-script-button');
+            const explainScriptButton = document.getElementById('explain-script-button');
+
  // --- State Variables (Combined V6.2.2 and V6.2) ---
             let geminiApiKey = '';
  let googleClientId = '';
@@ -349,8 +386,66 @@ let gisInited = false;
             let currentMode = 'generate';
  let appExplanation = '';
             const FOLDER_NAME = 'PowerShell Scriptsmith AI';
-            const baseMetaPrompt = `You are an expert PowerShell scripting assistant...`;
- // Placeholder, actual prompt likely longer
+            
+            // Updated Base Meta Prompt incorporating PowerShell best practices and dependency instructions
+            const baseMetaPrompt = `You are an expert PowerShell scripting assistant. When generating scripts, adhere strictly to the following best practices for professional, robust, and readable code:
+
+1. Structure and Readability 📖
+An excellent script is easy to read and understand. This is achieved through consistent formatting and logical organization.
+	• Consistent Naming Convention: Use approved verbs for functions (e.g., Get-, Set-, New-, Remove-) and a singular noun for the subject (e.g., Get-Process, not Get-Processes). For variables, use a consistent style like PascalCase ($WebService) or camelCase ($webService).
+	• Commenting and Documentation:
+		○ Comment-Based Help: Every script and function should have a comment-based help block. This allows anyone to understand its purpose, parameters, and examples by running Get-Help .\YourScript.ps1 -Full.
+		○ Inline Comments: Use comments (#) to explain complex or non-obvious parts of your code. Don't over-comment simple lines.
+	• Code Layout: Use consistent indentation and spacing to visually structure the code. Group related commands and use blank lines to separate logical blocks.
+
+2. Advanced Functions and Parameters ⚙️
+Instead of simple scripts, expert scripters build advanced functions. This makes the code modular, reusable, and professional.
+	• [CmdletBinding()]: This attribute turns a simple function into an advanced function, giving it access to common parameters like -Verbose, -Debug, and -ErrorAction for free.
+	• Parameter Validation: Always validate your parameters.
+		○ [Parameter(Mandatory=$true)]: Ensures a parameter must be provided.
+		○ Type Constraints: Strongly type your parameters (e.g., [string]$ComputerName, [int]$RetryCount).
+		○ Validation Attributes: Use attributes like [ValidateSet('Value1', 'Value2')], [ValidateRange(0, 100)], and [ValidatePattern('[a-zA-Z]')] to enforce specific input.
+	• Verbose and Debug Output: Use Write-Verbose and Write-Debug instead of Write-Host. Write-Host should generally be avoided.
+
+3. Robust Error Handling 🛡️
+Robust error handling is crucial.
+	• $ErrorActionPreference = 'Stop': Set this at the beginning of your script to ensure non-terminating errors become terminating ones.
+	• Try...Catch...Finally Blocks: Use these for modern error handling.
+		○ Try: Enclose the code that might cause an error.
+		○ Catch: Handle terminating errors. The $_ variable contains the error record.
+		○ Finally: Runs regardless of errors for cleanup tasks.
+	• Specific Exception Handling: Catch specific types of exceptions (e.g., [System.Net.WebException]) for granular control.
+
+4. Pipeline Support ("Thinking in PowerShell") ⛓️
+An expert script works with the pipeline.
+	• Accepts Pipeline Input: Use ValueFromPipeline or ValueFromPipelineByPropertyName in [Parameter()] attributes.
+	• Begin, Process, End Blocks: Use these blocks when a function processes pipeline input.
+		○ Begin: Setup tasks (runs once).
+		○ Process: Main logic (runs for each item).
+		○ End: Cleanup and returning summary data (runs once).
+	• Output Objects, Not Text: Create custom PowerShell objects ([PSCustomObject]) and output them instead of just formatted text.
+
+5. Performance and Efficiency ⚡
+An excellent script is also efficient.
+	• Filter Left, Format Right: Filter data as early as possible (Where-Object) and format (Format-Table, Format-List) as the very last step.
+	• Avoid Loops When Possible: Use the pipeline instead of foreach loops for better memory efficiency.
+	• Use Efficient Cmdlets: Use modern cmdlets like Get-CimInstance instead of older ones like Get-WmiObject.
+
+6. Security Considerations 🔒
+A script must be secure.
+	• Avoid Hardcoding Credentials: Never store plain-text passwords. Use PSCredential objects or secure methods.
+	• Code Signing: Scripts should be digitally signed in enterprise environments.
+	• Principle of Least Privilege: The script should only have the permissions it needs.
+
+7. Modularity and Reusability ♻️
+Write code that can be reused.
+	• Create Modules: Package related functions into a PowerShell module (.psm1 file) with a module manifest (.psd1 file).
+	• Generalize Functions: Write functions that solve general problems and use parameters for flexibility.
+
+8. Dependency Management 📦
+	• If the generated script requires non-standard PowerShell modules (e.g., Az, ActiveDirectory, PnP.PowerShell), include a commented-out section at the beginning of the script to `Install-Module` for those dependencies.
+
+By adhering to these principles, the generated PowerShell scripts will be reliable, efficient, and professional automation tools.`;
 
             // --- Config Modal Logic (V6.2.2) ---
             configForm.addEventListener('submit', async (e) => {
@@ -455,7 +550,80 @@ let gisInited = false;
             
             setupModal(promptsModal, viewPromptsButton, closePromptsModal);
             setupModal(explainAppModal, null, closeExplainAppModal); // Open is handled manually
-            
+            setupModal(explainScriptModal, null, closeExplainScriptModal); // Open handled by explainScript()
+
+            // --- Output Action Functions ---
+
+            const copyScript = async () => {
+                try {
+                    await navigator.clipboard.writeText(currentScript);
+                    alert('Script copied to clipboard!');
+                } catch (err) {
+                    console.error('Failed to copy script: ', err);
+                    alert('Failed to copy script.');
+                }
+            };
+
+            const downloadScript = () => {
+                const blob = new Blob([currentScript], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'generated_script.ps1';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+
+            const explainScript = async () => {
+                if (!currentScript) return;
+                
+                explainScriptModal.classList.add('active');
+                explainScriptContent.innerHTML = `<div class="flex items-center justify-center h-full"><p>Generating explanation with Gemini... this may take a moment.</p></div>`;
+
+                try {
+                    if (!geminiApiKey) {
+                        explainScriptContent.innerHTML = `<p class="text-red-400">Please enter your API key first to generate this explanation.</p>`;
+                        return;
+                    }
+
+                    const explanationPrompt = `You are an expert PowerShell scripting assistant. Analyze the following PowerShell script and provide a detailed, line-by-line explanation of how it works. Structure your explanation clearly using markdown.
+
+\`\`\`powershell
+${currentScript}
+\`\`\``;
+
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                    const payload = { contents: [{ parts: [{ text: explanationPrompt }] }] };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts) {
+                        const rawText = result.candidates[0].content.parts[0].text;
+                        // Use marked.js to convert markdown explanation to HTML
+                        const htmlContent = marked.parse(rawText);
+                        explainScriptContent.innerHTML = htmlContent;
+                    } else {
+                        if (result.promptFeedback && result.promptFeedback.blockReason) throw new Error(`Request blocked for safety reasons: ${result.promptFeedback.blockReason}`);
+                        throw new Error('No explanation content received from API.');
+                    }
+                } catch (error) {
+                    console.error('Error generating script explanation:', error);
+                    explainScriptContent.innerHTML = `<p class="text-red-400"><strong>Error:</strong> ${error.message}</p>`;
+                }
+            };
+
+            // --- Event Listeners for Output Actions ---
+            copyScriptButton.addEventListener('click', copyScript);
+            downloadScriptButton.addEventListener('click', downloadScript);
+            explainScriptButton.addEventListener('click', explainScript);
+
             // --- "How It Works" Modal Logic (V6.2) ---
             const handleAppExplanation = async () => {
                 explainAppModal.classList.add('active');
@@ -514,12 +682,16 @@ Present the explanation in clear, well-formatted markdown.`;
  const updateModeUI = () => {
                 // Logic to update the UI based on currentMode (generate/refactor)
                 // This typically involves changing button styles and potentially input field visibility/placeholders.
- if (currentMode === 'generate') {
+                if (currentMode === 'generate') {
                     modeGenerateBtn.classList.add('bg-blue-600', 'text-white');
- modeRefactorBtn.classList.remove('bg-blue-600', 'text-white');
+                    modeRefactorBtn.classList.remove('bg-blue-600', 'text-white');
+                    promptInput.placeholder = "Describe your desired script...";
+                    promptInput.rows = 2;
                 } else {
                     modeRefactorBtn.classList.add('bg-blue-600', 'text-white');
- modeGenerateBtn.classList.remove('bg-blue-600', 'text-white');
+                    modeGenerateBtn.classList.remove('bg-blue-600', 'text-white');
+                    promptInput.placeholder = "Paste the script you want to refactor, followed by instructions on how to improve it...";
+                    promptInput.rows = 6; // Increase textarea height for pasted scripts
                 }
             };
  // Event listeners for mode selection
@@ -536,6 +708,7 @@ Present the explanation in clear, well-formatted markdown.`;
                 // Logic to display generated script in the output panel and handle highlighting
                 // Example: Create a new tab and display the script content.
  initialMessage.style.display = 'none'; // Hide the initial message once output is generated
+ outputActions.style.display = 'flex'; // Show the action buttons
 
                 // Remove previous content in the output container
                 outputContainer.innerHTML = '';
@@ -569,12 +742,13 @@ Present the explanation in clear, well-formatted markdown.`;
             };
  
             const generateScriptWithGemini = async (userPrompt, environment) => {
+                // Add Environment Context to the prompt
+                const environmentContext = `Environment Context: The script should be compatible with: ${environment}\n\n`;
+
                 const promptTemplate = `
 ${baseMetaPrompt}
 
-Environment Context: 
-${environment}
-
+${environmentContext}
 Task: ${currentMode === 'generate' ? 'Generate New Script' : 'Refactor Existing Script'}
 
 ${currentMode === 'generate' ? 'Generate a PowerShell script based on the following user request:' : 'Refactor the provided PowerShell script based on the following instructions:'}
@@ -636,7 +810,7 @@ Provide only the PowerShell code within a single markdown code block. Do not inc
 
                 // Display a loading message
                 renderScript('Generating script... Please wait.');
-
+                
                 try {
                     // Call the Gemini API to generate the script
                     const generatedScript = await generateScriptWithGemini(userPrompt, targetEnvironment);
@@ -654,7 +828,26 @@ Provide only the PowerShell code within a single markdown code block. Do not inc
             const populatePromptsModal = () => {
                 // Logic to populate the prompts modal with the base, environment, and task-specific prompts.
  document.getElementById('modal-base-prompt').textContent = baseMetaPrompt;
-                // ... populate other prompt fields ...
+                // Since Environment Context and Task Specific Prompts are dynamically generated 
+                // in the JavaScript logic, we can populate placeholders with example prompts or descriptions.
+                
+                document.getElementById('modal-env-context').textContent = `The script should be compatible with: {{targetEnvironment}}\n\n`;
+
+                const generatePromptExample = `Generate a PowerShell script based on the following user request:
+
+User Input:
+{{userPrompt}}
+
+Provide only the PowerShell code within a single markdown code block. Do not include explanations.`;
+                document.getElementById('modal-generate-prompt').textContent = generatePromptExample;
+
+                const refactorPromptExample = `Refactor the provided PowerShell script based on the following instructions:
+
+User Input:
+{{userPrompt}}
+
+Provide only the PowerShell code within a single markdown code block. Do not include explanations.`;
+                document.getElementById('modal-refactor-prompt').textContent = refactorPromptExample;
             };
  // --- Initial UI setup ---
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
