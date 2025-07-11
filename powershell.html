@@ -235,7 +235,7 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
-                version: '9.0.1',
+                version: '9.0.2',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -378,7 +378,8 @@
 
             async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appState.geminiApiKey}`;
+                // Use the -latest alias to ensure the most recent stable version is used.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${appState.geminiApiKey}`;
                 const payload = { contents: history };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
