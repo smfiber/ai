@@ -207,7 +207,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Consolidated Application State ---
             const appState = {
-                version: '6.19.0-revised',
+                version: '6.19.1',
                 geminiApiKey: null,
                 googleClientId: null,
                 firebaseConfig: null,
@@ -441,7 +441,64 @@
                 document.body.removeChild(a);
             };
 
-            const saveScriptToDrive = async () => { /* ... (no changes to internal logic) ... */ };
+            // RESTORED: saveScriptToDrive function
+            const saveScriptToDrive = async () => {
+                if (!appState.isLoggedIn) {
+                    displayMessage('Please log in with your Google account first.', 'Authentication Required');
+                    return;
+                }
+                if (!appState.currentScript) {
+                    displayMessage('No script to save. Generate a script first.', 'No Script');
+                    return;
+                }
+
+                displayMessage('Saving script to Google Drive...', 'Saving...');
+                try {
+                    let folderId = null;
+                    const folderResponse = await gapi.client.drive.files.list({
+                        q: `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                        fields: 'files(id, name)',
+                        spaces: 'drive',
+                    });
+
+                    if (folderResponse.result.files.length > 0) {
+                        folderId = folderResponse.result.files[0].id;
+                    } else {
+                        const createFolderResponse = await gapi.client.drive.files.create({
+                            resource: {
+                                name: FOLDER_NAME,
+                                mimeType: 'application/vnd.google-apps.folder',
+                            },
+                            fields: 'id',
+                        });
+                        folderId = createFolderResponse.result.id;
+                    }
+
+                    const fileName = `powershell_script_${new Date().toISOString().replace(/[:.]/g, '-')}.ps1`;
+                    const fileContent = appState.currentScript;
+                    const mimeType = 'text/plain';
+
+                    const uploadResponse = await gapi.client.request({
+                        path: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'multipart/related; boundary=foo_bar_baz',
+                        },
+                        body: `--foo_bar_baz\nContent-Type: application/json; charset=UTF-8\n\n` +
+                              `{\n"name": "${fileName}",\n"parents": ["${folderId}"]\n}\n\n` +
+                              `--foo_bar_baz\nContent-Type: ${mimeType}\n\n` +
+                              `${fileContent}\n--foo_bar_baz--`,
+                    });
+                    if (uploadResponse.status === 200) {
+                        displayMessage(`Script "${fileName}" saved to Google Drive successfully!`, 'Success');
+                    } else {
+                        throw new Error(`Failed to upload file. Status: ${uploadResponse.status}`);
+                    }
+                } catch (error) {
+                    console.error('Error saving script to Drive:', error);
+                    displayMessage(`Error saving script to Drive: ${error.message}`, 'Error');
+                }
+            };
             
             const explainScript = async () => {
                 if (!appState.currentScript) return;
@@ -449,7 +506,6 @@
                 try {
                     const explanationPrompt = `Analyze the following PowerShell script... \n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
                     const rawText = await callGeminiAPI(explanationPrompt);
-                    // Sanitize HTML before rendering
                     explainScriptContent.innerHTML = DOMPurify.sanitize(marked.parse(rawText));
                 } catch (error) {
                     console.error('Error generating script explanation:', error);
@@ -468,7 +524,6 @@
                     const appSourceCode = document.documentElement.outerHTML;
                     const fullPrompt = `${selfAnalysisPrompt}\n\n\`\`\`html\n${appSourceCode}\n\`\`\``;
                     const rawText = await callGeminiAPI(fullPrompt);
-                    // Sanitize and cache
                     appState.appExplanation = DOMPurify.sanitize(marked.parse(rawText));
                     explainAppContent.innerHTML = appState.appExplanation;
                 } catch (error) {
@@ -481,12 +536,48 @@
             downloadScriptButton.addEventListener('click', downloadScript);
             saveToDriveButton.addEventListener('click', saveScriptToDrive);
             
-            const updateModeUI = () => { /* ... (no changes to internal logic) ... */ };
+            // RESTORED: updateModeUI function
+            const updateModeUI = () => {
+                if (appState.currentMode === 'generate') {
+                    modeGenerateBtn.classList.add('bg-blue-600', 'text-white');
+                    modeRefactorBtn.classList.remove('bg-blue-600', 'text-white');
+                    promptInput.placeholder = "Describe your desired script...";
+                    promptInput.rows = 2;
+                } else {
+                    modeRefactorBtn.classList.add('bg-blue-600', 'text-white');
+                    modeGenerateBtn.classList.remove('bg-blue-600', 'text-white');
+                    promptInput.placeholder = "Paste the script you want to refactor, followed by instructions on how to improve it...";
+                    promptInput.rows = 6;
+                }
+            };
+            
             modeGenerateBtn.addEventListener('click', () => { appState.currentMode = 'generate'; updateModeUI(); });
             modeRefactorBtn.addEventListener('click', () => { appState.currentMode = 'refactor'; updateModeUI(); });
-            
-            const renderScript = (scriptContent) => { /* ... (no changes to internal logic) ... */ };
-            const addMessageToHistory = (sender, message) => { /* ... (no changes to internal logic) ... */ };
+
+            // RESTORED: renderScript function
+            const renderScript = (scriptContent) => {
+                initialMessage.style.display = 'none';
+                outputActions.style.display = 'flex';
+                outputContainer.innerHTML = '';
+                const pre = document.createElement('pre');
+                pre.className = 'p-4 bg-gray-900 text-gray-200 overflow-auto code-font';
+                pre.textContent = scriptContent;
+                const tabContent = document.createElement('div');
+                tabContent.className = 'tab-content active flex-grow p-4';
+                tabContent.appendChild(pre);
+                outputContainer.appendChild(tabContent);
+                hljs.highlightElement(pre);
+                tabsContainer.innerHTML = `<button class="p-2 bg-blue-600 text-white rounded-md text-sm">Generated Script</button>`;
+            };
+
+            // RESTORED: addMessageToHistory function
+            const addMessageToHistory = (sender, message) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `p-3 rounded-lg ${sender === 'user' ? 'bg-blue-900 text-white self-end' : 'bg-gray-700 text-gray-200 self-start'}`;
+                messageDiv.textContent = message;
+                chatHistoryContainer.appendChild(messageDiv);
+                chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+            };
 
             const validateAndRefineScript = async (scriptToValidate) => {
                 const prompt = `${validationMetaPrompt}\n\n\`\`\`powershell\n${scriptToValidate}\n\`\`\``;
@@ -532,7 +623,16 @@
             };
             promptForm.addEventListener('submit', handleFormSubmit);
 
-            const populatePromptsModal = () => { /* ... (no changes to internal logic) ... */ };
+            // RESTORED: populatePromptsModal function
+            const populatePromptsModal = () => {
+                document.getElementById('modal-base-prompt').textContent = baseMetaPrompt;
+                document.getElementById('modal-env-context').textContent = `The script should be compatible with: {{targetEnvironment}}\n\n`;
+                const generatePromptExample = `Generate a PowerShell script based on the following user request:\n\nUser Input:\n{{userPrompt}}\n\nProvide only the PowerShell code...`;
+                document.getElementById('modal-generate-prompt').textContent = generatePromptExample;
+                const refactorPromptExample = `Refactor the provided PowerShell script based on the following instructions:\n\nUser Input:\n{{userPrompt}}\n\nProvide only the PowerShell code...`;
+                document.getElementById('modal-refactor-prompt').textContent = refactorPromptExample;
+                document.getElementById('modal-validation-prompt').textContent = validationMetaPrompt;
+            };
 
             // --- Initial UI setup ---
             document.getElementById('app-version').textContent = `v${appState.version}`;
