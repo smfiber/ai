@@ -41,6 +41,7 @@
 </head>
 <body class="text-gray-200">
 
+    <!-- Modals -->
     <div id="config-modal" class="modal active fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-bold text-white mb-4">Initial Configuration</h2>
@@ -114,6 +115,7 @@
         </div>
     </div>
 
+    <!-- Main App Structure -->
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between shadow-lg z-20">
             <div class="flex items-center space-x-3">
@@ -178,6 +180,7 @@
         </main>
     </div>
 
+    <!-- --- Global Scope for API Callbacks & State --- -->
     <script>
         // --- Promise-based API Initialization ---
         let resolveGapiReady;
@@ -207,7 +210,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Consolidated Application State ---
             const appState = {
-                version: '6.19.1',
+                version: '6.19.2',
                 geminiApiKey: null,
                 googleClientId: null,
                 firebaseConfig: null,
@@ -385,14 +388,15 @@
 
             // --- UI and Event Handlers ---
             const updateActionButtons = () => {
-                const token = gapi.client?.getToken();
+                if (typeof gapi === 'undefined' || !gapi.client) return; // Guard clause
+                const token = gapi.client.getToken();
                 appState.isLoggedIn = token !== null;
                 saveToDriveButton.disabled = !appState.isLoggedIn;
                 
                 if (appState.isLoggedIn) {
                     authButton.textContent = 'Logout';
                 } else {
-                    gapi.client?.setToken(null);
+                    gapi.client.setToken(null);
                     authButton.textContent = 'Login with Google';
                 }
             };
@@ -441,7 +445,6 @@
                 document.body.removeChild(a);
             };
 
-            // RESTORED: saveScriptToDrive function
             const saveScriptToDrive = async () => {
                 if (!appState.isLoggedIn) {
                     displayMessage('Please log in with your Google account first.', 'Authentication Required');
@@ -536,7 +539,6 @@
             downloadScriptButton.addEventListener('click', downloadScript);
             saveToDriveButton.addEventListener('click', saveScriptToDrive);
             
-            // RESTORED: updateModeUI function
             const updateModeUI = () => {
                 if (appState.currentMode === 'generate') {
                     modeGenerateBtn.classList.add('bg-blue-600', 'text-white');
@@ -553,8 +555,7 @@
             
             modeGenerateBtn.addEventListener('click', () => { appState.currentMode = 'generate'; updateModeUI(); });
             modeRefactorBtn.addEventListener('click', () => { appState.currentMode = 'refactor'; updateModeUI(); });
-
-            // RESTORED: renderScript function
+            
             const renderScript = (scriptContent) => {
                 initialMessage.style.display = 'none';
                 outputActions.style.display = 'flex';
@@ -569,8 +570,7 @@
                 hljs.highlightElement(pre);
                 tabsContainer.innerHTML = `<button class="p-2 bg-blue-600 text-white rounded-md text-sm">Generated Script</button>`;
             };
-
-            // RESTORED: addMessageToHistory function
+            
             const addMessageToHistory = (sender, message) => {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `p-3 rounded-lg ${sender === 'user' ? 'bg-blue-900 text-white self-end' : 'bg-gray-700 text-gray-200 self-start'}`;
@@ -623,7 +623,6 @@
             };
             promptForm.addEventListener('submit', handleFormSubmit);
 
-            // RESTORED: populatePromptsModal function
             const populatePromptsModal = () => {
                 document.getElementById('modal-base-prompt').textContent = baseMetaPrompt;
                 document.getElementById('modal-env-context').textContent = `The script should be compatible with: {{targetEnvironment}}\n\n`;
@@ -638,7 +637,7 @@
             document.getElementById('app-version').textContent = `v${appState.version}`;
             updateModeUI();
             populatePromptsModal();
-            updateActionButtons();
+            // REMOVED: The premature call to updateActionButtons() that caused the error.
         });
     </script>
 </body>
