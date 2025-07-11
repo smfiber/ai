@@ -35,7 +35,7 @@
             background: #1f2937;
         }
         ::-webkit-scrollbar-thumb { 
-            background: #4b5563; 
+            background: #4b5563;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover { 
@@ -51,14 +51,17 @@
             display: flex;
         }
         .modal-close-button { 
-            font-size: 2rem; 
+            font-size: 2rem;
             line-height: 1; 
             font-weight: bold;
         }
         /* V6.2 specific styles retained */
-        #output-panel .tab-content, .modal { display: none; }
-        #output-panel .tab-content.active, .modal.active { display: flex; }
-        #output-panel pre { flex-grow: 1; margin: 0; }
+        #output-panel .tab-content, .modal { display: none;
+        }
+        #output-panel .tab-content.active, .modal.active { display: flex;
+        }
+        #output-panel pre { flex-grow: 1; margin: 0;
+        }
     </style>
 </head>
 <body class="text-gray-200">
@@ -103,12 +106,14 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold text-blue-400 mb-2">Environment Context</h3>
-                    <p class="text-gray-400 text-sm mb-2">This text is added to instruct the AI on compatibility. `{{targetEnvironment}}` is replaced with your selection.</p>
+                    <p class="text-gray-400 text-sm mb-2">This text is added to instruct the AI on compatibility.
+                    `{{targetEnvironment}}` is replaced with your selection.</p>
                     <pre class="bg-gray-900 p-3 rounded-lg text-gray-300 text-sm whitespace-pre-wrap code-font" id="modal-env-context"></pre>
                 </div>
                  <div>
                     <h3 class="text-lg font-semibold text-blue-400 mb-2">Task-Specific Prompts</h3>
-                    <p class="text-gray-400 text-sm mb-2">Depending on the mode, one of the following instructions is used. Placeholders like `{{userPrompt}}` are replaced with your input.</p>
+                    <p class="text-gray-400 text-sm mb-2">Depending on the mode, one of the following instructions is used.
+                    Placeholders like `{{userPrompt}}` are replaced with your input.</p>
                     <div class="space-y-3">
                          <details class="bg-gray-900 p-3 rounded-lg">
                             <summary class="font-semibold text-gray-200 cursor-pointer">Generate New Script</summary>
@@ -145,7 +150,7 @@
                 
                 <button id="explain-app-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold p-2 rounded-full" title="How This App Works (AI-Generated)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 000-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                     </svg>
                 </button>
                 <button id="view-prompts-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm">View Prompts</button>
@@ -205,7 +210,6 @@
         let gisInited = false;
         let tokenClient;
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-        
         // --- Service Initialization Functions (V6.2.2) ---
         function gapiLoaded() {
             // Load the client library and set the flag
@@ -219,15 +223,16 @@
             gisInited = true;
         }
         
-        async function initializeGapiDrive(apiKey) {
+        async function initializeGapiDrive() {
             if (!gapiInited) { 
                 console.error("GAPI not loaded yet.");
                 return; 
             }
             try {
                 // Initialize GAPI client with Drive API discovery doc
+                // Note: We initialize without the API key here, as Google Drive operations typically
+                // rely on the access token provided by the OAuth flow.
                 await gapi.client.init({
-                    apiKey: apiKey,
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
                 });
                 console.log("Google Drive Client Initialized.");
@@ -292,7 +297,6 @@
             const explainAppButton = document.getElementById('explain-app-button');
             const explainAppContent = document.getElementById('explain-app-content');
             const viewPromptsButton = document.getElementById('view-prompts-button');
-
             // V6.2 specific UI elements
             const promptForm = document.getElementById('prompt-form');
             const promptInput = document.getElementById('prompt-input');
@@ -303,7 +307,6 @@
             const tabsContainer = document.getElementById('tabs');
             const initialMessage = document.getElementById('initial-message');
             const outputContainer = document.getElementById('output-container');
-
             // --- State Variables (Combined V6.2.2 and V6.2) ---
             let geminiApiKey = '';
             let googleClientId = '';
@@ -313,7 +316,8 @@
             let currentMode = 'generate';
             let appExplanation = '';
             const FOLDER_NAME = 'PowerShell Scriptsmith AI';
-            const baseMetaPrompt = `You are an expert PowerShell scripting assistant...`; // Placeholder, actual prompt likely longer
+            const baseMetaPrompt = `You are an expert PowerShell scripting assistant...`;
+            // Placeholder, actual prompt likely longer
 
             // --- Config Modal Logic (V6.2.2) ---
             configForm.addEventListener('submit', (e) => {
@@ -340,8 +344,8 @@
                 googleClientId = clientId;
 
                 // Initialize all services with user-provided configs (V6.2.2)
-                initializeGapiDrive(geminiApiKey);
-                initializeTokenClient(googleClientId);
+                initializeGapiDrive(); // Initialize Google Drive client (gapi.client)
+                initializeTokenClient(googleClientId); // Initialize Google Sign-In (gis)
                 initializeFirebase(firebaseConfig);
 
                 configModal.classList.remove('active');
@@ -362,7 +366,6 @@
                 }
                 updateActionButtons(); // Assuming this function exists to update UI state
             });
-
             // --- Modal Controls (V6.2) ---
             const setupModal = (modal, openBtn, closeBtn) => {
                 if (openBtn) openBtn.addEventListener('click', () => modal.classList.add('active'));
@@ -391,11 +394,14 @@
 
                 explainAppContent.innerHTML = `<div class="flex items-center justify-center h-full"><p>Generating explanation with Gemini... this may take a moment.</p></div>`;
                 try {
-                    const selfAnalysisPrompt = `You are an expert web developer. Analyze the following single-file HTML application code and explain how it works in its entirety. Describe the key components: the HTML structure, the CSS styling (including Tailwind and custom styles), and the JavaScript logic (including state management, Google API integrations, event handling, and dynamic UI updates). Present the explanation in clear, well-formatted markdown.`;
+                    const selfAnalysisPrompt = `You are an expert web developer.
+                    Analyze the following single-file HTML application code and explain how it works in its entirety.
+                    Describe the key components: the HTML structure, the CSS styling (including Tailwind and custom styles), and the JavaScript logic (including state management, Google API integrations, event handling, and dynamic UI updates).
+                    Present the explanation in clear, well-formatted markdown.`;
                     const appSourceCode = document.documentElement.outerHTML;
                     const payload = { contents: [{ parts: [{ text: `${selfAnalysisPrompt}\n\n\`\`\`html\n${appSourceCode}\n\`\`\`` }] }] };
+                    // Use geminiApiKey for the Gemini API call
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
-                    
                     const response = await fetch(apiUrl, { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
@@ -403,7 +409,6 @@
                     });
                     
                     if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-                    
                     const result = await response.json();
                     if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts) {
                         const rawText = result.candidates[0].content.parts[0].text;
@@ -421,14 +426,12 @@
             };
             
             explainAppButton.addEventListener('click', handleAppExplanation);
-
             // --- V6.2 Functions (Retained Core Application Logic) ---
             
             // Note: The following functions (updateModeUI, handleFormSubmit, renderScript, etc.) 
-            // are essential for the script generation functionality and should be included here. 
+            // are essential for the script generation functionality and should be included here.
             // Since they were not provided in the V6.2 source, they are represented by placeholders 
             // but are necessary for the application to function correctly.
-            
             const updateModeUI = () => {
                 // Logic to update the UI based on currentMode (generate/refactor)
                 // This typically involves changing button styles and potentially input field visibility/placeholders.
@@ -440,18 +443,15 @@
                     modeGenerateBtn.classList.remove('bg-blue-600', 'text-white');
                 }
             };
-
             // Event listeners for mode selection
             modeGenerateBtn.addEventListener('click', () => {
                 currentMode = 'generate';
                 updateModeUI();
             });
-
             modeRefactorBtn.addEventListener('click', () => {
                 currentMode = 'refactor';
                 updateModeUI();
             });
-
             // Placeholder for script rendering and history
             const renderScript = (scriptContent) => {
                 // Logic to display generated script in the output panel and handle highlighting
@@ -459,12 +459,10 @@
                 initialMessage.style.display = 'none'; // Hide the initial message once output is generated
                 // ... implementation details for adding tabs and code blocks ...
             };
-
             const addMessageToHistory = (sender, message) => {
                 // Logic to add user and AI messages to the chat history container
                 // ... implementation details ...
             };
-
             const handleFormSubmit = async (e) => {
                 e.preventDefault();
                 const userPrompt = promptInput.value.trim();
@@ -472,10 +470,8 @@
 
                 // Add user message to history
                 addMessageToHistory('user', userPrompt);
-                
                 // Clear input
                 promptInput.value = '';
-
                 // Generate script or refactor (Placeholder for AI interaction logic)
                 // This is where the application would interact with the Gemini API using the prompt and the configured environment.
                 try {
@@ -489,7 +485,6 @@
                     addMessageToHistory('error', 'Failed to generate script. Check console for details.');
                 }
             };
-
             promptForm.addEventListener('submit', handleFormSubmit);
 
             const populatePromptsModal = () => {
@@ -497,7 +492,6 @@
                 document.getElementById('modal-base-prompt').textContent = baseMetaPrompt;
                 // ... populate other prompt fields ...
             };
-
             // --- Initial UI setup ---
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
             updateModeUI();
