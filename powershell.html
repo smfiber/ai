@@ -11,13 +11,16 @@
         theme: {
             extend: {
                 keyframes: {
-                    spin: {
-                        '0%': { transform: 'rotate(0deg)' },
-                        '100%': { transform: 'rotate(360deg)' },
-                    },
+                    spin: { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+                    fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+                    fadeOut: { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+                    slideInUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } }
                 },
                 animation: {
                     spin: 'spin 1s linear infinite',
+                    'fade-in': 'fadeIn 0.3s ease-out forwards',
+                    'fade-out': 'fadeOut 0.3s ease-in forwards',
+                    'slide-in-up': 'slideInUp 0.3s ease-out forwards'
                 },
             }
         }
@@ -36,16 +39,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-app.js";
         window.initializeApp = initializeApp;
     </script>
     <script type="module">
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-auth.js";
         window.getAuth = getAuth; window.onAuthStateChanged = onAuthStateChanged; window.GoogleAuthProvider = GoogleAuthProvider; window.signInWithPopup = signInWithPopup; window.signOut = signOut;
     </script>
     <script type="module">
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc; window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy;
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.12.2/firebase-firestore.js";
+        window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc; window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy; window.writeBatch = writeBatch; window.getDoc = getDoc;
     </script>
 
     <style>
@@ -58,7 +61,6 @@
         .modal.active { display: flex; }
         .profile-dropdown { display: none; }
         .profile-dropdown.active { display: block; }
-        .workflow-btn-active { background-color: #2563eb; color: #ffffff; }
         .tab-btn { background-color: transparent; border-bottom: 2px solid transparent; }
         .tab-btn.active { border-bottom-color: #3b82f6; color: #ffffff; }
         .output-content { display: none; }
@@ -68,6 +70,7 @@
 </head>
 <body class="text-gray-200">
 
+    <!-- Modals -->
     <div id="config-modal" class="modal active fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-bold text-white mb-4">Initial Configuration</h2>
@@ -86,41 +89,6 @@
         </div>
     </div>
     
-    <div id="paste-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <h2 class="text-2xl font-bold text-white mb-4">Paste Script to Refactor</h2>
-            <p class="text-gray-400 mb-6">Paste your existing PowerShell script below to load it into the app for conversational refinement.</p>
-            <textarea id="paste-input" class="w-full flex-grow p-3 bg-gray-900 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 code-font" placeholder="... your script here ..."></textarea>
-            <div class="mt-6 flex justify-end space-x-3">
-                <button type="button" id="cancel-paste-script" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                <button type="button" id="load-pasted-script" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Load Script</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="refine-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl max-h-[80vh] flex flex-col">
-            <h2 class="text-2xl font-bold text-white mb-4">Refine Script</h2>
-            <div class="flex-grow grid grid-cols-2 gap-4 overflow-hidden">
-                <div class="flex flex-col">
-                    <label class="text-sm font-medium text-gray-300 mb-2">Current Script (Read-only)</label>
-                    <div class="flex-grow bg-gray-900 rounded-md p-1 overflow-auto border border-gray-600">
-                        <pre><code id="refine-script-preview" class="language-powershell"></code></pre>
-                    </div>
-                </div>
-                <div class="flex flex-col">
-                     <label for="refine-instructions-input" class="text-sm font-medium text-gray-300 mb-2">Your Instructions</label>
-                    <textarea id="refine-instructions-input" class="w-full flex-grow p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 code-font" placeholder="e.g., Add a transcript log to this script.&#10;e.g., Change the output to a CSV file."></textarea>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end space-x-3">
-                <button type="button" id="cancel-refine-script" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                <button type="submit" form="refine-form" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Submit Refinement</button>
-            </div>
-            <form id="refine-form"></form>
-        </div>
-    </div>
-
     <div id="save-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
             <h2 class="text-2xl font-bold text-white mb-4">Save Script to Cloud</h2>
@@ -138,12 +106,8 @@
     </div>
     
     <div id="load-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-white">Load Script from Cloud</h2>
-                <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-            </div>
-            <div id="saved-scripts-list" class="overflow-y-auto space-y-3 pr-2"></div>
+        <div id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <!-- Content dynamically populated -->
         </div>
     </div>
 
@@ -158,10 +122,6 @@
                     <h3 class="text-lg font-semibold text-blue-400 mb-2">Last Used Generation Prompt</h3>
                     <pre id="last-generation-prompt" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                 </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-blue-400 mb-2">Last Used Validation/Refinement Prompt</h3>
-                    <pre id="last-validation-prompt" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
-                </div>
                 <div class="border-t border-gray-700 pt-4">
                      <button class="accordion-toggle text-lg font-semibold text-gray-300 w-full text-left">View Prompt Templates & Rules ▼</button>
                      <div class="accordion-content mt-2 space-y-4">
@@ -170,8 +130,8 @@
                             <pre id="base-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                         <div>
-                            <h3 class="text-lg font-semibold text-blue-400 mb-2">Validation Meta-Prompt</h3>
-                            <pre id="validation-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
+                            <h3 class="text-lg font-semibold text-blue-400 mb-2">Refinement Meta-Prompt</h3>
+                            <pre id="refinement-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                          <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Environment Rules</h3>
@@ -183,6 +143,20 @@
         </div>
     </div>
 
+    <div id="confirmation-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md animate-slide-in-up">
+            <h2 id="confirmation-title" class="text-xl font-bold text-white mb-4">Are you sure?</h2>
+            <p id="confirmation-message" class="text-gray-400 mb-6">This action cannot be undone.</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirmation-cancel-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                <button id="confirmation-confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[100] space-y-3"></div>
+
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between shadow-lg z-20">
             <div class="flex items-center space-x-3">
@@ -190,6 +164,7 @@
                 <h1 class="text-xl font-bold text-white">PowerShell ScriptSmith AI <span id="app-version" class="text-xs font-mono text-blue-400/80 ml-2"></span></h1>
             </div>
              <div class="flex items-center space-x-4">
+                <button id="new-session-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm">New Session</button>
                 <button id="load-from-cloud-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm" disabled>Load from Cloud</button>
                 <button id="view-prompts-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm">View Prompts</button>
                 <div id="auth-container" class="relative">
@@ -209,13 +184,6 @@
             <div class="w-full md:w-1/3 flex flex-col bg-gray-900 border-r border-gray-700">
                 <div class="p-4 border-b border-gray-700 space-y-4">
                     <div>
-                        <label class="text-lg font-semibold">Workflow</label>
-                        <div class="mt-2 grid grid-cols-2 gap-2">
-                            <button id="workflow-generate" class="workflow-btn w-full py-2 text-sm font-medium rounded-md workflow-btn-active">Generate New</button>
-                            <button id="workflow-refactor" class="workflow-btn bg-gray-700 hover:bg-gray-600 w-full py-2 text-sm font-medium rounded-md">Paste & Refine</button>
-                        </div>
-                    </div>
-                    <div>
                         <label for="target-env" class="text-lg font-semibold">Target Environment</label>
                         <select id="target-env" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option>Active Directory</option>
@@ -234,7 +202,7 @@
                 <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4"></div>
                 <div id="generate-prompt-area" class="p-4 border-t border-gray-700 bg-gray-900">
                     <form id="prompt-form" class="flex items-center space-x-2">
-                        <textarea id="prompt-input" placeholder="Enter your script request..." class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2"></textarea>
+                        <textarea id="prompt-input" placeholder="Enter your script request or refinement..." class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2"></textarea>
                         <button type="submit" id="submit-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg flex-shrink-0 self-end">
                             <svg id="submit-icon" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.105 2.289a.75.75 0 0 0-.826.95l1.414 4.925A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086L2.279 16.76a.75.75 0 0 0 .95.826l16-5.333a.75.75 0 0 0 0-1.418l-16-5.333Z" /></svg>
                             <svg id="loading-spinner" class="w-6 h-6 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -250,7 +218,6 @@
                         <button id="copy-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">Copy</button>
                         <button id="download-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">Download</button>
                         <button id="save-to-cloud-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md text-sm" disabled>Save to Cloud</button>
-                        <button id="refine-script-button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Refine</button>
                         <button id="explain-script-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Explain</button>
                    </div>
                 </div>
@@ -258,7 +225,7 @@
                     <div id="initial-message" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
                         <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
                         <h3 class="text-xl font-semibold text-gray-400">Your generated script will appear here</h3>
-                        <p class="mt-2 max-w-md">Login to save and load scripts from the cloud.</p>
+                        <p class="mt-2 max-w-md">Enter a request to generate a new script, or refine an existing one. Login to save and load scripts from the cloud.</p>
                     </div>
                 </div>
             </div>
@@ -268,13 +235,13 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
-                version: '8.3.0',
+                version: '9.0.0',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
                 currentTabs: {},
+                conversationHistory: [],
                 lastGenerationPrompt: '',
-                lastValidationPrompt: '',
                 db: null,
                 auth: null,
                 user: null,
@@ -293,13 +260,13 @@
             const logoutButton = document.getElementById('logout-button');
             const saveToCloudButton = document.getElementById('save-to-cloud-button');
             const loadFromCloudButton = document.getElementById('load-from-cloud-button');
+            const newSessionButton = document.getElementById('new-session-button');
             const saveScriptModal = document.getElementById('save-script-modal');
             const saveScriptForm = document.getElementById('save-script-form');
             const scriptNameInput = document.getElementById('script-name-input');
             const cancelSaveScript = document.getElementById('cancel-save-script');
             const loadScriptModal = document.getElementById('load-script-modal');
-            const closeLoadScriptModal = document.getElementById('close-load-script-modal');
-            const savedScriptsList = document.getElementById('saved-scripts-list');
+            const loadScriptContainer = document.getElementById('load-script-container');
             const promptInput = document.getElementById('prompt-input');
             const targetEnvSelect = document.getElementById('target-env');
             const chatHistoryContainer = document.getElementById('chat-history');
@@ -314,17 +281,7 @@
             const promptsModal = document.getElementById('view-prompts-modal');
             const closePromptsModal = document.getElementById('close-prompts-modal');
             const tabsContainer = document.getElementById('tabs');
-            const pasteScriptModal = document.getElementById('paste-script-modal');
-            const pasteInput = document.getElementById('paste-input');
-            const cancelPasteScript = document.getElementById('cancel-paste-script');
-            const loadPastedScript = document.getElementById('load-pasted-script');
-            const refineScriptModal = document.getElementById('refine-script-modal');
-            const refineScriptPreview = document.getElementById('refine-script-preview');
-            const refineInstructionsInput = document.getElementById('refine-instructions-input');
-            const cancelRefineScript = document.getElementById('cancel-refine-script');
-            const refineForm = document.getElementById('refine-form');
-            const workflowGenerateBtn = document.getElementById('workflow-generate');
-            const workflowRefactorBtn = document.getElementById('workflow-refactor');
+            const confirmationModal = document.getElementById('confirmation-modal');
 
             // --- Prompts & Rules ---
             const baseMetaPrompt = `You are an expert PowerShell scripting assistant. Your goal is to generate a robust, clean, and efficient PowerShell script based on the user's request.
@@ -336,6 +293,12 @@
 - The script MUST start with a comment block containing a title, a brief description of what it does, and the target environment.
 - **Action-Based Warning:** If the script performs any action that modifies, creates, or deletes system objects (e.g., using verbs like Set, New, Remove, Disable, Stop, Add, etc.), it MUST include a prominent warning block at the top, advising the user to understand the script and test it in a safe environment first.
 - Format the final output inside a single \`\`\`powershell code block. Do not include any other explanatory text outside of the code block.`;
+
+            const refinementMetaPrompt = `You are an expert PowerShell script assistant. The user has provided an existing script and a request to refine it. Your task is to return a new version of the script that incorporates the user's changes.
+- Adhere strictly to the user's instructions for refinement.
+- Maintain the original functionality of the script unless asked to change it.
+- Ensure the refined script still follows the provided environment rules and PowerShell best practices.
+- The response MUST ONLY contain the final, corrected PowerShell script inside a single \`\`\`powershell code block. Do not add any extra text or explanation.`;
 
             const environmentRules = {
                 'Active Directory': `- **Best Practices:** Scripts MUST use efficient filters (\`-Filter\` or \`-LDAPFilter\`) on cmdlets like \`Get-ADUser\` or \`Get-ADComputer\`. DO NOT pipe a full \`Get-*\` command to \`Where-Object\` as it is highly inefficient for large directories. Assume the script is run from a domain-joined machine with RSAT installed.`,
@@ -350,20 +313,9 @@
                 'Windows Server': `- **Best Practices:** For Roles/Features, scripts MUST use \`Get-WindowsFeature\`/\`Install-WindowsFeature\`. For event logs, \`Get-WinEvent\` with \`-FilterHashtable\` is required for performance. For other tasks, follow the 'Windows Desktop' guidance (CIM over WMI, etc.). Assume scripts are run with administrative privileges.`,
             };
             
-            const validationMetaPrompt = `You are an expert PowerShell script validator. Your task is to analyze the provided script and refine it based on the specified environment rules.
-- **Goal:** Ensure the script is correct, follows best practices, and adheres strictly to the environment rules.
-- **Action:** Review the script against the rules. If it's valid, return it as is. If it has errors (e.g., uses wrong cmdlets, misses an authentication step), fix them and return the corrected script.
-- **Output:** The response MUST ONLY contain the final, corrected PowerShell script inside a single \`\`\`powershell code block. Do not add any extra text or explanation.`;
-
-            const refinementMetaPrompt = `You are an expert PowerShell script assistant. The user has provided an existing script and a request to refine it. Your task is to return a new version of the script that incorporates the user's changes.
-- Adhere strictly to the user's instructions for refinement.
-- Maintain the original functionality of the script unless asked to change it.
-- Ensure the refined script still follows the provided environment rules and PowerShell best practices.
-- The response MUST ONLY contain the final, corrected PowerShell script inside a single \`\`\`powershell code block. Do not add any extra text or explanation.`;
-
             // --- UI & Core Functions ---
             const setLoadingState = (isLoading) => {
-                const buttons = [submitButton, document.querySelector('#refine-form button[type="submit"]')];
+                const buttons = [submitButton];
                 buttons.forEach(button => {
                     if (!button) return;
                     const icon = button.querySelector('svg:not(.animate-spin)');
@@ -380,12 +332,54 @@
                 });
             };
             
-            const displayMessage = (message, title = "Error") => { alert(`[${title}] ${message}`); };
+            const showToast = (message, type = 'success') => {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+                toast.className = `animate-fade-in text-white ${bgColor} py-2 px-4 rounded-lg shadow-lg`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('animate-fade-out');
+                    toast.addEventListener('animationend', () => toast.remove());
+                }, 3000);
+            };
 
-            async function callGeminiAPI(prompt) {
+            const showConfirmation = (title, message) => {
+                return new Promise((resolve) => {
+                    document.getElementById('confirmation-title').textContent = title;
+                    document.getElementById('confirmation-message').textContent = message;
+                    confirmationModal.classList.add('active');
+
+                    const confirmBtn = document.getElementById('confirmation-confirm-button');
+                    const cancelBtn = document.getElementById('confirmation-cancel-button');
+
+                    const confirmHandler = () => {
+                        confirmationModal.classList.remove('active');
+                        cleanup();
+                        resolve(true);
+                    };
+
+                    const cancelHandler = () => {
+                        confirmationModal.classList.remove('active');
+                        cleanup();
+                        resolve(false);
+                    };
+                    
+                    const cleanup = () => {
+                        confirmBtn.removeEventListener('click', confirmHandler);
+                        cancelBtn.removeEventListener('click', cancelHandler);
+                    };
+
+                    confirmBtn.addEventListener('click', confirmHandler);
+                    cancelBtn.addEventListener('click', cancelHandler);
+                });
+            };
+
+            async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appState.geminiApiKey}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const payload = { contents: history };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
                 const result = await response.json();
@@ -402,7 +396,7 @@
                     appState.auth = window.getAuth(app);
                     appState.db = window.getFirestore(app);
                     setupAuthObserver();
-                } catch (error) { console.error("Firebase Init Error:", error); displayMessage("Failed to initialize Firebase. Check your configuration.", "Error"); }
+                } catch (error) { console.error("Firebase Init Error:", error); showToast("Failed to initialize Firebase. Check your configuration.", "error"); }
             }
             function setupAuthObserver() {
                 window.onAuthStateChanged(appState.auth, user => {
@@ -423,45 +417,153 @@
             }
             async function signInWithGoogle() {
                 const provider = new window.GoogleAuthProvider();
-                try { await window.signInWithPopup(appState.auth, provider); } catch (error) { console.error("Google Sign-In Error:", error); displayMessage(`Could not sign in: ${error.message}`); }
+                try { await window.signInWithPopup(appState.auth, provider); } catch (error) { console.error("Google Sign-In Error:", error); showToast(`Could not sign in: ${error.message}`, "error"); }
             }
             async function signOutUser() { try { await window.signOut(appState.auth); } catch (error) { console.error("Sign Out Error:", error); } }
             
             // --- Firestore Functions ---
             async function saveScriptToFirestore(name, content, environment) {
-                if (!appState.user) { displayMessage("You must be logged in to save scripts."); return; }
+                if (!appState.user) { showToast("You must be logged in to save scripts.", "error"); return; }
+                const scriptsCollection = window.collection(appState.db, 'scripts');
+                const q = window.query(scriptsCollection, window.where("uid", "==", appState.user.uid), window.where("name", "==", name));
+                
                 try {
-                    await window.addDoc(window.collection(appState.db, 'scripts'), { uid: appState.user.uid, name: name, content: content, environment: environment, createdAt: window.serverTimestamp() });
-                    displayMessage("Script saved successfully!", "Success");
-                    saveScriptModal.classList.remove('active');
-                } catch (error) { console.error("Error saving script:", error); displayMessage(`Failed to save script: ${error.message}`); }
-            }
-            async function loadScriptsFromFirestore() {
-                if (!appState.user) { displayMessage("You must be logged in to load scripts."); return; }
-                loadScriptModal.classList.add('active');
-                savedScriptsList.innerHTML = '<p class="text-gray-400">Loading scripts...</p>';
-                try {
-                    const q = window.query(window.collection(appState.db, "scripts"), window.where("uid", "==", appState.user.uid), window.orderBy("createdAt", "desc"));
                     const querySnapshot = await window.getDocs(q);
-                    if (querySnapshot.empty) { savedScriptsList.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>'; return; }
-                    savedScriptsList.innerHTML = '';
-                    querySnapshot.forEach(doc => {
-                        const script = doc.data();
-                        const scriptEl = document.createElement('div');
-                        scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
-                        scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment}</p></div><div><button data-id="${doc.id}" class="load-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-id="${doc.id}" class="delete-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`;
-                        scriptEl.dataset.content = script.content; scriptEl.dataset.env = script.environment;
-                        savedScriptsList.appendChild(scriptEl);
+                    let scriptId;
+                    if (querySnapshot.empty) {
+                        // Create new script document
+                        const scriptDocRef = await window.addDoc(scriptsCollection, {
+                            uid: appState.user.uid,
+                            name: name,
+                            environment: environment,
+                            createdAt: window.serverTimestamp(),
+                            updatedAt: window.serverTimestamp()
+                        });
+                        scriptId = scriptDocRef.id;
+                    } else {
+                        // Use existing script document
+                        scriptId = querySnapshot.docs[0].id;
+                        const scriptDocRef = window.doc(appState.db, 'scripts', scriptId);
+                        const batch = window.writeBatch(appState.db);
+                        batch.update(scriptDocRef, { updatedAt: window.serverTimestamp() });
+                        await batch.commit();
+                    }
+
+                    // Add a new version
+                    const versionCollection = window.collection(appState.db, `scripts/${scriptId}/versions`);
+                    await window.addDoc(versionCollection, {
+                        content: content,
+                        createdAt: window.serverTimestamp()
                     });
-                } catch (error) { console.error("Error loading scripts:", error); savedScriptsList.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`; }
+
+                    showToast("Script saved successfully!", "success");
+                    saveScriptModal.classList.remove('active');
+                } catch (error) {
+                    console.error("Error saving script:", error);
+                    showToast(`Failed to save script: ${error.message}`, "error");
+                }
             }
-            async function deleteScriptFromFirestore(id) {
-                if (!confirm("Are you sure you want to delete this script?")) return;
+
+            async function loadScriptsFromFirestore() {
+                if (!appState.user) { showToast("You must be logged in to load scripts.", "error"); return; }
+                loadScriptModal.classList.add('active');
+                loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Load Script from Cloud</h2><button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><p class="text-gray-400">Loading scripts...</p>`;
+                
+                document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
+
                 try {
-                    await window.deleteDoc(window.doc(appState.db, 'scripts', id));
-                    displayMessage("Script deleted successfully.", "Success");
-                    loadScriptsFromFirestore();
-                } catch (error) { console.error("Error deleting script:", error); displayMessage(`Failed to delete script: ${error.message}`); }
+                    const q = window.query(window.collection(appState.db, "scripts"), window.where("uid", "==", appState.user.uid), window.orderBy("updatedAt", "desc"));
+                    const querySnapshot = await window.getDocs(q);
+                    
+                    const listContainer = document.createElement('div');
+                    listContainer.id = 'saved-scripts-list';
+                    listContainer.className = 'overflow-y-auto space-y-3 pr-2';
+
+                    if (querySnapshot.empty) {
+                        listContainer.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>';
+                    } else {
+                        querySnapshot.forEach(doc => {
+                            const script = doc.data();
+                            const scriptEl = document.createElement('div');
+                            scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600';
+                            scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment} - Last updated: ${new Date(script.updatedAt.toDate()).toLocaleString()}</p></div><button data-id="${doc.id}" class="delete-script-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button>`;
+                            scriptEl.dataset.scriptId = doc.id;
+                            scriptEl.dataset.scriptName = script.name;
+                            listContainer.appendChild(scriptEl);
+                        });
+                    }
+                    loadScriptContainer.querySelector('p').replaceWith(listContainer);
+
+                } catch (error) {
+                    console.error("Error loading scripts:", error);
+                    loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
+                }
+            }
+
+            async function showScriptVersions(scriptId, scriptName) {
+                loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Versions for "${scriptName}"</h2><div><button id="back-to-scripts-btn" class="text-sm bg-gray-600 hover:bg-gray-500 py-1 px-2 rounded-md">Back to Scripts</button> <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl ml-2">&times;</button></div></div><p class="text-gray-400">Loading versions...</p>`;
+                document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
+                document.getElementById('back-to-scripts-btn').addEventListener('click', loadScriptsFromFirestore);
+
+                try {
+                    const versionsQuery = window.query(window.collection(appState.db, `scripts/${scriptId}/versions`), window.orderBy("createdAt", "desc"));
+                    const versionSnapshot = await window.getDocs(versionsQuery);
+                    
+                    const versionsList = document.createElement('div');
+                    versionsList.className = 'overflow-y-auto space-y-3 pr-2';
+
+                    if(versionSnapshot.empty) {
+                        versionsList.innerHTML = '<p class="text-gray-400">No versions found for this script.</p>';
+                    } else {
+                        versionSnapshot.forEach(doc => {
+                            const version = doc.data();
+                            const versionEl = document.createElement('div');
+                            versionEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
+                            versionEl.innerHTML = `<div><p class="text-sm text-gray-300">Saved on: ${new Date(version.createdAt.toDate()).toLocaleString()}</p></div><div><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="load-version-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="delete-version-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`;
+                            versionsList.appendChild(versionEl);
+                        });
+                    }
+                    loadScriptContainer.querySelector('p').replaceWith(versionsList);
+
+                } catch (error) {
+                    console.error("Error loading versions:", error);
+                    loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
+                }
+            }
+
+            async function deleteScript(scriptId, scriptName) {
+                const confirmed = await showConfirmation(`Delete "${scriptName}"?`, "This will delete the script and all of its versions permanently.");
+                if (!confirmed) return;
+                
+                try {
+                    const batch = window.writeBatch(appState.db);
+                    // Delete all versions
+                    const versionsRef = window.collection(appState.db, `scripts/${scriptId}/versions`);
+                    const versionsSnapshot = await window.getDocs(versionsRef);
+                    versionsSnapshot.forEach(doc => batch.delete(doc.ref));
+                    // Delete the main script doc
+                    batch.delete(window.doc(appState.db, 'scripts', scriptId));
+                    await batch.commit();
+                    showToast("Script deleted successfully.", "success");
+                    loadScriptsFromFirestore(); // Refresh the list
+                } catch (error) {
+                    console.error("Error deleting script:", error);
+                    showToast(`Failed to delete script: ${error.message}`, "error");
+                }
+            }
+
+            async function deleteVersion(scriptId, versionId, scriptName) {
+                const confirmed = await showConfirmation(`Delete this version?`, "This action will permanently delete this version of the script.");
+                if (!confirmed) return;
+
+                try {
+                    await window.deleteDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
+                    showToast("Version deleted successfully.", "success");
+                    showScriptVersions(scriptId, scriptName); // Refresh the version list
+                } catch (error) {
+                    console.error("Error deleting version:", error);
+                    showToast(`Failed to delete version: ${error.message}`, "error");
+                }
             }
 
             // --- Script Display & Generation Logic ---
@@ -498,12 +600,15 @@
                 }
                 outputContainer.appendChild(contentWrapper); setActiveTab(tabId);
             };
-            const addMessageToHistory = (sender, message) => {
+            const addMessageToHistory = (role, message) => {
                 const msgDiv = document.createElement('div');
                 const cleanMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                msgDiv.className = sender === 'user' ? 'bg-gray-800 p-3 rounded-lg self-end' : 'bg-blue-900/50 p-3 rounded-lg self-start';
-                msgDiv.innerHTML = `<p class="text-white">${cleanMessage}</p>`;
+                msgDiv.className = role === 'user' ? 'bg-gray-800 p-3 rounded-lg self-end max-w-xl' : 'bg-blue-900/50 p-3 rounded-lg self-start max-w-xl';
+                msgDiv.innerHTML = `<p class="text-white whitespace-pre-wrap">${cleanMessage}</p>`;
                 chatHistoryContainer.appendChild(msgDiv); chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+                if(role !== 'model') { // Don't add AI's thinking process to history
+                    appState.conversationHistory.push({ role, parts: [{ text: message }] });
+                }
             };
 
             const handleGenerationSubmit = async (e) => {
@@ -513,124 +618,86 @@
                 addMessageToHistory('user', userPrompt);
                 promptInput.value = '';
                 setLoadingState(true);
-                tabsContainer.innerHTML = ''; outputContainer.innerHTML = '';
-                initialMessage.classList.remove('hidden'); outputActions.classList.add('hidden');
-                addMessageToHistory('ai', 'Generating script...');
+                
+                addMessageToHistory('model', 'Thinking...'); // Temporary message
+                
                 try {
                     const targetEnvironment = targetEnvSelect.value;
                     const rules = environmentRules[targetEnvironment];
-                    const finalPrompt = `${baseMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**TASK:**\nGenerate a script for the following request:\n\`\`\`\n${userPrompt}\n\`\`\``;
+                    let finalPrompt;
+
+                    if (!appState.currentScript) {
+                        // This is a new script generation request
+                        finalPrompt = `${baseMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**TASK:**\nGenerate a script for the following request:\n\`\`\`\n${userPrompt}\n\`\`\``;
+                    } else {
+                        // This is a refinement request
+                        finalPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
+                    }
+                    
                     appState.lastGenerationPrompt = finalPrompt;
+                    const apiHistory = [...appState.conversationHistory.slice(0, -1), { role: 'user', parts: [{ text: finalPrompt }] }];
+
+                    const generatedScript = await callGeminiAPI(apiHistory);
+                    const finalCode = generatedScript.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || generatedScript;
                     
-                    const generatedScript = await callGeminiAPI(finalPrompt);
-                    addMessageToHistory('ai', 'Initial script generated. Now validating...');
-                    
-                    const validationPrompt = `${validationMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**SCRIPT TO VALIDATE:**\n${generatedScript}`;
-                    appState.lastValidationPrompt = validationPrompt;
-                    const refinedScript = await callGeminiAPI(validationPrompt);
-                    
-                    const finalCode = refinedScript.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || refinedScript;
                     appState.currentScript = finalCode;
                     appState.currentTabs = { 'script-content': finalCode };
-                    addMessageToHistory('ai', 'Script validated and refined successfully.');
+                    
+                    // Update conversation history with the final AI response
+                    appState.conversationHistory.push({ role: 'model', parts: [{ text: finalCode }] });
+                    
+                    // Update UI
+                    chatHistoryContainer.lastChild.remove(); // Remove "Thinking..."
+                    addMessageToHistory('model', 'Script generated/refined successfully.');
                     renderContent('script-content', 'Script', finalCode);
+
                 } catch (error) {
                     console.error("Error during script generation:", error);
-                    addMessageToHistory('ai', `**Error:** ${error.message}`);
-                    displayMessage(error.message, "Generation Error");
+                    chatHistoryContainer.lastChild.remove(); // Remove "Thinking..."
+                    addMessageToHistory('model', `**Error:** ${error.message}`);
+                    showToast(error.message, "error");
                 } finally {
                     setLoadingState(false);
                 }
             };
-
-            const handleRefinementSubmit = async (e) => {
-                e.preventDefault();
-                const instructions = refineInstructionsInput.value.trim();
-                if (!instructions || !appState.currentScript) return;
-                setLoadingState(true);
-                refineScriptModal.classList.remove('active');
-                addMessageToHistory('user', `Refinement request: ${instructions}`);
-                refineInstructionsInput.value = '';
-                try {
-                    addMessageToHistory('ai', 'Refining script...');
-                    const rules = environmentRules[targetEnvSelect.value];
-                    const prompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${instructions}`;
-                    appState.lastGenerationPrompt = prompt; // Store this as the main prompt for viewing
-                    
-                    const refinedScript = await callGeminiAPI(prompt);
-                    addMessageToHistory('ai', 'Validation pass...');
-
-                    const validationPrompt = `${validationMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**SCRIPT TO VALIDATE:**\n${refinedScript}`;
-                    appState.lastValidationPrompt = validationPrompt;
-                    const finalScript = await callGeminiAPI(validationPrompt);
-
-                    const finalCode = finalScript.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScript;
-                    appState.currentScript = finalCode;
-                    appState.currentTabs = { 'script-content': finalCode };
-                    renderContent('script-content', 'Script', finalCode);
-                    addMessageToHistory('ai', 'Script refined successfully.');
-                } catch (error) {
-                    console.error("Error during script refinement:", error);
-                    addMessageToHistory('ai', `**Error:** ${error.message}`);
-                    displayMessage(error.message, "Refinement Error");
-                } finally {
-                    setLoadingState(false);
-                }
+            
+            const startNewSession = () => {
+                appState.currentScript = '';
+                appState.currentTabs = {};
+                appState.conversationHistory = [];
+                appState.lastGenerationPrompt = '';
+                chatHistoryContainer.innerHTML = '';
+                outputContainer.innerHTML = '';
+                tabsContainer.innerHTML = '';
+                outputActions.classList.add('hidden');
+                initialMessage.classList.remove('hidden');
+                showToast("New session started.", "success");
             };
 
             // --- Event Listeners ---
-            configForm.addEventListener('submit', (e) => { e.preventDefault(); appState.geminiApiKey = geminiKeyInput.value.trim(); try { const configText = firebaseConfigInput.value.trim(); if (!appState.geminiApiKey || !configText) { displayMessage("Please fill out all fields."); return; } appState.firebaseConfig = JSON.parse(configText); initializeFirebase(appState.firebaseConfig); configModal.classList.remove('active'); } catch (error) { displayMessage("Firebase config is not valid JSON."); } });
+            configForm.addEventListener('submit', (e) => { e.preventDefault(); appState.geminiApiKey = geminiKeyInput.value.trim(); try { const configText = firebaseConfigInput.value.trim(); if (!appState.geminiApiKey || !configText) { showToast("Please fill out all fields.", "error"); return; } appState.firebaseConfig = JSON.parse(configText); initializeFirebase(appState.firebaseConfig); configModal.classList.remove('active'); } catch (error) { showToast("Firebase config is not valid JSON.", "error"); } });
             authButton.addEventListener('click', signInWithGoogle);
             logoutButton.addEventListener('click', signOutUser);
             userProfileArea.addEventListener('click', () => profileDropdownMenu.classList.toggle('active'));
-
-            workflowGenerateBtn.addEventListener('click', () => {
-                workflowGenerateBtn.classList.add('workflow-btn-active');
-                workflowRefactorBtn.classList.remove('workflow-btn-active');
-            });
-            workflowRefactorBtn.addEventListener('click', () => {
-                workflowRefactorBtn.classList.add('workflow-btn-active');
-                workflowGenerateBtn.classList.remove('workflow-btn-active');
-                pasteScriptModal.classList.add('active');
-                pasteInput.value = '';
-                pasteInput.focus();
-            });
-
-            cancelPasteScript.addEventListener('click', () => pasteScriptModal.classList.remove('active'));
-            loadPastedScript.addEventListener('click', () => {
-                const scriptContent = pasteInput.value.trim();
-                if (!scriptContent) { displayMessage("No script was pasted."); return; }
-                appState.currentScript = scriptContent;
-                appState.currentTabs = { 'script-content': scriptContent };
-                tabsContainer.innerHTML = ''; outputContainer.innerHTML = '';
-                renderContent('script-content', 'Script', scriptContent);
-                pasteScriptModal.classList.remove('active');
-                addMessageToHistory('ai', 'Script loaded. Use "Refine" to make changes.');
-            });
+            newSessionButton.addEventListener('click', startNewSession);
 
             outputActions.addEventListener('click', async (e) => {
                 const targetId = e.target.id;
-                if(targetId === 'refine-script-button'){
-                    if (!appState.currentScript) return;
-                    refineScriptPreview.textContent = appState.currentScript;
-                    hljs.highlightElement(refineScriptPreview);
-                    refineScriptModal.classList.add('active');
-                    refineInstructionsInput.focus();
-                }
                 if(targetId === 'explain-script-button'){
                     setLoadingState(true);
                     try {
-                        addMessageToHistory('ai', 'Generating explanation...');
+                        addMessageToHistory('model', 'Generating explanation...');
                         const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe its purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
-                        const explanation = await callGeminiAPI(explainPrompt);
+                        const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
                         appState.currentTabs['explanation-content'] = explanation;
                         renderContent('explanation-content', 'Explanation', explanation, true);
-                    } catch(error) { displayMessage(`Explanation failed: ${error.message}`); } 
+                        chatHistoryContainer.lastChild.remove(); // Remove "Generating..."
+                    } catch(error) { showToast(`Explanation failed: ${error.message}`, "error"); } 
                     finally { setLoadingState(false); }
                 }
                 if (targetId === 'copy-script-button') {
                     const activeContent = appState.currentTabs[document.querySelector('.output-content.active')?.id];
-                    if(activeContent) navigator.clipboard.writeText(activeContent).then(() => displayMessage("Copied to clipboard!", "Success"));
+                    if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
                 }
                 if (targetId === 'download-script-button') {
                     const activeContent = appState.currentTabs[document.querySelector('.output-content.active')?.id];
@@ -644,28 +711,53 @@
                 }
             });
 
-            cancelRefineScript.addEventListener('click', () => refineScriptModal.classList.remove('active'));
-            refineForm.addEventListener('submit', handleRefinementSubmit);
-
-            saveToCloudButton.addEventListener('click', () => { if (!appState.currentScript) { displayMessage("No script to save."); return; } saveScriptModal.classList.add('active'); scriptNameInput.value = ''; scriptNameInput.focus(); });
+            saveToCloudButton.addEventListener('click', () => { if (!appState.currentScript) { showToast("No script to save.", "error"); return; } saveScriptModal.classList.add('active'); scriptNameInput.value = ''; scriptNameInput.focus(); });
             cancelSaveScript.addEventListener('click', () => saveScriptModal.classList.remove('active'));
             saveScriptForm.addEventListener('submit', (e) => { e.preventDefault(); const scriptName = scriptNameInput.value.trim(); saveScriptToFirestore(scriptName, appState.currentScript, targetEnvSelect.value); });
             
             loadFromCloudButton.addEventListener('click', loadScriptsFromFirestore);
-            closeLoadScriptModal.addEventListener('click', () => loadScriptModal.classList.remove('active'));
-            savedScriptsList.addEventListener('click', async (e) => {
-                if (e.target.classList.contains('load-btn')) {
-                    const parent = e.target.closest('.bg-gray-700');
-                    appState.currentScript = parent.dataset.content;
-                    appState.currentTabs = { 'script-content': parent.dataset.content };
-                    targetEnvSelect.value = parent.dataset.env;
-                    tabsContainer.innerHTML = ''; outputContainer.innerHTML = '';
-                    renderContent('script-content', 'Script', appState.currentScript);
-                    loadScriptModal.classList.remove('active');
-                    addMessageToHistory('ai', 'Script loaded from cloud.');
+            loadScriptContainer.addEventListener('click', async (e) => {
+                const scriptEl = e.target.closest('.bg-gray-700[data-script-id]');
+                if (scriptEl && !e.target.classList.contains('delete-script-btn')) {
+                    showScriptVersions(scriptEl.dataset.scriptId, scriptEl.dataset.scriptName);
                 }
-                if (e.target.classList.contains('delete-btn')) {
-                    deleteScriptFromFirestore(e.target.dataset.id);
+                if (e.target.classList.contains('delete-script-btn')) {
+                    e.stopPropagation();
+                    const parent = e.target.closest('[data-script-id]');
+                    deleteScript(parent.dataset.scriptId, parent.dataset.scriptName);
+                }
+                if (e.target.classList.contains('load-version-btn')) {
+                    const versionButton = e.target;
+                    const scriptId = versionButton.dataset.scriptId;
+                    const versionId = versionButton.dataset.versionId;
+                    try {
+                        const versionDoc = await window.getDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
+                        if(versionDoc.exists()){
+                            const versionData = versionDoc.data();
+                            const scriptDoc = await window.getDoc(window.doc(appState.db, 'scripts', scriptId));
+                            const scriptData = scriptDoc.data();
+                            
+                            startNewSession(); // Clear everything first
+                            
+                            appState.currentScript = versionData.content;
+                            appState.currentTabs = { 'script-content': versionData.content };
+                            targetEnvSelect.value = scriptData.environment;
+                            
+                            renderContent('script-content', 'Script', appState.currentScript);
+                            addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
+                            
+                            loadScriptModal.classList.remove('active');
+                        }
+                    } catch(error) {
+                        showToast(`Failed to load version: ${error.message}`, 'error');
+                    }
+                }
+                if (e.target.classList.contains('delete-version-btn')) {
+                    const versionButton = e.target;
+                    const scriptId = versionButton.dataset.scriptId;
+                    const versionId = versionButton.dataset.versionId;
+                    const scriptName = versionButton.closest('#load-script-container').querySelector('h2').textContent.match(/"(.*?)"/)[1];
+                    deleteVersion(scriptId, versionId, scriptName);
                 }
             });
 
@@ -673,9 +765,9 @@
             
             viewPromptsBtn.addEventListener('click', () => {
                 document.getElementById('last-generation-prompt').textContent = appState.lastGenerationPrompt || 'No script generated in this session yet.';
-                document.getElementById('last-validation-prompt').textContent = appState.lastValidationPrompt || 'No script generated in this session yet.';
                 document.getElementById('base-prompt-content').textContent = baseMetaPrompt;
-                document.getElementById('validation-prompt-content').textContent = validationMetaPrompt;
+                document.getElementById('refinement-prompt-content').textContent = refinementMetaPrompt;
+
                 document.getElementById('rules-content').textContent = JSON.stringify(environmentRules, null, 2);
                 promptsModal.classList.add('active');
             });
