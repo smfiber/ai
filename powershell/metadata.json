@@ -1,0 +1,5 @@
+{
+  "name": "PowerShell ScriptSmith AI",
+  "description": "An AI-powered assistant to generate and refactor high-quality PowerShell scripts based on best practices. Select a mode, describe your needs, and get expert-level scripts in seconds.",
+  "requestFramePermissions": []
+}
