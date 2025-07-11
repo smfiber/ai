@@ -7,7 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com/"></script>
     <script>
-      tailwind.config = { plugins: [require('@tailwindcss/typography')] }
+      tailwind.config = { plugins: [] }
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -262,21 +262,22 @@ Google</button>
     <script>
         // --- Global Scope for API Callbacks & State (V6.2.2 & V6.2) ---
         let gapiInited = false;
-let gisInited = false;
+        let gisInited = false;
         let tokenClient;
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
- // --- Service Initialization Functions (V6.2.2) ---
+
+        // --- Service Initialization Functions (Global Scope) ---
         function gapiLoaded() {
             // Load the client library and set the flag
             gapi.load('client', () => {
                 gapiInited = true;
             });
-}
+        }
 
         function gisLoaded() {
             // Set the GIS flag
             gisInited = true;
-}
+        }
         
         async function initializeGapiDrive(clientId) {
             if (!gapiInited) { 
@@ -340,7 +341,7 @@ let gisInited = false;
 
         // --- Main App Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = '6.9.0'; // Updated version number
+            const APP_VERSION = '6.10.0'; // Updated version number
 
             // --- Element References (Combined V6.2.2 and V6.2) ---
             const configModal = document.getElementById('config-modal');
