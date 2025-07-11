@@ -133,6 +133,10 @@
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Refinement Meta-Prompt</h3>
                             <pre id="refinement-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-blue-400 mb-2">Self-Correction Meta-Prompt</h3>
+                            <pre id="self-correction-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
+                        </div>
                          <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Environment Rules</h3>
                             <pre id="rules-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
@@ -235,7 +239,7 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appState = {
-                version: '9.0.2',
+                version: '9.0.3',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -291,7 +295,6 @@
 - Use clear variable names.
 - Add comments where the logic is complex.
 - The script MUST start with a comment block containing a title, a brief description of what it does, and the target environment.
-- **Action-Based Warning:** If the script performs any action that modifies, creates, or deletes system objects (e.g., using verbs like Set, New, Remove, Disable, Stop, Add, etc.), it MUST include a prominent warning block at the top, advising the user to understand the script and test it in a safe environment first.
 - Format the final output inside a single \`\`\`powershell code block. Do not include any other explanatory text outside of the code block.`;
 
             const refinementMetaPrompt = `You are an expert PowerShell script assistant. The user has provided an existing script and a request to refine it. Your task is to return a new version of the script that incorporates the user's changes.
@@ -299,6 +302,22 @@
 - Maintain the original functionality of the script unless asked to change it.
 - Ensure the refined script still follows the provided environment rules and PowerShell best practices.
 - The response MUST ONLY contain the final, corrected PowerShell script inside a single \`\`\`powershell code block. Do not add any extra text or explanation.`;
+
+            const selfCorrectionMetaPrompt = `You are a senior PowerShell DevOps engineer acting as a strict code reviewer. You have been given a draft PowerShell script. Your task is to review it against the following checklist and return a corrected, production-ready version. If the script is perfect, return it as is. Otherwise, fix all issues. The final output MUST ONLY be the corrected script in a \`\`\`powershell code block.
+
+**CRITICAL CHECKLIST:**
+1.  **Comment-Based Help Header:** The script MUST start with a Comment-Based Help block (\`<# ... #>\`). This header MUST be correctly formatted and include at least the .SYNOPSIS, .DESCRIPTION, .AUTHOR, .DATE, .VERSION, and .EXAMPLE sections. The content must be accurate and well-written.
+2.  **Action-Based Warning:** This is non-negotiable. If the script contains any modifying verbs (e.g., Set, New, Remove, Stop, Disable, Add, Unregister), it MUST contain a prominent warning block. This warning MUST be placed inside the .NOTES section of the Comment-Based Help header.
+3.  **Modern & Efficient Cmdlets:** Replace any outdated cmdlets (e.g., \`Get-WmiObject\` with \`Get-CimInstance\`). Ensure efficient filtering is used (e.g., \`-Filter\` on the cmdlet, not piping to \`Where-Object\`).
+4.  **Robust Error Handling:** Wrap all potentially failing external commands (especially those that create, modify, or delete resources) in \`try/catch\` blocks. The script should start with \`$ErrorActionPreference = 'Stop'\`.
+5.  **Security:** There must be absolutely NO hardcoded credentials, API keys, or secrets.
+6.  **Parameter Validation:** Add appropriate validation attributes to parameters (e.g., \`[Parameter(Mandatory=$true)]\`, \`[ValidateSet(...)]\`, \`[ValidatePattern(...)]\`) to prevent invalid input.
+7.  **Verbose Output:** Use \`Write-Verbose\` for progress messages and status updates, not \`Write-Host\`.
+8.  **Resource Management:** If a persistent connection is made (e.g., \`Connect-VIServer\`, \`Connect-AzAccount\`), ensure a corresponding \`Disconnect-*\` call exists, preferably in a \`finally\` block to guarantee execution.
+9.  **Readability & Formatting:** The code must be properly indented and consistently formatted for human readability.
+10. **Logical Soundness:** Perform a final sanity check. Does the script's logic actually and correctly solve the original user request? Is it complete?
+
+Review the following DRAFT SCRIPT and return ONLY the corrected, final version.`;
 
             const environmentRules = {
                 'Active Directory': `- **Best Practices:** Scripts MUST use efficient filters (\`-Filter\` or \`-LDAPFilter\`) on cmdlets like \`Get-ADUser\` or \`Get-ADComputer\`. DO NOT pipe a full \`Get-*\` command to \`Where-Object\` as it is highly inefficient for large directories. Assume the script is run from a domain-joined machine with RSAT installed.`,
@@ -378,7 +397,6 @@
 
             async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
-                // Use the -latest alias to ensure the most recent stable version is used.
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${appState.geminiApiKey}`;
                 const payload = { contents: history };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -432,139 +450,77 @@
                     const querySnapshot = await window.getDocs(q);
                     let scriptId;
                     if (querySnapshot.empty) {
-                        // Create new script document
-                        const scriptDocRef = await window.addDoc(scriptsCollection, {
-                            uid: appState.user.uid,
-                            name: name,
-                            environment: environment,
-                            createdAt: window.serverTimestamp(),
-                            updatedAt: window.serverTimestamp()
-                        });
+                        const scriptDocRef = await window.addDoc(scriptsCollection, { uid: appState.user.uid, name: name, environment: environment, createdAt: window.serverTimestamp(), updatedAt: window.serverTimestamp() });
                         scriptId = scriptDocRef.id;
                     } else {
-                        // Use existing script document
                         scriptId = querySnapshot.docs[0].id;
                         const scriptDocRef = window.doc(appState.db, 'scripts', scriptId);
                         const batch = window.writeBatch(appState.db);
                         batch.update(scriptDocRef, { updatedAt: window.serverTimestamp() });
                         await batch.commit();
                     }
-
-                    // Add a new version
                     const versionCollection = window.collection(appState.db, `scripts/${scriptId}/versions`);
-                    await window.addDoc(versionCollection, {
-                        content: content,
-                        createdAt: window.serverTimestamp()
-                    });
-
+                    await window.addDoc(versionCollection, { content: content, createdAt: window.serverTimestamp() });
                     showToast("Script saved successfully!", "success");
                     saveScriptModal.classList.remove('active');
-                } catch (error) {
-                    console.error("Error saving script:", error);
-                    showToast(`Failed to save script: ${error.message}`, "error");
-                }
+                } catch (error) { console.error("Error saving script:", error); showToast(`Failed to save script: ${error.message}`, "error"); }
             }
 
             async function loadScriptsFromFirestore() {
                 if (!appState.user) { showToast("You must be logged in to load scripts.", "error"); return; }
                 loadScriptModal.classList.add('active');
                 loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Load Script from Cloud</h2><button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><p class="text-gray-400">Loading scripts...</p>`;
-                
                 document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
-
                 try {
                     const q = window.query(window.collection(appState.db, "scripts"), window.where("uid", "==", appState.user.uid), window.orderBy("updatedAt", "desc"));
                     const querySnapshot = await window.getDocs(q);
-                    
                     const listContainer = document.createElement('div');
                     listContainer.id = 'saved-scripts-list';
                     listContainer.className = 'overflow-y-auto space-y-3 pr-2';
-
-                    if (querySnapshot.empty) {
-                        listContainer.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>';
-                    } else {
-                        querySnapshot.forEach(doc => {
-                            const script = doc.data();
-                            const scriptEl = document.createElement('div');
-                            scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600';
-                            scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment} - Last updated: ${new Date(script.updatedAt.toDate()).toLocaleString()}</p></div><button data-id="${doc.id}" class="delete-script-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button>`;
-                            scriptEl.dataset.scriptId = doc.id;
-                            scriptEl.dataset.scriptName = script.name;
-                            listContainer.appendChild(scriptEl);
-                        });
-                    }
+                    if (querySnapshot.empty) { listContainer.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>'; } 
+                    else { querySnapshot.forEach(doc => { const script = doc.data(); const scriptEl = document.createElement('div'); scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600'; scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment} - Last updated: ${new Date(script.updatedAt.toDate()).toLocaleString()}</p></div><button data-id="${doc.id}" class="delete-script-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button>`; scriptEl.dataset.scriptId = doc.id; scriptEl.dataset.scriptName = script.name; listContainer.appendChild(scriptEl); }); }
                     loadScriptContainer.querySelector('p').replaceWith(listContainer);
-
-                } catch (error) {
-                    console.error("Error loading scripts:", error);
-                    loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
-                }
+                } catch (error) { console.error("Error loading scripts:", error); loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`; }
             }
 
             async function showScriptVersions(scriptId, scriptName) {
                 loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Versions for "${scriptName}"</h2><div><button id="back-to-scripts-btn" class="text-sm bg-gray-600 hover:bg-gray-500 py-1 px-2 rounded-md">Back to Scripts</button> <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl ml-2">&times;</button></div></div><p class="text-gray-400">Loading versions...</p>`;
                 document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                 document.getElementById('back-to-scripts-btn').addEventListener('click', loadScriptsFromFirestore);
-
                 try {
                     const versionsQuery = window.query(window.collection(appState.db, `scripts/${scriptId}/versions`), window.orderBy("createdAt", "desc"));
                     const versionSnapshot = await window.getDocs(versionsQuery);
-                    
                     const versionsList = document.createElement('div');
                     versionsList.className = 'overflow-y-auto space-y-3 pr-2';
-
-                    if(versionSnapshot.empty) {
-                        versionsList.innerHTML = '<p class="text-gray-400">No versions found for this script.</p>';
-                    } else {
-                        versionSnapshot.forEach(doc => {
-                            const version = doc.data();
-                            const versionEl = document.createElement('div');
-                            versionEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center';
-                            versionEl.innerHTML = `<div><p class="text-sm text-gray-300">Saved on: ${new Date(version.createdAt.toDate()).toLocaleString()}</p></div><div><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="load-version-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="delete-version-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`;
-                            versionsList.appendChild(versionEl);
-                        });
-                    }
+                    if(versionSnapshot.empty) { versionsList.innerHTML = '<p class="text-gray-400">No versions found for this script.</p>'; } 
+                    else { versionSnapshot.forEach(doc => { const version = doc.data(); const versionEl = document.createElement('div'); versionEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center'; versionEl.innerHTML = `<div><p class="text-sm text-gray-300">Saved on: ${new Date(version.createdAt.toDate()).toLocaleString()}</p></div><div><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="load-version-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="delete-version-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`; versionsList.appendChild(versionEl); }); }
                     loadScriptContainer.querySelector('p').replaceWith(versionsList);
-
-                } catch (error) {
-                    console.error("Error loading versions:", error);
-                    loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
-                }
+                } catch (error) { console.error("Error loading versions:", error); loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`; }
             }
 
             async function deleteScript(scriptId, scriptName) {
                 const confirmed = await showConfirmation(`Delete "${scriptName}"?`, "This will delete the script and all of its versions permanently.");
                 if (!confirmed) return;
-                
                 try {
                     const batch = window.writeBatch(appState.db);
-                    // Delete all versions
                     const versionsRef = window.collection(appState.db, `scripts/${scriptId}/versions`);
                     const versionsSnapshot = await window.getDocs(versionsRef);
                     versionsSnapshot.forEach(doc => batch.delete(doc.ref));
-                    // Delete the main script doc
                     batch.delete(window.doc(appState.db, 'scripts', scriptId));
                     await batch.commit();
                     showToast("Script deleted successfully.", "success");
-                    loadScriptsFromFirestore(); // Refresh the list
-                } catch (error) {
-                    console.error("Error deleting script:", error);
-                    showToast(`Failed to delete script: ${error.message}`, "error");
-                }
+                    loadScriptsFromFirestore();
+                } catch (error) { console.error("Error deleting script:", error); showToast(`Failed to delete script: ${error.message}`, "error"); }
             }
 
             async function deleteVersion(scriptId, versionId, scriptName) {
                 const confirmed = await showConfirmation(`Delete this version?`, "This action will permanently delete this version of the script.");
                 if (!confirmed) return;
-
                 try {
                     await window.deleteDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
                     showToast("Version deleted successfully.", "success");
-                    showScriptVersions(scriptId, scriptName); // Refresh the version list
-                } catch (error) {
-                    console.error("Error deleting version:", error);
-                    showToast(`Failed to delete version: ${error.message}`, "error");
-                }
+                    showScriptVersions(scriptId, scriptName);
+                } catch (error) { console.error("Error deleting version:", error); showToast(`Failed to delete version: ${error.message}`, "error"); }
             }
 
             // --- Script Display & Generation Logic ---
@@ -601,60 +557,80 @@
                 }
                 outputContainer.appendChild(contentWrapper); setActiveTab(tabId);
             };
-            const addMessageToHistory = (role, message) => {
+            
+            const addMessageToHistory = (role, message, isTransient = false) => {
                 const msgDiv = document.createElement('div');
                 const cleanMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 msgDiv.className = role === 'user' ? 'bg-gray-800 p-3 rounded-lg self-end max-w-xl' : 'bg-blue-900/50 p-3 rounded-lg self-start max-w-xl';
+                if (isTransient) {
+                    msgDiv.id = 'transient-message';
+                }
                 msgDiv.innerHTML = `<p class="text-white whitespace-pre-wrap">${cleanMessage}</p>`;
-                chatHistoryContainer.appendChild(msgDiv); chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
-                if(role !== 'model') { // Don't add AI's thinking process to history
-                    appState.conversationHistory.push({ role, parts: [{ text: message }] });
+                
+                const transientMsg = document.getElementById('transient-message');
+                if (transientMsg) {
+                    transientMsg.innerHTML = msgDiv.innerHTML;
+                } else {
+                    chatHistoryContainer.appendChild(msgDiv);
+                }
+                
+                chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+                
+                if (role === 'user') {
+                     appState.conversationHistory.push({ role, parts: [{ text: message }] });
                 }
             };
-
+            
             const handleGenerationSubmit = async (e) => {
                 e.preventDefault();
                 const userPrompt = promptInput.value.trim();
                 if (!userPrompt) return;
+                
                 addMessageToHistory('user', userPrompt);
                 promptInput.value = '';
                 setLoadingState(true);
                 
-                addMessageToHistory('model', 'Thinking...'); // Temporary message
-                
                 try {
                     const targetEnvironment = targetEnvSelect.value;
                     const rules = environmentRules[targetEnvironment];
-                    let finalPrompt;
+                    let generationPrompt;
 
                     if (!appState.currentScript) {
-                        // This is a new script generation request
-                        finalPrompt = `${baseMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**TASK:**\nGenerate a script for the following request:\n\`\`\`\n${userPrompt}\n\`\`\``;
+                        // New script generation
+                        generationPrompt = `${baseMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**TASK:**\nGenerate a script for the following request:\n\`\`\`\n${userPrompt}\n\`\`\``;
                     } else {
-                        // This is a refinement request
-                        finalPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
+                        // Refinement request
+                        generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
                     }
-                    
-                    appState.lastGenerationPrompt = finalPrompt;
-                    const apiHistory = [...appState.conversationHistory.slice(0, -1), { role: 'user', parts: [{ text: finalPrompt }] }];
 
-                    const generatedScript = await callGeminiAPI(apiHistory);
-                    const finalCode = generatedScript.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || generatedScript;
-                    
+                    // --- Step 1: Draft Generation ---
+                    addMessageToHistory('model', 'Generating draft script...', true);
+                    appState.lastGenerationPrompt = generationPrompt;
+                    const draftApiHistory = [...appState.conversationHistory.slice(0, -1), { role: 'user', parts: [{ text: generationPrompt }] }];
+                    const draftScriptResponse = await callGeminiAPI(draftApiHistory);
+                    const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
+
+                    // --- Step 2: Self-Correction ---
+                    addMessageToHistory('model', 'Performing quality and security review...', true);
+                    const correctionPrompt = `${selfCorrectionMetaPrompt}\n\n**DRAFT SCRIPT TO REVIEW:**\n\`\`\`powershell\n${draftScript}\n\`\`\``;
+                    const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+                    const finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+
+                    // --- Finalize ---
                     appState.currentScript = finalCode;
                     appState.currentTabs = { 'script-content': finalCode };
-                    
-                    // Update conversation history with the final AI response
                     appState.conversationHistory.push({ role: 'model', parts: [{ text: finalCode }] });
                     
-                    // Update UI
-                    chatHistoryContainer.lastChild.remove(); // Remove "Thinking..."
-                    addMessageToHistory('model', 'Script generated/refined successfully.');
+                    const transientMsg = document.getElementById('transient-message');
+                    if(transientMsg) transientMsg.remove();
+                    
+                    addMessageToHistory('model', 'Script generated and verified successfully.');
                     renderContent('script-content', 'Script', finalCode);
 
                 } catch (error) {
                     console.error("Error during script generation:", error);
-                    chatHistoryContainer.lastChild.remove(); // Remove "Thinking..."
+                    const transientMsg = document.getElementById('transient-message');
+                    if(transientMsg) transientMsg.remove();
                     addMessageToHistory('model', `**Error:** ${error.message}`);
                     showToast(error.message, "error");
                 } finally {
@@ -687,12 +663,13 @@
                 if(targetId === 'explain-script-button'){
                     setLoadingState(true);
                     try {
-                        addMessageToHistory('model', 'Generating explanation...');
+                        addMessageToHistory('model', 'Generating explanation...', true);
                         const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe its purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
                         const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
                         appState.currentTabs['explanation-content'] = explanation;
                         renderContent('explanation-content', 'Explanation', explanation, true);
-                        chatHistoryContainer.lastChild.remove(); // Remove "Generating..."
+                        const transientMsg = document.getElementById('transient-message');
+                        if(transientMsg) transientMsg.remove();
                     } catch(error) { showToast(`Explanation failed: ${error.message}`, "error"); } 
                     finally { setLoadingState(false); }
                 }
@@ -737,21 +714,15 @@
                             const versionData = versionDoc.data();
                             const scriptDoc = await window.getDoc(window.doc(appState.db, 'scripts', scriptId));
                             const scriptData = scriptDoc.data();
-                            
-                            startNewSession(); // Clear everything first
-                            
+                            startNewSession();
                             appState.currentScript = versionData.content;
                             appState.currentTabs = { 'script-content': versionData.content };
                             targetEnvSelect.value = scriptData.environment;
-                            
                             renderContent('script-content', 'Script', appState.currentScript);
                             addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
-                            
                             loadScriptModal.classList.remove('active');
                         }
-                    } catch(error) {
-                        showToast(`Failed to load version: ${error.message}`, 'error');
-                    }
+                    } catch(error) { showToast(`Failed to load version: ${error.message}`, 'error'); }
                 }
                 if (e.target.classList.contains('delete-version-btn')) {
                     const versionButton = e.target;
@@ -768,7 +739,7 @@
                 document.getElementById('last-generation-prompt').textContent = appState.lastGenerationPrompt || 'No script generated in this session yet.';
                 document.getElementById('base-prompt-content').textContent = baseMetaPrompt;
                 document.getElementById('refinement-prompt-content').textContent = refinementMetaPrompt;
-
+                document.getElementById('self-correction-prompt-content').textContent = selfCorrectionMetaPrompt;
                 document.getElementById('rules-content').textContent = JSON.stringify(environmentRules, null, 2);
                 promptsModal.classList.add('active');
             });
