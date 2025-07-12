@@ -11,43 +11,21 @@
         theme: {
             extend: {
                 keyframes: {
-    
-               
-
-
-
                     spin: { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
                     fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
-                    fadeOut: 
-{ '0%': { opacity: 1 }, '100%': { opacity: 0 } },
-    
-
-
-                slideInUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
+                    fadeOut: { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+                    slideInUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
                     flash: { 
-                        '0%': { backgroundColor: 'rgba(59, 130, 246, 0.4)', boxShadow: 'inset 0 0 
-15px rgba(59, 130, 246, 0.5)' }, 
-         
-
-
-               '100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0px transparent' } 
+                        '0%': { backgroundColor: 'rgba(59, 130, 246, 0.4)', boxShadow: 'inset 0 0 15px rgba(59, 130, 246, 0.5)' }, 
+                        '100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0px transparent' } 
                     }
                 },
                 animation: {
-      
-              spin: 
-
-
-'spin 1s linear infinite',
+                    spin: 'spin 1s linear infinite',
                     'fade-in': 'fadeIn 0.3s ease-out forwards',
-          
                     'fade-out': 'fadeOut 0.3s ease-in forwards',
-                    'slide-in-up': 'slideInUp 0.3s ease-out 
-forwards',
-               
-
-
-     'flash-update': 'flash 0.8s ease-out'
+                    'slide-in-up': 'slideInUp 0.3s ease-out forwards',
+                    'flash-update': 'flash 0.8s ease-out'
                 },
             }
         }
@@ -58,127 +36,53 @@ forwards',
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
   
-  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
     
-   
-
- <link rel="preconnect" href="https://fonts.googleapis.com">
-  
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-window.initializeApp = initializeApp;
+        window.initializeApp = initializeApp;
     </script>
     <script type="module">
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-window.getAuth = getAuth; window.onAuthStateChanged = onAuthStateChanged; window.GoogleAuthProvider = GoogleAuthProvider; window.signInWithPopup = signInWithPopup; window.signOut = signOut;
-</script>
+        window.getAuth = getAuth; window.onAuthStateChanged = onAuthStateChanged; window.GoogleAuthProvider = GoogleAuthProvider; window.signInWithPopup = signInWithPopup; window.signOut = signOut;
+    </script>
     <script type="module">
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, query, where, orderBy, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc;
-window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy; window.writeBatch = writeBatch; window.getDoc = getDoc;
-</script>
+        window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc;
+        window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy; window.writeBatch = writeBatch; window.getDoc = getDoc;
+    </script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #111827;
-}
-        .code-font { font-family: 'Fira Code', monospace;
-}
-        ::-webkit-scrollbar { width: 8px;
-}
-        ::-webkit-scrollbar-track { background: #1f2937;
-}
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px;
-}
-        .modal { display: none;
-}
-        .modal.active { display: flex;
-}
-        .profile-dropdown { display: none;
-}
-        .profile-dropdown.active { display: block;
-}
-        .tab-btn { background-color: transparent; border-bottom: 2px solid transparent;
-}
-        .tab-btn.active { border-bottom-color: #3b82f6; color: #ffffff;
-}
-        .output-content { display: none;
-}
-        .output-content.active { display: block;
-}
-        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out;
-}
-
-        /* For line numbers and code display */
-        .code-display {
-            display: flex;
-background-color: #1f2937; /* Match pre background */
-            border-radius: 0.375rem;
-/* rounded-md */
-            overflow: hidden;
-            font-size: 0.875rem;
-/* text-sm, applied to parent */
-            line-height: 1.6;
-/* unitless line-height for consistency */
-        }
-        .line-numbers {
-            padding: 1rem;
-font-family: 'Fira Code', monospace;
-            color: #6b7280; /* gray-500 */
-            text-align: right;
-user-select: none;
-            background-color: #111827; /* Darker bg */
-            border-right: 1px solid #374151;
-white-space: pre; /* Renders newlines correctly */
-        }
-        .code-display pre {
-            margin: 0;
-flex-grow: 1;
-            padding: 1rem;
-            overflow-x: auto;
-        }
-        .code-display pre, .code-display code {
-             font-family: 'Fira Code', monospace;
-}
-        
-        /* For diff view */
-        .diff-view {
-            padding: 1rem;
-font-family: 'Fira Code', monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            background-color: #1f2937;
-            border-radius: 0.375rem;
-            overflow-x: auto;
-            white-space: pre;
-}
-        .diff-view code span {
-            white-space: pre-wrap;
-}
-        .diff-added {
-            background-color: rgba(16, 185, 129, 0.15);
-}
-        .diff-removed {
-            background-color: rgba(239, 68, 68, 0.15);
-}
-
-        .output-content.flash-update > .code-display,
-        .output-content.flash-update > .prose,
-        .output-content.flash-update > .diff-view {
-             animation: flash-update 0.8s ease-out;
-}
-        
-        #toast-container {
-            display: flex;
-flex-direction: column-reverse;
-            align-items: flex-end;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        .profile-dropdown { display: none; }
+        .profile-dropdown.active { display: block; }
+        .tab-btn { background-color: transparent; border-bottom: 2px solid transparent; }
+        .tab-btn.active { border-bottom-color: #3b82f6; color: #ffffff; }
+        .output-content { display: none; }
+        .output-content.active { display: block; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .code-display { display: flex; background-color: #1f2937; border-radius: 0.375rem; overflow: hidden; font-size: 0.875rem; line-height: 1.6; }
+        .line-numbers { padding: 1rem; font-family: 'Fira Code', monospace; color: #6b7280; text-align: right; user-select: none; background-color: #111827; border-right: 1px solid #374151; white-space: pre; }
+        .code-display pre { margin: 0; flex-grow: 1; padding: 1rem; overflow-x: auto; }
+        .code-display pre, .code-display code { font-family: 'Fira Code', monospace; }
+        .diff-view { padding: 1rem; font-family: 'Fira Code', monospace; font-size: 0.875rem; line-height: 1.6; background-color: #1f2937; border-radius: 0.375rem; overflow-x: auto; white-space: pre; }
+        .diff-view code span { white-space: pre-wrap; }
+        .diff-added { background-color: rgba(16, 185, 129, 0.15); }
+        .diff-removed { background-color: rgba(239, 68, 68, 0.15); }
+        .output-content.flash-update > .code-display, .output-content.flash-update > .prose, .output-content.flash-update > .diff-view { animation: flash-update 0.8s ease-out; }
+        #toast-container { display: flex; flex-direction: column-reverse; align-items: flex-end; }
     </style>
 </head>
 <body class="text-gray-200">
@@ -188,151 +92,74 @@ flex-direction: column-reverse;
             <h2 class="text-2xl font-bold text-white mb-4">Initial Configuration</h2>
             <p class="text-gray-400 mb-6">Provide your API keys to use the application.</p>
             <form id="config-form">
-          
-  
-
-
-
-              <div>
+                <div>
                     <label for="gemini-key-input" class="block text-sm font-medium text-gray-300">Gemini API Key</label>
                     <input type="password" id="gemini-key-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1" placeholder="Your Google AI API Key">
                 </div>
-      
-
-
-
-        
                 <div class="mt-4">
                     <label for="firebase-config-input" class="block text-sm font-medium text-gray-300">Firebase Config</label>
                     <textarea id="firebase-config-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1 code-font" rows="6" placeholder="Enter your Firebase project configuration JSON here."></textarea>
-         
-
-
-
-       </div>
-               
+                </div>
                 <button type="submit" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200">Save and Initialize</button>
             </form>
         </div>
     </div>
     
     <div id="save-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
-       
-
-
-
- <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
             <h2 class="text-2xl font-bold text-white mb-4">Save Script to Cloud</h2>
-           
             <form id="save-script-form">
                 <div>
                     <label for="script-name-input" class="block text-sm font-medium text-gray-300">Script Name</label>
-        
-
-
-
-            <input type="text" id="script-name-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1" placeholder="e.g., 'Get All AD Users'" required>
+                    <input type="text" id="script-name-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1" placeholder="e.g., 'Get All AD Users'" required>
                 </div>
-  
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-save-script" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-   
-
-
-
-                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Save</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Save</button>
                 </div>
-         
             </form>
         </div>
     </div>
     
     <div id="load-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
-        <div 
-
-
-
-id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
-            </div>
+        <div id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
+        </div>
     </div>
 
     <div id="view-prompts-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold text-white">Prompts Viewer</h2>
-         
-
-
-
-       <button id="close-prompts-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                <button id="close-prompts-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
             <div class="overflow-y-auto space-y-4 pr-2 text-sm">
-        
                 <div>
                     <h3 class="text-lg font-semibold text-blue-400 mb-2">Last Used Generation Prompt</h3>
-          
-
-
-
-          <pre id="last-generation-prompt" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
+                    <pre id="last-generation-prompt" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                 </div>
                 <div class="border-t border-gray-700 pt-4">
-   
                     <button class="accordion-toggle text-lg font-semibold text-gray-300 w-full text-left">View Prompt Templates & Rules ▼</button>
-              
-
-
-
-       <div class="accordion-content mt-2 space-y-4">
+                    <div class="accordion-content mt-2 space-y-4">
                         <div>
-                       
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Base Meta-Prompt</h3>
-          
-
-
-
-                  <pre id="base-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
+                            <pre id="base-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                         <div>
-       
-                    
-
-
-
-        <h3 class="text-lg font-semibold text-blue-400 mb-2">Refinement Meta-Prompt</h3>
+                            <h3 class="text-lg font-semibold text-blue-400 mb-2">Refinement Meta-Prompt</h3>
                             <pre id="refinement-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
-               
-             
-
-
-
-           <div>
+                        <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Self-Correction Meta-Prompt</h3>
                             <pre id="self-correction-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
-                     
-
-
-
-  
                         </div>
                          <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Environment Rules</h3>
-                
-
-
-
-            <pre id="rules-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
-      
+                            <pre id="rules-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                     </div>
                 </div>
             </div>
-   
-
-
-
-     </div>
+        </div>
     </div>
 
     <div id="confirmation-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
@@ -340,11 +167,7 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
             <h2 id="confirmation-title" class="text-xl font-bold text-white mb-4">Are you sure?</h2>
             <p id="confirmation-message" class="text-gray-400 mb-6">This action cannot be undone.</p>
             <div class="flex justify-end space-x-3">
-          
-
-
-
-      <button id="confirmation-cancel-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                <button id="confirmation-cancel-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
                 <button id="confirmation-confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Confirm</button>
             </div>
         </div>
@@ -354,179 +177,82 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
 
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between shadow-lg z-20">
-  
-
-
-
-          <div class="flex items-center space-x-3">
-          
+            <div class="flex items-center space-x-3">
                 <svg class="w-8 h-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
-                <h1 class="text-xl font-bold text-white">PowerShell 
-
-
-
-ScriptSmith AI <span id="app-version" class="text-xs font-mono text-blue-400/80 ml-2"></span></h1>
+                <h1 class="text-xl font-bold text-white">PowerShell ScriptSmith AI <span id="app-version" class="text-xs font-mono text-blue-400/80 ml-2"></span></h1>
             </div>
              <div class="flex items-center space-x-4">
                 <button id="new-session-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm">New Session</button>
                 <button id="load-from-cloud-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm" disabled>Load from Cloud</button>
-           
-
-
-
-     <button id="view-prompts-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm">View Prompts</button>
+                <button id="view-prompts-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm">View Prompts</button>
                 <div id="auth-container" class="relative">
                     <button id="auth-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Login with Google</button>
                     <div id="user-profile-area" class="hidden items-center space-x-3 cursor-pointer">
-            
-
-
-
-            <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User Photo">
-              
+                        <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User Photo">
                         <span id="user-name" class="font-semibold"></span>
                     </div>
-                    <div 
-
-
-
-id="profile-dropdown-menu" class="profile-dropdown absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg z-30">
+                    <div id="profile-dropdown-menu" class="profile-dropdown absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg z-30">
                         <button id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600">Logout</button>
-     
                     </div>
                 </div>
             </div>
-     
-
-
-
-   </header>
+        </header>
 
         <main class="flex-grow flex flex-col md:flex-row overflow-hidden">
             <div class="w-full md:w-1/3 flex flex-col bg-gray-900 border-r border-gray-700">
                 <div class="p-4 border-b border-gray-700 space-y-4">
                     <div>
-                        <label 
-
-
-
-for="target-env" class="text-lg font-semibold">Target Environment</label>
+                        <label for="target-env" class="text-lg font-semibold">Target Environment</label>
                         <select id="target-env" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-              
                             <option>Active Directory</option>
-                   
-
-
-
-         <option>Azure (Az Module)</option>
+                            <option>Azure (Az Module)</option>
                             <option>MS Graph (SDK)</option>
-                         
                             <option>MS365 / Entra ID</option>
-   
-
-
-
-                         <option>MS365 / Exchange Online</option>
+                            <option>MS365 / Exchange Online</option>
                             <option>MS365 / SharePoint PnP</option>
                             <option>MS365 / Teams</option>
-  
-         
-
-
-
-                   <option>PowerCLI (VMware)</option>
+                            <option>PowerCLI (VMware)</option>
                             <option>Windows Desktop (10/11)</option>
                             <option>Windows Server</option>
-              
-       
-
-
-
-                 </select>
+                        </select>
                     </div>
                     <div>
                         <label for="output-type-select" class="text-lg font-semibold">Output Type</label>
-               
-
-         <select id="output-type-select" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="output-type-select" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option>Full Script</option>
                             <option>Command Snippet</option>
-                      
-
-  </select>
+                        </select>
                     </div>
                 </div>
                 <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4"></div>
                 <div id="generate-prompt-area" class="p-4 border-t border-gray-700 bg-gray-900">
-     
-
-       
-        
-
-            <form id="prompt-form" class="flex items-center space-x-2">
+                    <form id="prompt-form" class="flex items-center space-x-2">
                         <textarea id="prompt-input" placeholder="Enter your script request or refinement..." class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2"></textarea>
-                        <button type="submit" id="submit-button" 
-
-class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg flex-shrink-0 self-end">
-        
-
-    
+                        <button type="submit" id="submit-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg flex-shrink-0 self-end">
                             <svg id="submit-icon" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.105 2.289a.75.75 0 0 0-.826.95l1.414 4.925A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086L2.279 16.76a.75.75 0 0 0 .95.826l16-5.333a.75.75 0 0 0 0-1.418l-16-5.333Z" /></svg>
-            
-
-               
-
- <svg id="loading-spinner" class="w-6 h-6 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <svg id="loading-spinner" class="w-6 h-6 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         </button>
                     </form>
- 
-
-               
-
-</div>
+                </div>
             </div>
 
-    
             <div id="output-panel" class="w-full md:w-2/3 flex flex-col bg-gray-800/50 overflow-y-auto relative">
                  <div class="border-b border-gray-700 sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
-                   <nav id="tabs" class="flex space-x-1 p-2 px-4"></nav>
- 
-
-               
-
-   <div id="output-actions" class="p-2 flex justify-end space-x-2 border-t border-gray-700 hidden">
-         
+                    <nav id="tabs" class="flex space-x-1 p-2 px-4"></nav>
+                    <div id="output-actions" class="p-2 flex justify-end space-x-2 border-t border-gray-700 hidden">
                         <button id="copy-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">Copy</button>
-                        <button id="download-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 
-
-rounded-md text-sm">Download</button>
-              
-
-          <button id="save-to-cloud-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md text-sm" disabled>Save to Cloud</button>
-       
+                        <button id="download-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">Download</button>
+                        <button id="save-to-cloud-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md text-sm" disabled>Save to Cloud</button>
                         <button id="explain-script-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Explain</button>
                         <button id="generate-pester-button" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Generate Tests</button>
-    
-               </div>
-    
-
-            </div>
+                   </div>
+                </div>
    
-             <div id="output-container" class="flex-grow relative p-4">
-                   
+                <div id="output-container" class="flex-grow relative p-4">
                     <div id="initial-message" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
- 
-                   
-
-    <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
+                        <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
                         <h3 class="text-xl font-semibold text-gray-400">Your generated script will appear here</h3>
-    
-                   
-
- <p class="mt-2 max-w-md">Enter a request to generate a new script, or refine an existing 
-one.
-Login to save and load scripts from the cloud.</p>
+                        <p class="mt-2 max-w-md">Enter a request to generate a new script, or refine an existing one. Login to save and load scripts from the cloud.</p>
                     </div>
                 </div>
             </div>
@@ -535,20 +261,13 @@ Login to save and load scripts from the cloud.</p>
 
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
-            const appState = 
-{
-
- 
-                version: '9.9.1',
+            // --- Application State ---
+            const appState = {
+                version: '9.9.2',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
                 currentTabs: {},
-              
- 
- 
-
- 
                 conversationHistory: [],
                 lastGenerationPrompt: '',
                 db: null,
@@ -556,110 +275,91 @@ Login to save and load scripts from the cloud.</p>
                 user: null,
             };
 
- 
- 
-
-
-          // --- Element References ---
-   
+            // --- Element References ---
             const configModal = document.getElementById('config-modal');
             const configForm = document.getElementById('config-form');
             const geminiKeyInput = document.getElementById('gemini-key-input');
             const firebaseConfigInput = document.getElementById('firebase-config-input');
-const authButton = document.getElementById('auth-button');
+            const authButton = document.getElementById('auth-button');
             const userProfileArea = document.getElementById('user-profile-area');
             const userPhoto = document.getElementById('user-photo');
             const userName = document.getElementById('user-name');
             const profileDropdownMenu = document.getElementById('profile-dropdown-menu');
-const logoutButton = document.getElementById('logout-button');
+            const logoutButton = document.getElementById('logout-button');
             const saveToCloudButton = document.getElementById('save-to-cloud-button');
             const loadFromCloudButton = document.getElementById('load-from-cloud-button');
             const newSessionButton = document.getElementById('new-session-button');
             const saveScriptModal = document.getElementById('save-script-modal');
-const saveScriptForm = document.getElementById('save-script-form');
+            const saveScriptForm = document.getElementById('save-script-form');
             const scriptNameInput = document.getElementById('script-name-input');
             const cancelSaveScript = document.getElementById('cancel-save-script');
             const loadScriptModal = document.getElementById('load-script-modal');
             const loadScriptContainer = document.getElementById('load-script-container');
-const promptInput = document.getElementById('prompt-input');
+            const promptInput = document.getElementById('prompt-input');
             const targetEnvSelect = document.getElementById('target-env');
             const outputTypeSelect = document.getElementById('output-type-select');
             const chatHistoryContainer = document.getElementById('chat-history');
             const outputActions = document.getElementById('output-actions');
-const outputContainer = document.getElementById('output-container');
-const initialMessage = document.getElementById('initial-message');
+            const outputContainer = document.getElementById('output-container');
+            const initialMessage = document.getElementById('initial-message');
             const promptForm = document.getElementById('prompt-form');
             const submitButton = document.getElementById('submit-button');
             const submitIcon = document.getElementById('submit-icon');
-const loadingSpinner = document.getElementById('loading-spinner');
-const viewPromptsBtn = document.getElementById('view-prompts-button');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const viewPromptsBtn = document.getElementById('view-prompts-button');
             const promptsModal = document.getElementById('view-prompts-modal');
             const closePromptsModal = document.getElementById('close-prompts-modal');
             const tabsContainer = document.getElementById('tabs');
-const confirmationModal = document.getElementById('confirmation-modal');
-// --- Prompts & Rules ---
+            const confirmationModal = document.getElementById('confirmation-modal');
+
+            // --- Prompts & Rules ---
             const baseMetaPrompt = `You are a senior PowerShell automation engineer specializing in the specified [Target Environment].
 Your task is to create a robust, secure, and efficient PowerShell script based on the user's request.
 **ENVIRONMENT-SPECIFIC INSTRUCTIONS:**
 - The script is for: **[Target Environment]**.
 - **Module & Connection Management:** The script MUST include commands to handle connections (e.g., \`Connect-AzAccount\`, \`Connect-MgGraph\`) and specify required modules using a \`#Requires\` statement at the beginning (e.g., \`#Requires -Module Az.Accounts\`).
-- **Authentication:** Assume the script may be used in an automated context.
-Where possible, favor non-interactive authentication methods (e.g., service principal, managed identity) over methods requiring user prompts.
-- **Cmdlet Selection:** Exclusively use cmdlets relevant to the specified environment.
-Do not mix cmdlets from different environments (e.g., no \`Get-ADUser\` in an Azure script).
+- **Authentication:** Assume the script may be used in an automated context. Where possible, favor non-interactive authentication methods (e.g., service principal, managed identity) over methods requiring user prompts.
+- **Cmdlet Selection:** Exclusively use cmdlets relevant to the specified environment. Do not mix cmdlets from different environments (e.g., no \`Get-ADUser\` in an Azure script).
 [Specific Environment Rules]
 
 **CORE SCRIPTING PRINCIPLES:**
 1.  **Best Practices:** The script MUST follow modern PowerShell best practices.
-* **Use full cmdlet names.** No aliases (e.g., \`Get-ChildItem\`, not \`gci\`).
-* **Use \`[CmdletBinding()]\` and \`[Parameter()]\` attributes** for all parameterized scripts.
+    * **Use full cmdlet names.** No aliases (e.g., \`Get-ChildItem\`, not \`gci\`).
+    * **Use \`[CmdletBinding()]\` and \`[Parameter()]\` attributes** for all parameterized scripts.
     * **Use \`Get-CimInstance\`** over the legacy \`Get-WmiObject\`.
-* **Avoid \`Write-Host\` for output.** Return objects to the pipeline or use \`Write-Output\`.
-* **Avoid \`+=\` for building collections in loops.** Capture pipeline output directly.
+    * **Avoid \`Write-Host\` for output.** Return objects to the pipeline or use \`Write-Output\`.
+    * **Avoid \`+=\` for building collections in loops.** Capture pipeline output directly.
     * **NEVER use \`Invoke-Expression\`**.
 2.  **Error Handling & Reliability:**
-    * The script MUST be robust.
-Wrap all major operations in \`try/catch\` blocks.
+    * The script MUST be robust. Wrap all major operations in \`try/catch\` blocks.
     * Set \`$ErrorActionPreference = 'Stop'\` at the beginning of the script to ensure errors are caught properly.
 3.  **Clarity and Documentation:**
     * Use clear, descriptive variable names (e.g., \`$targetVM\`, not \`$vm\`).
-* Add comments to explain complex logic, but avoid over-commenting simple commands.
+    * Add comments to explain complex logic, but avoid over-commenting simple commands.
 **FINAL SCRIPT STRUCTURE:**
 - The script MUST begin with a comment block detailing the Title, a brief Description, and the intended Target Environment.
-- The final output MUST be only the complete PowerShell script inside a single \`\`\`powershell code block.
-Do not add any introduction, explanation, or conversational text.
+- The final output MUST be only the complete PowerShell script inside a single \`\`\`powershell code block. Do not add any introduction, explanation, or conversational text.
 
 ---
 **USER REQUEST:**
 [User's specific request goes here]
 ---`;
-const refinementMetaPrompt = `You are an expert-level PowerShell script analyzer and debugger.
+            const refinementMetaPrompt = `You are an expert-level PowerShell script analyzer and debugger.
 Your task is to receive a PowerShell script that contains a syntax error, logical flaw, or fails to execute, along with a user's request for a fix or a related error message.
 Your mission is to analyze the script in conjunction with the user's request, identify the root cause of the problem, and produce a fully corrected, operational PowerShell script that implements the user's intent.
 **CRITICAL INSTRUCTIONS:**
-1.  **Analyze the Error:** The user's refinement request or error message is the key to understanding the problem.
-Use it to pinpoint the exact location and nature of the bug.
-2.  **Prioritize the Fix:** Your primary goal is to resolve the specified error.
-Do not add new functionality that is unrelated to the fix.
-3.  **Adhere to Modern PowerShell Best Practices:** Your generated script MUST follow modern standards for reliability, security, and performance.
-Forbid the use of archaic or problematic techniques.
+1.  **Analyze the Error:** The user's refinement request or error message is the key to understanding the problem. Use it to pinpoint the exact location and nature of the bug.
+2.  **Prioritize the Fix:** Your primary goal is to resolve the specified error. Do not add new functionality that is unrelated to the fix.
+3.  **Adhere to Modern PowerShell Best Practices:** Your generated script MUST follow modern standards for reliability, security, and performance. Forbid the use of archaic or problematic techniques.
     * **CIM over WMI:** ALWAYS use \`Get-CimInstance\` instead of the legacy \`Get-WmiObject\`.
-* **No Aliases:** Do not use aliases (e.g., \`ls\`, \`gci\`, \`?\`, \`%\`).
-ALWAYS use the full cmdlet name (e.g., \`Get-ChildItem\`, \`Where-Object\`, \`ForEach-Object\`) for clarity and reliability in scripts.
-* **Proper Output Handling:** Do NOT use \`Write-Host\` to return data from a function or script.
-Use \`Write-Output\`, the \`return\` keyword, or simply place objects on the pipeline to allow for redirection and variable assignment.
-\`Write-Host\` should only be used for informational messages displayed directly to the user.
-* **Efficient Collection Handling:** Avoid using the \`+=\` operator to add items to an array inside a loop, as it is highly inefficient.
-Instead, capture the output of the loop on the pipeline or use a more performant collection type like \`System.Collections.Generic.List[object]\`.
-* **Avoid \`Invoke-Expression\`:** Do NOT use \`Invoke-Expression\` under any circumstances due to its significant security risks.
-There is always a safer, more robust method to achieve the same goal.
-* **Use Advanced Functions:** For any script that accepts parameters, structure it as an advanced function using \`[CmdletBinding()]\` and \`[Parameter()]\` attributes.
-This enables standard cmdlet behaviors like common parameters (\`-Verbose\`, \`-ErrorAction\`).
-* **Robust Error Handling:** Implement proper error handling using \`try\`/\`catch\` blocks.
-Set \`$ErrorActionPreference = "Stop"\` within the script or use the \`-ErrorAction Stop\` parameter on individual commands to ensure terminating errors can be caught.
-4.  **Output Format:** Return ONLY the complete, corrected PowerShell script inside a single \`powershell\` code block.
-Do not include any explanatory text, apologies, or introductory phrases.`;
-const selfCorrectionMetaPrompt = `You are a senior PowerShell DevOps engineer performing a strict, final code review.
+    * **No Aliases:** Do not use aliases (e.g., \`ls\`, \`gci\`, \`?\`, \`%\`). ALWAYS use the full cmdlet name (e.g., \`Get-ChildItem\`, \`Where-Object\`, \`ForEach-Object\`) for clarity and reliability in scripts.
+    * **Proper Output Handling:** Do NOT use \`Write-Host\` to return data from a function or script. Use \`Write-Output\`, the \`return\` keyword, or simply place objects on the pipeline to allow for redirection and variable assignment. \`Write-Host\` should only be used for informational messages displayed directly to the user.
+    * **Efficient Collection Handling:** Avoid using the \`+=\` operator to add items to an array inside a loop, as it is highly inefficient. Instead, capture the output of the loop on the pipeline or use a more performant collection type like \`System.Collections.Generic.List[object]\`.
+    * **Avoid \`Invoke-Expression\`:** Do NOT use \`Invoke-Expression\` under any circumstances due to its significant security risks. There is always a safer, more robust method to achieve the same goal.
+    * **Use Advanced Functions:** For any script that accepts parameters, structure it as an advanced function using \`[CmdletBinding()]\` and \`[Parameter()]\` attributes. This enables standard cmdlet behaviors like common parameters (\`-Verbose\`, \`-ErrorAction\`).
+    * **Robust Error Handling:** Implement proper error handling using \`try\`/\`catch\` blocks. Set \`$ErrorActionPreference = "Stop"\` within the script or use the \`-ErrorAction Stop\` parameter on individual commands to ensure terminating errors can be caught.
+4.  **Output Format:** Return ONLY the complete, corrected PowerShell script inside a single \`powershell\` code block. Do not include any explanatory text, apologies, or introductory phrases.`;
+            const selfCorrectionMetaPrompt = `You are a senior PowerShell DevOps engineer performing a strict, final code review.
 Your task is to meticulously analyze the provided [DRAFT SCRIPT] against the [ORIGINAL USER REQUEST] and a checklist of production-readiness standards.
 Your goal is to return a perfected, production-ready script. If the draft perfectly meets all criteria, return it unmodified.
 Otherwise, apply all necessary corrections.
@@ -675,29 +375,23 @@ Do not include any other text.
 **CRITICAL REVIEW CHECKLIST:**
 
 ## 1. Logic and Intent
-- **Fulfillment:** Does the script's logic fully and correctly achieve the goal stated in the **[ORIGINAL USER REQUEST]**?
-Is anything missing?
+- **Fulfillment:** Does the script's logic fully and correctly achieve the goal stated in the **[ORIGINAL USER REQUEST]**? Is anything missing?
 - **Correct Tooling:** Are the cmdlets and techniques used the most direct and appropriate for the requested task and its implied environment (e.g., using \`Get-ADUser\` for Active Directory, \`Get-AzVM\` for Azure, etc.)?
 ## 2. Safety, Reliability, and Error Handling
 - **No Hardcoded Secrets:** The script MUST NOT contain any hardcoded credentials, API keys, or other secrets.
-- **Robust Error Handling:** All external commands or potentially failing operations MUST be wrapped in \`try/catch\` blocks.
-The script MUST start with \`$ErrorActionPreference = 'Stop'\`.
+- **Robust Error Handling:** All external commands or potentially failing operations MUST be wrapped in \`try/catch\` blocks. The script MUST start with \`$ErrorActionPreference = 'Stop'\`.
 - **Destructive Action Warning:** If the script contains modifying verbs (e.g., \`Set\`, \`New\`, \`Remove\`, \`Stop\`), it MUST include a prominent warning in the \`.NOTES\` section of the help header.
 - **Resource Management:** If a persistent session is created (\`Connect-AzAccount\`, \`Connect-VIServer\`), a corresponding \`Disconnect-*\` command MUST be included, ideally within a \`finally\` block to ensure execution.
 ## 3. Structure, Documentation, and Usability
-- **Comment-Based Help:** The script MUST start with a comprehensive \`<# ... #>\` help header.
-It must include, at a minimum: \`.SYNOPSIS\`, \`.DESCRIPTION\`, and at least one \`.EXAMPLE\`.
-If the script has parameters, each one must have a \`.PARAMETER\` description.
+- **Comment-Based Help:** The script MUST start with a comprehensive \`<# ... #>\` help header. It must include, at a minimum: \`.SYNOPSIS\`, \`.DESCRIPTION\`, and at least one \`.EXAMPLE\`. If the script has parameters, each one must have a \`.PARAMETER\` description.
 - **Parameter Validation:** All parameters MUST have appropriate validation attributes to prevent invalid user input (e.g., \`[Parameter(Mandatory=$true)]\`, \`[ValidateSet('Value1', 'Value2')]\`, \`[ValidateScript({...})]\`).
 - **Verbose Output:** Use \`Write-Verbose\` for detailed status updates, not \`Write-Host\`.
 - **Readability:** The code MUST be clean, properly indented, and use clear variable names.
 ## 4. Performance and Best Practices
 - **Modern Cmdlets:** All outdated cmdlets MUST be replaced with modern equivalents (e.g., \`Get-CimInstance\` instead of \`Get-WmiObject\`).
 - **Efficient Filtering:** Use "filter-left" principles. Employ provider-side filters (\`-Filter\`, \`-Include\`) instead of piping large datasets to \`Where-Object\`.
-- **No \`Win32_Product\`:** The script MUST NOT use the \`Win32_Product\` class.
-For software inventory, it must query the Windows Uninstall registry keys.
-- **Flat Objects for Exports:** If exporting to a CSV, the script must first create an array of flat \`[PSCustomObject]\`s.
-It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
+- **No \`Win32_Product\`:** The script MUST NOT use the \`Win32_Product\` class. For software inventory, it must query the Windows Uninstall registry keys.
+- **Flat Objects for Exports:** If exporting to a CSV, the script must first create an array of flat \`[PSCustomObject]\`s. It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
 
 ---
 **[DRAFT SCRIPT]:**
@@ -705,15 +399,14 @@ It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
 {{draft_script}}
 \`\`\`
 ---`;
-const snippetMetaPrompt = `You are a PowerShell expert who provides quick, concise command-line solutions.
+            const snippetMetaPrompt = `You are a PowerShell expert who provides quick, concise command-line solutions.
 **TASK:** Based on the user's request for the specified [Target Environment], provide ONLY the necessary PowerShell command(s) to accomplish the task.
 **CRITICAL RULES:**
 1.  **Be Direct:** Generate only the command(s). Do not wrap them in a full script structure.
 2.  **No Boilerplate:** You MUST NOT include comment-based help, [CmdletBinding()], [Parameter()] attributes, or full try/catch blocks.
 3.  **Placeholders:** For any values the user must provide, use clear placeholders in angle brackets (e.g., \`<Your-VM-Name>\`, \`<Path\\To\\File.csv>\`).
 4.  **Focus:** The goal is a command that can be copied and pasted directly into a PowerShell terminal.
-5.  **Output Format:** The final output MUST be only the PowerShell command(s) inside a single \`\`\`powershell code block.
-Do not add any introduction, explanation, or conversational text.
+5.  **Output Format:** The final output MUST be only the PowerShell command(s) inside a single \`\`\`powershell code block. Do not add any introduction, explanation, or conversational text.
 
 ---
 **TARGET ENVIRONMENT:**
@@ -722,7 +415,7 @@ Do not add any introduction, explanation, or conversational text.
 **USER REQUEST:**
 [User's specific request goes here]
 ---`;
-const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
+            const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
 Your task is to analyze the provided PowerShell script for any violations of best practices.
 Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWriteHost, PSUseCmdletBinding, etc.
 **CRITICAL INSTRUCTIONS:**
@@ -738,123 +431,72 @@ Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWri
 \`\`\`
 ---`;
 
-const pesterMetaPrompt = `You are an AI assistant that acts as a PowerShell Test expert, specializing in the Pester framework.
+            const pesterMetaPrompt = `You are an AI assistant that acts as a PowerShell Test expert, specializing in the Pester framework.
 Your task is to analyze the provided PowerShell script and generate a basic, effective Pester test script.
 **CRITICAL INSTRUCTIONS:**
 1.  **Analyze the Script:** Meticulously review the script, paying close attention to its parameters (especially mandatory ones), its main commands, and its overall purpose.
 2.  **Pester Structure:**
     * Create a single \`Describe\` block named after the script's general purpose.
-* Use \`Context\` blocks to separate different types of tests (e.g., 'Parameter Validation', 'Basic Execution').
-* Use \`It\` blocks for individual assertions. The names should be clear and descriptive (e.g., 'Should run without throwing an error').
+    * Use \`Context\` blocks to separate different types of tests (e.g., 'Parameter Validation', 'Basic Execution').
+    * Use \`It\` blocks for individual assertions. The names should be clear and descriptive (e.g., 'Should run without throwing an error').
 3.  **Test Content:**
     * **Execution Test:** Include a basic test to ensure the script can be invoked without throwing a terminating error.
-* **Parameter Test:** Use \`Get-Command -Syntax\` to check for the existence of mandatory parameters if any are defined in a \`[Parameter(Mandatory=$true)]\` block.
-* **Mocking:** For critical external commands (e.g., \`Get-ADUser\`, \`Get-AzVM\`, \`Invoke-RestMethod\`), create a simple \`Mock\` to verify that the command is called at least once.
-This confirms the script's logic path. Do not mock every command, only the most critical ones that define the script's purpose.
+    * **Parameter Test:** Use \`Get-Command -Syntax\` to check for the existence of mandatory parameters if any are defined in a \`[Parameter(Mandatory=$true)]\` block.
+    * **Mocking:** For critical external commands (e.g., \`Get-ADUser\`, \`Get-AzVM\`, \`Invoke-RestMethod\`), create a simple \`Mock\` to verify that the command is called at least once. This confirms the script's logic path. Do not mock every command, only the most critical ones that define the script's purpose.
 4.  **Output Format:**
     * The final output MUST be only the complete Pester test script inside a single \`\`\`powershell code block.
-* Do not include any other text, introduction, or conclusion.
+    * Do not include any other text, introduction, or conclusion.
 ---
 **SCRIPT TO ANALYZE:**
 \`\`\`powershell
 {{script_content}}
 \`\`\`
 ---`;
-const environmentRules = {
-                'Active Directory': `
-- **Best Practices:** Scripts MUST use efficient filters (-Filter or -LDAPFilter).
-Do not pipe a full Get-* command to Where-Object.
-- **Parameterization:** Key identifiers like -Identity, -Filter, and -SearchBase MUST be script parameters.
-- **Safety:** Any modifying cmdlets (Set-ADUser, Remove-ADGroup, etc.) MUST support -WhatIf and -Confirm.
-- **Prerequisites:** Assume the script is run from a domain-joined machine with RSAT installed and include a #Requires -Module ActiveDirectory statement.`,
-                'Azure (Az Module)': `
-- **Authentication:** The script MUST include Connect-AzAccount.
-When possible, it should show Connect-AzAccount -Identity for automation.
-- **Parameterization:** Resource names, group names, subscription IDs, etc., MUST be script parameters.
-- **Safety:** Any destructive or modifying cmdlets (Remove-AzVM, Set-AzSqlDatabase) MUST support -WhatIf and -Confirm.
-- **Prerequisites:** Include a #Requires -Module Az.Accounts and any other specific Az modules needed (e.g., Az.Compute).`,
-                'MS Graph (SDK)': `
-- **Authentication:** The script MUST use Connect-MgGraph.
-The -Scopes parameter is required.
-- **Permissions:** The minimum required permissions for the task MUST be listed in the script's comment header.
-- **Performance:** The script MUST use the -Filter parameter for queries where available.
-For commands that return many items, the script must use the -All parameter to handle pagination.
-- **Parameterization:** User IDs, group IDs, and other specific identifiers MUST be script parameters.`,
-                'MS365 / Entra ID': `
-- **Modern Standard:** This environment exclusively uses the Microsoft Graph SDK.
-Scripts MUST NOT use legacy MSOnline or AzureAD modules.
-- **Guidance:** All rules from the 'MS Graph (SDK)' environment apply.
-The focus is typically on user, group, device, and application objects (Get-MgUser, Get-MgGroup, etc.).`,
-                'MS365 / Exchange Online': `
-- **Best Practices:** Scripts MUST use server-side filtering with the -Filter parameter on cmdlets like Get-Mailbox.
-- **Authentication:** Must use Connect-ExchangeOnline.
-- **Safety:** All modifying cmdlets (Set-Mailbox, Remove-MailboxPermission) MUST support -WhatIf and -Confirm.
-- **Prerequisites:** Include #Requires -Module ExchangeOnlineManagement.`,
-                'MS365 / SharePoint PnP': `
-- **Authentication:** For automation, the script MUST use app-based authentication.
-- **Parameterization:** The site URL (-Url) for Connect-PnPOnline MUST be a mandatory script parameter.
-List and item identifiers should also be parameters.
-- **Safety:** All cmdlets that modify lists, libraries, or items MUST support -WhatIf.
-- **Prerequisites:** Include #Requires -Module PnP.PowerShell.`,
-                'MS365 / Teams': `
-- **Primary Tool:** Default to the Microsoft Graph SDK for all automation, as it's more powerful.
-The MicrosoftTeams module should only be used if a specific cmdlet is not available in the Graph SDK.
-- **Guidance:** When using Graph, all rules from the 'MS Graph (SDK)' environment apply.`,
-                'PowerCLI (VMware)': `
-- **Connection:** The script MUST accept the vCenter server name as a mandatory parameter for Connect-VIServer.
-It MUST include a Disconnect-VIServer call in a finally block to ensure cleanup.
-- **Efficiency:** Use Get-View for high-performance queries.
-- **Safety:** Any state-changing cmdlets (Stop-VM, Set-VM, Remove-VM) MUST support -WhatIf and -Confirm.
-- **Prerequisites:** Include #Requires -Module VMware.PowerCLI.`,
-                'Windows Desktop (10/11)': `
-- **Best Practices:** Prefer CIM (Get-CimInstance) over legacy WMI.
-For software, query both HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall and HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall for completeness.
-- **Privileges:** If administrative rights are needed, the script MUST include a #Requires -RunAsAdministrator statement.`,
-                'Windows Server': `
-- **Best Practices:** Use Get-WindowsFeature for roles and Get-WinEvent with a -FilterHashtable for logs.
-All other guidance from 'Windows Desktop' applies.
-- **Privileges & Safety:** Scripts MUST include #Requires -RunAsAdministrator.
-Any server-modifying cmdlets (Install-WindowsFeature, Restart-Computer) MUST support -WhatIf and -Confirm.`
+            const environmentRules = {
+                'Active Directory': `- **Best Practices:** Scripts MUST use efficient filters (-Filter or -LDAPFilter). Do not pipe a full Get-* command to Where-Object.\n- **Parameterization:** Key identifiers like -Identity, -Filter, and -SearchBase MUST be script parameters.\n- **Safety:** Any modifying cmdlets (Set-ADUser, Remove-ADGroup, etc.) MUST support -WhatIf and -Confirm.\n- **Prerequisites:** Assume the script is run from a domain-joined machine with RSAT installed and include a #Requires -Module ActiveDirectory statement.`,
+                'Azure (Az Module)': `- **Authentication:** The script MUST include Connect-AzAccount. When possible, it should show Connect-AzAccount -Identity for automation.\n- **Parameterization:** Resource names, group names, subscription IDs, etc., MUST be script parameters.\n- **Safety:** Any destructive or modifying cmdlets (Remove-AzVM, Set-AzSqlDatabase) MUST support -WhatIf and -Confirm.\n- **Prerequisites:** Include a #Requires -Module Az.Accounts and any other specific Az modules needed (e.g., Az.Compute).`,
+                'MS Graph (SDK)': `- **Authentication:** The script MUST use Connect-MgGraph. The -Scopes parameter is required.\n- **Permissions:** The minimum required permissions for the task MUST be listed in the script's comment header.\n- **Performance:** The script MUST use the -Filter parameter for queries where available. For commands that return many items, the script must use the -All parameter to handle pagination.\n- **Parameterization:** User IDs, group IDs, and other specific identifiers MUST be script parameters.`,
+                'MS365 / Entra ID': `- **Modern Standard:** This environment exclusively uses the Microsoft Graph SDK. Scripts MUST NOT use legacy MSOnline or AzureAD modules.\n- **Guidance:** All rules from the 'MS Graph (SDK)' environment apply. The focus is typically on user, group, device, and application objects (Get-MgUser, Get-MgGroup, etc.).`,
+                'MS365 / Exchange Online': `- **Best Practices:** Scripts MUST use server-side filtering with the -Filter parameter on cmdlets like Get-Mailbox.\n- **Authentication:** Must use Connect-ExchangeOnline.\n- **Safety:** All modifying cmdlets (Set-Mailbox, Remove-MailboxPermission) MUST support -WhatIf and -Confirm.\n- **Prerequisites:** Include #Requires -Module ExchangeOnlineManagement.`,
+                'MS365 / SharePoint PnP': `- **Authentication:** For automation, the script MUST use app-based authentication.\n- **Parameterization:** The site URL (-Url) for Connect-PnPOnline MUST be a mandatory script parameter. List and item identifiers should also be parameters.\n- **Safety:** All cmdlets that modify lists, libraries, or items MUST support -WhatIf.\n- **Prerequisites:** Include #Requires -Module PnP.PowerShell.`,
+                'MS365 / Teams': `- **Primary Tool:** Default to the Microsoft Graph SDK for all automation, as it's more powerful. The MicrosoftTeams module should only be used if a specific cmdlet is not available in the Graph SDK.\n- **Guidance:** When using Graph, all rules from the 'MS Graph (SDK)' environment apply.`,
+                'PowerCLI (VMware)': `- **Connection:** The script MUST accept the vCenter server name as a mandatory parameter for Connect-VIServer. It MUST include a Disconnect-VIServer call in a finally block to ensure cleanup.\n- **Efficiency:** Use Get-View for high-performance queries.\n- **Safety:** Any state-changing cmdlets (Stop-VM, Set-VM, Remove-VM) MUST support -WhatIf and -Confirm.\n- **Prerequisites:** Include #Requires -Module VMware.PowerCLI.`,
+                'Windows Desktop (10/11)': `- **Best Practices:** Prefer CIM (Get-CimInstance) over legacy WMI. For software, query both HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall and HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall for completeness.\n- **Privileges:** If administrative rights are needed, the script MUST include a #Requires -RunAsAdministrator statement.`,
+                'Windows Server': `- **Best Practices:** Use Get-WindowsFeature for roles and Get-WinEvent with a -FilterHashtable for logs. All other guidance from 'Windows Desktop' applies.\n- **Privileges & Safety:** Scripts MUST include #Requires -RunAsAdministrator. Any server-modifying cmdlets (Install-WindowsFeature, Restart-Computer) MUST support -WhatIf and -Confirm.`
             };
-// --- UI & Core Functions ---
+
+            // --- UI & Core Functions ---
             const setLoadingState = (isLoading, buttonId = null) => {
-                const buttons = buttonId ?
-[document.getElementById(buttonId)] : [submitButton, document.getElementById('explain-script-button'), document.getElementById('generate-pester-button')];
+                const buttons = buttonId ? [document.getElementById(buttonId)] : [submitButton, document.getElementById('explain-script-button'), document.getElementById('generate-pester-button')];
                 buttons.forEach(button => {
                     if (!button) return;
                     const icon = button.querySelector('svg:not(.animate-spin)');
                     const spinner = button.querySelector('svg.animate-spin');
                     if (isLoading) {
-   
- 
-                    if(icon) icon.classList.add('hidden');
+                        if(icon) icon.classList.add('hidden');
                         if(spinner) spinner.classList.remove('hidden');
                         button.disabled = true;
                     } else {
-     
- 
-                  if(icon) icon.classList.remove('hidden');
+                        if(icon) icon.classList.remove('hidden');
                         if(spinner) spinner.classList.add('hidden');
                         button.disabled = false;
                     }
-         
- 
-      });
+                });
             };
             
             const showToast = (message, type = 'success') => {
                 const toastContainer = document.getElementById('toast-container');
-const toast = document.createElement('div');
+                const toast = document.createElement('div');
                 const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
-toast.className = `animate-fade-in text-white ${bgColor} py-2 px-4 rounded-lg shadow-lg`;
+                toast.className = `animate-fade-in text-white ${bgColor} py-2 px-4 rounded-lg shadow-lg`;
                 toast.textContent = message;
                 toastContainer.appendChild(toast);
-setTimeout(() => {
+                setTimeout(() => {
                     toast.classList.remove('animate-fade-in');
                     toast.classList.add('animate-fade-out');
                     toast.addEventListener('animationend', () => toast.remove());
                 }, 5000);
-};
+            };
 
             const showConfirmation = (title, message) => {
                 return new Promise((resolve) => {
@@ -862,39 +504,24 @@ setTimeout(() => {
                     document.getElementById('confirmation-message').textContent = message;
                     confirmationModal.classList.add('active');
 
-         
-
-
-
                     const confirmBtn = document.getElementById('confirmation-confirm-button');
                     const cancelBtn = document.getElementById('confirmation-cancel-button');
 
                     const confirmHandler = () => {
                         confirmationModal.classList.remove('active');
-     
-
-
-
-         
                         cleanup();
                         resolve(true);
                     };
 
-                    const cancelHandler = 
-
-
-
-() => {
-                     
+                    const cancelHandler = () => {
                         confirmationModal.classList.remove('active');
                         cleanup();
                         resolve(false);
-};
+                    };
                     
-         
                     const cleanup = () => {
                         confirmBtn.removeEventListener('click', confirmHandler);
-cancelBtn.removeEventListener('click', cancelHandler);
+                        cancelBtn.removeEventListener('click', cancelHandler);
                     };
 
                     confirmBtn.addEventListener('click', confirmHandler);
@@ -904,306 +531,321 @@ cancelBtn.removeEventListener('click', cancelHandler);
 
             async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
-const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${appState.geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${appState.geminiApiKey}`;
                 const payload = { contents: history };
 
                 let lastError = null;
                 const maxRetries = 4;
-let delay = 1000; // Start with 1 second
+                let delay = 1000; 
 
                 for (let i = 0; i < maxRetries; i++) {
                     try {
                         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-if (response.ok) {
+                        if (response.ok) {
                             const result = await response.json();
-if (result.promptFeedback && result.promptFeedback.blockReason) {
+                            if (result.promptFeedback && result.promptFeedback.blockReason) {
                                 throw new Error(`Request blocked: ${result.promptFeedback.blockReason}`);
-}
+                            }
                             if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts) {
-                                return result.candidates[0].content.parts[0].text ||
-'';
+                                return result.candidates[0].content.parts[0].text || '';
                             } else {
                                 console.warn("API returned no valid content.", result);
-return ''; 
+                                return ''; 
                             }
                         }
 
                         if (response.status === 503 || response.status === 429) {
                             lastError = new Error(`API Error: ${response.status} ${response.statusText}`);
-console.warn(`Attempt ${i + 1} of ${maxRetries} failed. Retrying in ${delay}ms...`);
-if (i < maxRetries - 1) {
+                            console.warn(`Attempt ${i + 1} of ${maxRetries} failed. Retrying in ${delay}ms...`);
+                            if (i < maxRetries - 1) {
                                 await new Promise(resolve => setTimeout(resolve, delay + Math.random() * 500));
-delay *= 2;
+                                delay *= 2;
                             }
                             continue;
-}
+                        }
                         
                         throw new Error(`API Error: ${response.status} ${response.statusText}`);
-} catch (error) {
+                    } catch (error) {
                         lastError = error;
-if (i < maxRetries - 1) {
+                        if (i < maxRetries - 1) {
                             console.warn(`Attempt ${i + 1} of ${maxRetries} failed with a network error. Retrying in ${delay}ms...`, error);
-await new Promise(resolve => setTimeout(resolve, delay + Math.random() * 500));
+                            await new Promise(resolve => setTimeout(resolve, delay + Math.random() * 500));
                             delay *= 2;
-}
+                        }
                     }
                 }
 
                 console.error("All API retry attempts failed.");
-throw lastError || new Error("An unknown error occurred after multiple retries.");
-}
+                throw lastError || new Error("An unknown error occurred after multiple retries.");
+            }
             
             // --- Firebase & Auth ---
             function initializeFirebase(config) {
                 try {
                     const app = window.initializeApp(config);
-appState.auth = window.getAuth(app);
+                    appState.auth = window.getAuth(app);
                     appState.db = window.getFirestore(app);
                     setupAuthObserver();
-                } catch (error) { console.error("Firebase Init Error:", error);
-showToast("Failed to initialize Firebase. Check your configuration.", "error"); }
+                } catch (error) { 
+                    console.error("Firebase Init Error:", error); 
+                    showToast("Failed to initialize Firebase. Check your configuration.", "error"); 
+                }
             }
+
             function setupAuthObserver() {
                 window.onAuthStateChanged(appState.auth, user => {
                     if (user) {
-                        appState.user 
-
-
-
-= { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL };
-                        userProfileArea.classList.remove('hidden'); userProfileArea.classList.add('flex');
+                        appState.user = { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL };
+                        userProfileArea.classList.remove('hidden'); 
+                        userProfileArea.classList.add('flex');
                         authButton.classList.add('hidden');
-                        userPhoto.src = user.photoURL; userName.textContent = user.displayName;
-              
-
-
-
-
-                        saveToCloudButton.disabled = false; loadFromCloudButton.disabled = false;
+                        userPhoto.src = user.photoURL; 
+                        userName.textContent = user.displayName;
+                        saveToCloudButton.disabled = false; 
+                        loadFromCloudButton.disabled = false;
                     } else {
                         appState.user = null;
-                       
-
-
-
- userProfileArea.classList.add('hidden'); userProfileArea.classList.remove('flex');
-            
+                        userProfileArea.classList.add('hidden'); 
+                        userProfileArea.classList.remove('flex');
                         authButton.classList.remove('hidden');
-                        saveToCloudButton.disabled = true; loadFromCloudButton.disabled = true;
-profileDropdownMenu.classList.remove('active');
+                        saveToCloudButton.disabled = true; 
+                        loadFromCloudButton.disabled = true;
+                        profileDropdownMenu.classList.remove('active');
                     }
                 });
-}
+            }
+
             async function signInWithGoogle() {
                 const provider = new window.GoogleAuthProvider();
-try { await window.signInWithPopup(appState.auth, provider); } catch (error) { console.error("Google Sign-In Error:", error); showToast(`Could not sign in: ${error.message}`, "error");
-}
+                try { 
+                    await window.signInWithPopup(appState.auth, provider); 
+                } catch (error) { 
+                    console.error("Google Sign-In Error:", error); 
+                    showToast(`Could not sign in: ${error.message}`, "error");
+                }
             }
-            async function signOutUser() { try { await window.signOut(appState.auth);
-} catch (error) { console.error("Sign Out Error:", error); } }
+
+            async function signOutUser() { 
+                try { 
+                    await window.signOut(appState.auth);
+                } catch (error) { 
+                    console.error("Sign Out Error:", error); 
+                } 
+            }
             
             // --- Firestore Functions ---
             async function saveScriptToFirestore(name, content, environment) {
-                if (!appState.user) { showToast("You must be logged in to save scripts.", "error");
-return; }
+                if (!appState.user) { 
+                    showToast("You must be logged in to save scripts.", "error");
+                    return; 
+                }
                 const scriptsCollection = window.collection(appState.db, 'scripts');
-const q = window.query(scriptsCollection, window.where("uid", "==", appState.user.uid), window.where("name", "==", name));
-try {
+                const q = window.query(scriptsCollection, window.where("uid", "==", appState.user.uid), window.where("name", "==", name));
+                try {
                     const querySnapshot = await window.getDocs(q);
-let scriptId;
+                    let scriptId;
                     if (querySnapshot.empty) {
-                        const scriptDocRef = await window.addDoc(scriptsCollection, { uid: appState.user.uid, name: name, environment: environment, createdAt: window.serverTimestamp(), updatedAt: window.serverTimestamp() });
-scriptId = scriptDocRef.id;
+                        const scriptDocRef = await window.addDoc(scriptsCollection, { 
+                            uid: appState.user.uid, 
+                            name: name, 
+                            environment: environment, 
+                            createdAt: window.serverTimestamp(), 
+                            updatedAt: window.serverTimestamp() 
+                        });
+                        scriptId = scriptDocRef.id;
                     } else {
                         scriptId = querySnapshot.docs[0].id;
-const scriptDocRef = window.doc(appState.db, 'scripts', scriptId);
+                        const scriptDocRef = window.doc(appState.db, 'scripts', scriptId);
                         const batch = window.writeBatch(appState.db);
                         batch.update(scriptDocRef, { updatedAt: window.serverTimestamp() });
                         await batch.commit();
-}
+                    }
                     const versionCollection = window.collection(appState.db, `scripts/${scriptId}/versions`);
-await window.addDoc(versionCollection, { content: content, createdAt: window.serverTimestamp() });
+                    await window.addDoc(versionCollection, { content: content, createdAt: window.serverTimestamp() });
                     showToast("Script saved successfully!", "success");
                     saveScriptModal.classList.remove('active');
-} catch (error) { console.error("Error saving script:", error); showToast(`Failed to save script: ${error.message}`, "error");
-}
+                } catch (error) { 
+                    console.error("Error saving script:", error); 
+                    showToast(`Failed to save script: ${error.message}`, "error");
+                }
             }
 
             async function loadScriptsFromFirestore() {
-                if (!appState.user) { showToast("You must be logged in to load scripts.", "error");
-return; }
+                if (!appState.user) { 
+                    showToast("You must be logged in to load scripts.", "error");
+                    return; 
+                }
                 loadScriptModal.classList.add('active');
-loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Load Script from Cloud</h2><button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><p class="text-gray-400">Loading scripts...</p>`;
-document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
+                loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Load Script from Cloud</h2><button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button></div><p class="text-gray-400">Loading scripts...</p>`;
+                document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                 try {
                     const q = window.query(window.collection(appState.db, "scripts"), window.where("uid", "==", appState.user.uid), window.orderBy("updatedAt", "desc"));
-const querySnapshot = await window.getDocs(q);
+                    const querySnapshot = await window.getDocs(q);
                     const listContainer = document.createElement('div');
                     listContainer.id = 'saved-scripts-list';
                     listContainer.className = 'overflow-y-auto space-y-3 pr-2';
-if (querySnapshot.empty) { listContainer.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>';
-} 
-                    else { querySnapshot.forEach(doc => { const script = doc.data(); const scriptEl = document.createElement('div'); scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600'; scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment} - Last updated: ${new Date(script.updatedAt.toDate()).toLocaleString()}</p></div><button data-id="${doc.id}" class="delete-script-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button>`; scriptEl.dataset.scriptId = doc.id; scriptEl.dataset.scriptName = script.name; listContainer.appendChild(scriptEl); });
-}
+                    if (querySnapshot.empty) { 
+                        listContainer.innerHTML = '<p class="text-gray-400">No saved scripts found.</p>';
+                    } else { 
+                        querySnapshot.forEach(doc => { 
+                            const script = doc.data(); 
+                            const scriptEl = document.createElement('div'); 
+                            scriptEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-600'; 
+                            scriptEl.innerHTML = `<div><h4 class="font-bold text-white">${script.name}</h4><p class="text-sm text-gray-400">${script.environment} - Last updated: ${new Date(script.updatedAt.toDate()).toLocaleString()}</p></div><button data-id="${doc.id}" class="delete-script-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button>`; 
+                            scriptEl.dataset.scriptId = doc.id; 
+                            scriptEl.dataset.scriptName = script.name; 
+                            listContainer.appendChild(scriptEl); 
+                        });
+                    }
                     loadScriptContainer.querySelector('p').replaceWith(listContainer);
-} catch (error) {
+                } catch (error) {
                     console.error("Error loading scripts:", error);
-const errorMessage = error.message || '';
+                    const errorMessage = error.message || '';
                     if (errorMessage.includes("query requires an index")) {
                         const urlMatch = errorMessage.match(/https?:\/\/[^\s]+/);
-if (urlMatch && urlMatch[0]) {
+                        if (urlMatch && urlMatch[0]) {
                             const indexUrl = urlMatch[0].replace('?create_composite=', '?create_composite=');
-loadScriptContainer.innerHTML = `
+                            loadScriptContainer.innerHTML = `
                                 <div class="flex justify-between items-center mb-4">
                                     <h2 class="text-2xl font-bold text-white">Database Setup Required</h2>
-                     
-
-
-
-               <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                                    <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                                 </div>
                                 <div class="text-center p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg">
-           
-
-
-
-                         <h3 class="font-bold text-lg text-yellow-300">Action Required: Create Database Index</h3>
+                                    <h3 class="font-bold text-lg text-yellow-300">Action Required: Create Database Index</h3>
                                     <p class="mt-2 text-yellow-200">
-                              
-
-
-
-          Your Firestore database needs a special index to sort your saved scripts by date.
-This is a one-time setup step.
+                                        Your Firestore database needs a special index to sort your saved scripts by date. This is a one-time setup step.
                                     </p>
-                                    <a href="${indexUrl}" target="_blank" rel="noopener noreferrer"
-                                    class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
-          
-
-
-
-                              Click Here to Create Index
+                                    <a href="${indexUrl}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                                        Click Here to Create Index
                                     </a>
-                              
-
-
-
-      <p class="mt-2 text-xs text-gray-400">
-                                        After creating the index, please close this window and try loading your scripts again.
-It may take a few minutes for the index to become active.
-</p>
-                                </div>
-                            `;
-document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
+                                    <p class="mt-2 text-xs text-gray-400">
+                                        After creating the index, please close this window and try loading your scripts again. It may take a few minutes for the index to become active.
+                                    </p>
+                                </div>`;
+                            document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                         } else {
-                            loadScriptContainer.innerHTML += `<p class="text-red-400">Error: A database index is required.
-Please check the browser console for a link to create it.</p>`;
-}
+                            loadScriptContainer.innerHTML += `<p class="text-red-400">Error: A database index is required. Please check the browser console for a link to create it.</p>`;
+                        }
                     } else {
                         loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${errorMessage}</p>`;
-}
+                    }
                 }
             }
 
             async function showScriptVersions(scriptId, scriptName) {
                 loadScriptContainer.innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold text-white">Versions for "${scriptName}"</h2><div><button id="back-to-scripts-btn" class="text-sm bg-gray-600 hover:bg-gray-500 py-1 px-2 rounded-md">Back to Scripts</button> <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl ml-2">&times;</button></div></div><p class="text-gray-400">Loading versions...</p>`;
-document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
+                document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                 document.getElementById('back-to-scripts-btn').addEventListener('click', loadScriptsFromFirestore);
                 try {
                     const versionsQuery = window.query(window.collection(appState.db, `scripts/${scriptId}/versions`), window.orderBy("createdAt", "desc"));
-const versionSnapshot = await window.getDocs(versionsQuery);
+                    const versionSnapshot = await window.getDocs(versionsQuery);
                     const versionsList = document.createElement('div');
                     versionsList.className = 'overflow-y-auto space-y-3 pr-2';
-if(versionSnapshot.empty) { versionsList.innerHTML = '<p class="text-gray-400">No versions found for this script.</p>';
-} 
-                    else { versionSnapshot.forEach(doc => { const version = doc.data(); const versionEl = document.createElement('div'); versionEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center'; versionEl.innerHTML = `<div><p class="text-sm text-gray-300">Saved on: ${new Date(version.createdAt.toDate()).toLocaleString()}</p></div><div><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="load-version-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="delete-version-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`; versionsList.appendChild(versionEl); });
-}
+                    if(versionSnapshot.empty) { 
+                        versionsList.innerHTML = '<p class="text-gray-400">No versions found for this script.</p>';
+                    } else { 
+                        versionSnapshot.forEach(doc => { 
+                            const version = doc.data(); 
+                            const versionEl = document.createElement('div'); 
+                            versionEl.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center'; 
+                            versionEl.innerHTML = `<div><p class="text-sm text-gray-300">Saved on: ${new Date(version.createdAt.toDate()).toLocaleString()}</p></div><div><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="load-version-btn bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm">Load</button><button data-script-id="${scriptId}" data-version-id="${doc.id}" class="delete-version-btn bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-md text-sm ml-2">Delete</button></div>`; 
+                            versionsList.appendChild(versionEl); 
+                        });
+                    }
                     loadScriptContainer.querySelector('p').replaceWith(versionsList);
-} catch (error) { console.error("Error loading versions:", error); loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
-}
+                } catch (error) { 
+                    console.error("Error loading versions:", error); 
+                    loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${error.message}</p>`;
+                }
             }
 
             async function deleteScript(scriptId, scriptName) {
                 const confirmed = await showConfirmation(`Delete "${scriptName}"?`, "This will delete the script and all of its versions permanently.");
-if (!confirmed) return;
+                if (!confirmed) return;
                 try {
                     const batch = window.writeBatch(appState.db);
-const versionsRef = window.collection(appState.db, `scripts/${scriptId}/versions`);
+                    const versionsRef = window.collection(appState.db, `scripts/${scriptId}/versions`);
                     const versionsSnapshot = await window.getDocs(versionsRef);
                     versionsSnapshot.forEach(doc => batch.delete(doc.ref));
                     batch.delete(window.doc(appState.db, 'scripts', scriptId));
                     await batch.commit();
-showToast("Script deleted successfully.", "success");
+                    showToast("Script deleted successfully.", "success");
                     loadScriptsFromFirestore();
-                } catch (error) { console.error("Error deleting script:", error); showToast(`Failed to delete script: ${error.message}`, "error");
-}
+                } catch (error) { 
+                    console.error("Error deleting script:", error); 
+                    showToast(`Failed to delete script: ${error.message}`, "error");
+                }
             }
 
             async function deleteVersion(scriptId, versionId, scriptName) {
                 const confirmed = await showConfirmation(`Delete this version?`, "This action will permanently delete this version of the script.");
-if (!confirmed) return;
+                if (!confirmed) return;
                 try {
                     await window.deleteDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
-showToast("Version deleted successfully.", "success");
+                    showToast("Version deleted successfully.", "success");
                     showScriptVersions(scriptId, scriptName);
-                } catch (error) { console.error("Error deleting version:", error); showToast(`Failed to delete version: ${error.message}`, "error");
-}
+                } catch (error) { 
+                    console.error("Error deleting version:", error); 
+                    showToast(`Failed to delete version: ${error.message}`, "error");
+                }
             }
 
             // --- Script Display & Generation Logic ---
             const setActiveTab = (tabId) => {
                 document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-document.querySelectorAll('.output-content').forEach(content => content.classList.remove('active'));
+                document.querySelectorAll('.output-content').forEach(content => content.classList.remove('active'));
                 const tabButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
                 const tabContent = document.getElementById(tabId);
                 if (tabButton) tabButton.classList.add('active');
-if (tabContent) {
+                if (tabContent) {
                     tabContent.classList.add('active');
-}
+                }
             };
-const createTab = (tabId, title, isActive = false) => {
+
+            const createTab = (tabId, title, isActive = false) => {
                 if (document.querySelector(`.tab-btn[data-tab="${tabId}"]`)) return;
-const button = document.createElement('button');
+                const button = document.createElement('button');
                 button.className = `tab-btn text-gray-400 hover:text-white px-3 py-2 text-sm font-medium ${isActive ? 'active' : ''}`;
-button.dataset.tab = tabId; button.textContent = title;
+                button.dataset.tab = tabId; 
+                button.textContent = title;
                 tabsContainer.appendChild(button);
             };
 
             const renderContent = (tabId, title, content, isHtml = false, setActive = true) => {
                 initialMessage.classList.add('hidden');
-outputActions.classList.remove('hidden');
+                outputActions.classList.remove('hidden');
                 
                 let contentWrapper = document.getElementById(tabId);
                 if (contentWrapper) {
                     contentWrapper.innerHTML = '';
-// Clear existing content
                 } else {
                     contentWrapper = document.createElement('div');
-contentWrapper.id = tabId;
+                    contentWrapper.id = tabId;
                     contentWrapper.className = 'output-content';
                     outputContainer.appendChild(contentWrapper);
                     createTab(tabId, title);
                 }
                 
                 contentWrapper.classList.add('flash-update');
-contentWrapper.addEventListener('animationend', () => {
+                contentWrapper.addEventListener('animationend', () => {
                     contentWrapper.classList.remove('flash-update');
                 }, { once: true });
-if (isHtml) {
+
+                if (isHtml) {
                     contentWrapper.innerHTML = `<div class="prose prose-invert max-w-none p-4">${DOMPurify.sanitize(marked.parse(content))}</div>`;
-} else {
+                } else {
                     const codeDisplay = document.createElement('div');
-codeDisplay.className = 'code-display';
+                    codeDisplay.className = 'code-display';
 
                     const lineNumbers = document.createElement('div');
                     lineNumbers.className = 'line-numbers';
                     
                     const lines = content.split('\n').length;
-lineNumbers.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+                    lineNumbers.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
                     
                     const pre = document.createElement('pre');
                     const code = document.createElement('code');
-code.className = 'language-powershell';
+                    code.className = 'language-powershell';
                     code.textContent = content;
                     
                     pre.appendChild(code);
@@ -1212,190 +854,181 @@ code.className = 'language-powershell';
                     contentWrapper.appendChild(codeDisplay);
                     
                     hljs.highlightElement(code);
-}
+                }
                 
                 if (setActive) {
                     setActiveTab(tabId);
-}
-};
+                }
+            };
             
             const renderDiff = (tabId, title, diff, setActive = true) => {
                 initialMessage.classList.add('hidden');
-outputActions.classList.remove('hidden');
+                outputActions.classList.remove('hidden');
 
                 if (!document.querySelector(`.tab-btn[data-tab="${tabId}"]`)) {
                     createTab(tabId, title);
-}
+                }
 
                 let contentWrapper = document.getElementById(tabId);
-if (contentWrapper) {
+                if (contentWrapper) {
                     contentWrapper.innerHTML = '';
-} else {
+                } else {
                     contentWrapper = document.createElement('div');
-contentWrapper.id = tabId;
+                    contentWrapper.id = tabId;
                     contentWrapper.className = 'output-content';
                     outputContainer.appendChild(contentWrapper);
                 }
                 
                 const pre = document.createElement('pre');
-pre.className = 'diff-view';
+                pre.className = 'diff-view';
                 const code = document.createElement('code');
 
                 diff.forEach(part => {
                     const span = document.createElement('span');
                     span.className = part.added ? 'diff-added' : part.removed ? 'diff-removed' : '';
                     span.textContent = part.value;
-                
-
-    code.appendChild(span);
+                    code.appendChild(span);
                 });
-pre.appendChild(code);
+                pre.appendChild(code);
                 contentWrapper.appendChild(pre);
 
                 contentWrapper.classList.add('flash-update');
                 contentWrapper.addEventListener('animationend', () => {
                     contentWrapper.classList.remove('flash-update');
                 }, { once: true });
-if (setActive) {
+
+                if (setActive) {
                     setActiveTab(tabId);
-}
+                }
             };
-const addMessageToHistory = (role, message, isTransient = false) => {
+
+            const addMessageToHistory = (role, message, isTransient = false) => {
                 const msgDiv = document.createElement('div');
-const cleanMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                msgDiv.className = role === 'user' ?
-'bg-gray-800 p-3 rounded-lg self-end max-w-xl' : 'bg-blue-900/50 p-3 rounded-lg self-start max-w-xl';
-if (isTransient) {
+                const cleanMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                msgDiv.className = role === 'user' ? 'bg-gray-800 p-3 rounded-lg self-end max-w-xl' : 'bg-blue-900/50 p-3 rounded-lg self-start max-w-xl';
+                if (isTransient) {
                     msgDiv.id = 'transient-message';
-}
+                }
                 msgDiv.innerHTML = `<p class="text-white whitespace-pre-wrap">${cleanMessage}</p>`;
-const transientMsg = document.getElementById('transient-message');
+                const transientMsg = document.getElementById('transient-message');
                 if (transientMsg) {
                     transientMsg.id = '';
-// remove ID so it's not targeted again
                     transientMsg.innerHTML = msgDiv.innerHTML;
-} else {
+                } else {
                     chatHistoryContainer.appendChild(msgDiv);
-}
+                }
                 
                 chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
-if (role === 'user') {
+                if (role === 'user') {
                      appState.conversationHistory.push({ role, parts: [{ text: message }] });
-}
+                }
             };
-async function runBestPracticesAnalysis(scriptContent) {
+
+            async function runBestPracticesAnalysis(scriptContent) {
                 const tabId = 'analysis-content';
-const loadingMessage = "### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.";
-renderContent(tabId, 'Analysis', loadingMessage, true, false);
-try {
+                const loadingMessage = `### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.`;
+                renderContent(tabId, 'Analysis', loadingMessage, true, false);
+                try {
                     const analysisPrompt = bestPracticesPrompt.replace('{{script_content}}', scriptContent);
-const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
+                    const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
                     appState.currentTabs[tabId] = analysisResult;
-renderContent(tabId, 'Analysis', analysisResult, true, false);
-} catch (error) {
+                    renderContent(tabId, 'Analysis', analysisResult, true, false);
+                } catch (error) {
                     console.error("Error during script analysis:", error);
-const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
+                    const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
                     renderContent(tabId, 'Analysis', errorMessage, true, false);
                     showToast(`Analysis failed: ${error.message}`, "error");
-}
+                }
             }
 
             const handleGenerationSubmit = async (e) => {
                 e.preventDefault();
-const userPrompt = promptInput.value.trim();
+                const userPrompt = promptInput.value.trim();
                 if (!userPrompt) return;
                 
                 const oldScript = appState.currentScript;
                 const isRefinement = !!oldScript;
                 let finalCode = '';
-addMessageToHistory('user', userPrompt);
+                addMessageToHistory('user', userPrompt);
                 promptInput.value = '';
-                promptInput.style.height = 'auto'; // Reset height after submit
+                promptInput.style.height = 'auto';
                 promptInput.rows = 2;
-// Reset rows
                 setLoadingState(true, 'submit-button');
-try {
+                try {
                     const targetEnvironment = targetEnvSelect.value;
-const rules = environmentRules[targetEnvironment];
+                    const rules = environmentRules[targetEnvironment];
                     const outputType = outputTypeSelect.value;
 
                     if (isRefinement) {
-                        // Refinement always uses the full script refinement process
                         addMessageToHistory('model', 'Refining script...', true);
-const generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
+                        const generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
                         appState.lastGenerationPrompt = generationPrompt;
-const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: generationPrompt }] }]);
+                        const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: generationPrompt }] }]);
                         finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
-} else if (outputType === 'Command Snippet') {
-                        // New snippet generation
+                    } else if (outputType === 'Command Snippet') {
                         addMessageToHistory('model', 'Generating command snippet...', true);
-let snippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
+                        let snippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
                         snippetPrompt = snippetPrompt.replace("[User's specific request goes here]", userPrompt);
                         appState.lastGenerationPrompt = snippetPrompt;
-const snippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: snippetPrompt }] }]);
+                        const snippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: snippetPrompt }] }]);
                         finalCode = snippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || snippetResponse;
-} else {
-                        // New full script generation
+                    } else {
                         addMessageToHistory('model', 'Generating draft script...', true);
-let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
-finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
+                        let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
+                        finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
                         finalPrompt = finalPrompt.replace("[User's specific request goes here]", userPrompt);
-appState.lastGenerationPrompt = finalPrompt;
+                        appState.lastGenerationPrompt = finalPrompt;
                         
-                        // --- Step 1: Draft Generation ---
                         const draftApiHistory = [{ role: 'user', parts: [{ text: finalPrompt }] }];
-const draftScriptResponse = await callGeminiAPI(draftApiHistory);
-const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
-// --- Step 2: Self-Correction ---
+                        const draftScriptResponse = await callGeminiAPI(draftApiHistory);
+                        const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
+                        
                         addMessageToHistory('model', 'Performing quality and security review...', true);
-let correctionPrompt = selfCorrectionMetaPrompt.replace('{{user_request}}', userPrompt);
+                        let correctionPrompt = selfCorrectionMetaPrompt.replace('{{user_request}}', userPrompt);
                         correctionPrompt = correctionPrompt.replace('{{draft_script}}', draftScript);
                         
                         const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
-finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+                        finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
                     }
                     
                     if (finalCode) {
                         finalCode = finalCode.trim();
-}
+                    }
 
-                    // --- Finalize ---
                     appState.currentScript = finalCode;
-appState.currentTabs = { 'script-content': finalCode };
+                    appState.currentTabs = { 'script-content': finalCode };
                     appState.conversationHistory.push({ role: 'model', parts: [{ text: finalCode }] });
                     
                     const transientMsg = document.getElementById('transient-message');
-if(transientMsg) transientMsg.remove();
+                    if(transientMsg) transientMsg.remove();
                     
                     addMessageToHistory('model', 'Script generated successfully.');
                     renderContent('script-content', 'Script', finalCode, false, true);
-if (isRefinement && oldScript !== finalCode) {
+                    if (isRefinement && oldScript !== finalCode) {
                         const diff = Diff.diffLines(oldScript, finalCode);
-renderDiff('changes-content', 'Changes', diff, false);
+                        renderDiff('changes-content', 'Changes', diff, false);
                     }
                     
-// --- Run Best Practices Analyzer in the background ---
                     runBestPracticesAnalysis(finalCode);
-} catch (error) {
+                } catch (error) {
                     console.error("Error during script generation:", error);
-const transientMsg = document.getElementById('transient-message');
+                    const transientMsg = document.getElementById('transient-message');
                     if(transientMsg) transientMsg.remove();
 
                     let friendlyMessage = `**Error:** ${error.message}`;
-if (error.message && error.message.includes("503")) {
-                        friendlyMessage = `**Persistent API Error:** The request failed after multiple retries with a 503 error.
-This usually indicates a problem with the API key or the associated Google Cloud project (e.g., billing disabled, API not enabled, or restrictive quotas).
-Please verify your key and project settings.`;
+                    if (error.message && error.message.includes("503")) {
+                        friendlyMessage = `**Persistent API Error:** The request failed after multiple retries with a 503 error. This usually indicates a problem with the API key or the associated Google Cloud project (e.g., billing disabled, API not enabled, or restrictive quotas). Please verify your key and project settings.`;
                     }
                     addMessageToHistory('model', friendlyMessage);
-showToast(error.message, "error");
+                    showToast(error.message, "error");
                 } finally {
                     setLoadingState(false, 'submit-button');
-}
+                }
             };
-const startNewSession = () => {
+
+            const startNewSession = () => {
                 appState.currentScript = '';
-appState.currentTabs = {};
+                appState.currentTabs = {};
                 appState.conversationHistory = [];
                 appState.lastGenerationPrompt = '';
                 chatHistoryContainer.innerHTML = '';
@@ -1403,193 +1036,208 @@ appState.currentTabs = {};
                 tabsContainer.innerHTML = '';
                 outputActions.classList.add('hidden');
                 initialMessage.classList.remove('hidden');
-showToast("New session started.", "success");
+                showToast("New session started.", "success");
             };
 
             // --- Event Listeners ---
-            configForm.addEventListener('submit', (e) => { e.preventDefault(); appState.geminiApiKey = geminiKeyInput.value.trim(); try { const configText = firebaseConfigInput.value.trim(); if (!appState.geminiApiKey || !configText) { showToast("Please fill out all fields.", "error"); return; } appState.firebaseConfig = JSON.parse(configText); initializeFirebase(appState.firebaseConfig); configModal.classList.remove('active'); } catch (error) { showToast("Firebase config is not valid JSON.", "error"); } });
-authButton.addEventListener('click', signInWithGoogle);
+            configForm.addEventListener('submit', (e) => { 
+                e.preventDefault(); 
+                appState.geminiApiKey = geminiKeyInput.value.trim(); 
+                try { 
+                    const configText = firebaseConfigInput.value.trim(); 
+                    if (!appState.geminiApiKey || !configText) { 
+                        showToast("Please fill out all fields.", "error"); 
+                        return; 
+                    } 
+                    appState.firebaseConfig = JSON.parse(configText); 
+                    initializeFirebase(appState.firebaseConfig); 
+                    configModal.classList.remove('active'); 
+                } catch (error) { 
+                    showToast("Firebase config is not valid JSON.", "error"); 
+                } 
+            });
+
+            authButton.addEventListener('click', signInWithGoogle);
             logoutButton.addEventListener('click', signOutUser);
             userProfileArea.addEventListener('click', () => profileDropdownMenu.classList.toggle('active'));
             newSessionButton.addEventListener('click', startNewSession);
-outputActions.addEventListener('click', async (e) => {
+
+            outputActions.addEventListener('click', async (e) => {
                 const targetId = e.target.id;
                 if (!appState.currentScript) {
                      showToast("There is no script to perform this action on.", "error");
                      return;
-        
-        }
+                }
                 if(targetId === 'explain-script-button'){
                     setLoadingState(true, 'explain-script-button');
                     const tabId = 'explanation-content';
-               
-
-     const loadingMessage = "### Generating explanation...\n\nPlease wait while the script 
-is being explained.";
+                    const loadingMessage = `### Generating explanation...\n\nPlease wait while the script is being explained.`;
                     renderContent(tabId, 'Explanation', loadingMessage, true, true);
 
                     try {
-                        const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe 
-its 
-purpose, how it works, and any important cmdlets it uses. Format the output as 
-Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
-                    
+                        const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe its purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
                         const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
-appState.currentTabs[tabId] = explanation;
-renderContent(tabId, 'Explanation', explanation, true, true);
+                        appState.currentTabs[tabId] = explanation;
+                        renderContent(tabId, 'Explanation', explanation, true, true);
                     } catch(error) { 
                         showToast(`Explanation failed: ${error.message}`, "error");
-const errorMessage = `### Explanation Failed\n\nAn error occurred: ${error.message}`;
+                        const errorMessage = `### Explanation Failed\n\nAn error occurred: ${error.message}`;
                         renderContent(tabId, 'Explanation', errorMessage, true, true);
-} 
-                    finally { setLoadingState(false, 'explain-script-button');
-}
+                    } finally { 
+                        setLoadingState(false, 'explain-script-button');
+                    }
                 }
                 if (targetId === 'generate-pester-button') {
                     setLoadingState(true, 'generate-pester-button');
-const tabId = 'pester-content';
-                    const loadingMessage = "### Generating Pester tests...\n\nPlease wait while a test script is being created.";
-renderContent(tabId, 'Pester Tests', loadingMessage, true, true);
+                    const tabId = 'pester-content';
+                    const loadingMessage = `### Generating Pester tests...\n\nPlease wait while a test script is being created.`;
+                    renderContent(tabId, 'Pester Tests', loadingMessage, true, true);
                     try {
                         const pesterPrompt = pesterMetaPrompt.replace('{{script_content}}', appState.currentScript);
-const pesterResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: pesterPrompt }] }]);
-                        const pesterScript = pesterResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || pesterResponse ||
-"Could not generate a Pester test from the response.";
+                        const pesterResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: pesterPrompt }] }]);
+                        const pesterScript = pesterResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || pesterResponse || "Could not generate a Pester test from the response.";
                         appState.currentTabs[tabId] = pesterScript;
                         renderContent(tabId, 'Pester Tests', pesterScript.trim(), false, true);
-} catch (error) {
+                    } catch (error) {
                         showToast(`Pester test generation failed: ${error.message}`, "error");
-const errorMessage = `### Pester Test Generation Failed\n\nAn error occurred: ${error.message}`;
+                        const errorMessage = `### Pester Test Generation Failed\n\nAn error occurred: ${error.message}`;
                         renderContent(tabId, 'Pester Tests', errorMessage, true, true);
-} finally {
+                    } finally {
                         setLoadingState(false, 'generate-pester-button');
-}
+                    }
                 }
                 if (targetId === 'copy-script-button') {
                     const activeTabId = document.querySelector('.output-content.active')?.id;
-const activeContent = appState.currentTabs[activeTabId];
-if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
-}
+                    const activeContent = appState.currentTabs[activeTabId];
+                    if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
+                }
                 if (targetId === 'download-script-button') {
                      const activeTabId = document.querySelector('.output-content.active')?.id;
-if (activeTabId === 'script-content' || activeTabId === 'pester-content') {
+                     if (activeTabId === 'script-content' || activeTabId === 'pester-content') {
                         const activeContent = appState.currentTabs[activeTabId];
-if(activeContent){
+                        if(activeContent){
                             const blob = new Blob([activeContent], { type: 'text/plain' });
-const url = URL.createObjectURL(blob);
+                            const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             const fileExtension = activeTabId === 'pester-content' ? '.Tests.ps1' : '.ps1';
-a.href = url; a.download = `script${fileExtension}`;
-                            a.click(); URL.revokeObjectURL(url);
-}
+                            a.href = url; 
+                            a.download = `script${fileExtension}`;
+                            a.click(); 
+                            URL.revokeObjectURL(url);
+                        }
                     } else {
                         showToast("Only the Script and Pester Test tabs can be downloaded.", "error");
-}
+                    }
                 }
             });
-saveToCloudButton.addEventListener('click', () => { if (!appState.currentScript) { showToast("No script to save.", "error"); return; } saveScriptModal.classList.add('active'); scriptNameInput.value = ''; scriptNameInput.focus(); });
-cancelSaveScript.addEventListener('click', () => saveScriptModal.classList.remove('active'));
-            saveScriptForm.addEventListener('submit', (e) => { e.preventDefault(); const scriptName = scriptNameInput.value.trim(); saveScriptToFirestore(scriptName, appState.currentScript, targetEnvSelect.value); });
+
+            saveToCloudButton.addEventListener('click', () => { 
+                if (!appState.currentScript) { 
+                    showToast("No script to save.", "error"); 
+                    return; 
+                } 
+                saveScriptModal.classList.add('active'); 
+                scriptNameInput.value = ''; 
+                scriptNameInput.focus(); 
+            });
+
+            cancelSaveScript.addEventListener('click', () => saveScriptModal.classList.remove('active'));
+            saveScriptForm.addEventListener('submit', (e) => { 
+                e.preventDefault(); 
+                const scriptName = scriptNameInput.value.trim(); 
+                saveScriptToFirestore(scriptName, appState.currentScript, targetEnvSelect.value); 
+            });
             
             loadFromCloudButton.addEventListener('click', loadScriptsFromFirestore);
-loadScriptContainer.addEventListener('click', async (e) => {
+            
+            loadScriptContainer.addEventListener('click', async (e) => {
                 const scriptEl = e.target.closest('.bg-gray-700[data-script-id]');
                 if (scriptEl && !e.target.classList.contains('delete-script-btn')) {
                     showScriptVersions(scriptEl.dataset.scriptId, scriptEl.dataset.scriptName);
                 }
                 if (e.target.classList.contains('delete-script-btn')) {
-  
-
-
-
                     e.stopPropagation();
                     const parent = e.target.closest('[data-script-id]');
                     deleteScript(parent.dataset.scriptId, parent.dataset.scriptName);
                 }
                 if (e.target.classList.contains('load-version-btn')) {
-  
                     const versionButton = e.target;
                     const scriptId = versionButton.dataset.scriptId;
                     const versionId = versionButton.dataset.versionId;
                     try {
-        
                         const versionDoc = await window.getDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
-if(versionDoc.exists()){
+                        if(versionDoc.exists()){
                             const versionData = versionDoc.data();
-const scriptDoc = await window.getDoc(window.doc(appState.db, 'scripts', scriptId));
+                            const scriptDoc = await window.getDoc(window.doc(appState.db, 'scripts', scriptId));
                             const scriptData = scriptDoc.data();
                             startNewSession();
                             appState.currentScript = versionData.content;
-appState.currentTabs = { 'script-content': versionData.content };
+                            appState.currentTabs = { 'script-content': versionData.content };
                             targetEnvSelect.value = scriptData.environment;
                             renderContent('script-content', 'Script', appState.currentScript);
                             runBestPracticesAnalysis(appState.currentScript);
-addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
+                            addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
                             loadScriptModal.classList.remove('active');
-}
-                    } catch(error) { showToast(`Failed to load version: ${error.message}`, 'error');
-}
+                        }
+                    } catch(error) { 
+                        showToast(`Failed to load version: ${error.message}`, 'error');
+                    }
                 }
                 if (e.target.classList.contains('delete-version-btn')) {
                     const versionButton = e.target;
-const scriptId = versionButton.dataset.scriptId;
-                    const versionId = versionId.dataset.versionId;
+                    const scriptId = versionButton.dataset.scriptId;
+                    const versionId = versionButton.dataset.versionId;
                     const scriptName = versionButton.closest('#load-script-container').querySelector('h2').textContent.match(/"(.*?)"/)[1];
                     deleteVersion(scriptId, versionId, scriptName);
-}
+                }
             });
 
-            tabsContainer.addEventListener('click', (e) => { if(e.target.classList.contains('tab-btn')) setActiveTab(e.target.dataset.tab); });
-viewPromptsBtn.addEventListener('click', () => {
+            tabsContainer.addEventListener('click', (e) => { 
+                if(e.target.classList.contains('tab-btn')) setActiveTab(e.target.dataset.tab); 
+            });
+
+            viewPromptsBtn.addEventListener('click', () => {
                 document.getElementById('last-generation-prompt').textContent = appState.lastGenerationPrompt || 'No script generated in this session yet.';
                 document.getElementById('base-prompt-content').textContent = baseMetaPrompt;
                 document.getElementById('refinement-prompt-content').textContent = refinementMetaPrompt;
                 document.getElementById('self-correction-prompt-content').textContent = selfCorrectionMetaPrompt;
-                document.getElementById('rules-content').textContent 
-
-
-
-= JSON.stringify(environmentRules, null, 2);
+                document.getElementById('rules-content').textContent = JSON.stringify(environmentRules, null, 2);
                 promptsModal.classList.add('active');
             });
-closePromptsModal.addEventListener('click', () => promptsModal.classList.remove('active'));
+
+            closePromptsModal.addEventListener('click', () => promptsModal.classList.remove('active'));
+            
             promptsModal.addEventListener('click', e => {
                 if (e.target.classList.contains('accordion-toggle')) {
                     const content = e.target.nextElementSibling;
                     if (content.style.maxHeight) {
                         content.style.maxHeight = null;
-    
-
-
-
-
                         e.target.textContent = e.target.textContent.replace('▲', '▼');
                     } else {
                         content.style.maxHeight = content.scrollHeight + "px";
-                       
-
-
-
- e.target.textContent = e.target.textContent.replace('▼', '▲');
+                        e.target.textContent = e.target.textContent.replace('▼', '▲');
                     }
                 }
             });
-promptForm.addEventListener('submit', handleGenerationSubmit);
+
+            promptForm.addEventListener('submit', handleGenerationSubmit);
             
             promptInput.addEventListener('input', () => {
-                promptInput.rows = 2; // Start from base
-                const newRows = Math.ceil((promptInput.scrollHeight - 40) / 24); // Heuristic adjustment
-                promptInput.rows = Math.max(2, Math.min(newRows, 10)); // Min 2, Max 10 rows
+                promptInput.rows = 2;
+                const newRows = Math.ceil((promptInput.scrollHeight - 40) / 24);
+                promptInput.rows = Math.max(2, Math.min(newRows, 10));
             });
-promptInput.addEventListener('keydown', (e) => {
+
+            promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     submitButton.click();
                 }
             });
-// --- Initial UI Setup ---
+
+            // --- Initial UI Setup ---
             document.getElementById('app-version').textContent = `v${appState.version}`;
-});
+        });
     </script>
 </body>
 </html>
