@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PowerShell ScriptSmith AI</title>
     
-    <script src="https://cdn.tailwindcss.com/"></script>
+    <!-- FIX: Added the 'typography' plugin to the Tailwind CSS script -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
       tailwind.config = { 
         theme: {
@@ -374,7 +375,7 @@ Login to save and load scripts from the cloud.</p>
             const appState = {
  
 
-                version: '9.5.0',
+                version: '9.6.0',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -533,6 +534,22 @@ It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
 {{draft_script}}
 \`\`\`
 ---`;
+            const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
+Your task is to analyze the provided PowerShell script for any violations of best practices.
+Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWriteHost, PSUseCmdletBinding, etc.
+**CRITICAL INSTRUCTIONS:**
+1.  **Analyze the Script:** Meticulously review the script line by line.
+2.  **Format Output:** Present your findings in a Markdown table with the following columns: "Line", "Rule Name", and "Suggestion".
+3.  **Be Concise:** Keep suggestions clear and to the point.
+4.  **No Findings:** If the script is clean and has no violations, return a single sentence: "No best practice violations were found."
+5.  **Output Only the Table:** Do not include any other text, introduction, or conclusion outside of the Markdown table or the "no violations" message.
+
+---
+**SCRIPT TO ANALYZE:**
+\`\`\`powershell
+{{script_content}}
+\`\`\`
+---`;
 const environmentRules = {
                 'Active Directory': `
 - **Best Practices:** Scripts MUST use efficient filters (-Filter or -LDAPFilter).
@@ -590,29 +607,23 @@ All other guidance from 'Windows Desktop' applies.
 Any server-modifying cmdlets (Install-WindowsFeature, Restart-Computer) MUST support -WhatIf and -Confirm.`
             };
 // --- UI & Core Functions ---
-            const setLoadingState = (isLoading) => {
-                const buttons = [submitButton, document.getElementById('explain-script-button')];
-buttons.forEach(button => {
+            const setLoadingState = (isLoading, buttonId = null) => {
+                const buttons = buttonId ? [document.getElementById(buttonId)] : [submitButton, document.getElementById('explain-script-button')];
+                buttons.forEach(button => {
                     if (!button) return;
                     const icon = button.querySelector('svg:not(.animate-spin)');
                     const spinner = button.querySelector('svg.animate-spin');
                     if (isLoading) {
-        
-
                         if(icon) icon.classList.add('hidden');
                         if(spinner) spinner.classList.remove('hidden');
                         button.disabled = true;
                     } else {
-  
-        
                         if(icon) icon.classList.remove('hidden');
                         if(spinner) spinner.classList.add('hidden');
                         button.disabled = false;
-                
-    }
-              
+                    }
                 });
-};
+            };
             
             const showToast = (message, type = 'success') => {
                 const toastContainer = document.getElementById('toast-container');
@@ -980,6 +991,25 @@ if (role === 'user') {
                      appState.conversationHistory.push({ role, parts: [{ text: message }] });
 }
             };
+
+            async function runBestPracticesAnalysis(scriptContent) {
+                const tabId = 'analysis-content';
+                const loadingMessage = "### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.";
+                renderContent(tabId, 'Analysis', loadingMessage, true);
+
+                try {
+                    const analysisPrompt = bestPracticesPrompt.replace('{{script_content}}', scriptContent);
+                    const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
+                    appState.currentTabs[tabId] = analysisResult;
+                    renderContent(tabId, 'Analysis', analysisResult, true);
+                } catch (error) {
+                    console.error("Error during script analysis:", error);
+                    const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
+                    renderContent(tabId, 'Analysis', errorMessage, true);
+                    showToast(`Analysis failed: ${error.message}`, "error");
+                }
+            }
+
 const handleGenerationSubmit = async (e) => {
                 e.preventDefault();
 const userPrompt = promptInput.value.trim();
@@ -987,14 +1017,14 @@ const userPrompt = promptInput.value.trim();
                 
                 addMessageToHistory('user', userPrompt);
                 promptInput.value = '';
-                setLoadingState(true);
+                setLoadingState(true, 'submit-button');
 try {
                     const targetEnvironment = targetEnvSelect.value;
 const rules = environmentRules[targetEnvironment];
                     let generationPrompt;
 
                     if (!appState.currentScript) {
-                        // New script generation using template substitution
+                        // New script generation
                         let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
 finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
                         finalPrompt = finalPrompt.replace("[User's specific request goes here]", userPrompt);
@@ -1007,7 +1037,6 @@ finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
                     // --- Step 1: Draft Generation ---
                     addMessageToHistory('model', 'Generating draft script...', true);
 appState.lastGenerationPrompt = generationPrompt;
-                    // Send only the self-contained prompt, not the whole history, to prevent payload size issues.
 const draftApiHistory = [{ role: 'user', parts: [{ text: generationPrompt }] }];
                     const draftScriptResponse = await callGeminiAPI(draftApiHistory);
 const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
@@ -1018,7 +1047,11 @@ let correctionPrompt = selfCorrectionMetaPrompt.replace('{{user_request}}', user
                     correctionPrompt = correctionPrompt.replace('{{draft_script}}', draftScript);
                     
                     const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
-const finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+                    let finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+                    
+                    if (finalCode) {
+                        finalCode = finalCode.trim();
+                    }
 
                     // --- Finalize ---
                     appState.currentScript = finalCode;
@@ -1030,6 +1063,10 @@ if(transientMsg) transientMsg.remove();
                     
                     addMessageToHistory('model', 'Script generated and verified successfully.');
                     renderContent('script-content', 'Script', finalCode);
+                    
+                    // --- Run Best Practices Analyzer in the background ---
+                    runBestPracticesAnalysis(finalCode);
+
 } catch (error) {
                     console.error("Error during script generation:", error);
 const transientMsg = document.getElementById('transient-message');
@@ -1044,7 +1081,7 @@ Please verify your key and project settings.`;
                     addMessageToHistory('model', friendlyMessage);
 showToast(error.message, "error");
                 } finally {
-                    setLoadingState(false);
+                    setLoadingState(false, 'submit-button');
 }
             };
 const startNewSession = () => {
@@ -1069,36 +1106,45 @@ authButton.addEventListener('click', signInWithGoogle);
 outputActions.addEventListener('click', async (e) => {
                 const targetId = e.target.id;
                 if(targetId === 'explain-script-button'){
-                    setLoadingState(true);
-                    try {
-                  
+                    setLoadingState(true, 'explain-script-button');
+                    const tabId = 'explanation-content';
+                    const loadingMessage = "### Generating explanation...\n\nPlease wait while the script is being explained.";
+                    renderContent(tabId, 'Explanation', loadingMessage, true);
 
-                        addMessageToHistory('model', 'Generating explanation...', true);
+                    try {
                         const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe its purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
                     
-    const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
+                        const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
   
-                        appState.currentTabs['explanation-content'] = explanation;
-                        renderContent('explanation-content', 'Explanation', explanation, true);
-                        const transientMsg = document.getElementById('transient-message');
-if(transientMsg) transientMsg.remove();
-                    } catch(error) { showToast(`Explanation failed: ${error.message}`, "error"); } 
-                    finally { setLoadingState(false);
+                        appState.currentTabs[tabId] = explanation;
+                        renderContent(tabId, 'Explanation', explanation, true);
+                    } catch(error) { 
+                        showToast(`Explanation failed: ${error.message}`, "error"); 
+                        const errorMessage = `### Explanation Failed\n\nAn error occurred: ${error.message}`;
+                        renderContent(tabId, 'Explanation', errorMessage, true);
+                    } 
+                    finally { setLoadingState(false, 'explain-script-button');
 }
                 }
                 if (targetId === 'copy-script-button') {
-                    const activeContent = appState.currentTabs[document.querySelector('.output-content.active')?.id];
+                    const activeTabId = document.querySelector('.output-content.active')?.id;
+                    const activeContent = appState.currentTabs[activeTabId];
 if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
                 }
                 if (targetId === 'download-script-button') {
-                    const activeContent = appState.currentTabs[document.querySelector('.output-content.active')?.id];
-if(activeContent){
-                        const blob = new Blob([activeContent], { type: 'text/plain' });
+                     const activeTabId = document.querySelector('.output-content.active')?.id;
+                    if (activeTabId === 'script-content') {
+                        const activeContent = appState.currentTabs[activeTabId];
+                        if(activeContent){
+                            const blob = new Blob([activeContent], { type: 'text/plain' });
 const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url; a.download = 'script.ps1';
-                        a.click(); URL.revokeObjectURL(url);
-}
+                            const a = document.createElement('a');
+                            a.href = url; a.download = 'script.ps1';
+                            a.click(); URL.revokeObjectURL(url);
+                        }
+                    } else {
+                        showToast("Only the Script tab can be downloaded.", "error");
+                    }
                 }
             });
 saveToCloudButton.addEventListener('click', () => { if (!appState.currentScript) { showToast("No script to save.", "error"); return; } saveScriptModal.classList.add('active'); scriptNameInput.value = ''; scriptNameInput.focus(); });
@@ -1137,6 +1183,7 @@ const scriptDoc = await window.getDoc(window.doc(appState.db, 'scripts', scriptI
 appState.currentTabs = { 'script-content': versionData.content };
                             targetEnvSelect.value = scriptData.environment;
                             renderContent('script-content', 'Script', appState.currentScript);
+                            runBestPracticesAnalysis(appState.currentScript);
 addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
                             loadScriptModal.classList.remove('active');
 }
