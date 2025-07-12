@@ -5,34 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PowerShell ScriptSmith AI</title>
     
-    <!-- FIX: Added the 'typography' plugin to the Tailwind CSS script -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
       tailwind.config = { 
         theme: {
             extend: {
                 keyframes: {
-                   
+    
+               
+
 
                     spin: { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
                     fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
-                    fadeOut: { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+                    fadeOut: 
+{ '0%': { opacity: 1 }, '100%': { opacity: 0 } },
     
+
                 slideInUp: { '0%': { transform: 'translateY(100%)' }, '100%': { transform: 'translateY(0)' } },
                     flash: { 
-                        '0%': { backgroundColor: 'rgba(59, 130, 246, 0.4)', boxShadow: 'inset 0 0 15px rgba(59, 130, 246, 0.5)' }, 
+                        '0%': { backgroundColor: 'rgba(59, 130, 246, 0.4)', boxShadow: 'inset 0 0 
+15px rgba(59, 130, 246, 0.5)' }, 
          
+
                '100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0px transparent' } 
                     }
                 },
                 animation: {
-                    spin: 
+      
+              spin: 
+
 'spin 1s linear infinite',
                     'fade-in': 'fadeIn 0.3s ease-out forwards',
           
                     'fade-out': 'fadeOut 0.3s ease-in forwards',
-                    'slide-in-up': 'slideInUp 0.3s ease-out forwards',
+                    'slide-in-up': 'slideInUp 0.3s ease-out 
+forwards',
                
+
      'flash-update': 'flash 0.8s ease-out'
                 },
             }
@@ -42,13 +51,16 @@
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
   
   
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+   
+ <link rel="preconnect" href="https://fonts.googleapis.com">
   
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -128,9 +140,31 @@ flex-grow: 1;
         .code-display pre, .code-display code {
              font-family: 'Fira Code', monospace;
 }
+        
+        /* For diff view */
+        .diff-view {
+            padding: 1rem;
+font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            background-color: #1f2937;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            white-space: pre;
+}
+        .diff-view code span {
+            white-space: pre-wrap;
+}
+        .diff-added {
+            background-color: rgba(16, 185, 129, 0.15);
+}
+        .diff-removed {
+            background-color: rgba(239, 68, 68, 0.15);
+}
 
         .output-content.flash-update > .code-display,
-        .output-content.flash-update > .prose {
+        .output-content.flash-update > .prose,
+        .output-content.flash-update > .diff-view {
              animation: flash-update 0.8s ease-out;
 }
         
@@ -150,16 +184,22 @@ flex-direction: column-reverse;
             <form id="config-form">
           
   
+
+
               <div>
                     <label for="gemini-key-input" class="block text-sm font-medium text-gray-300">Gemini API Key</label>
                     <input type="password" id="gemini-key-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1" placeholder="Your Google AI API Key">
                 </div>
       
+
+
         
                 <div class="mt-4">
                     <label for="firebase-config-input" class="block text-sm font-medium text-gray-300">Firebase Config</label>
                     <textarea id="firebase-config-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1 code-font" rows="6" placeholder="Enter your Firebase project configuration JSON here."></textarea>
          
+
+
        </div>
                
                 <button type="submit" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200">Save and Initialize</button>
@@ -169,6 +209,8 @@ flex-direction: column-reverse;
     
     <div id="save-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
        
+
+
  <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
             <h2 class="text-2xl font-bold text-white mb-4">Save Script to Cloud</h2>
            
@@ -176,12 +218,16 @@ flex-direction: column-reverse;
                 <div>
                     <label for="script-name-input" class="block text-sm font-medium text-gray-300">Script Name</label>
         
+
+
             <input type="text" id="script-name-input" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1" placeholder="e.g., 'Get All AD Users'" required>
                 </div>
   
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-save-script" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
    
+
+
                  <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Save</button>
                 </div>
          
@@ -191,6 +237,8 @@ flex-direction: column-reverse;
     
     <div id="load-script-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-50">
         <div 
+
+
 id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[80vh] flex flex-col">
             </div>
     </div>
@@ -200,6 +248,8 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold text-white">Prompts Viewer</h2>
          
+
+
        <button id="close-prompts-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
             <div class="overflow-y-auto space-y-4 pr-2 text-sm">
@@ -207,36 +257,50 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
                 <div>
                     <h3 class="text-lg font-semibold text-blue-400 mb-2">Last Used Generation Prompt</h3>
           
+
+
           <pre id="last-generation-prompt" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                 </div>
                 <div class="border-t border-gray-700 pt-4">
    
                     <button class="accordion-toggle text-lg font-semibold text-gray-300 w-full text-left">View Prompt Templates & Rules ▼</button>
               
+
+
        <div class="accordion-content mt-2 space-y-4">
                         <div>
                        
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Base Meta-Prompt</h3>
           
+
+
                   <pre id="base-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                         <div>
        
                     
+
+
         <h3 class="text-lg font-semibold text-blue-400 mb-2">Refinement Meta-Prompt</h3>
                             <pre id="refinement-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                         </div>
                
              
+
+
            <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Self-Correction Meta-Prompt</h3>
                             <pre id="self-correction-prompt-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
                      
+
+
   
                         </div>
                          <div>
                             <h3 class="text-lg font-semibold text-blue-400 mb-2">Environment Rules</h3>
                 
+
+
             <pre id="rules-content" class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap code-font text-gray-300"></pre>
       
                         </div>
@@ -244,6 +308,8 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
                 </div>
             </div>
    
+
+
      </div>
     </div>
 
@@ -253,6 +319,8 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
             <p id="confirmation-message" class="text-gray-400 mb-6">This action cannot be undone.</p>
             <div class="flex justify-end space-x-3">
           
+
+
       <button id="confirmation-cancel-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
                 <button id="confirmation-confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Confirm</button>
             </div>
@@ -264,26 +332,36 @@ id="load-script-container" class="bg-gray-800 rounded-lg shadow-xl p-8 w-full ma
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between shadow-lg z-20">
   
+
+
           <div class="flex items-center space-x-3">
           
                 <svg class="w-8 h-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
                 <h1 class="text-xl font-bold text-white">PowerShell 
+
+
 ScriptSmith AI <span id="app-version" class="text-xs font-mono text-blue-400/80 ml-2"></span></h1>
             </div>
              <div class="flex items-center space-x-4">
                 <button id="new-session-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm">New Session</button>
                 <button id="load-from-cloud-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm" disabled>Load from Cloud</button>
            
+
+
      <button id="view-prompts-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm">View Prompts</button>
                 <div id="auth-container" class="relative">
                     <button id="auth-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Login with Google</button>
                     <div id="user-profile-area" class="hidden items-center space-x-3 cursor-pointer">
             
+
+
             <img id="user-photo" class="w-10 h-10 rounded-full" src="" alt="User Photo">
               
                         <span id="user-name" class="font-semibold"></span>
                     </div>
                     <div 
+
+
 id="profile-dropdown-menu" class="profile-dropdown absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg z-30">
                         <button id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600">Logout</button>
      
@@ -291,6 +369,8 @@ id="profile-dropdown-menu" class="profile-dropdown absolute right-0 mt-2 w-48 bg
                 </div>
             </div>
      
+
+
    </header>
 
         <main class="flex-grow flex flex-col md:flex-row overflow-hidden">
@@ -298,45 +378,72 @@ id="profile-dropdown-menu" class="profile-dropdown absolute right-0 mt-2 w-48 bg
                 <div class="p-4 border-b border-gray-700 space-y-4">
                     <div>
                         <label 
+
+
 for="target-env" class="text-lg font-semibold">Target Environment</label>
                         <select id="target-env" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
               
                             <option>Active Directory</option>
                    
+
+
          <option>Azure (Az Module)</option>
                             <option>MS Graph (SDK)</option>
                          
                             <option>MS365 / Entra ID</option>
    
+
+
                          <option>MS365 / Exchange Online</option>
                             <option>MS365 / SharePoint PnP</option>
                             <option>MS365 / Teams</option>
   
          
+
+
                    <option>PowerCLI (VMware)</option>
                             <option>Windows Desktop (10/11)</option>
                             <option>Windows Server</option>
               
        
+
+
                  </select>
+                    </div>
+                    <div>
+                        <label for="output-type-select" class="text-lg font-semibold">Output Type</label>
+               
+         <select id="output-type-select" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>Full Script</option>
+                            <option>Command Snippet</option>
+                      
+  </select>
                     </div>
                 </div>
                 <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4"></div>
                 <div id="generate-prompt-area" class="p-4 border-t border-gray-700 bg-gray-900">
      
+
        
-                    <form id="prompt-form" class="flex items-center space-x-2">
+        
+            <form id="prompt-form" class="flex items-center space-x-2">
                         <textarea id="prompt-input" placeholder="Enter your script request or refinement..." class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2"></textarea>
                         <button type="submit" id="submit-button" 
+
 class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg flex-shrink-0 self-end">
-            
+        
+    
                             <svg id="submit-icon" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.105 2.289a.75.75 0 0 0-.826.95l1.414 4.925A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086L2.279 16.76a.75.75 0 0 0 .95.826l16-5.333a.75.75 0 0 0 0-1.418l-16-5.333Z" /></svg>
             
-                <svg id="loading-spinner" class="w-6 h-6 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+
+               
+ <svg id="loading-spinner" class="w-6 h-6 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         </button>
                     </form>
  
-               </div>
+
+               
+</div>
             </div>
 
     
@@ -344,25 +451,36 @@ class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg flex-sh
                  <div class="border-b border-gray-700 sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
                    <nav id="tabs" class="flex space-x-1 p-2 px-4"></nav>
  
-                  <div id="output-actions" class="p-2 flex justify-end space-x-2 border-t border-gray-700 hidden">
+
+               
+   <div id="output-actions" class="p-2 flex justify-end space-x-2 border-t border-gray-700 hidden">
          
                         <button id="copy-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-md text-sm">Copy</button>
                         <button id="download-script-button" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 
+
 rounded-md text-sm">Download</button>
-                        <button id="save-to-cloud-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md text-sm" disabled>Save to Cloud</button>
+              
+          <button id="save-to-cloud-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-md text-sm" disabled>Save to Cloud</button>
        
                         <button id="explain-script-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Explain</button>
+                        <button id="generate-pester-button" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-1 px-3 rounded-md text-sm">Generate Tests</button>
                    </div>
     
+
             </div>
-                <div id="output-container" class="flex-grow relative p-4">
+   
+             <div id="output-container" class="flex-grow relative p-4">
                    
                     <div id="initial-message" class="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
                     
-    <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
+
+    <svg class="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9.75 6.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6.75a1.5 1.5 0 0 0-1.5-1.5H3.75a1.5 1.5 0 0 0-1.5 1.5v10.5a1.5 1.5 0 0 0 1.5 1.5Z" /></svg>
                         <h3 class="text-xl font-semibold text-gray-400">Your generated script will appear here</h3>
                        
- <p class="mt-2 max-w-md">Enter a request to generate a new script, or refine an existing one.
+
+ <p class="mt-2 max-w-md">Enter a request to generate a new script, or refine an existing 
+one.
 Login to save and load scripts from the cloud.</p>
                     </div>
                 </div>
@@ -372,15 +490,19 @@ Login to save and load scripts from the cloud.</p>
 
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
-            const appState = {
+            const appState = 
+{
  
 
-                version: '9.6.0',
+
+                version: '9.9.0',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
                 currentTabs: {},
-               
+              
+ 
+
  
                 conversationHistory: [],
                 lastGenerationPrompt: '',
@@ -389,7 +511,9 @@ Login to save and load scripts from the cloud.</p>
                 user: null,
             };
 
-  
+ 
+ 
+
           // --- Element References ---
    
             const configModal = document.getElementById('config-modal');
@@ -413,19 +537,20 @@ const saveScriptForm = document.getElementById('save-script-form');
             const loadScriptContainer = document.getElementById('load-script-container');
 const promptInput = document.getElementById('prompt-input');
             const targetEnvSelect = document.getElementById('target-env');
+            const outputTypeSelect = document.getElementById('output-type-select');
             const chatHistoryContainer = document.getElementById('chat-history');
             const outputActions = document.getElementById('output-actions');
-            const outputContainer = document.getElementById('output-container');
+const outputContainer = document.getElementById('output-container');
 const initialMessage = document.getElementById('initial-message');
             const promptForm = document.getElementById('prompt-form');
             const submitButton = document.getElementById('submit-button');
             const submitIcon = document.getElementById('submit-icon');
-            const loadingSpinner = document.getElementById('loading-spinner');
+const loadingSpinner = document.getElementById('loading-spinner');
 const viewPromptsBtn = document.getElementById('view-prompts-button');
             const promptsModal = document.getElementById('view-prompts-modal');
             const closePromptsModal = document.getElementById('close-prompts-modal');
             const tabsContainer = document.getElementById('tabs');
-            const confirmationModal = document.getElementById('confirmation-modal');
+const confirmationModal = document.getElementById('confirmation-modal');
 // --- Prompts & Rules ---
             const baseMetaPrompt = `You are a senior PowerShell automation engineer specializing in the specified [Target Environment].
 Your task is to create a robust, secure, and efficient PowerShell script based on the user's request.
@@ -534,7 +659,24 @@ It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
 {{draft_script}}
 \`\`\`
 ---`;
-            const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
+const snippetMetaPrompt = `You are a PowerShell expert who provides quick, concise command-line solutions.
+**TASK:** Based on the user's request for the specified [Target Environment], provide ONLY the necessary PowerShell command(s) to accomplish the task.
+**CRITICAL RULES:**
+1.  **Be Direct:** Generate only the command(s). Do not wrap them in a full script structure.
+2.  **No Boilerplate:** You MUST NOT include comment-based help, [CmdletBinding()], [Parameter()] attributes, or full try/catch blocks.
+3.  **Placeholders:** For any values the user must provide, use clear placeholders in angle brackets (e.g., \`<Your-VM-Name>\`, \`<Path\\To\\File.csv>\`).
+4.  **Focus:** The goal is a command that can be copied and pasted directly into a PowerShell terminal.
+5.  **Output Format:** The final output MUST be only the PowerShell command(s) inside a single \`\`\`powershell code block.
+Do not add any introduction, explanation, or conversational text.
+
+---
+**TARGET ENVIRONMENT:**
+[Target Environment]
+---
+**USER REQUEST:**
+[User's specific request goes here]
+---`;
+const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
 Your task is to analyze the provided PowerShell script for any violations of best practices.
 Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWriteHost, PSUseCmdletBinding, etc.
 **CRITICAL INSTRUCTIONS:**
@@ -543,7 +685,28 @@ Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWri
 3.  **Be Concise:** Keep suggestions clear and to the point.
 4.  **No Findings:** If the script is clean and has no violations, return a single sentence: "No best practice violations were found."
 5.  **Output Only the Table:** Do not include any other text, introduction, or conclusion outside of the Markdown table or the "no violations" message.
+---
+**SCRIPT TO ANALYZE:**
+\`\`\`powershell
+{{script_content}}
+\`\`\`
+---`;
 
+const pesterMetaPrompt = `You are an AI assistant that acts as a PowerShell Test expert, specializing in the Pester framework.
+Your task is to analyze the provided PowerShell script and generate a basic, effective Pester test script.
+**CRITICAL INSTRUCTIONS:**
+1.  **Analyze the Script:** Meticulously review the script, paying close attention to its parameters (especially mandatory ones), its main commands, and its overall purpose.
+2.  **Pester Structure:**
+    * Create a single \`Describe\` block named after the script's general purpose.
+    * Use \`Context\` blocks to separate different types of tests (e.g., 'Parameter Validation', 'Basic Execution').
+    * Use \`It\` blocks for individual assertions. The names should be clear and descriptive (e.g., 'Should run without throwing an error').
+3.  **Test Content:**
+    * **Execution Test:** Include a basic test to ensure the script can be invoked without throwing a terminating error.
+    * **Parameter Test:** Use \`Get-Command -Syntax\` to check for the existence of mandatory parameters if any are defined in a \`[Parameter(Mandatory=$true)]\` block.
+    * **Mocking:** For critical external commands (e.g., \`Get-ADUser\`, \`Get-AzVM\`, \`Invoke-RestMethod\`), create a simple \`Mock\` to verify that the command is called at least once. This confirms the script's logic path. Do not mock every command, only the most critical ones that define the script's purpose.
+4.  **Output Format:**
+    * The final output MUST be only the complete Pester test script inside a single \`\`\`powershell code block.
+    * Do not include any other text, introduction, or conclusion.
 ---
 **SCRIPT TO ANALYZE:**
 \`\`\`powershell
@@ -598,7 +761,7 @@ It MUST include a Disconnect-VIServer call in a finally block to ensure cleanup.
 - **Prerequisites:** Include #Requires -Module VMware.PowerCLI.`,
                 'Windows Desktop (10/11)': `
 - **Best Practices:** Prefer CIM (Get-CimInstance) over legacy WMI.
-For software, query both HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall and HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall for completeness.
+For software, query both HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall and HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall for completeness.
 - **Privileges:** If administrative rights are needed, the script MUST include a #Requires -RunAsAdministrator statement.`,
                 'Windows Server': `
 - **Best Practices:** Use Get-WindowsFeature for roles and Get-WinEvent with a -FilterHashtable for logs.
@@ -608,21 +771,28 @@ Any server-modifying cmdlets (Install-WindowsFeature, Restart-Computer) MUST sup
             };
 // --- UI & Core Functions ---
             const setLoadingState = (isLoading, buttonId = null) => {
-                const buttons = buttonId ? [document.getElementById(buttonId)] : [submitButton, document.getElementById('explain-script-button')];
+                const buttons = buttonId ?
+[document.getElementById(buttonId)] : [submitButton, document.getElementById('explain-script-button'), document.getElementById('generate-pester-button')];
                 buttons.forEach(button => {
                     if (!button) return;
                     const icon = button.querySelector('svg:not(.animate-spin)');
                     const spinner = button.querySelector('svg.animate-spin');
                     if (isLoading) {
-                        if(icon) icon.classList.add('hidden');
+    
+
+                    if(icon) icon.classList.add('hidden');
                         if(spinner) spinner.classList.remove('hidden');
                         button.disabled = true;
                     } else {
-                        if(icon) icon.classList.remove('hidden');
+      
+
+                  if(icon) icon.classList.remove('hidden');
                         if(spinner) spinner.classList.add('hidden');
                         button.disabled = false;
                     }
-                });
+          
+
+      });
             };
             
             const showToast = (message, type = 'success') => {
@@ -647,18 +817,24 @@ setTimeout(() => {
 
          
 
+
+
                     const confirmBtn = document.getElementById('confirmation-confirm-button');
                     const cancelBtn = document.getElementById('confirmation-cancel-button');
 
                     const confirmHandler = () => {
                         confirmationModal.classList.remove('active');
      
+
+
          
                         cleanup();
                         resolve(true);
                     };
 
                     const cancelHandler = 
+
+
 () => {
                      
                         confirmationModal.classList.remove('active');
@@ -742,16 +918,22 @@ showToast("Failed to initialize Firebase. Check your configuration.", "error"); 
                 window.onAuthStateChanged(appState.auth, user => {
                     if (user) {
                         appState.user 
+
+
 = { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL };
                         userProfileArea.classList.remove('hidden'); userProfileArea.classList.add('flex');
                         authButton.classList.add('hidden');
                         userPhoto.src = user.photoURL; userName.textContent = user.displayName;
               
 
+
+
                         saveToCloudButton.disabled = false; loadFromCloudButton.disabled = false;
                     } else {
                         appState.user = null;
                        
+
+
  userProfileArea.classList.add('hidden'); userProfileArea.classList.remove('flex');
             
                         authButton.classList.remove('hidden');
@@ -823,22 +1005,32 @@ loadScriptContainer.innerHTML = `
                                 <div class="flex justify-between items-center mb-4">
                                     <h2 class="text-2xl font-bold text-white">Database Setup Required</h2>
                      
+
+
                <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                                 </div>
                                 <div class="text-center p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg">
            
+
+
                          <h3 class="font-bold text-lg text-yellow-300">Action Required: Create Database Index</h3>
                                     <p class="mt-2 text-yellow-200">
                               
+
+
           Your Firestore database needs a special index to sort your saved scripts by date.
 This is a one-time setup step.
                                     </p>
                                     <a href="${indexUrl}" target="_blank" rel="noopener noreferrer"
                                     class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
           
+
+
                               Click Here to Create Index
                                     </a>
                               
+
+
       <p class="mt-2 text-xs text-gray-400">
                                         After creating the index, please close this window and try loading your scripts again.
 It may take a few minutes for the index to become active.
@@ -920,7 +1112,7 @@ button.dataset.tab = tabId; button.textContent = title;
                 tabsContainer.appendChild(button);
             };
 
-            const renderContent = (tabId, title, content, isHtml = false) => {
+            const renderContent = (tabId, title, content, isHtml = false, setActive = true) => {
                 initialMessage.classList.add('hidden');
 outputActions.classList.remove('hidden');
                 
@@ -949,7 +1141,7 @@ codeDisplay.className = 'code-display';
                     const lineNumbers = document.createElement('div');
                     lineNumbers.className = 'line-numbers';
                     
-                    const lines = (content.match(/\n/g) || '').length + 1;
+                    const lines = content.split('\n').length;
 lineNumbers.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
                     
                     const pre = document.createElement('pre');
@@ -965,10 +1157,52 @@ code.className = 'language-powershell';
                     hljs.highlightElement(code);
 }
                 
-                setActiveTab(tabId);
+                if (setActive) {
+                    setActiveTab(tabId);
+}
 };
+            
+            const renderDiff = (tabId, title, diff, setActive = true) => {
+                initialMessage.classList.add('hidden');
+outputActions.classList.remove('hidden');
 
-            const addMessageToHistory = (role, message, isTransient = false) => {
+                if (!document.querySelector(`.tab-btn[data-tab="${tabId}"]`)) {
+                    createTab(tabId, title);
+}
+
+                let contentWrapper = document.getElementById(tabId);
+if (contentWrapper) {
+                    contentWrapper.innerHTML = '';
+} else {
+                    contentWrapper = document.createElement('div');
+contentWrapper.id = tabId;
+                    contentWrapper.className = 'output-content';
+                    outputContainer.appendChild(contentWrapper);
+                }
+                
+                const pre = document.createElement('pre');
+pre.className = 'diff-view';
+                const code = document.createElement('code');
+
+                diff.forEach(part => {
+                    const span = document.createElement('span');
+                    span.className = part.added ? 'diff-added' : part.removed ? 'diff-removed' : '';
+                    span.textContent = part.value;
+                
+    code.appendChild(span);
+                });
+pre.appendChild(code);
+                contentWrapper.appendChild(pre);
+
+                contentWrapper.classList.add('flash-update');
+                contentWrapper.addEventListener('animationend', () => {
+                    contentWrapper.classList.remove('flash-update');
+                }, { once: true });
+if (setActive) {
+                    setActiveTab(tabId);
+}
+            };
+const addMessageToHistory = (role, message, isTransient = false) => {
                 const msgDiv = document.createElement('div');
 const cleanMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 msgDiv.className = role === 'user' ?
@@ -991,67 +1225,80 @@ if (role === 'user') {
                      appState.conversationHistory.push({ role, parts: [{ text: message }] });
 }
             };
-
-            async function runBestPracticesAnalysis(scriptContent) {
+async function runBestPracticesAnalysis(scriptContent) {
                 const tabId = 'analysis-content';
-                const loadingMessage = "### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.";
-                renderContent(tabId, 'Analysis', loadingMessage, true);
-
-                try {
+const loadingMessage = "### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.";
+renderContent(tabId, 'Analysis', loadingMessage, true, false);
+try {
                     const analysisPrompt = bestPracticesPrompt.replace('{{script_content}}', scriptContent);
-                    const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
+const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
                     appState.currentTabs[tabId] = analysisResult;
-                    renderContent(tabId, 'Analysis', analysisResult, true);
-                } catch (error) {
+renderContent(tabId, 'Analysis', analysisResult, true, false);
+} catch (error) {
                     console.error("Error during script analysis:", error);
-                    const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
-                    renderContent(tabId, 'Analysis', errorMessage, true);
+const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
+                    renderContent(tabId, 'Analysis', errorMessage, true, false);
                     showToast(`Analysis failed: ${error.message}`, "error");
-                }
+}
             }
 
-const handleGenerationSubmit = async (e) => {
+            const handleGenerationSubmit = async (e) => {
                 e.preventDefault();
 const userPrompt = promptInput.value.trim();
                 if (!userPrompt) return;
                 
-                addMessageToHistory('user', userPrompt);
+                const oldScript = appState.currentScript;
+                const isRefinement = !!oldScript;
+                let finalCode = '';
+addMessageToHistory('user', userPrompt);
                 promptInput.value = '';
+                promptInput.style.height = 'auto'; // Reset height after submit
+                promptInput.rows = 2; // Reset rows
                 setLoadingState(true, 'submit-button');
 try {
                     const targetEnvironment = targetEnvSelect.value;
 const rules = environmentRules[targetEnvironment];
-                    let generationPrompt;
+                    const outputType = outputTypeSelect.value;
 
-                    if (!appState.currentScript) {
-                        // New script generation
-                        let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
+                    if (isRefinement) {
+                        // Refinement always uses the full script refinement process
+                        addMessageToHistory('model', 'Refining script...', true);
+const generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
+                        appState.lastGenerationPrompt = generationPrompt;
+const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: generationPrompt }] }]);
+                        finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+} else if (outputType === 'Command Snippet') {
+                        // New snippet generation
+                        addMessageToHistory('model', 'Generating command snippet...', true);
+let snippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
+                        snippetPrompt = snippetPrompt.replace("[User's specific request goes here]", userPrompt);
+                        appState.lastGenerationPrompt = snippetPrompt;
+const snippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: snippetPrompt }] }]);
+                        finalCode = snippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || snippetResponse;
+} else {
+                        // New full script generation
+                        addMessageToHistory('model', 'Generating draft script...', true);
+let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
 finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
                         finalPrompt = finalPrompt.replace("[User's specific request goes here]", userPrompt);
-                        generationPrompt = finalPrompt;
-} else {
-                        // Refinement request
-                        generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
-}
-
-                    // --- Step 1: Draft Generation ---
-                    addMessageToHistory('model', 'Generating draft script...', true);
-appState.lastGenerationPrompt = generationPrompt;
-const draftApiHistory = [{ role: 'user', parts: [{ text: generationPrompt }] }];
-                    const draftScriptResponse = await callGeminiAPI(draftApiHistory);
+appState.lastGenerationPrompt = finalPrompt;
+                        
+                        // --- Step 1: Draft Generation ---
+                        const draftApiHistory = [{ role: 'user', parts: [{ text: finalPrompt }] }];
+const draftScriptResponse = await callGeminiAPI(draftApiHistory);
 const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
-
-                    // --- Step 2: Self-Correction ---
-                    addMessageToHistory('model', 'Performing quality and security review...', true);
+// --- Step 2: Self-Correction ---
+                        addMessageToHistory('model', 'Performing quality and security review...', true);
 let correctionPrompt = selfCorrectionMetaPrompt.replace('{{user_request}}', userPrompt);
-                    correctionPrompt = correctionPrompt.replace('{{draft_script}}', draftScript);
-                    
-                    const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
-                    let finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+                        correctionPrompt = correctionPrompt.replace('{{draft_script}}', draftScript);
+                        
+                        const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
+                    }
                     
                     if (finalCode) {
                         finalCode = finalCode.trim();
-                    }
+}
 
                     // --- Finalize ---
                     appState.currentScript = finalCode;
@@ -1061,12 +1308,15 @@ appState.currentTabs = { 'script-content': finalCode };
                     const transientMsg = document.getElementById('transient-message');
 if(transientMsg) transientMsg.remove();
                     
-                    addMessageToHistory('model', 'Script generated and verified successfully.');
-                    renderContent('script-content', 'Script', finalCode);
+                    addMessageToHistory('model', 'Script generated successfully.');
+                    renderContent('script-content', 'Script', finalCode, false, true);
+if (isRefinement && oldScript !== finalCode) {
+                        const diff = Diff.diffLines(oldScript, finalCode);
+renderDiff('changes-content', 'Changes', diff, false);
+                    }
                     
-                    // --- Run Best Practices Analyzer in the background ---
+// --- Run Best Practices Analyzer in the background ---
                     runBestPracticesAnalysis(finalCode);
-
 } catch (error) {
                     console.error("Error during script generation:", error);
 const transientMsg = document.getElementById('transient-message');
@@ -1105,46 +1355,74 @@ authButton.addEventListener('click', signInWithGoogle);
             newSessionButton.addEventListener('click', startNewSession);
 outputActions.addEventListener('click', async (e) => {
                 const targetId = e.target.id;
+                if (!appState.currentScript) {
+                     showToast("There is no script to perform this action on.", "error");
+                     return;
+                }
                 if(targetId === 'explain-script-button'){
                     setLoadingState(true, 'explain-script-button');
                     const tabId = 'explanation-content';
-                    const loadingMessage = "### Generating explanation...\n\nPlease wait while the script is being explained.";
-                    renderContent(tabId, 'Explanation', loadingMessage, true);
+               
+
+     const loadingMessage = "### Generating explanation...\n\nPlease wait while the script is being explained.";
+                    renderContent(tabId, 'Explanation', loadingMessage, true, true);
 
                     try {
-                        const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe its purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
+                        const explainPrompt = `Explain the following PowerShell script in a clear, concise way. Describe 
+its 
+purpose, how it works, and any important cmdlets it uses. Format the output as Markdown.\n\n\`\`\`powershell\n${appState.currentScript}\n\`\`\``;
                     
                         const explanation = await callGeminiAPI([{ role: 'user', parts: [{ text: explainPrompt }] }]);
   
                         appState.currentTabs[tabId] = explanation;
-                        renderContent(tabId, 'Explanation', explanation, true);
+renderContent(tabId, 'Explanation', explanation, true, true);
                     } catch(error) { 
-                        showToast(`Explanation failed: ${error.message}`, "error"); 
-                        const errorMessage = `### Explanation Failed\n\nAn error occurred: ${error.message}`;
-                        renderContent(tabId, 'Explanation', errorMessage, true);
-                    } 
+                        showToast(`Explanation failed: ${error.message}`, "error");
+const errorMessage = `### Explanation Failed\n\nAn error occurred: ${error.message}`;
+                        renderContent(tabId, 'Explanation', errorMessage, true, true);
+} 
                     finally { setLoadingState(false, 'explain-script-button');
 }
                 }
+                if (targetId === 'generate-pester-button') {
+                    setLoadingState(true, 'generate-pester-button');
+                    const tabId = 'pester-content';
+                    const loadingMessage = "### Generating Pester tests...\n\nPlease wait while a test script is being created.";
+                    renderContent(tabId, 'Pester Tests', loadingMessage, true, true);
+                    try {
+                        const pesterPrompt = pesterMetaPrompt.replace('{{script_content}}', appState.currentScript);
+                        const pesterResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: pesterPrompt }] }]);
+                        const pesterScript = pesterResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || pesterResponse || "Could not generate a Pester test from the response.";
+                        appState.currentTabs[tabId] = pesterScript;
+                        renderContent(tabId, 'Pester Tests', pesterScript.trim(), false, true);
+                    } catch (error) {
+                        showToast(`Pester test generation failed: ${error.message}`, "error");
+                        const errorMessage = `### Pester Test Generation Failed\n\nAn error occurred: ${error.message}`;
+                        renderContent(tabId, 'Pester Tests', errorMessage, true, true);
+                    } finally {
+                        setLoadingState(false, 'generate-pester-button');
+                    }
+                }
                 if (targetId === 'copy-script-button') {
                     const activeTabId = document.querySelector('.output-content.active')?.id;
-                    const activeContent = appState.currentTabs[activeTabId];
+const activeContent = appState.currentTabs[activeTabId];
 if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
-                }
+}
                 if (targetId === 'download-script-button') {
                      const activeTabId = document.querySelector('.output-content.active')?.id;
-                    if (activeTabId === 'script-content') {
+if (activeTabId === 'script-content' || activeTabId === 'pester-content') {
                         const activeContent = appState.currentTabs[activeTabId];
-                        if(activeContent){
+if(activeContent){
                             const blob = new Blob([activeContent], { type: 'text/plain' });
 const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
-                            a.href = url; a.download = 'script.ps1';
+                            const fileExtension = activeTabId === 'pester-content' ? '.Tests.ps1' : '.ps1';
+                            a.href = url; a.download = `script${fileExtension}`;
                             a.click(); URL.revokeObjectURL(url);
-                        }
+}
                     } else {
-                        showToast("Only the Script tab can be downloaded.", "error");
-                    }
+                        showToast("Only the Script and Pester Test tabs can be downloaded.", "error");
+}
                 }
             });
 saveToCloudButton.addEventListener('click', () => { if (!appState.currentScript) { showToast("No script to save.", "error"); return; } saveScriptModal.classList.add('active'); scriptNameInput.value = ''; scriptNameInput.focus(); });
@@ -1160,18 +1438,24 @@ loadScriptContainer.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('delete-script-btn')) {
   
 
+
+
                     e.stopPropagation();
                     const parent = e.target.closest('[data-script-id]');
                     deleteScript(parent.dataset.scriptId, parent.dataset.scriptName);
                 }
                 if (e.target.classList.contains('load-version-btn')) {
   
+
+
   
                     const versionButton = e.target;
                     const scriptId = versionButton.dataset.scriptId;
-                    const versionId = versionButton.dataset.versionId;
+                    const versionId = versionId.dataset.versionId;
                     try {
         
+
+
       
                         const versionDoc = await window.getDoc(window.doc(appState.db, `scripts/${scriptId}/versions`, versionId));
 if(versionDoc.exists()){
@@ -1193,7 +1477,7 @@ addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Da
                 if (e.target.classList.contains('delete-version-btn')) {
                     const versionButton = e.target;
 const scriptId = versionButton.dataset.scriptId;
-                    const versionId = versionButton.dataset.versionId;
+                    const versionId = versionId.dataset.versionId;
                     const scriptName = versionButton.closest('#load-script-container').querySelector('h2').textContent.match(/"(.*?)"/)[1];
                     deleteVersion(scriptId, versionId, scriptName);
 }
@@ -1206,6 +1490,8 @@ viewPromptsBtn.addEventListener('click', () => {
                 document.getElementById('refinement-prompt-content').textContent = refinementMetaPrompt;
                 document.getElementById('self-correction-prompt-content').textContent = selfCorrectionMetaPrompt;
                 document.getElementById('rules-content').textContent 
+
+
 = JSON.stringify(environmentRules, null, 2);
                 promptsModal.classList.add('active');
             });
@@ -1217,15 +1503,33 @@ closePromptsModal.addEventListener('click', () => promptsModal.classList.remove(
                         content.style.maxHeight = null;
     
 
+
+
                         e.target.textContent = e.target.textContent.replace('▲', '▼');
                     } else {
                         content.style.maxHeight = content.scrollHeight + "px";
                        
+
+
  e.target.textContent = e.target.textContent.replace('▼', '▲');
                     }
                 }
             });
 promptForm.addEventListener('submit', handleGenerationSubmit);
+            
+            promptInput.addEventListener('input', () => {
+                promptInput.rows = 2; // Start from base
+                const newRows = Math.ceil((promptInput.scrollHeight - 40) / 24); // Heuristic adjustment
+                promptInput.rows = Math.max(2, Math.min(newRows, 10)); // Min 2, Max 10 rows
+            });
+
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitButton.click();
+                }
+            });
+
 
             // --- Initial UI Setup ---
             document.getElementById('app-version').textContent = `v${appState.version}`;
