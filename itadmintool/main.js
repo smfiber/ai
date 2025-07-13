@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.5"; // Updated version
+const APP_VERSION = "1.0.6"; // Updated version
 
 // --- Global State ---
 let db;
@@ -105,7 +105,7 @@ async function saveArticleToKB(title, markdownContent, hierarchyPath) {
         return;
     }
 
-    const statusEl = document.getElementById('article-modal-status-message');
+    const statusEl = document.getElementById('explanatory-article-modal-status-message');
     statusEl.textContent = 'Adding to Knowledge Base...';
 
     const appId = firebaseConfig.appId || 'it-admin-hub-global';
@@ -2340,7 +2340,7 @@ async function handleExplanatoryArticleRequest(topicId, categoryId) {
     const contentEl = document.getElementById('explanatoryArticleModalContent');
     const footerEl = document.getElementById('explanatoryArticleModalFooter');
     const buttonContainer = document.getElementById('explanatoryArticleModalButtons');
-    const statusEl = document.getElementById('article-modal-status-message');
+    const statusEl = document.getElementById('explanatory-article-modal-status-message');
     
     const fullTitle = `Explanatory Article: ${item.title}`;
     titleEl.textContent = fullTitle;
