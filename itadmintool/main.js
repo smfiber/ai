@@ -2,6 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// --- App Version ---
+const APP_VERSION = "1.0.1";
+
 // --- Global State ---
 let db;
 let auth;
@@ -33,9 +36,10 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
+let GOOGLE_SEARCH_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
-let oauthToken = null; // Used to store token from redirect flow
+let oauthToken = null;
 
 // --- Prompt Engineering Constants ---
 const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
@@ -63,15 +67,14 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
     statusEl.textContent = 'Adding to Knowledge Base...';
 
     const appId = firebaseConfig.appId || 'it-admin-hub-global';
-    // The collection for the Knowledge Base, now using the correct public path.
     const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
     const guideData = {
         title: title,
         markdownContent: markdownContent,
         hierarchyPath: hierarchyPath.map(p => p.title || p).join(' / '),
         createdAt: Timestamp.now(),
-        status: 'completed', // Default status
-        userId: userId, // Associate the guide with the user who saved it
+        status: 'completed',
+        userId: userId,
     };
 
     try {
@@ -85,31 +88,54 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
     }
 }
 
-
+/**
+ * [REFACTORED] Opens a modal and manages body classes for scroll locking.
+ * @param {string} modalId The ID of the modal element to open.
+ */
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        modal.classList.remove('hidden');
-        document.body.classList.add('modal-open', `${modalId}-open`);
+        document.body.classList.add('modal-open');
+        modal.classList.add('is-open');
     }
 }
 
-function checkGapiReady(callback) {
-  if (typeof gapi !== 'undefined' && gapi.load) {
-    callback();
-  } else {
-    setTimeout(() => checkGapiReady(callback), 100);
-  }
-}
-
+/**
+ * [REFACTORED] Closes a modal and intelligently manages body classes.
+ * @param {string} modalId The ID of the modal element to close.
+ */
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        modal.classList.add('hidden');
-        document.body.classList.remove(`${modalId}-open`);
-        if (document.querySelectorAll('.modal:not(.hidden)').length === 0) {
+        modal.classList.remove('is-open');
+        // Only remove the body class if no other modals are open
+        if (document.querySelectorAll('.modal.is-open').length === 0) {
              document.body.classList.remove('modal-open');
         }
+    }
+}
+
+/**
+ * Helper function to safely wait for the GAPI script to load.
+ * @param {function} callback The function to execute once GAPI is ready.
+ */
+function gapiLoaded(callback) {
+    if (typeof gapi !== 'undefined' && gapi.load) {
+        callback();
+    } else {
+        setTimeout(() => gapiLoaded(callback), 100);
+    }
+}
+
+/**
+ * Helper function to safely wait for the Google Identity Services (GIS) script to load.
+ * @param {function} callback The function to execute once GIS is ready.
+ */
+function gisLoaded(callback) {
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+        callback();
+    } else {
+        setTimeout(() => gisLoaded(callback), 100);
     }
 }
 
@@ -117,6 +143,7 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
+    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -134,6 +161,7 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
+        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -201,7 +229,10 @@ function initializeFirebase() {
     }
 }
 
-function initializeGoogleClients() {
+/**
+ * Orchestrates the initialization of all Google API clients.
+ */
+function initializeGoogleApiClients() {
     if (!GOOGLE_CLIENT_ID) {
         console.warn("Google Client ID is not provided. Cloud features will be disabled.");
         return;
@@ -209,31 +240,57 @@ function initializeGoogleClients() {
     document.getElementById('cloud-storage-card').classList.remove('hidden');
     document.getElementById('google-drive-section').classList.remove('hidden');
 
-    // Use a helper to wait for the gapi script to be fully loaded
-    checkGapiReady(() => {
-        // Load the GAPI libraries ('client' and 'picker').
-        gapi.load('client:picker', initializeGapiClient);
+    gisLoaded(initGisClient);
+    gapiLoaded(() => {
+        gapi.load('client:picker', initGapiClient);
     });
 }
 
-async function initializeGapiClient() {
+/**
+ * Initializes the Google Identity Services (GIS) client for authentication.
+ */
+function initGisClient() {
+    try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: G_SCOPES,
+            callback: (tokenResponse) => {
+                oauthToken = tokenResponse; 
+                if (gapiInited && oauthToken && oauthToken.access_token) {
+                    gapi.client.setToken(oauthToken);
+                    updateSigninStatus(true);
+                } else if (!oauthToken || !oauthToken.access_token) {
+                    console.error("Authentication failed or was cancelled. Token not received.");
+                    displayMessageInModal("Google Drive connection failed. Please try again.", 'error');
+                    updateSigninStatus(false);
+                }
+            },
+        });
+        gisInited = true;
+    } catch (error) {
+        console.error("Critical Error: Failed to initialize Google Identity Service client.", error);
+        document.getElementById('drive-status').textContent = 'Error: Google Auth failed to load. Check console.';
+        document.getElementById('auth-button').disabled = true;
+    }
+}
+
+/**
+ * Initializes the Google API (GAPI) client for Drive functionality.
+ */
+async function initGapiClient() {
     try {
         await gapi.client.init({
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
-        gapiInited = true;
-
-        // If a token was captured from the redirect, set it now.
-        if (oauthToken) {
-            gapi.client.setToken(oauthToken);
-            updateSigninStatus(true);
-            oauthToken = null; // Clear the token after it has been used
-        }
+        gapiInited = true; 
+        updateSigninStatus(!!(oauthToken && oauthToken.access_token));
     } catch(error) {
-        console.error("Error initializing GAPI Client", error);
-        document.getElementById('drive-status').textContent = 'Google API init failed. Check keys.';
+        console.error("Critical Error: Failed to initialize GAPI Client for Drive.", error);
+        document.getElementById('drive-status').textContent = 'Error: Drive API failed to load. Check console.';
+        document.getElementById('auth-button').disabled = true;
     }
 }
+
 
 function _performAuthUISetup(user, authStatusEl, appContainer) {
     if (user) {
@@ -292,20 +349,30 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-    const driveToken = gapi?.client?.getToken();
-    if (driveToken) {
-        // This only revokes the token on the client side for GAPI
-        gapi.client.setToken(null);
+    if (oauthToken && oauthToken.access_token) {
+        google.accounts.oauth2.revoke(oauthToken.access_token, () => {
+            console.log("Google Drive token revoked during logout.");
+        });
     }
+    if (gapi?.client) {
+       gapi.client.setToken(null);
+    }
+    
     signOut(auth).then(() => {
+        oauthToken = null;
         updateSigninStatus(false);
         localStorage.clear();
+        sessionStorage.clear();
         location.reload();
     }).catch(error => {
         console.error("Sign out failed:", error);
     });
 }
 
+/**
+ * Updates all UI elements related to Google Drive sign-in status.
+ * @param {boolean} isSignedIn Whether the user is signed into Google Drive.
+ */
 function updateSigninStatus(isSignedIn) {
     const authButton = document.getElementById('auth-button');
     const loadBtn = document.getElementById('load-from-drive-btn');
@@ -325,15 +392,16 @@ function updateSigninStatus(isSignedIn) {
         driveFolderId = null;
     }
 
-    if (document.body.classList.contains('inDepthModal-open')) {
+    const hasToken = !!(oauthToken && oauthToken.access_token);
+    if (document.getElementById('inDepthModal')?.classList.contains('is-open')) {
         const isInitial = !!document.getElementById('generate-detailed-steps-btn');
-        addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial);
+        addModalActionButtons(document.getElementById('inDepthModalButtons'), isInitial, hasToken);
     }
-    if (document.body.classList.contains('inDepthDetailedModal-open')) {
-        addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'));
+    if (document.getElementById('inDepthDetailedModal')?.classList.contains('is-open')) {
+        addDetailedModalActionButtons(document.getElementById('inDepthDetailedModalButtons'), hasToken);
     }
-    if (document.body.classList.contains('searchGeminiModal-open')) {
-        addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
+    if (document.getElementById('searchGeminiModal')?.classList.contains('is-open')) {
+        addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'), hasToken);
     }
 }
 
@@ -355,6 +423,7 @@ async function handleApiKeySubmit(e) {
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     const tempGoogleClientId = document.getElementById('googleClientIdInput').value.trim();
+    const tempGoogleSearchEngineId = document.getElementById('googleSearchEngineIdInput').value.trim();
     const tempAlgoliaAppId = document.getElementById('algoliaAppIdInput').value.trim();
     const tempAlgoliaSearchKey = document.getElementById('algoliaSearchKeyInput').value.trim();
     let tempFirebaseConfig;
@@ -387,13 +456,14 @@ async function handleApiKeySubmit(e) {
     localStorage.setItem('geminiApiKey', tempGeminiKey);
     localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
     localStorage.setItem('googleClientId', tempGoogleClientId);
+    localStorage.setItem('googleSearchEngineId', tempGoogleSearchEngineId);
     localStorage.setItem('algoliaAppId', tempAlgoliaAppId);
     localStorage.setItem('algoliaSearchKey', tempAlgoliaSearchKey);
 
     
     if (loadConfigFromStorage()) {
         initializeFirebase();
-        initializeGoogleClients();
+        initializeGoogleApiClients();
         handleLogin();
     }
 }
@@ -402,7 +472,6 @@ function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('gemini-form')?.addEventListener('submit', handleGeminiSubmit);
 
-    // Event listeners for the new Prompt Workshop
     document.getElementById('persona-selector')?.addEventListener('click', (e) => {
         if (e.target.classList.contains('prompt-builder-btn')) {
             document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach(btn => btn.classList.remove('active'));
@@ -422,12 +491,14 @@ function setupEventListeners() {
     document.getElementById('browse-all-btn')?.addEventListener('click', () => openCategoryBrowser('all'));
     document.getElementById('closeCategoryBrowserModal')?.addEventListener('click', () => closeModal('categoryBrowserModal'));
     document.getElementById('auth-button')?.addEventListener('click', handleAuthClick);
+    
     document.getElementById('load-from-drive-btn')?.addEventListener('click', async () => {
         const folderId = await getDriveFolderId();
         createPicker('open', folderId);
     });
     
-    document.getElementById('prompts-button')?.addEventListener('click', displayPromptsInModal);
+    document.getElementById('prompts-button')?.addEventListener('click', displayAppInternalsModal);
+    
     document.getElementById('real-time-log-button')?.addEventListener('click', displayAiLog);
     document.getElementById('theme-changer-button')?.addEventListener('click', () => {
         if(!geminiApiKey) { openModal('apiKeyModal'); return; }
@@ -445,7 +516,6 @@ function setupEventListeners() {
     document.getElementById('font-size-select')?.addEventListener('change', (e) => root.style.setProperty('--font-size-base', e.target.value));
     document.getElementById('line-height-select')?.addEventListener('change', (e) => root.style.setProperty('--line-height-base', e.target.value));
     
-    // Search and KB listeners
     document.getElementById('search-kb-button')?.addEventListener('click', () => openModal('searchModal'));
     document.getElementById('kb-button')?.addEventListener('click', openKbBrowser);
     document.getElementById('search-input')?.addEventListener('keyup', performSearch);
@@ -478,16 +548,21 @@ function setupEventListeners() {
             const codeBlock = target.closest('.code-block-container').querySelector('code, pre');
             copyElementTextToClipboard(codeBlock, target);
         } else if (target.closest('#save-to-drive-btn')) {
-            handleSaveToDriveClick(target);
-        } else if (target.closest('.add-topic-button')) {
+            handleSaveToDriveClick(target.closest('#save-to-drive-btn'));
+        } else if (target.closest('.add-topic-button')) {            
             handleAddNewTopic(target.closest('.add-topic-button'));
         } else if (target.closest('.grid-card-selector')) {
             handleGridSelect(target.closest('.grid-card-selector'));
         } else if (target.closest('.explore-button')) {
-            const card = target.closest('.card');
-            const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-            const topicId = target.closest('.explore-button').dataset.topicId;
-            handleExploreInDepth(topicId, fullHierarchyPath);
+            const button = target.closest('.explore-button');
+            const card = button.closest('.card');
+            if (card) {
+                const topicId = button.dataset.topicId;
+                const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
+                handleExploreInDepth(topicId, fullHierarchyPath);
+            } else {
+                console.error("Could not find parent card for explore button.");
+            }
         } else if (target.closest('.refine-button')) {
             toggleRefineUI(target.closest('.refine-button').parentElement);
         } else if (target.closest('.modal-refine-button')) {
@@ -532,51 +607,25 @@ function setupEventListeners() {
 }
 
 async function handleAuthClick() {
-    // If the user is already connected, this button should act as a disconnect/logout.
-    if (gapi.client.getToken() !== null) {
-        const token = gapi.client.getToken();
-        if (token) {
-            // Revoke the token on Google's side
-            google.accounts.oauth2.revoke(token.access_token, () => {
+    if (oauthToken && oauthToken.access_token) {
+        google.accounts.oauth2.revoke(oauthToken.access_token, () => {
+            if (gapi?.client) {
                 gapi.client.setToken(null);
-                updateSigninStatus(false);
-            });
+            }
+            oauthToken = null;
+            updateSigninStatus(false);
+            console.log('Google Drive token has been revoked.');
+        });
+    } else {
+        if (gisInited && tokenClient) {
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        } else {
+            console.error("Google token client is not initialized.");
+            displayMessageInModal("Google services are not ready. Please wait a moment and try again.", "error");
         }
-        return;
     }
-
-    // If not connected, redirect to Google's authentication page.
-    const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
-
-    // --- START: Create a robust redirect URI ---
-    // Get the base URL of the application.
-    let redirectUri = window.location.origin + window.location.pathname;
-    
-    // If the URL ends with 'index.html', remove it to get the directory.
-    if (redirectUri.endsWith('index.html')) {
-        redirectUri = redirectUri.substring(0, redirectUri.lastIndexOf('index.html'));
-    }
-    
-    // Ensure the redirect URI ends with a slash if it's a directory path.
-    if (!redirectUri.endsWith('/')) {
-        redirectUri += '/';
-    }
-    // --- END: Create a robust redirect URI ---
-
-    // Log the exact URI to the console for debugging purposes.
-    console.log("Attempting to redirect with URI:", redirectUri);
-    
-    const params = {
-        'client_id': GOOGLE_CLIENT_ID,
-        'redirect_uri': redirectUri, // Use the more robust URI
-        'response_type': 'token',
-        'scope': G_SCOPES,
-        'include_granted_scopes': 'true'
-    };
-
-    const url = oauth2Endpoint + '?' + (new URLSearchParams(params)).toString();
-    window.location.assign(url);
 }
+
 
 async function getDriveFolderId() {
     if (driveFolderId) return driveFolderId;
@@ -607,39 +656,64 @@ async function getDriveFolderId() {
 }
 
 async function handleSaveToDriveClick(button) {
-     const modal = button.closest('.card');
-     if (!modal) return;
-     
-     let contentToSave, statusEl, cardName, topicTitle;
-     if (modal.parentElement.id === 'searchGeminiModal') {
+    const modal = button.closest('.card');
+    if (!modal) return;
+
+    let contentToSave, statusEl, topicTitle, finalFileName, modalFooter;
+
+    if (modal.parentElement.id === 'searchGeminiModal') {
         contentToSave = document.getElementById('searchGeminiResult').innerText;
-        cardName = "Gemini Search";
+        const cardName = "Gemini Search";
         const fullTopicTitle = document.getElementById('searchGeminiQueryText').value;
         topicTitle = truncateText(fullTopicTitle, 40);
         statusEl = document.getElementById('search-modal-status-message');
+        finalFileName = `${cardName} - ${topicTitle}.md`;
     } else {
-        const modalFooter = button.closest('[id$="ModalFooter"]');
+        modalFooter = button.closest('[id$="ModalFooter"]');
+
+        if (!modalFooter) {
+            console.error("Save to Drive Error: Could not find the modal footer for the clicked button.");
+            const anyStatusEl = modalFooter?.querySelector('p[id$="status-message"]');
+            if (anyStatusEl) anyStatusEl.textContent = 'Error: Could not find modal data.';
+            return;
+        }
+
         const fullTitle = modalFooter.dataset.fullTitle;
-        cardName = modalFooter.dataset.cardName || "Guide";
+        const hierarchyPathString = modalFooter.dataset.fullHierarchyPath;
+
         contentToSave = originalGeneratedText.get(fullTitle);
-        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: /g, '');
+        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '').trim();
         statusEl = modalFooter.querySelector('p[id$="status-message"]');
+
+        let breadcrumbs = modalFooter.dataset.cardName || 'Guide';
+        try {
+            if (hierarchyPathString && hierarchyPathString !== 'undefined') {
+                const hierarchyPath = JSON.parse(hierarchyPathString);
+                if (Array.isArray(hierarchyPath)) {
+                    breadcrumbs = hierarchyPath.map(p => p.title || p).join(' / ');
+                }
+            }
+        } catch (e) {
+            console.error("Could not parse hierarchy path for filename, using fallback.", e);
+        }
+        finalFileName = `${breadcrumbs} - ${topicTitle}.md`;
     }
-     
-     if (!contentToSave) {
+
+    if (!contentToSave) {
         if (statusEl) statusEl.textContent = "Error: Content not found.";
         return;
-     }
+    }
 
-     const fileName = `${cardName} - ${topicTitle}.md`.replace(/[/\\?%*:|"<>]/g, '-');
-     await saveContentToDrive(contentToSave, fileName, statusEl);
+    const safeFileName = finalFileName.replace(/[/\\?%*:|"<>]/g, '-');
+    await saveContentToDrive(contentToSave, safeFileName, statusEl);
 }
 
 async function saveContentToDrive(content, fileName, statusElement) {
-    if (gapi.client.getToken() === null) {
+    if (!gapiInited || !gisInited || !oauthToken || !oauthToken.access_token) {
         statusElement.textContent = 'Please connect to Google Drive first.';
         return;
     }
+
     statusElement.textContent = 'Saving to Google Drive...';
     const folderId = await getDriveFolderId();
     if (!folderId) {
@@ -647,29 +721,46 @@ async function saveContentToDrive(content, fileName, statusElement) {
         return;
     }
     try {
+        gapi.client.setToken(oauthToken);
+
+        const safeFileName = fileName.replace(/'/g, "\\'").replace(/"/g, '\\"');
         const searchResponse = await gapi.client.drive.files.list({
-            q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false`,
+            q: `name='${safeFileName}' and '${folderId}' in parents and trashed=false`,
             fields: 'files(id)',
             spaces: 'drive'
         });
+
+        const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
+        const fileId = fileExists ? searchResponse.result.files[0].id : null;
+
         const boundary = '-------314159265358979323846';
         const delimiter = "\r\n--" + boundary + "\r\n";
         const close_delim = "\r\n--" + boundary + "--";
         const contentType = 'text/markdown';
-        const metadata = { name: fileName };
-        if (!searchResponse.result.files || searchResponse.result.files.length === 0) {
-             metadata.parents = [folderId];
-        }
-        const multipartRequestBody = delimiter + `Content-Type: application/json; charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) + delimiter + `Content-Type: ${contentType}\r\n\r\n` + content + close_delim;
-        const fileExists = searchResponse.result.files && searchResponse.result.files.length > 0;
-        const fileId = fileExists ? searchResponse.result.files[0].id : null;
+
+        const metadata = fileExists
+            ? {}
+            : { name: fileName, parents: [folderId] };
+
+        const multipartRequestBody = delimiter +
+            `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+            JSON.stringify(metadata) +
+            delimiter +
+            `Content-Type: ${contentType}\r\n\r\n` +
+            content +
+            close_delim;
+
+        const requestPath = `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`;
+        const requestMethod = fileExists ? 'PATCH' : 'POST';
+
         await gapi.client.request({
-            path: `/upload/drive/v3/files${fileExists ? '/' + fileId : ''}`,
-            method: fileExists ? 'PATCH' : 'POST',
+            path: requestPath,
+            method: requestMethod,
             params: { uploadType: 'multipart' },
-            headers: {'Content-Type': `multipart/related; boundary="${boundary}"`},
+            headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
             body: multipartRequestBody
         });
+
         statusElement.textContent = `File '${fileName}' ${fileExists ? 'updated' : 'saved'} in Drive!`;
         setTimeout(() => { if (statusElement) statusElement.textContent = ''; }, 4000);
     } catch (error) {
@@ -678,28 +769,43 @@ async function saveContentToDrive(content, fileName, statusElement) {
     }
 }
 
-function createPicker(mode, startInFolderId = null) { 
-    if (!gapiInited) {
-         (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'Google API not ready.';
-         return;
-     }
-     const token = gapi.client.getToken()?.access_token;
-     if (!token) {
-         (document.getElementById('drive-status') || document.getElementById('modal-status-message')).textContent = 'You are not signed in.';
-         return;
-     }
-     const builder = new google.picker.PickerBuilder().setOAuthToken(token).setDeveloperKey(geminiApiKey);
-     if (mode === 'open') {
-        const view = new google.picker.View(google.picker.ViewId.DOCS);
-        view.setMimeTypes("text/markdown,text/plain,.md");
-        if (startInFolderId) {
-            view.setParent(startInFolderId);
+function createPicker(mode, startInFolderId = null) {
+    const statusEl = document.getElementById('drive-status');
+
+    if (!gapiInited || !gisInited) {
+        statusEl.textContent = 'Google API is not ready. Please try again in a moment.';
+        console.error("Picker creation failed: GAPI or GIS not initialized.");
+        return;
+    }
+
+    const token = oauthToken?.access_token;
+    if (!token) {
+        statusEl.textContent = 'Please connect to Google Drive first.';
+        handleAuthClick(); 
+        return;
+    }
+
+    try {
+        const builder = new google.picker.PickerBuilder()
+            .setOAuthToken(token)
+            .setDeveloperKey(geminiApiKey); 
+        if (mode === 'open') {
+            const view = new google.picker.View(google.picker.ViewId.DOCS);
+            view.setMimeTypes("text/markdown,text/plain,.md");
+            if (startInFolderId) {
+                view.setParent(startInFolderId);
+            }
+            builder.addView(view).setCallback(pickerCallbackOpen);
         }
-        builder.addView(view).setCallback(pickerCallbackOpen);
-    } 
-     const picker = builder.build();
-     picker.setVisible(true);
+        const picker = builder.build();
+        picker.setVisible(true);
+
+    } catch (error) {
+        console.error("Error creating Google Picker:", error);
+        statusEl.textContent = `Error launching the file picker: ${error.message}`;
+    }
 }
+
 
 async function pickerCallbackOpen(data) {
     if (data.action === google.picker.Action.PICKED) {
@@ -707,12 +813,17 @@ async function pickerCallbackOpen(data) {
         const statusEl = document.getElementById('drive-status');
         statusEl.textContent = 'Loading selected file...';
         try {
+            gapi.client.setToken(oauthToken);
             const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
             const fileContent = response.body;
             const fileName = data.docs[0].name;
             displayImportedGuide(fileName, fileContent);
             statusEl.textContent = 'File loaded successfully.';
-            setTimeout(() => updateSigninStatus(true), 3000);
+            setTimeout(() => {
+                if (oauthToken && oauthToken.access_token) {
+                    statusEl.textContent = 'Connected to Google Drive.';
+                }
+            }, 3000);
         } catch (error) {
             console.error("Error loading file content:", error);
             statusEl.textContent = 'Error loading file from Google Drive.';
@@ -725,24 +836,30 @@ function displayImportedGuide(fileName, markdownContent) {
     const container = document.getElementById('imported-guides-container');
     section.classList.remove('hidden');
     const cardId = `imported-${fileName.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
+    
     const card = document.createElement('div');
     card.className = 'card';
     card.id = cardId;
+
     const cardContent = document.createElement('div');
     cardContent.className = 'p-8 card-content';
+    
     cardContent.innerHTML = `
-        <h2 class="text-2xl font-bold mb-2 themed-text-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+        <h2 class="text-2xl font-bold mb-2 themed-text-primary flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Imported: ${fileName}
         </h2>
         <div class="prose max-w-none mt-4"></div>
     `;
+    
     const renderTarget = cardContent.querySelector('.prose');
     renderAccordionFromMarkdown(markdownContent, renderTarget);
+    
     card.appendChild(cardContent);
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
 
 async function loadAppContent() {
     try {
@@ -751,6 +868,14 @@ async function loadAppContent() {
         console.error("An error occurred while loading app content:", error.message);
         throw error;
     }
+}
+
+function createBreadcrumbsHtml(pathArray) {
+    if (!pathArray || pathArray.length === 0) {
+        return '';
+    }
+    const pathSegments = pathArray.map(p => `<span>${p.title}</span>`).join('<span class="mx-2 opacity-50">/</span>');
+    return `<div class="flex items-center flex-wrap gap-x-2 text-sm themed-text-muted mb-3">${pathSegments}</div>`;
 }
 
 async function generateAndPopulateAICategory(fullHierarchyPath) {
@@ -766,23 +891,50 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
     card.id = cardId;
     card.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     const selectorId = `selector-${finalCategory.id}`;
-    card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+    
+    const breadcrumbsHtml = createBreadcrumbsHtml(fullHierarchyPath);
+    card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${finalCategory.title}</h2><p class="mb-6 themed-text-muted">${finalCategory.description}</p><div id="${selectorId}" data-category-id="${finalCategory.id}" class="w-full">${getLoaderHTML(`AI is generating topics for ${finalCategory.title}...`)}</div><div id="details-${finalCategory.id}" class="details-container mt-4"></div></div>`;
+    
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    allThemeData[finalCategory.id] = null; // Set to null to indicate loading
+    allThemeData[finalCategory.id] = null;
     listenForUserAddedTopics(finalCategory.id);
 
     try {
-        const prompt = finalCategory.initialPrompt || `Generate 8 common topics for ${finalCategory.title}.`;
+        const defaultPrompt = `Generate 8 common administrative tasks or areas of focus for "${finalCategory.title}". Avoid generic numbered 'steps'. For each topic, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description". Return a valid JSON array of objects.`;
+        const prompt = finalCategory.initialPrompt || defaultPrompt;
+        
         const jsonText = await callGeminiAPI(prompt, true, "Initial Category Population");
         if (!jsonText) throw new Error(`API returned empty content for ${finalCategory.title}.`);
         
-        const data = parseJsonWithCorrections(jsonText);
+        let data = parseJsonWithCorrections(jsonText);
         if (!Array.isArray(data)) {
             throw new Error("Invalid API response format: Expected an array of topics for the category.");
         }
+        
+        data = data.map(item => {
+            if (!item.title) item.title = "Untitled Topic";
+
+            const sanitizedTitle = sanitizeTitle(item.title);
+
+            if (sanitizedTitle.length > 65 && item.description && item.description.length < 65) {
+                return {
+                    ...item,
+                    title: sanitizeTitle(item.description),
+                    description: item.title
+                };
+            }
+            
+            return { ...item, title: sanitizedTitle };
+        });
+        
+        data.forEach(item => {
+            if (!item.id) {
+                item.id = `${sanitizeTitle(item.title).replace(/\s+/g, '-')}-${Date.now()}`;
+            }
+        });
         
         data.sort((a, b) => a.title.localeCompare(b.title));
         allThemeData[finalCategory.id] = data;
@@ -790,7 +942,7 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
         populateCardGridSelector(card.querySelector(`#${selectorId}`), finalCategory.id);
         return card;
     } catch (error) {
-        allThemeData[finalCategory.id] = []; // Set to empty array on failure
+        allThemeData[finalCategory.id] = [];
         handleApiError(error, card.querySelector(`#${selectorId}`), finalCategory.title, card);
         throw error;
     }
@@ -799,13 +951,12 @@ async function generateAndPopulateAICategory(fullHierarchyPath) {
 function populateCardGridSelector(container, categoryId, newItemsIds = new Set()) {
     if (!container) return;
 
-    // Check if the main data is still being fetched.
     if (allThemeData[categoryId] === null) {
         if (!container.querySelector('.loader')) {
             const cardTitle = document.getElementById(`category-card-${categoryId}`)?.querySelector('h2')?.textContent || 'this category';
             container.innerHTML = getLoaderHTML(`AI is generating topics for ${cardTitle}...`);
         }
-        return; // Exit while loading
+        return;
     }
     
     const data = allThemeData[categoryId] || [];
@@ -854,9 +1005,11 @@ function populateCardGridSelector(container, categoryId, newItemsIds = new Set()
     const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
     const fullPrompt = finalCategory.fullPrompt;
     let actionButtonsHtml = '';
+    
     if (fullPrompt && data.length > 0) {
         actionButtonsHtml = `<div class="col-span-full text-center mt-4"><button class="generate-more-button btn-secondary" data-container-id="${containerId}" data-category-id="${categoryId}" title="Use AI to generate more topics for this category"><span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span></button></div>`;
     }
+
     container.innerHTML = `<div class="${gridClass}">${stickyHtml}${userAddedHtml}${regularItemsHtml}</div>${addNewTopicHtml}<div class="mt-4">${actionButtonsHtml}</div>`;
 }
 
@@ -891,39 +1044,90 @@ async function handleAddNewTopic(button) {
     }
 }
 
-async function handleGenerateMoreClick(button) {
+async function handleGenerateMoreClick(button, attempt = 1) {
+    const MAX_ATTEMPTS = 2;
     const { containerId, categoryId } = button.dataset;
     const container = document.getElementById(containerId);
     if (!container || !categoryId || !allThemeData[categoryId]) return;
+
     button.disabled = true;
-    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating...</span>`;
+    button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Generating (Attempt ${attempt})...</span>`;
+
     const card = container.closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-    const categoryTitle = fullHierarchyPath[fullHierarchyPath.length - 1].title;
+    const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+    
+    const basePrompt = finalCategory.fullPrompt;
+    if (!basePrompt) {
+        handleApiError({ message: "No 'fullPrompt' is configured for this category in the Hierarchy Manager." }, container.closest('.card-content').querySelector('.details-container'));
+        button.disabled = false;
+        button.innerHTML = 'Error: Prompt not configured';
+        return;
+    }
+
     const existingTitles = allThemeData[categoryId].map(item => item.title);
-    const prompt = `Generate 8 new and unique administrative task ideas for the IT category "${categoryTitle}". These tasks must be different from the ones in the following list. Existing Task List:\n- ${existingTitles.join('\n- ')}\n For each new task, provide a unique "id", a "title", and a short "description". Return the response as a valid JSON array.`;
+    const topicsToRequest = 8;
+    
+    const prompt = `
+        Based on the following core instruction, generate ${topicsToRequest} new and unique topics.
+        ---
+        Core Instruction: "${basePrompt}"
+        ---
+        This is attempt number ${attempt}. Be extra creative and ensure the new topics are genuinely different from the following list of ${existingTitles.length} existing topics. Do NOT repeat any topics from this list.
+        Existing Topics:
+        - ${existingTitles.join('\n- ')}
+        
+        For each new topic, provide a "title" and a short one-sentence "description".
+        IMPORTANT: Your response MUST be a JSON array of objects, where each object has a "title" and a "description" key.
+    `;
+
     try {
-        const jsonText = await callGeminiAPI(prompt, true, "Generate More Topics");
+        const jsonText = await callGeminiAPI(prompt, true, `Generate More Topics (Attempt ${attempt})`);
         if (!jsonText) throw new Error("AI did not return any new items.");
+        
         const newItems = parseJsonWithCorrections(jsonText);
-        const newItemIds = new Set(newItems.map(item => item.id));
+
+        if (!Array.isArray(newItems)) {
+            console.error("The AI response was not a valid array.", jsonText);
+            throw new Error("The AI returned data in an unexpected format. Please try again.");
+        }
+
+        const addedItems = [];
+
         newItems.forEach(newItem => {
-            if (!allThemeData[categoryId].some(existing => existing.id === newItem.id || existing.title === newItem.title)) {
-                allThemeData[categoryId].push(newItem);
+            if (newItem.title && !allThemeData[categoryId].some(existing => existing.title.toLowerCase() === newItem.title.toLowerCase())) {
+                newItem.id = `${sanitizeTitle(newItem.title).replace(/\s+/g, '-')}-${Date.now()}`;
+                addedItems.push(newItem);
             }
         });
-        allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
-        populateCardGridSelector(container, categoryId, newItemIds);
-        document.getElementById(`details-${categoryId}`).innerHTML = '';
+
+        if (addedItems.length === 0 && attempt < MAX_ATTEMPTS) {
+            console.warn(`Attempt ${attempt} yielded 0 new topics. Retrying...`);
+            await handleGenerateMoreClick(button, attempt + 1);
+            return; 
+        }
+
+        if (addedItems.length > 0) {
+            const newItemIds = new Set();
+            addedItems.forEach(item => {
+                 allThemeData[categoryId].push(item);
+                 newItemIds.add(item.id);
+            });
+            allThemeData[categoryId].sort((a, b) => a.title.localeCompare(b.title));
+            populateCardGridSelector(container, categoryId, newItemIds);
+            document.getElementById(`details-${categoryId}`).innerHTML = '';
+        } else {
+             throw new Error("After multiple attempts, the AI failed to generate unique topics.");
+        }
+        
     } catch (error) {
         console.error(`Error generating more items for ${categoryId}:`, error);
-        const originalButtonHTML = button.innerHTML;
         button.disabled = false;
         button.innerHTML = 'Error. Try Again.';
         button.classList.add('bg-red-100', 'text-red-700');
         setTimeout(() => {
             button.classList.remove('bg-red-100', 'text-red-700');
-            button.innerHTML = originalButtonHTML.replace('Generating...','Add 8 more topics');
+            button.innerHTML = `<span class="flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add 8 more topics</span>`;
         }, 3000);
     } 
 }
@@ -958,6 +1162,7 @@ async function handleGridSelect(target) {
         originalGeneratedText.set(topicId, resultText); 
         const resultHtml = marked.parse(resultText || '');
         resultContainer.innerHTML = `<div class="prose max-w-none">${resultHtml}</div>`;
+        
         addPostGenerationButtons(resultContainer, topicId, categoryId);
     } catch (error) {
         handleApiError(error, resultContainer, `guide for ${item.title}`);
@@ -979,7 +1184,6 @@ async function handleGeminiSubmit(e) {
     e.preventDefault();
     const form = e.target;
     
-    // --- 1. Gather all inputs from the Prompt Workshop ---
     const coreTask = document.getElementById('core-task-input').value.trim();
     if (!coreTask) {
         displayMessageInModal("Please define the core task before generating.", 'warning');
@@ -991,7 +1195,6 @@ async function handleGeminiSubmit(e) {
     const outputFormat = form.querySelector('input[name="output-format"]:checked').value;
     const additionalContext = document.getElementById('additional-context-input').value.trim();
 
-    // --- 2. Route to the correct function based on selected format ---
     if (outputFormat === 'guide') {
         generateCustomGuide(coreTask, persona, tone, additionalContext);
     } else if (outputFormat === 'card') {
@@ -999,7 +1202,6 @@ async function handleGeminiSubmit(e) {
     }
     
     form.reset();
-    // Reset buttons to default active state
     document.querySelectorAll('#persona-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
     document.querySelectorAll('#tone-selector .prompt-builder-btn').forEach((btn, i) => btn.classList.toggle('active', i === 0));
 }
@@ -1007,7 +1209,6 @@ async function handleGeminiSubmit(e) {
 async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
     const fullTitle = `Custom Guide: ${coreTask}`;
 
-    // Setup modal UI
     const titleEl = document.getElementById('inDepthModalTitle');
     const contentEl = document.getElementById('inDepthModalContent');
     const footerEl = document.getElementById('inDepthModalFooter');
@@ -1021,26 +1222,14 @@ async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
     footerEl.dataset.cardName = "Custom Task";
     openModal('inDepthModal');
     
-    // Assemble the detailed prompt for the initial guide sections
-    const initialCustomPrompt = `
-        Persona: You are an expert ${persona}.
-        Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later.
-        
-        //-- BLUEPRINT DETAILS --//
-        - **Topic:** "${coreTask}"
-        - **Audience & Tone:** The guide should be written for a "${tone}" audience.
-        - **Additional Context:** ${additionalContext || 'None'}
-        
-        //-- INSTRUCTIONS --//
-        1.  **Generate Four Sections Only:** Create detailed content exclusively for:
-            * ### 1. Introduction
-            * ### 2. Architectural Overview
-            * ### 3. Key Concepts & Terminology
-            * ### 4. Prerequisites
-        2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope of the guide (e.g., will it cover GUI, PowerShell, API methods?). This is critical.
-        3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for IT administrators.
-        4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections.
-    `;
+    const context = {
+        coreTask: coreTask,
+        persona: persona,
+        tone: tone,
+        additionalContext: additionalContext,
+        fullHierarchyPath: [] // Pass empty array to signify it's a workshop custom guide
+    };
+    const initialCustomPrompt = getMasterGuidePrompt('blueprint', context);
 
     try {
         let initialResultText = await callGeminiAPI(initialCustomPrompt, false, "Generate Custom Guide (Initial)");
@@ -1050,7 +1239,7 @@ async function generateCustomGuide(coreTask, persona, tone, additionalContext) {
         renderAccordionFromMarkdown(initialResultText, contentEl);
         const dummyHierarchy = [{title: "Custom Topic", description: `A guide for ${coreTask}`}];
         footerEl.dataset.fullHierarchyPath = JSON.stringify(dummyHierarchy);
-        addModalActionButtons(buttonContainer, true);
+        addModalActionButtons(buttonContainer, true, !!(oauthToken && oauthToken.access_token));
     } catch(error) {
         handleApiError(error, contentEl, 'custom IT guide (initial sections)');
     }
@@ -1064,7 +1253,6 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
     card.id = cardId;
     const selectorId = `selector-${cardId}`;
 
-    // Assemble a prompt specifically for generating topic ideas
     const descriptionPrompt = `Persona: You are a helpful AI assistant. Based on the user's request for a topic card about "${coreTask}", write a concise, one-sentence description for this topic card.`;
     
     let description = `A collection of topics related to: ${coreTask}`;
@@ -1074,21 +1262,22 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
         console.warn("Could not generate dynamic description, using default.", e);
     }
     
-    const fullHierarchyPath = JSON.stringify([{
-        id: cardId,
-        title: coreTask,
-        description: description,
-        fullPrompt: "This is a custom generated card, no full prompt available." // Add a dummy prompt
-    }]);
+    const hierarchyArray = [
+        { title: "Prompt Workshop" },
+        { title: coreTask }
+    ];
+    const fullHierarchyPath = JSON.stringify(hierarchyArray);
 
     card.dataset.fullHierarchyPath = fullHierarchyPath;
-    card.innerHTML = `<div class="p-8 card-content"><h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
+    
+    const breadcrumbsHtml = createBreadcrumbsHtml(hierarchyArray);
+    card.innerHTML = `<div class="p-8 card-content">${breadcrumbsHtml}<h2 class="text-2xl font-bold mb-2 themed-text-primary">${coreTask}</h2><p class="mb-6 themed-text-muted">${description}</p><div id="${selectorId}" data-category-id="${cardId}" class="w-full">${getLoaderHTML(`AI is generating topics for ${coreTask}...`)}</div><div id="details-${cardId}" class="details-container mt-4"></div></div>`;
     
     const container = document.getElementById('dynamic-card-container');
     container.prepend(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    allThemeData[cardId] = null; // Set to null to indicate loading
+    allThemeData[cardId] = null;
 
     try {
         const topicGenerationPrompt = `
@@ -1101,7 +1290,7 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
 
             //-- INSTRUCTIONS --//
             For each of the 8 topics, provide a unique "id" (a short, URL-friendly string), a "title", and a short one-sentence "description".
-            Return the response as a valid JSON array of objects. ${jsonInstruction}
+            Return the response as a valid JSON array of objects.
         `;
 
         const jsonText = await callGeminiAPI(topicGenerationPrompt, true, "Generate Topic Card");
@@ -1118,7 +1307,7 @@ async function generateAndPopulateAITopicCard(coreTask, persona, tone, additiona
         populateCardGridSelector(card.querySelector(`#${selectorId}`), cardId);
         return card;
     } catch (error) {
-        allThemeData[cardId] = []; // Set to empty array on failure
+        allThemeData[cardId] = [];
         handleApiError(error, card.querySelector(`#${selectorId}`), coreTask, card);
         throw error;
     }
@@ -1131,10 +1320,16 @@ function parseJsonWithCorrections(jsonString) {
     let cleanedString = jsonString.replace(/```(json|markdown)?\n?/g, '').replace(/```/g, '').trim();
     try {
         return JSON.parse(cleanedString);
-    } catch (error) {
+    }
+    catch (error) {
         console.warn("Initial JSON.parse failed. Attempting correction for common errors.", error);
         try {
-            const correctedJsonString = cleanedString.replace(/\\'/g, "'").replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3');
+            // Attempt to fix common JSON issues: unquoted keys, trailing commas, etc.
+            // This is a very basic attempt and might not catch all cases.
+            const correctedJsonString = cleanedString
+                .replace(/\\'/g, "'") // Unescape single quotes that might have been escaped
+                .replace(/([{\s,])(\w+)(:)/g, '$1"$2"$3') // Quote unquoted keys
+                .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
             return JSON.parse(correctedJsonString);
         } catch (finalError) {
              console.error("Failed to parse JSON even after cleaning:", finalError);
@@ -1179,18 +1374,24 @@ async function callGeminiAPI(prompt, isJson = false, logType = "General") {
         throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
     }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
-    const payload = { contents: [{ parts: [{ text: prompt }] }] };
+    
+    let finalPrompt = prompt;
+    if (isJson && !prompt.includes(jsonInstruction)) {
+        finalPrompt += jsonInstruction;
+    }
+
+    const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
     if (isJson) {
         payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
     }
     const result = await callApi(apiUrl, payload);
     const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    logAiInteraction(prompt, responseText, logType);
+    logAiInteraction(finalPrompt, responseText, logType);
     return responseText;
 }
 
 async function callColorGenAPI(prompt) {
-    const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
+    const fullPrompt = `Based on the theme "${prompt}", generate a color palette. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light).`;
     const jsonText = await callGeminiAPI(fullPrompt, true, "Generate Color Theme");
     if (jsonText) return parseJsonWithCorrections(jsonText);
     throw new Error("Could not parse a valid color theme from API response.");
@@ -1257,79 +1458,438 @@ function showThemeLoading(isLoading) {
 
 function getAppPrompts() {
     const prompts = {};
-    prompts["Full Guide Generation Prompt"] = getFullGuideGenerationPrompt();
+    const blueprintContext = {
+        coreTask: '{core_task}',
+        persona: '{persona}', // from workshop
+        tone: '{tone}', // from workshop
+        additionalContext: '{additional_context}', // from workshop
+        fullHierarchyPath: [{ title: 'Example Main Category' }, { title: 'Example Final Topic', initialPrompt: 'Persona: an example persona.' }]
+    };
+    const fullGuideContext = {
+        blueprintMarkdown: '{blueprint_markdown}',
+        coreTask: '{core_task}',
+        fullHierarchyPath: [{ title: 'Example Main Category' }, { title: 'Example Final Topic', initialPrompt: 'Persona: an example persona.' }]
+    };
+    prompts["Blueprint Generation Prompt"] = getMasterGuidePrompt('blueprint', blueprintContext);
+    prompts["Full Guide Generation Prompt"] = getMasterGuidePrompt('fullGuide', fullGuideContext);
     prompts["Refinement Prompt"] = getRefinementPrompt();
     return prompts;
 }
 
-function displayPromptsInModal() {
+/**
+ * Creates a curated list of key prompt engineering functions and their source code for display.
+ * @returns {object} An object where keys are function names and values are their source code as a string.
+ */
+function getAppFunctionsForDisplay() {
+    const functions = {
+        'getMasterGuidePrompt': `
+function getMasterGuidePrompt(type, context) {
+    const {
+        blueprintMarkdown = '',
+        coreTask = '',
+        persona = '',
+        tone = '',
+        additionalContext = '',
+        fullHierarchyPath = []
+    } = context;
+
+    let personaAndObjective;
+    let fullSubject = coreTask;
+
+    if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
+        const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
+        const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        if (fullHierarchyPath.length > 1) {
+            fullSubject = \`\${coreTask} for \${fullHierarchyPath[0].title}\`;
+        }
+        
+        let personaDescription = "an expert IT Administrator";
+        if (finalCategory && finalCategory.initialPrompt) {
+            const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
+            if (match && match[1]) {
+                personaDescription = match[1].trim();
+            }
+        }
+        personaAndObjective = \`
+//-- PERSONA & CONTEXT (Derived from Hierarchy) --//
+Persona: You are \${personaDescription}.
+Your writing should be professional, technical, and authoritative.
+The guide is part of a knowledge base: \${pathString}.\`;
+    } else {
+        personaAndObjective = \`
+//-- PERSONA & OBJECTIVE (FROM WORKSHOP) --//
+Persona: You are an expert \${persona}.
+Audience & Tone: The guide is for a "\${tone}" audience.
+Additional Context: \${additionalContext || 'None'}\`;
+    }
+
+    if (type === 'blueprint') {
+        return \`
+        //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
+        Generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for an IT guide.
+        //-- PRIMARY SUBJECT (MANDATORY) --//
+        The Primary Subject is exclusively: "\${fullSubject}". You MUST NOT deviate from this.
+        \${personaAndObjective}
+        //-- REQUIRED OUTPUT --//
+        1.  **Generate Four Sections:**
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "\${fullSubject}". State the guide's scope (e.g., GUI, PowerShell, API).
+            * ### 2. Architectural Overview: Describe the architecture relevant to "\${fullSubject}".
+            * ### 3. Key Concepts & Terminology: Define terms essential for "\${fullSubject}".
+            * ### 4. Prerequisites: List skills and access required for "\${fullSubject}".
+        2.  **Format:** Use '###' for headers. Return ONLY markdown for these four sections.\`;
+    }
+
+    if (type === 'fullGuide') {
+        return \`
+        //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
+        You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
+        
+        //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
+        \${blueprintMarkdown}
+        \${personaAndObjective}
+        
+        //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
+        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
+        - **Actionable Content:** All instructions must be practical and clear for a technical audience.
+
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
+        
+        ### 5. Detailed Implementation Guide
+        **CRITICAL:** This section must be highly practical.
+        - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+        
+        ### 6. Verification and Validation
+        **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
+        - Give specific commands (e.g., \\\`ping <server>\\\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Describe the exact expected output or visual confirmation of success.
+        
+        ### 7. Best Practices
+        - List 3-5 actionable best practices directly related to the topic.
+        
+        ### 8. Automation Techniques
+        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        
+        ### 9. Security Considerations
+        - Detail specific security hardening steps (e.g., policies to enable, ports to check).
+        
+        ### 10. Advanced Use Cases & Scenarios
+        - Describe at least two advanced scenarios where this knowledge could be applied.
+        
+        ### 11. Troubleshooting
+        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and a logical process for isolating the true root cause.
+        
+        ### 12. Helpful Resources
+        - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
+        
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".\`;
+    }
+    return '';
+}`,
+        'getRefinementPrompt': `
+function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
+    return \`Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// \${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// \${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.\`;
+}`,
+        'callGeminiAPI': `
+async function callGeminiAPI(prompt, isJson = false, logType = "General") {
+    if (!geminiApiKey) {
+        throw new Error("Gemini API Key is not set. Please enter it in the initial modal.");
+    }
+    const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=\${geminiApiKey}\`;
+    
+    let finalPrompt = prompt;
+    if (isJson && !prompt.includes(jsonInstruction)) {
+        finalPrompt += jsonInstruction;
+    }
+
+    const payload = { contents: [{ parts: [{ text: finalPrompt }] }] };
+    if (isJson) {
+        payload.generationConfig = { responseMimeType: "application/json", maxOutputTokens: 8192 };
+    }
+    const result = await callApi(apiUrl, payload);
+    const responseText = result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    logAiInteraction(finalPrompt, responseText, logType);
+    return responseText;
+}`
+    };
+    return functions;
+}
+
+/**
+ * Displays both AI prompts and the source code of key prompt engineering functions in a modal.
+ */
+function displayAppInternalsModal() {
     const contentEl = document.getElementById('promptsModalContent');
-    contentEl.innerHTML = '';
+    contentEl.innerHTML = ''; // Clear previous content
+
+    // Section for AI Prompts
+    const promptsContainer = document.createElement('div');
+    promptsContainer.innerHTML = '<h2 class="text-2xl font-bold themed-text-primary mb-4 border-b pb-2">Key AI Prompts</h2>';
     const prompts = getAppPrompts();
     for (const [title, promptText] of Object.entries(prompts)) {
-        const promptContainer = document.createElement('div');
-        promptContainer.className = 'mb-6';
-        promptContainer.innerHTML = `
+        const promptEl = document.createElement('div');
+        promptEl.className = 'mb-6';
+        promptEl.innerHTML = `
             <h3 class="text-lg font-semibold themed-text-accent mb-2">${title}</h3>
             <div class="code-block-container !mt-0">
                 <div class="code-block-header"><span>Prompt</span><button class="copy-code-button">Copy</button></div>
                 <pre class="text-sm" style="color: var(--code-text);">${promptText}</pre>
             </div>`;
-        contentEl.appendChild(promptContainer);
+        promptsContainer.appendChild(promptEl);
     }
+    contentEl.appendChild(promptsContainer);
+
+    // Section for Prompt Engineering Functions
+    const functionsContainer = document.createElement('div');
+    functionsContainer.innerHTML = '<h2 class="text-2xl font-bold themed-text-primary mt-8 mb-4 border-b pb-2">Prompt Engineering Functions</h2>';
+    const functions = getAppFunctionsForDisplay();
+    for (const [name, code] of Object.entries(functions)) {
+        const functionEl = document.createElement('div');
+        functionEl.className = 'mb-6';
+        functionEl.innerHTML = `
+            <h3 class="text-lg font-semibold themed-text-accent mb-2">${name}</h3>
+            <div class="code-block-container !mt-0">
+                <div class="code-block-header"><span>JavaScript</span><button class="copy-code-button">Copy</button></div>
+                <pre><code class="language-javascript text-sm" style="color: var(--code-text);">${code.trim()}</code></pre>
+            </div>`;
+        functionsContainer.appendChild(functionEl);
+    }
+    contentEl.appendChild(functionsContainer);
+
     openModal('promptsModal');
 }
 
 function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
-    return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
+    return `Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// ${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// ${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.`;
 }
 
-function getFullGuideGenerationPrompt(context = {}) {
-    const hierarchy = context.hierarchyContext || [];
-    const task = context.task || '{task}';
-    const options = context.options || '{options}';
-    const topicTechnology = hierarchy.map(h => h.title).join(' - ') || 'General IT';
-    const specificGoal = `A complete reference guide to designing, implementing, and troubleshooting for the task: ${task}.`;
-    const targetAudience = `An IT administrator with 3-5 years of experience who understands basic concepts related to ${hierarchy[0]?.title || 'the topic'}.`;
-    const inScope = `Management via GUI, CLI (PowerShell/bash), and APIs where applicable for the task: ${task}. ${options}`;
-    const outOfScope = `Basic setup of the core technology (e.g., installing Windows Server). Licensing or cost analysis.`;
-    return `Persona: You are an elite-level AI, functioning as a Senior IT Administrator and a Principal Technical Writer. Mission: Produce a definitive, practical, and deeply conceptual reference guide based on the blueprint provided below. Your output must be exhaustive, clear, and focused entirely on the defined scope. The goal is for a technical professional to transition from having a basic awareness of a topic to possessing a deep and applicable understanding of its core concepts and management. //-- GUIDE BLUEPRINT & SCOPE --// 1. Topic Technology: ${topicTechnology} 2. Specific Goal: ${specificGoal} 3. Target Audience: ${targetAudience} 4. IN-SCOPE (Must be included): ${inScope} 5. OUT-OF-SCOPE (Must be excluded): ${outOfScope} //-- CRITICAL STRUCTURE & FORMATTING RULES --// A. Markdown Formatting: You MUST format each of the 12 main sections below with a ### header. Example: ### 1. Introduction. B. Required Guide Content (Generate all 12 sections): 1. Introduction: Overview, Importance, What You'll Learn. 2. Architectural Overview: Components and interactions. 3. Key Concepts & Terminology: Definitions only. 4. Prerequisites: Permissions, Software/Licensing, System Requirements. 5. Detailed Implementation Guide: CRITICAL SECTION. Provide a comprehensive, step-by-step walkthrough of the process outlined in the Introduction. For each major step, provide detailed mini-guides for GUI, PowerShell/CLI, and API/SDK management, as dictated by the scope in the Introduction. **Crucially, for each technique, you MUST provide at least one clear, practical example of what a user would actually type or do. Use markdown blockquotes to showcase these example prompts or code snippets so the user can copy them directly.** 6. Verification and Validation: Specific commands/procedures to confirm correct configuration based on the steps in Section 5. 7. Best Practices: Expert advice for the implementation and management process detailed in Section 5. 8. Automation Techniques: Automation opportunities with full scripts for the process in Section 5. 9. Security Considerations: Hardening, vulnerabilities, and auditing related to the process in Section 5. 10. Advanced Use Cases & Scenarios: 2-3 advanced examples combining concepts from the implementation in Section 5. 11. Troubleshooting: A table of common problems, causes, and solutions related to the process in Section 5. 12. Helpful Resources: Bulleted list of high-quality, working links to official documentation relevant to the process in Section 5. //-- MANDATORY QUALITY STANDARDS --// 1.  **Factual Accuracy:** All technical content, especially code snippets, API endpoints, and procedural steps, MUST be factually correct and based on current, official documentation. 2.  **No Placeholders:** Your output MUST NOT contain placeholder links, hypothetical API endpoints (e.g., "api.gemini.example.com"), or notes to the user like "(Replace with actual link)". You must use your capabilities to find and provide real, authoritative information. 3.  **PowerShell/CLI Standards:** Scripts must be robust and production-ready. This includes using modern cmdlets, server-side filtering (e.g., \`-Filter\`), and comprehensive \`try/catch\` error handling with \`-ErrorAction Stop\`. 4.  **Professional Tone:** The guide must be written in a clean, professional voice. Do not include your own meta-commentary or asides (e.g., "Pro Tip:", "Note:", "This is a hypothetical example"). Instead, integrate advice naturally into the text.`;
+/**
+ * Constructs master prompts with improved specificity and quality control.
+ * @param {string} type - 'blueprint' or 'fullGuide'.
+ * @param {object} context - Data for prompt construction.
+ * @returns {string} The fully constructed prompt.
+ */
+function getMasterGuidePrompt(type, context) {
+    const {
+        blueprintMarkdown = '',
+        coreTask = '',
+        persona = '',
+        tone = '',
+        additionalContext = '',
+        fullHierarchyPath = []
+    } = context;
+
+    let personaAndObjective;
+    let fullSubject = coreTask;
+
+    if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
+        const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
+        const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        if (fullHierarchyPath.length > 1) {
+            fullSubject = `${coreTask} for ${fullHierarchyPath[0].title}`;
+        }
+        
+        let personaDescription = "an expert IT Administrator";
+        if (finalCategory && finalCategory.initialPrompt) {
+            const match = finalCategory.initialPrompt.match(/Persona:(.*?)(Objective:|Instructions:|$)/is);
+            if (match && match[1]) {
+                personaDescription = match[1].trim();
+            }
+        }
+        personaAndObjective = `
+//-- PERSONA & CONTEXT (Derived from Hierarchy) --//
+Persona: You are ${personaDescription}.
+Your writing should be professional, technical, and authoritative.
+The guide is part of a knowledge base: ${pathString}.`;
+    } else {
+        personaAndObjective = `
+//-- PERSONA & OBJECTIVE (FROM WORKSHOP) --//
+Persona: You are an expert ${persona}.
+Audience & Tone: The guide is for a "${tone}" audience.
+Additional Context: ${additionalContext || 'None'}`;
+    }
+
+    if (type === 'blueprint') {
+        return `
+        //-- MASTER INSTRUCTION: GENERATE GUIDE BLUEPRINT --//
+        Generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for an IT guide.
+        //-- PRIMARY SUBJECT (MANDATORY) --//
+        The Primary Subject is exclusively: "${fullSubject}". You MUST NOT deviate from this.
+        ${personaAndObjective}
+        //-- REQUIRED OUTPUT --//
+        1.  **Generate Four Sections:**
+            * ### 1. Introduction: Introduce the guide's purpose, focusing only on "${fullSubject}". State the guide's scope (e.g., GUI, PowerShell, API).
+            * ### 2. Architectural Overview: Describe the architecture relevant to "${fullSubject}".
+            * ### 3. Key Concepts & Terminology: Define terms essential for "${fullSubject}".
+            * ### 4. Prerequisites: List skills and access required for "${fullSubject}".
+        2.  **Format:** Use '###' for headers. Return ONLY markdown for these four sections.`;
+    }
+
+    if (type === 'fullGuide') {
+        return `
+        //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
+        You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
+        
+        //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
+        ${blueprintMarkdown}
+        ${personaAndObjective}
+        
+        //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
+        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
+        - **Actionable Content:** All instructions must be practical and clear for a technical audience.
+
+        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
+        
+        ### 5. Detailed Implementation Guide
+        **CRITICAL:** This section must be highly practical.
+        - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+        
+        ### 6. Verification and Validation
+        **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
+        - Give specific commands (e.g., \`ping <server>\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Describe the exact expected output or visual confirmation of success.
+        
+        ### 7. Best Practices
+        - List 3-5 actionable best practices directly related to the topic.
+        
+        ### 8. Automation Techniques
+        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        
+        ### 9. Security Considerations
+        - Detail specific security hardening steps (e.g., policies to enable, ports to check).
+        
+        ### 10. Advanced Use Cases & Scenarios
+        - Describe at least two advanced scenarios where this knowledge could be applied.
+        
+        ### 11. Troubleshooting
+        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and the logical process for isolating the true root cause.
+        
+        ### 12. Helpful Resources
+        - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
+        
+        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
+    }
+    return '';
 }
 
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
     const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) || userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
     if (!item) return;
+
     const titleEl = document.getElementById('inDepthModalTitle');
     const contentEl = document.getElementById('inDepthModalContent');
     const footerEl = document.getElementById('inDepthModalFooter');
     const buttonContainer = document.getElementById('inDepthModalButtons');
+
     const fullTitle = `In-Depth: ${item.title}`;
-    titleEl.textContent = fullTitle;
+    
+    const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
+    const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
+    titleEl.innerHTML = `${breadcrumbHtml}${fullTitle}`;
+    
     contentEl.innerHTML = getLoaderHTML(`Generating foundational guide for ${item.title}...`);
     buttonContainer.innerHTML = '';
     document.getElementById('modal-status-message').textContent = '';
+
     footerEl.dataset.topicId = topicId;
     footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     footerEl.dataset.fullTitle = fullTitle;
-    footerEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
+    footerEl.dataset.cardName = pathString;
     openModal('inDepthModal');
-    const contextString = fullHierarchyPath.map(p => p.title).join(' -> ');
-    const initialPrompt = `Persona: You are an expert senior IT administrator and technical writer AI. Objective: Your task is to generate ONLY the "Introduction", "Architectural Overview", "Key Concepts & Terminology", and "Prerequisites" sections for a comprehensive IT administration guide. This output will serve as the foundational "blueprint" for a more detailed guide later. //-- BLUEPRINT DETAILS --// - **Topic:** "${item.title}" - **Context:** "${contextString}" - **Tailoring Options:** "None" //-- INSTRUCTIONS --// 1.  **Generate Four Sections Only:** Create detailed content exclusively for: * ### 1. Introduction * ### 2. Architectural Overview * ### 3. Key Concepts & Terminology * ### 4. Prerequisites 2.  **Define Scope Clearly:** Within the "Introduction" section, you MUST clearly state the scope. For example, explicitly mention if the guide will cover GUI, PowerShell, and/or API methods. This is critical as it will dictate the content of the full guide. 3.  **Professional & Accurate:** The content must be technically accurate, detailed, and written in a professional tone suitable for experienced IT administrators. 4.  **Markdown Format:** Use '###' for section headers. Return only the markdown for these four sections. Do not include any other content or explanatory text.`;
+    
+    const context = {
+        coreTask: item.title,
+        fullHierarchyPath: fullHierarchyPath
+    };
+    const initialPrompt = getMasterGuidePrompt('blueprint', context);
+
     try {
         let initialResultText = await callGeminiAPI(initialPrompt, false, "Explore In-Depth (Initial)");
         initialResultText = initialResultText ? initialResultText.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
         originalGeneratedText.set(fullTitle, initialResultText);
         contentEl.innerHTML = '';
         renderAccordionFromMarkdown(initialResultText, contentEl);
-        addModalActionButtons(buttonContainer, true);
+        addModalActionButtons(buttonContainer, true, !!(oauthToken && oauthToken.access_token));
     } catch (error) {
         handleApiError(error, contentEl, 'initial in-depth content');
     }
 }
 
+/**
+ * Performs a "Search, Validate, and Format" process for generating helpful resources.
+ * @param {string} topic The core topic of the guide.
+ * @param {Array} fullHierarchyPath The hierarchical path of the topic.
+ * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
+ */
+async function generateVerifiedResources(topic, fullHierarchyPath) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
+        console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
+        return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
+    }
+
+    const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
+    const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic].join(' ');
+
+    try {
+        // 1. Search
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchResponse = await fetch(searchApiUrl);
+        if (!searchResponse.ok) {
+            const errorData = await searchResponse.json();
+            throw new Error(`Google Search API request failed: ${errorData.error.message}`);
+        }
+        const searchResults = await searchResponse.json();
+        const searchItems = searchResults.items?.slice(0, 8) || []; // Get more results to filter
+
+        if (searchItems.length === 0) {
+            return `### 12. Helpful Resources\n*No relevant online resources were found for "${contextualTopic}".*`;
+        }
+
+        // 2. Validate
+        const validationPrompt = `
+            Persona: You are a senior ${mainCategory} expert.
+            Task: Review the following list of web search results. Your job is to critique and filter this list to find the most relevant, authoritative, and up-to-date resources for a technical guide about "${contextualTopic}".
+            
+            //-- SEARCH RESULTS --//
+            ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
+
+            //-- INSTRUCTIONS --//
+            1.  **Critically Evaluate:** Discard any links that are irrelevant (e.g., about different products), severely outdated (e.g., for hardware more than two generations old or deprecated software), or low-quality (e.g., forum posts with no clear answer, marketing pages).
+            2.  **Select the Best:** Choose the top 3-4 most valuable links.
+            3.  **Return JSON:** Your response MUST be a valid JSON array containing only the objects of the approved links. Do not add any other text.
+        `;
+        const validatedLinksJson = await callGeminiAPI(validationPrompt, true, "Validate Search Results");
+        const validatedLinks = parseJsonWithCorrections(validatedLinksJson);
+
+        if (!validatedLinks || validatedLinks.length === 0) {
+            return `### 12. Helpful Resources\n*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
+        }
+        
+        // 3. Format
+        const formattingPrompt = `
+            Persona: You are an expert IT Technical Writer.
+            Task: Format the following list of expert-validated search results into a clean, professional "Helpful Resources" section.
+
+            //-- VALIDATED SEARCH RESULTS --//
+            ${JSON.stringify(validatedLinks)}
+
+            //-- INSTRUCTIONS --//
+            1.  **Use Provided Data:** You MUST use the exact URL and Title provided for each link.
+            2.  **Write New Descriptions:** Based on the title and snippet, write a concise, one-sentence description for each resource explaining its value. Do not just copy the snippet.
+            3.  **Format as Markdown:** Structure your response as a complete markdown section, starting with the "### 12. Helpful Resources" header, followed by a bulleted list.
+
+            Return ONLY the complete markdown for this section.
+        `;
+        return await callGeminiAPI(formattingPrompt, false, "Format Helpful Resources");
+
+    } catch (error) {
+        console.error("Could not fetch, validate, or format helpful resources:", error);
+        return `### 12. Helpful Resources\n*An error occurred while trying to find real-time resources: ${error.message}*`;
+    }
+}
+
+
 async function generateFullDetailedGuide(button) {
-    // --- 1. Get the necessary context from the first modal ---
     const firstModalFooter = document.getElementById('inDepthModalFooter');
     const fullTitleFromFirstModal = firstModalFooter.dataset.fullTitle;
     const fullHierarchyPath = JSON.parse(firstModalFooter.dataset.fullHierarchyPath);
@@ -1343,83 +1903,85 @@ async function generateFullDetailedGuide(button) {
     button.disabled = true;
     button.innerHTML = `<span class="flex items-center justify-center gap-2"><div class="loader themed-loader" style="width:20px; height:20px; border-width: 2px;"></div>Opening...</span>`;
     
-    // --- 2. Setup the second (detailed) modal UI ---
     const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
     const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
     const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
     
-    const detailedModalTitle = `Complete Guide: ${fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '')}`;
-    detailedTitleEl.textContent = detailedModalTitle;
+    const detailedModalTitleText = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
+    const mainTitle = `Complete Guide: ${detailedModalTitleText}`;
+    const detailedModalTitleKey = mainTitle;
+    
+    const pathString = fullHierarchyPath.map(p => p.title).join(' / ');
+    const breadcrumbHtml = `<span class="text-sm font-normal themed-text-muted block mb-1">${pathString}</span>`;
+    detailedTitleEl.innerHTML = `${breadcrumbHtml}${mainTitle}`;
+    
     detailedButtonContainer.innerHTML = '';
-    detailedFooterEl.dataset.fullTitle = detailedModalTitle;
-    detailedFooterEl.dataset.cardName = fullHierarchyPath.map(p => p.title).join(' / ');
+    detailedFooterEl.dataset.fullTitle = detailedModalTitleKey;
+    detailedFooterEl.dataset.cardName = pathString;
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
-    detailedContentEl.innerHTML = getLoaderHTML('Generating complete, detailed guide (sections 5-12)...');
-
-    // --- 3. Define the new, improved prompt for the final content ---
-    const finalContentPrompt = `
-    Persona: You are an elite-level AI, a Senior IT Administrator and Principal Technical Writer.
-    Mission: You have ALREADY CREATED the foundational blueprint for an IT guide (sections 1-4). Your mission now is to generate ONLY the remaining detailed sections (5 through 12) to complete the guide. Your output must be a direct and logical expansion of the blueprint, especially the Introduction.
-
-    //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
-    ${blueprintMarkdown}
-
-    //-- INSTRUCTIONS: GENERATE THE FOLLOWING SECTIONS (5-12) --//
-
-    ### 5. Detailed Implementation Guide
-    This is the most CRITICAL section. It must be a comprehensive, step-by-step walkthrough of the primary task outlined in the blueprint's "Introduction". **Do not simply explain the concepts from Section 3 again.** Instead, show how to apply them to achieve the goal stated in the Introduction. Structure this section logically (e.g., Step 1: Configuration, Step 2: Deployment, Step 3: Integration). For each major step, provide practical instructions for the methods (GUI, CLI, API) defined as IN-SCOPE in the Introduction. **Provide clear, real-world examples for each method.** Use markdown blockquotes for code snippets or commands.
-
-    ### 6. Verification and Validation
-    Provide specific, copy-able commands or detailed UI navigation steps to confirm that the process detailed in Section 5 was completed successfully.
-
-    ### 7. Best Practices
-    List expert, actionable advice directly related to the implementation process from Section 5. Avoid generic advice.
-
-    ### 8. Automation Techniques
-    If scripting is in scope, provide full, production-ready scripts that automate the end-to-end process from Section 5. Scripts MUST include robust error handling.
-
-    ### 9. Security Considerations
-    Detail security hardening steps, potential vulnerabilities, and auditing procedures specifically for the process and technologies used in Section 5.
-
-    ### 10. Advanced Use Cases & Scenarios
-    Describe 2-3 advanced, real-world examples that build upon the successful implementation from Section 5.
-
-    ### 11. Troubleshooting
-    Create a detailed markdown table of common problems that could occur during the process in Section 5, their likely causes, and concrete solutions.
-
-    ### 12. Helpful Resources
-    Provide a bulleted list of high-quality, real, and working URLs to official documentation or tools directly relevant to the process in Section 5.
-
-    //-- MANDATORY QUALITY STANDARDS --//
-    1.  **Introduction-Driven:** All content in sections 5-12 MUST directly support and expand upon the scope defined in the blueprint's Introduction.
-    2.  **No Placeholders:** Your output MUST NOT contain placeholders (e.g., "[Link to documentation]", "api.example.com").
-    3.  **Factual Accuracy:** All technical content must be accurate and validated against current standards.
-    4.  **Professional Tone:** Write in a clean, professional voice. Do not include meta-commentary like "Pro Tip:" or "Note:".
-
-    //-- FINAL OUTPUT INSTRUCTION --//
-    Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide". Do not repeat the blueprint.
-    `;
 
     try {
-        // --- 4. Make a single API call for the final content ---
-        let finalSections5to12 = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Single Call)");
-        finalSections5to12 = finalSections5to12 ? finalSections5to12.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
+        const coreTopic = detailedModalTitleText.trim();
+        
+        const context = {
+            blueprintMarkdown: blueprintMarkdown,
+            fullHierarchyPath: fullHierarchyPath,
+            coreTask: coreTopic
+        };
+        const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
+        let firstDraftMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Draft)");
+        firstDraftMarkdown = firstDraftMarkdown ? firstDraftMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
 
-        if (!finalSections5to12) {
+        if (!firstDraftMarkdown) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        // --- 5. Combine the blueprint and the new content, then render ---
-        const finalCompleteGuideMarkdown = blueprintMarkdown + "\n\n" + finalSections5to12;
-        originalGeneratedText.set(detailedModalTitle, finalCompleteGuideMarkdown);
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
+        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
+        const section5Match = firstDraftMarkdown.match(section5Regex);
+        const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
+
+        if (!implementationGuideDraft) {
+            throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
+        }
+        
+        const refinementPrompt = `
+            Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
+            
+            Original Section:
+            ${implementationGuideDraft}
+        `;
+        let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
+        if (!refinedImplementationGuide.startsWith('### 5.')) {
+            refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
+        }
+
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching & validating web resources...');
+        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopic, fullHierarchyPath);
+
+        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
+        
+        const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
+        const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
+        const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
+
+        const finalCompleteGuideMarkdown = [
+            blueprintMarkdown,
+            refinedImplementationGuide,
+            sections6to11.trim(),
+            helpfulResourcesMarkdown.trim()
+        ].join("\n\n").trim();
+        
+        originalGeneratedText.set(detailedModalTitleKey, finalCompleteGuideMarkdown);
 
         detailedContentEl.innerHTML = '';
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
         
-        addDetailedModalActionButtons(detailedButtonContainer);
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
+        addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
+        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and verified successfully!';
 
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -1429,9 +1991,9 @@ async function generateFullDetailedGuide(button) {
     }
 }
 
-function addModalActionButtons(buttonContainer, isInitialPhase = false) {
+
+function addModalActionButtons(buttonContainer, isInitialPhase = false, hasToken = false) {
     buttonContainer.innerHTML = '';
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
 
     if (isInitialPhase) {
@@ -1448,13 +2010,9 @@ function addModalActionButtons(buttonContainer, isInitialPhase = false) {
     }
 }
 
-function addDetailedModalActionButtons(buttonContainer) {
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-
-    // Add the new "Add to Knowledge Base" button
     const addToKbBtnHtml = `<button id="add-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
-
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
 
     const copyButton = buttonContainer.querySelector('.copy-button');
@@ -1465,7 +2023,6 @@ function addDetailedModalActionButtons(buttonContainer) {
         });
     }
 
-    // Add event listener for the new button
     const addToKbButton = buttonContainer.querySelector('#add-to-kb-btn');
     if (addToKbButton) {
         addToKbButton.addEventListener('click', () => {
@@ -1491,8 +2048,8 @@ function addDetailedModalActionButtons(buttonContainer) {
 }
 
 
-function addSearchModalActionButtons(buttonContainer) {
-    const hasToken = gapi && gapi.client && gapi.client.getToken() !== null;
+
+function addSearchModalActionButtons(buttonContainer, hasToken = false) {
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
     const copyButton = buttonContainer.querySelector('.copy-button');
@@ -1530,7 +2087,7 @@ async function handleSearchGemini() {
     const resultEl = document.getElementById('searchGeminiResult');
     searchTextEl.value = selectedText;
     resultEl.innerHTML = getLoaderHTML(`Searching Gemini for an explanation of "${selectedText}"...`);
-    addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'));
+    addSearchModalActionButtons(document.getElementById('searchGeminiModalButtons'), !!(oauthToken && oauthToken.access_token));
     openModal('searchGeminiModal');
     const prompt = `In the context of IT administration, please explain the following term or concept clearly and concisely: "${selectedText}". Provide a simple definition and a practical example of how it's used. Format the response as a simple markdown string.`;
     try {
@@ -1571,18 +2128,15 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar = document.createElement('div');
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
-    const card = container.closest('.card');
-    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
-    buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}" data-full-hierarchy-path='${JSON.stringify(fullHierarchyPath).replace(/'/g, "&#39;")}'>Explore In-Depth</button>`;
-    container.appendChild(buttonBar);
+    
+    buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>`;
+    
     buttonBar.querySelector('.copy-button').addEventListener('click', e => {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
         if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
     });
-    buttonBar.querySelector('.explore-button').addEventListener('click', e => {
-        const { topicId, categoryId } = e.currentTarget.dataset;
-        handleExploreInDepth(topicId, fullHierarchyPath);
-    });
+
+    container.appendChild(buttonBar);
 }
 
 async function handleCustomVisualThemeGeneration() {
@@ -1654,6 +2208,11 @@ function copyElementTextToClipboard(element, button) {
     document.body.removeChild(textarea);
 }
 
+/**
+ * Renders markdown content into an accordion structure inside a container element.
+ * @param {string} markdownText The markdown content.
+ * @param {HTMLElement} containerElement The element to render into.
+ */
 function renderAccordionFromMarkdown(markdownText, containerElement) {
     containerElement.innerHTML = '';
     if (!markdownText || !markdownText.trim()) {
@@ -1663,6 +2222,7 @@ function renderAccordionFromMarkdown(markdownText, containerElement) {
     const fullHtml = convertMarkdownToHtml(markdownText);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = fullHtml;
+
     const nodes = Array.from(tempDiv.childNodes);
     let currentAccordionItem = null;
     let introContent = document.createElement('div');
@@ -1784,7 +2344,7 @@ async function handleRefineRequest(refineContainer, targetModalId) {
 
 function getIconForTheme(categoryId, topicId) { 
     const icons = {
-        serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
+        serviceNowAdmin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
         windowsServer: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
         m365Admin: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>`,
         default: `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`
@@ -1798,8 +2358,9 @@ function getLoaderHTML(message) { return `<div class="flex justify-center items-
 
 function sanitizeTitle(title) {
     if (typeof title !== 'string') return '';
-    return title.replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
+    return title.replace(/<|>/g, '').replace(/^["*-\s]+|["*-\s]+$/g, '').trim();
 }
+
 
 function truncateText(text, maxLength = 50) {
     if (typeof text !== 'string' || text.length <= maxLength) { return text; }
@@ -1978,7 +2539,6 @@ async function openCategoryBrowser(mode) {
     openModal('categoryBrowserModal');
 }
 
-// MODIFIED: This function now groups guides by their hierarchy path.
 async function openKbBrowser() {
     if (!db || !firebaseConfig) {
         displayMessageInModal("Database not initialized.", "error");
@@ -2003,7 +2563,6 @@ async function openKbBrowser() {
             return;
         }
 
-        // Group guides by their hierarchy path
         const groupedGuides = items.reduce((acc, item) => {
             const path = item.hierarchyPath || 'Uncategorized';
             if (!acc[path]) {
@@ -2013,15 +2572,13 @@ async function openKbBrowser() {
             return acc;
         }, {});
 
-        modalContent.innerHTML = ''; // Clear the loader
+        modalContent.innerHTML = '';
 
-        // Sort the group keys alphabetically
         const sortedGroupKeys = Object.keys(groupedGuides).sort((a, b) => a.localeCompare(b));
 
-        // Render each group
         sortedGroupKeys.forEach(path => {
             const groupContainer = document.createElement('div');
-            groupContainer.className = 'mb-8'; // Add margin between groups
+            groupContainer.className = 'mb-8';
 
             const groupHeader = document.createElement('h3');
             groupHeader.className = 'text-xl font-bold themed-text-accent mb-4 pb-2 border-b-2';
@@ -2308,7 +2865,6 @@ function displayMessageInModal(message, type = 'info') {
     const modalId = 'messageModal';
     let modal = document.getElementById(modalId);
     
-    // Always ensure the content is there. This is safer than checking for existence.
     modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
     modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
 
@@ -2326,7 +2882,6 @@ function showConfirmationModal(message, onConfirmCallback) {
     const modalId = 'confirmationModal';
     let modal = document.getElementById(modalId);
     
-    // Always ensure the content is there.
     modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 class="text-2xl font-bold mb-4 themed-text-primary">Confirm Action</h2><p id="confirmationModalContent" class="mb-6 themed-text-muted"></p><div class="flex justify-center gap-4"><button id="confirmYesBtn" class="btn-primary">Yes</button><button id="confirmNoBtn" class="btn-secondary">No</button></div></div>`;
     
     const contentEl = modal.querySelector('#confirmationModalContent');
@@ -2335,7 +2890,6 @@ function showConfirmationModal(message, onConfirmCallback) {
     const confirmYesBtn = modal.querySelector('#confirmYesBtn');
     const confirmNoBtn = modal.querySelector('#confirmNoBtn');
 
-    // Use a fresh listener to avoid stacking them
     const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
     confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
     
@@ -2566,7 +3120,7 @@ async function handleSearchResultClick(objectID) {
             
             detailedContentEl.innerHTML = '';
             renderAccordionFromMarkdown(guide.markdownContent, detailedContentEl);
-            addDetailedModalActionButtons(detailedButtonContainer);
+            addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
             
             openModal('inDepthDetailedModal');
         } else {
@@ -2581,51 +3135,7 @@ async function handleSearchResultClick(objectID) {
 }
 
 // --- App Initialization Trigger ---
-
-// Handles the result of the OAuth redirect.
-// It stores the token and forces a reload to a clean URL.
-function handleRedirectResult() {
-    if (window.location.hash.includes('access_token')) {
-        const params = new URLSearchParams(window.location.hash.substring(1));
-        const token = params.get('access_token');
-        if (token) {
-            // Store the token in session storage to survive the redirect.
-            sessionStorage.setItem('oauthToken', JSON.stringify({ access_token: token }));
-            // Redirect to the clean URL. This stops script execution here.
-            window.location.href = window.location.pathname + window.location.search;
-            return true; // Indicates a redirect is happening.
-        }
-    }
-    return false; // No redirect happened.
-}
-
-// Checks for a token in session storage on page load.
-function loadTokenFromSession() {
-    const tokenString = sessionStorage.getItem('oauthToken');
-    if (tokenString) {
-        try {
-            oauthToken = JSON.parse(tokenString);
-            // Important: Remove the token from storage after loading it into memory.
-            sessionStorage.removeItem('oauthToken');
-        } catch(e) {
-            console.error("Could not parse token from session storage", e);
-            sessionStorage.removeItem('oauthToken');
-        }
-    }
-}
-
-// Main entry point for the application.
 function initializeApplication() {
-    // First, check if the current URL is the result of a redirect.
-    // If it is, this function will store the token and force a reload, stopping further execution.
-    if (handleRedirectResult()) {
-        return; // Stop initialization since the page is about to reload.
-    }
-
-    // If we are on a clean page (not a redirect result), check session storage for a token.
-    loadTokenFromSession(); 
-    
-    // Now, proceed with normal application setup.
     setupEventListeners();
     populateTypographySettings();
     marked.setOptions({
@@ -2638,7 +3148,7 @@ function initializeApplication() {
 
     if (loadConfigFromStorage()) {
         initializeFirebase();
-        initializeGoogleClients();
+        initializeGoogleApiClients();
     } else {
         openModal('apiKeyModal');
     }
