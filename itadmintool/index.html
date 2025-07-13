@@ -133,7 +133,8 @@
         </main>
     </div>
 
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <!-- Modals -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
             <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are stored locally in your browser.</p>
@@ -149,6 +150,11 @@
                         <p class="text-xs themed-text-muted mt-1">Note: The Admin Key is for the backend function setup and is not used directly in the browser.</p>
                     </div>
                 </div>
+                <div class="mb-4">
+                    <label for="googleSearchEngineIdInput" class="block text-sm font-medium themed-text-primary mb-1">Google Programmable Search Engine ID (Optional)</label>
+                    <input type="text" id="googleSearchEngineIdInput" name="googleSearchEngineIdInput" class="themed-input w-full" placeholder="Enter your Search Engine ID">
+                    <p class="text-xs themed-text-muted mt-1">Required for the "Helpful Resources" section to find live URLs.</p>
+                </div>                
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="btn-primary">Save and Continue</button>
@@ -157,7 +163,7 @@
         </div>
     </div>
     
-    <div id="searchModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="searchModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">Search Knowledge Base</h2>
@@ -172,14 +178,14 @@
         </div>
     </div>
 
-    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="flex flex-col items-center">
             <div class="loader themed-loader"></div>
             <p id="loading-message" class="text-white mt-4"></p>
         </div>
     </div>
     
-    <div id="inDepthModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="inDepthModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
@@ -192,7 +198,7 @@
             </div>
         </div>
     </div>
-    <div id="inDepthDetailedModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="inDepthDetailedModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
          <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 id="inDepthDetailedModalTitle" class="text-2xl font-bold themed-text-primary mb-0"></h2>
@@ -205,7 +211,7 @@
             </div>
         </div>
     </div>
-    <div id="searchGeminiModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="searchGeminiModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
          <div class="card w-full max-w-2xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">Gemini Search</h2>
@@ -221,7 +227,7 @@
             </div>
         </div>
     </div>
-    <div id="categoryBrowserModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="categoryBrowserModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-5xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-4 border-b flex justify-between items-center shrink-0">
                 <h2 id="categoryBrowserModalTitle" class="text-2xl font-bold themed-text-primary mb-0">Browse Categories</h2>
@@ -231,7 +237,7 @@
             <div id="categoryBrowserModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
-    <div id="stickyTopicsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="stickyTopicsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-lg m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">Sticky Topics</h2>
@@ -247,7 +253,7 @@
             </div>
         </div>
     </div>
-    <div id="promptsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="promptsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">Application Prompts</h2>
@@ -256,7 +262,7 @@
             <div id="promptsModalContent" class="p-6 overflow-y-auto prose max-w-none"></div>
         </div>
     </div>
-    <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">Generate Custom Theme</h2>
             <input id="theme-prompt" class="themed-input w-full p-2 rounded-lg mb-4" placeholder="e.g., 'Cyberpunk Sunset'">
@@ -268,7 +274,7 @@
             <button id="closeThemeGeneratorModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
         </div>
     </div>
-    <div id="aiLogModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="aiLogModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-4xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">AI Interaction Log</h2>
@@ -277,7 +283,7 @@
             <div id="aiLogModalContent" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
-    <div id="hierarchyManagementModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal">
+    <div id="hierarchyManagementModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card w-full max-w-6xl m-4 flex flex-col overflow-hidden" style="max-height: 90vh;">
             <div class="p-4 border-b flex justify-between items-center shrink-0">
                 <h2 class="text-2xl font-bold themed-text-primary mb-0">Hierarchy Management</h2>
@@ -330,8 +336,8 @@
             </div>
         </div>
     </div>
-    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal"></div>
-    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 hidden modal"></div>
+    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
+    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
     
     <button id="scroll-to-top-button" class="floating-action-button hidden">&uarr;</button>
     <div id="settings-panel" class="hidden">
