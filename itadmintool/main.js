@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 
 // --- Global State ---
 let db;
@@ -1775,6 +1775,76 @@ Additional Context: ${additionalContext || 'None'}`;
     return '';
 }
 
+// NEW: Prompt builder for Narrative Guides
+function getNarrativeGuidePrompt(type, context) {
+    const {
+        topicTitle = '',
+        fullHierarchyPath = [],
+        introductionText = '',
+        expansionText = ''
+    } = context;
+
+    const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
+    const persona = `You are a Senior Technical Writer and Subject Matter Expert in ${fullHierarchyPath[0]?.title || 'IT Administration'}. Your writing style is clear, authoritative, and engaging.`;
+
+    if (type === 'introduction') {
+        return `
+        //-- PERSONA & OBJECTIVE --//
+        ${persona}
+        Your task is to write a single, compelling introductory paragraph for a technical guide on the topic: "${topicTitle}".
+        
+        //-- CONTEXT --//
+        This guide is part of the knowledge base path: "${pathString}".
+        
+        //-- INSTRUCTIONS --//
+        - The introduction should be a single paragraph.
+        - It must clearly state the purpose and scope of the guide.
+        - It should engage the reader by explaining why this topic is important.
+        - Do NOT use headers or markdown formatting.
+        - Return ONLY the raw text of the paragraph.`;
+    }
+
+    if (type === 'expansion') {
+        return `
+        //-- PERSONA & OBJECTIVE --//
+        ${persona}
+        Your task is to write the main body of a detailed, narrative-style guide on the topic: "${topicTitle}". You will expand upon the provided introduction.
+
+        //-- CONTEXT: THE GUIDE'S INTRODUCTION (DO NOT REPEAT) --//
+        "${introductionText}"
+
+        //-- INSTRUCTIONS --//
+        - Write a detailed, free-flowing guide that continues seamlessly from the introduction.
+        - Use a paragraph-based, narrative style. Avoid using lists or bullet points unless absolutely necessary for clarity (e.g., for a sequence of commands).
+        - Organize the content logically, but without using formal "###" headers. You can use bold text for emphasis on key terms or concepts.
+        - Cover the core concepts, key processes, best practices, and potential pitfalls related to "${topicTitle}".
+        - Return ONLY the raw text of the detailed guide.`;
+    }
+    
+    if (type === 'review') {
+        return `
+        //-- PERSONA & OBJECTIVE --//
+        You are a meticulous Master Technical Editor. Your task is to review and polish a draft of a technical guide to ensure it is accurate, coherent, and well-written.
+
+        //-- DRAFT CONTENT TO REVIEW --//
+        Introduction: "${introductionText}"
+        Main Body: "${expansionText}"
+
+        //-- INSTRUCTIONS --//
+        1.  **Combine and Refine:** Merge the introduction and the main body into a single, cohesive text.
+        2.  **Ensure Accuracy:** Correct any potential technical inaccuracies or unclear statements regarding "${topicTitle}".
+        3.  **Improve Flow:** Edit for clarity, conciseness, and logical flow. Ensure smooth transitions between paragraphs.
+        4.  **Final Polish:** Correct any grammar or spelling errors.
+        5.  **Format:** The final output should be a single block of markdown text. The first paragraph should be the introduction, followed by the detailed expansion.
+        
+        //-- REQUIRED OUTPUT --//
+        Return ONLY the final, polished, and complete markdown text for the guide. Do not include any headers, preambles, or notes about your changes.`;
+    }
+    
+    return '';
+}
+
+
 async function handleExploreInDepth(topicId, fullHierarchyPath) {
     const categoryId = fullHierarchyPath[fullHierarchyPath.length - 1].id;
     const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) || userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
@@ -2051,6 +2121,21 @@ function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
     }
 }
 
+// NEW: Add action buttons for the Narrative Guide modal
+function addNarrativeModalActionButtons(buttonContainer, hasToken = false) {
+    const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
+    // Later, we can add a button to save to the new 'narrativeGuides' collection in Firebase
+    // const addToKbBtnHtml = `<button id="add-narrative-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
+    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
+
+    const copyButton = buttonContainer.querySelector('.copy-button');
+    if (copyButton) {
+        copyButton.addEventListener('click', e => {
+            const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]');
+            copyElementTextToClipboard(contentToCopy, e.target);
+        });
+    }
+}
 
 
 function addSearchModalActionButtons(buttonContainer, hasToken = false) {
@@ -2149,11 +2234,14 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     container.appendChild(buttonBar);
 }
 
-// NEW: Placeholder function for Narrative Guide Request
-function handleNarrativeGuideRequest(topicId, categoryId) {
+// MODIFIED: Implemented full AI logic for Narrative Guide Request
+async function handleNarrativeGuideRequest(topicId, categoryId) {
+    const card = document.getElementById(`selector-${categoryId}`).closest('.card');
+    const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || 
                  stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) || 
                  userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
+
     if (!item) {
         displayMessageInModal("Could not find the selected topic data.", "error");
         return;
@@ -2161,11 +2249,67 @@ function handleNarrativeGuideRequest(topicId, categoryId) {
 
     const titleEl = document.getElementById('narrativeGuideModalTitle');
     const contentEl = document.getElementById('narrativeGuideModalContent');
+    const footerEl = document.getElementById('narrativeGuideModalFooter');
+    const buttonContainer = document.getElementById('narrativeGuideModalButtons');
+    const statusEl = document.getElementById('narrative-modal-status-message');
     
-    titleEl.textContent = `Narrative Guide: ${item.title}`;
-    contentEl.innerHTML = `<p class="themed-text-muted text-center p-8">Narrative guide generation will be implemented in the next phase.</p>`;
+    const fullTitle = `Narrative Guide: ${item.title}`;
+    titleEl.textContent = fullTitle;
+    buttonContainer.innerHTML = '';
+    statusEl.textContent = '';
     
+    footerEl.dataset.fullTitle = fullTitle;
+    footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
+
     openModal('narrativeGuideModal');
+
+    try {
+        // Step 1: Generate Introduction
+        contentEl.innerHTML = getLoaderHTML('Step 1/3: Generating Introduction...');
+        const introContext = { topicTitle: item.title, fullHierarchyPath };
+        const introPrompt = getNarrativeGuidePrompt('introduction', introContext);
+        const introductionText = await callGeminiAPI(introPrompt, false, "Narrative Intro");
+        if (!introductionText) throw new Error("AI failed to generate an introduction.");
+
+        // Step 2: Generate Expansion
+        contentEl.innerHTML = getLoaderHTML('Step 2/3: Expanding on the Topic...');
+        const expansionContext = { topicTitle: item.title, introductionText };
+        const expansionPrompt = getNarrativeGuidePrompt('expansion', expansionContext);
+        const expansionText = await callGeminiAPI(expansionPrompt, false, "Narrative Expansion");
+        if (!expansionText) throw new Error("AI failed to generate the guide's expansion.");
+
+        // Step 3: Perform Final Review
+        contentEl.innerHTML = getLoaderHTML('Step 3/3: Performing Final Review...');
+        const reviewContext = { topicTitle: item.title, introductionText, expansionText };
+        const reviewPrompt = getNarrativeGuidePrompt('review', reviewContext);
+        const finalMarkdown = await callGeminiAPI(reviewPrompt, false, "Narrative Review");
+        if (!finalMarkdown) throw new Error("AI failed to complete the final review.");
+
+        // Step 4: Render Final Content
+        originalGeneratedText.set(fullTitle, finalMarkdown);
+        
+        const introParagraph = finalMarkdown.split('\n')[0];
+        const detailedContent = finalMarkdown.substring(introParagraph.length).trim();
+
+        contentEl.innerHTML = `
+            <p class="mb-6 text-lg leading-relaxed">${introParagraph}</p>
+            <div class="accordion-item">
+                <button type="button" class="accordion-header active">
+                    <span class="text-left">In-Depth Details</span>
+                    <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content open prose max-w-none">
+                    ${marked.parse(detailedContent)}
+                </div>
+            </div>
+        `;
+        
+        addNarrativeModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
+        statusEl.textContent = 'Narrative guide generated successfully!';
+
+    } catch (error) {
+        handleApiError(error, contentEl, 'narrative guide');
+    }
 }
 
 
