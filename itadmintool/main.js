@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.1";
+const APP_VERSION = "1.0.2";
 
 // --- Global State ---
 let db;
@@ -563,6 +563,10 @@ function setupEventListeners() {
             } else {
                 console.error("Could not find parent card for explore button.");
             }
+        } else if (target.closest('.narrative-guide-button')) { // NEW
+            const button = target.closest('.narrative-guide-button');
+            const { topicId, categoryId } = button.dataset;
+            handleNarrativeGuideRequest(topicId, categoryId);
         } else if (target.closest('.refine-button')) {
             toggleRefineUI(target.closest('.refine-button').parentElement);
         } else if (target.closest('.modal-refine-button')) {
@@ -2129,7 +2133,13 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
     
-    buttonBar.innerHTML = `<button class="btn-secondary text-sm refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button><button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explore In-Depth</button>`;
+    // MODIFIED: Added Narrative Guide button and renamed existing button
+    buttonBar.innerHTML = `
+        <button class="btn-secondary text-sm refine-button">Refine with AI</button>
+        <button class="btn-secondary text-sm copy-button">Copy Text</button>
+        <button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Structured Guide</button>
+        <button class="btn-primary text-sm narrative-guide-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Narrative Guide</button>
+    `;
     
     buttonBar.querySelector('.copy-button').addEventListener('click', e => {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
@@ -2138,6 +2148,26 @@ function addPostGenerationButtons(container, topicId, categoryId) {
 
     container.appendChild(buttonBar);
 }
+
+// NEW: Placeholder function for Narrative Guide Request
+function handleNarrativeGuideRequest(topicId, categoryId) {
+    const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || 
+                 stickyTopics[categoryId]?.find(d => String(d.id) === String(topicId)) || 
+                 userAddedTopics[categoryId]?.find(d => String(d.id) === String(topicId));
+    if (!item) {
+        displayMessageInModal("Could not find the selected topic data.", "error");
+        return;
+    }
+
+    const titleEl = document.getElementById('narrativeGuideModalTitle');
+    const contentEl = document.getElementById('narrativeGuideModalContent');
+    
+    titleEl.textContent = `Narrative Guide: ${item.title}`;
+    contentEl.innerHTML = `<p class="themed-text-muted text-center p-8">Narrative guide generation will be implemented in the next phase.</p>`;
+    
+    openModal('narrativeGuideModal');
+}
+
 
 async function handleCustomVisualThemeGeneration() {
     const prompt = document.getElementById('theme-prompt').value;
