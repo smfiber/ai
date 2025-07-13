@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.6"; // Updated version
+const APP_VERSION = "1.0.7"; // Updated version
 
 // --- Global State ---
 let db;
@@ -634,7 +634,8 @@ function setupEventListeners() {
             generateFullDetailedGuide(target.closest('#generate-detailed-steps-btn'));
         } else if (target.closest('.search-result-item')) {
             const objectID = target.closest('.search-result-item').dataset.id;
-            handleSearchResultClick(objectID);
+            const type = target.closest('.search-result-item').dataset.type;
+            handleSearchResultClick(objectID, type);
         }
     });
     window.addEventListener('scroll', () => {
@@ -1625,7 +1626,7 @@ Additional Context: \${additionalContext || 'None'}\`;
         - Describe at least two advanced scenarios where this knowledge could be applied.
         
         ### 11. Troubleshooting
-        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and a logical process for isolating the true root cause.
+        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and the logical process for isolating the true root cause.
         
         ### 12. Helpful Resources
         - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
@@ -1821,7 +1822,7 @@ Additional Context: ${additionalContext || 'None'}`;
 }
 
 /**
- * [REPLACED] Generates a prompt for an AI to create a detailed explanatory article on a given topic.
+ * [REPLACED/ENHANCED] Generates a prompt for an AI to create a detailed explanatory article on a given topic, now with citations.
  * This is revised to focus on deep explanation rather than a procedural guide.
  *
  * @param {string} type - The type of prompt to generate ('introduction', 'expansion', 'review').
@@ -1830,6 +1831,7 @@ Additional Context: ${additionalContext || 'None'}`;
  * @param {Array<string|object>} [context.fullHierarchyPath=[]] - The breadcrumb path for the topic.
  * @param {string} [context.introductionText=''] - The text of the introduction (for 'expansion' and 'review').
  * @param {string} [context.expansionText=''] - The text of the main body (for 'review').
+ * @param {string} [context.sources=''] - A markdown string of verified sources for citation.
  * @returns {string} The generated prompt for the AI.
  */
 function getExplanatoryArticlePrompt(type, context) {
@@ -1837,7 +1839,8 @@ function getExplanatoryArticlePrompt(type, context) {
         topicTitle = '',
         fullHierarchyPath = [],
         introductionText = '',
-        expansionText = ''
+        expansionText = '',
+        sources = ''
     } = context;
 
     // Creates a breadcrumb string from the hierarchy path for context.
@@ -1890,21 +1893,24 @@ function getExplanatoryArticlePrompt(type, context) {
     if (type === 'review') {
         return `
         //-- PERSONA & OBJECTIVE --//
-        You are a meticulous Master Technical Editor. Your task is to review and polish a draft of an explanatory article to ensure it is accurate, coherent, and provides deep understanding.
+        You are a meticulous Master Technical Editor and research assistant. Your task is to review a draft article, integrate provided sources to add credibility, and produce a final, polished, and cited piece of work.
 
-        //-- DRAFT CONTENT TO REVIEW --//
+        //-- INPUT 1: DRAFT CONTENT TO REVIEW --//
         Introduction: "${introductionText}"
         Main Body: "${expansionText}"
 
+        //-- INPUT 2: VERIFIED SOURCES FOR CITATION --//
+        ${sources}
+
         //-- INSTRUCTIONS --//
-        1.  **Combine and Synthesize:** Merge the introduction and the main body into a single, cohesive article.
-        2.  **Verify Clarity and Depth:** Ensure the explanation of "${topicTitle}" is not only technically accurate but also conceptually clear and sufficiently detailed for a reader looking to understand the topic, not just use it.
-        3.  **Improve Narrative Flow:** Edit for clarity, conciseness, and logical progression of ideas. Ensure smooth transitions between concepts.
-        4.  **Final Polish:** Correct any grammar, spelling, or punctuation errors.
-        5.  **Format:** The final output should be a single block of markdown text. The first paragraph should be the introduction, followed by the detailed expansion.
+        1.  **Synthesize and Refine:** Merge the introduction and main body into a single, cohesive article. Improve the flow and clarity.
+        2.  **Integrate and Cite:** Read through the draft and the provided sources. Where a statement or concept in the draft is supported by a source, add an inline markdown citation, e.g., [1], [2]. You MUST use the sources to add these citations.
+        3.  **Add References Section:** At the end of the article, create a new section titled "### References".
+        4.  **List Sources:** Under the "References" header, create a numbered list that corresponds to your inline citations. Each item in the list should be the full markdown link of the source (e.g., \`1. [Title of Source](URL)\`).
+        5.  **Final Polish:** Correct any grammar, spelling, or punctuation errors.
         
         //-- REQUIRED OUTPUT --//
-        Return ONLY the final, polished, and complete markdown text for the article. Do not include any headers, preambles, or notes about your changes.`;
+        Return ONLY the final, polished, and complete markdown text for the article, including the inline citations and the concluding "### References" section. Do not include any other headers, preambles, or notes.`;
     }
     
     return ''; // Return an empty string if the type is invalid.
@@ -1964,7 +1970,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 async function generateVerifiedResources(topic, fullHierarchyPath) {
     if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
-        return "### 12. Helpful Resources\n*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
+        return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
 
     const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
@@ -1982,7 +1988,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
         const searchItems = searchResults.items?.slice(0, 8) || []; // Get more results to filter
 
         if (searchItems.length === 0) {
-            return `### 12. Helpful Resources\n*No relevant online resources were found for "${contextualTopic}".*`;
+            return `*No relevant online resources were found for "${contextualTopic}".*`;
         }
 
         // 2. Validate
@@ -2002,29 +2008,16 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
         const validatedLinks = parseJsonWithCorrections(validatedLinksJson);
 
         if (!validatedLinks || validatedLinks.length === 0) {
-            return `### 12. Helpful Resources\n*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
+            return `*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
         }
         
-        // 3. Format
-        const formattingPrompt = `
-            Persona: You are an expert IT Technical Writer.
-            Task: Format the following list of expert-validated search results into a clean, professional "Helpful Resources" section.
+        // 3. Format for citation
+        return validatedLinks.map(link => `* [${link.title}](${link.link}) - ${link.snippet}`).join('\n');
 
-            //-- VALIDATED SEARCH RESULTS --//
-            ${JSON.stringify(validatedLinks)}
-
-            //-- INSTRUCTIONS --//
-            1.  **Use Provided Data:** You MUST use the exact URL and Title provided for each link.
-            2.  **Write New Descriptions:** Based on the title and snippet, write a concise, one-sentence description for each resource explaining its value. Do not just copy the snippet.
-            3.  **Format as Markdown:** Structure your response as a complete markdown section, starting with the "### 12. Helpful Resources" header, followed by a bulleted list.
-
-            Return ONLY the complete markdown for this section.
-        `;
-        return await callGeminiAPI(formattingPrompt, false, "Format Helpful Resources");
 
     } catch (error) {
         console.error("Could not fetch, validate, or format helpful resources:", error);
-        return `### 12. Helpful Resources\n*An error occurred while trying to find real-time resources: ${error.message}*`;
+        return `*An error occurred while trying to find real-time resources: ${error.message}*`;
     }
 }
 
@@ -2112,7 +2105,7 @@ async function generateFullDetailedGuide(button) {
             blueprintMarkdown,
             refinedImplementationGuide,
             sections6to11.trim(),
-            helpfulResourcesMarkdown.trim()
+            `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`
         ].join("\n\n").trim();
         
         originalGeneratedText.set(detailedModalTitleKey, finalCompleteGuideMarkdown);
@@ -2354,30 +2347,33 @@ async function handleExplanatoryArticleRequest(topicId, categoryId) {
 
     try {
         // Step 1: Generate Introduction
-        contentEl.innerHTML = getLoaderHTML('Step 1/3: Generating Introduction...');
+        contentEl.innerHTML = getLoaderHTML('Step 1/4: Generating Introduction...');
         const introContext = { topicTitle: item.title, fullHierarchyPath };
         const introPrompt = getExplanatoryArticlePrompt('introduction', introContext);
         const introductionText = await callGeminiAPI(introPrompt, false, "Explanatory Article Intro");
         if (!introductionText) throw new Error("AI failed to generate an introduction.");
 
         // Step 2: Generate Expansion
-        contentEl.innerHTML = getLoaderHTML('Step 2/3: Expanding on the Topic...');
+        contentEl.innerHTML = getLoaderHTML('Step 2/4: Expanding on the Topic...');
         const expansionContext = { topicTitle: item.title, introductionText, fullHierarchyPath };
         const expansionPrompt = getExplanatoryArticlePrompt('expansion', expansionContext);
         const expansionText = await callGeminiAPI(expansionPrompt, false, "Explanatory Article Expansion");
         if (!expansionText) throw new Error("AI failed to generate the article's expansion.");
 
-        // Step 3: Perform Final Review
-        contentEl.innerHTML = getLoaderHTML('Step 3/3: Performing Final Review...');
-        const reviewContext = { topicTitle: item.title, introductionText, expansionText };
+        // Step 3: Search for and validate sources
+        contentEl.innerHTML = getLoaderHTML('Step 3/4: Searching for references...');
+        const sources = await generateVerifiedResources(item.title, fullHierarchyPath);
+
+        // Step 4: Perform Final Review and add citations
+        contentEl.innerHTML = getLoaderHTML('Step 4/4: Performing final review and adding citations...');
+        const reviewContext = { topicTitle: item.title, introductionText, expansionText, sources };
         const reviewPrompt = getExplanatoryArticlePrompt('review', reviewContext);
         const finalMarkdown = await callGeminiAPI(reviewPrompt, false, "Explanatory Article Review");
         if (!finalMarkdown) throw new Error("AI failed to complete the final review.");
 
-        // Step 4: Render Final Content
+        // Render Final Content
         originalGeneratedText.set(fullTitle, finalMarkdown);
         
-        // Render all content within a single .prose container for consistent styling
         contentEl.innerHTML = `
             <div class="prose max-w-none">
                 ${marked.parse(finalMarkdown)}
@@ -2385,7 +2381,7 @@ async function handleExplanatoryArticleRequest(topicId, categoryId) {
         `;
         
         addArticleModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
-        statusEl.textContent = 'Explanatory article generated successfully!';
+        statusEl.textContent = 'Explanatory article with citations generated successfully!';
 
     } catch (error) {
         handleApiError(error, contentEl, 'explanatory article');
@@ -2807,17 +2803,26 @@ async function openKbBrowser() {
 
     try {
         const appId = firebaseConfig.appId || 'it-admin-hub-global';
-        const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
-        const snapshot = await getDocs(query(kbCollectionRef, orderBy("createdAt", "desc")));
-        
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const guideCollectionRef = collection(db, `artifacts/${appId}/public/data/knowledgeBase`);
+        const articleCollectionRef = collection(db, `artifacts/${appId}/public/data/explanatoryArticles`);
 
-        if (items.length === 0) {
-            modalContent.innerHTML = `<p class="themed-text-muted text-center">The Knowledge Base is empty. Add some guides to see them here.</p>`;
+        const [guideSnapshot, articleSnapshot] = await Promise.all([
+            getDocs(query(guideCollectionRef)),
+            getDocs(query(articleCollectionRef))
+        ]);
+        
+        const guides = guideSnapshot.docs.map(doc => ({ id: doc.id, type: 'Structured Guide', ...doc.data() }));
+        const articles = articleSnapshot.docs.map(doc => ({ id: doc.id, type: 'Explanatory Article', ...doc.data() }));
+
+        const allItems = [...guides, ...articles];
+        allItems.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+
+        if (allItems.length === 0) {
+            modalContent.innerHTML = `<p class="themed-text-muted text-center">The Knowledge Base is empty. Add some guides or articles to see them here.</p>`;
             return;
         }
 
-        const groupedGuides = items.reduce((acc, item) => {
+        const groupedItems = allItems.reduce((acc, item) => {
             const path = item.hierarchyPath || 'Uncategorized';
             if (!acc[path]) {
                 acc[path] = [];
@@ -2828,7 +2833,7 @@ async function openKbBrowser() {
 
         modalContent.innerHTML = '';
 
-        const sortedGroupKeys = Object.keys(groupedGuides).sort((a, b) => a.localeCompare(b));
+        const sortedGroupKeys = Object.keys(groupedItems).sort((a, b) => a.localeCompare(b));
 
         sortedGroupKeys.forEach(path => {
             const groupContainer = document.createElement('div');
@@ -2840,11 +2845,12 @@ async function openKbBrowser() {
             groupHeader.textContent = path;
             groupContainer.appendChild(groupHeader);
 
-            const guides = groupedGuides[path];
+            const items = groupedItems[path];
             const categoryGrid = document.createElement('div');
             categoryGrid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
-            categoryGrid.innerHTML = guides.map(item => `
-                <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer search-result-item" data-id="${item.id}">
+            categoryGrid.innerHTML = items.map(item => `
+                <div class="border rounded-lg p-4 flex flex-col items-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer search-result-item" data-id="${item.id}" data-type="${item.type}">
+                    <span class="text-xs font-semibold px-2 py-1 rounded-full mb-2 ${item.type === 'Structured Guide' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">${item.type}</span>
                     <h3 class="font-semibold text-lg themed-text-accent">${item.title}</h3>
                     <p class="text-sm themed-text-muted mt-1 flex-grow">${item.hierarchyPath}</p>
                     <span class="text-xs themed-text-muted mt-2">${item.createdAt.toDate().toLocaleDateString()}</span>
@@ -3346,43 +3352,51 @@ function displaySearchResults(hits) {
     `).join('');
 }
 
-async function handleSearchResultClick(objectID) {
+async function handleSearchResultClick(objectID, type) {
     if (!db || !firebaseConfig) return;
     closeModal('searchModal');
     openModal('loadingStateModal');
-    document.getElementById('loading-message').textContent = "Loading guide from search...";
+    document.getElementById('loading-message').textContent = "Loading content from search...";
+
+    const appId = firebaseConfig.appId || 'it-admin-hub-global';
+    const collectionName = type === 'Explanatory Article' ? 'explanatoryArticles' : 'knowledgeBase';
+    const docRef = doc(db, `artifacts/${appId}/public/data/${collectionName}`, objectID);
 
     try {
-        const appId = firebaseConfig.appId || 'it-admin-hub-global';
-        const docRef = doc(db, `artifacts/${appId}/public/data/knowledgeBase`, objectID);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            const guide = docSnap.data();
-            const detailedTitleEl = document.getElementById('inDepthDetailedModalTitle');
-            const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
-            const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
-            const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+            const item = docSnap.data();
+            const modalToOpen = type === 'Explanatory Article' ? 'explanatoryArticleModal' : 'inDepthDetailedModal';
+            const titleEl = document.getElementById(`${modalToOpen}Title`);
+            const contentEl = document.getElementById(`${modalToOpen}Content`);
+            const footerEl = document.getElementById(`${modalToOpen}Footer`);
+            const buttonContainer = document.getElementById(`${modalToOpen}Buttons`);
 
-            detailedTitleEl.textContent = guide.title;
-            detailedButtonContainer.innerHTML = '';
-            detailedFooterEl.dataset.fullTitle = guide.title;
-            detailedFooterEl.dataset.cardName = "Knowledge Base Guide";
-            detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify([{ title: guide.hierarchyPath }]);
+            titleEl.textContent = item.title;
+            buttonContainer.innerHTML = '';
+            footerEl.dataset.fullTitle = item.title;
+            footerEl.dataset.cardName = "Knowledge Base";
+            footerEl.dataset.fullHierarchyPath = JSON.stringify([{ title: item.hierarchyPath }]);
             
-            originalGeneratedText.set(guide.title, guide.markdownContent);
+            originalGeneratedText.set(item.title, item.markdownContent);
             
-            detailedContentEl.innerHTML = '';
-            renderAccordionFromMarkdown(guide.markdownContent, detailedContentEl);
-            addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
+            contentEl.innerHTML = '';
+            if (type === 'Explanatory Article') {
+                 contentEl.innerHTML = `<div class="prose max-w-none">${marked.parse(item.markdownContent)}</div>`;
+                 addArticleModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
+            } else {
+                renderAccordionFromMarkdown(item.markdownContent, contentEl);
+                addDetailedModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
+            }
             
-            openModal('inDepthDetailedModal');
+            openModal(modalToOpen);
         } else {
-            displayMessageInModal("Could not find the selected guide in the database.", "error");
+            displayMessageInModal("Could not find the selected content in the database.", "error");
         }
     } catch (error) {
-        console.error("Error loading guide from Firestore:", error);
-        displayMessageInModal(`Error loading guide: ${error.message}`, "error");
+        console.error("Error loading content from Firestore:", error);
+        displayMessageInModal(`Error loading content: ${error.message}`, "error");
     } finally {
         closeModal('loadingStateModal');
     }
