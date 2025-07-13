@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4"; // Updated version
 
 // --- Global State ---
 let db;
@@ -87,6 +87,51 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
         statusEl.textContent = `Error: ${error.message}`;
     }
 }
+
+/**
+ * [NEW] Saves a completed narrative guide to the 'narrativeGuides' Firestore collection.
+ * @param {string} title The title of the guide.
+ * @param {string} markdownContent The full markdown content of the guide.
+ * @param {Array} hierarchyPath The hierarchical path of the guide's topic.
+ */
+async function saveNarrativeToKB(title, markdownContent, hierarchyPath) {
+    if (!userId) {
+        displayMessageInModal("You must be logged in to save to the Knowledge Base.", 'warning');
+        return;
+    }
+    if (!db || !firebaseConfig) {
+        console.error("Firestore database or config is not initialized.");
+        displayMessageInModal("Database connection error. Cannot save guide.", 'error');
+        return;
+    }
+
+    const statusEl = document.getElementById('narrative-modal-status-message');
+    statusEl.textContent = 'Adding to Knowledge Base...';
+
+    const appId = firebaseConfig.appId || 'it-admin-hub-global';
+    // Save to a new collection to distinguish between structured and narrative guides
+    const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/narrativeGuides`);
+    const guideData = {
+        title: title,
+        markdownContent: markdownContent,
+        hierarchyPath: hierarchyPath.map(p => p.title || p).join(' / '),
+        createdAt: Timestamp.now(),
+        status: 'completed',
+        userId: userId,
+    };
+
+    try {
+        const docRef = await addDoc(kbCollectionRef, guideData);
+        console.log("Narrative Guide saved to Knowledge Base with ID: ", docRef.id);
+        // This action should trigger a backend Firebase Function to index this record in Algolia.
+        statusEl.textContent = 'Successfully added to Knowledge Base!';
+        setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    } catch (error) {
+        console.error("Error saving narrative guide to Knowledge Base:", error);
+        statusEl.textContent = `Error: ${error.message}`;
+    }
+}
+
 
 /**
  * [REFACTORED] Opens a modal and manages body classes for scroll locking.
@@ -1591,7 +1636,7 @@ Additional Context: \${additionalContext || 'None'}\`;
 }`,
         'getRefinementPrompt': `
 function getRefinementPrompt(originalText = '{original_text}', refinementRequest = '{refinement_request}') {
-    return \`Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// \${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// \${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.\`;
+    return \`Persona: You are a Master Technical Editor and Content Strategist AI. You specialize in interpreting revision requests and surgically modifying existing technical content to meet new new requirements while upholding the highest standards of quality. Core Mandate: Your task is to analyze the ORIGINAL TEXT and the USER'S REVISION DIRECTIVE provided below. You must then rewrite the original text to flawlessly execute the user's directive, producing a new, complete, and professionally polished version of the text. //-- INPUT 1: ORIGINAL TEXT --// \${originalText} //-- INPUT 2: USER'S REVISION DIRECTIVE --// \${refinementRequest} //-- GUIDING PRINCIPLES FOR REVISION --// - **Interpret Intent:** Understand the objective behind the directive. If the user asks to "make it simpler," you must simplify terminology, rephrase complex sentences, and perhaps add analogies. - **Seamless Integration:** The new content must flow naturally. The final output should feel like a single, cohesive piece. - **Maintain Structural Integrity:** Preserve the original markdown formatting unless the directive requires a structural change. - **Uphold Technical Accuracy:** Ensure any changes or additions are technically accurate and align with modern best practices. Final Output Instruction: Return ONLY the new, complete, and rewritten markdown text. Do not provide a preamble, an explanation of your changes, or any text other than the final, revised content itself.\`;
 }`,
         'callGeminiAPI': `
 async function callGeminiAPI(prompt, isJson = false, logType = "General") {
@@ -2121,18 +2166,42 @@ function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
     }
 }
 
-// NEW: Add action buttons for the Narrative Guide modal
+// [MODIFIED] Add action buttons for the Narrative Guide modal, including the new KB button
 function addNarrativeModalActionButtons(buttonContainer, hasToken = false) {
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-    // Later, we can add a button to save to the new 'narrativeGuides' collection in Firebase
-    // const addToKbBtnHtml = `<button id="add-narrative-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
-    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}`;
+    const addToKbBtnHtml = `<button id="add-narrative-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
+    
+    buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
 
     const copyButton = buttonContainer.querySelector('.copy-button');
     if (copyButton) {
         copyButton.addEventListener('click', e => {
             const contentToCopy = e.target.closest('.card').querySelector('[id$="ModalContent"]');
             copyElementTextToClipboard(contentToCopy, e.target);
+        });
+    }
+
+    const addToKbButton = buttonContainer.querySelector('#add-narrative-to-kb-btn');
+    if (addToKbButton) {
+        addToKbButton.addEventListener('click', () => {
+            const narrativeFooterEl = document.getElementById('narrativeGuideModalFooter');
+            const title = narrativeFooterEl.dataset.fullTitle;
+            const hierarchyPathString = narrativeFooterEl.dataset.fullHierarchyPath;
+            
+            if (!title || !hierarchyPathString) {
+                 displayMessageInModal("Could not save. Guide data is missing.", "error");
+                 return;
+            }
+
+            const hierarchyPath = JSON.parse(hierarchyPathString);
+            const markdownContent = originalGeneratedText.get(title);
+
+            if (markdownContent) {
+                // Call the new save function for narrative guides
+                saveNarrativeToKB(title, markdownContent, hierarchyPath);
+            } else {
+                displayMessageInModal("Could not save. Guide content not found.", "error");
+            }
         });
     }
 }
@@ -2218,7 +2287,6 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
     
-    // MODIFIED: Added Narrative Guide button and renamed existing button
     buttonBar.innerHTML = `
         <button class="btn-secondary text-sm refine-button">Refine with AI</button>
         <button class="btn-secondary text-sm copy-button">Copy Text</button>
@@ -2234,7 +2302,7 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     container.appendChild(buttonBar);
 }
 
-// MODIFIED: Implemented full AI logic for Narrative Guide Request
+// [MODIFIED] Implemented full AI logic and updated rendering for Narrative Guide Request
 async function handleNarrativeGuideRequest(topicId, categoryId) {
     const card = document.getElementById(`selector-${categoryId}`).closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
@@ -2288,19 +2356,10 @@ async function handleNarrativeGuideRequest(topicId, categoryId) {
         // Step 4: Render Final Content
         originalGeneratedText.set(fullTitle, finalMarkdown);
         
-        const introParagraph = finalMarkdown.split('\n')[0];
-        const detailedContent = finalMarkdown.substring(introParagraph.length).trim();
-
+        // Render all content within a single .prose container for consistent styling
         contentEl.innerHTML = `
-            <p class="mb-6 text-lg leading-relaxed">${introParagraph}</p>
-            <div class="accordion-item">
-                <button type="button" class="accordion-header active">
-                    <span class="text-left">In-Depth Details</span>
-                    <svg class="icon w-5 h-5 transition-transform shrink-0" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div class="accordion-content open prose max-w-none">
-                    ${marked.parse(detailedContent)}
-                </div>
+            <div class="prose max-w-none">
+                ${marked.parse(finalMarkdown)}
             </div>
         `;
         
