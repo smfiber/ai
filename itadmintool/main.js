@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.4"; // Updated version
+const APP_VERSION = "1.0.5"; // Updated version
 
 // --- Global State ---
 let db;
@@ -89,29 +89,29 @@ async function saveGuideToKB(title, markdownContent, hierarchyPath) {
 }
 
 /**
- * [NEW] Saves a completed narrative guide to the 'narrativeGuides' Firestore collection.
- * @param {string} title The title of the guide.
- * @param {string} markdownContent The full markdown content of the guide.
- * @param {Array} hierarchyPath The hierarchical path of the guide's topic.
+ * [NEW/REFACTORED] Saves a completed explanatory article to the 'explanatoryArticles' Firestore collection.
+ * @param {string} title The title of the article.
+ * @param {string} markdownContent The full markdown content of the article.
+ * @param {Array} hierarchyPath The hierarchical path of the article's topic.
  */
-async function saveNarrativeToKB(title, markdownContent, hierarchyPath) {
+async function saveArticleToKB(title, markdownContent, hierarchyPath) {
     if (!userId) {
         displayMessageInModal("You must be logged in to save to the Knowledge Base.", 'warning');
         return;
     }
     if (!db || !firebaseConfig) {
         console.error("Firestore database or config is not initialized.");
-        displayMessageInModal("Database connection error. Cannot save guide.", 'error');
+        displayMessageInModal("Database connection error. Cannot save article.", 'error');
         return;
     }
 
-    const statusEl = document.getElementById('narrative-modal-status-message');
+    const statusEl = document.getElementById('article-modal-status-message');
     statusEl.textContent = 'Adding to Knowledge Base...';
 
     const appId = firebaseConfig.appId || 'it-admin-hub-global';
-    // Save to a new collection to distinguish between structured and narrative guides
-    const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/narrativeGuides`);
-    const guideData = {
+    // Save to a new collection to distinguish between structured guides and explanatory articles.
+    const kbCollectionRef = collection(db, `artifacts/${appId}/public/data/explanatoryArticles`);
+    const articleData = {
         title: title,
         markdownContent: markdownContent,
         hierarchyPath: hierarchyPath.map(p => p.title || p).join(' / '),
@@ -121,13 +121,13 @@ async function saveNarrativeToKB(title, markdownContent, hierarchyPath) {
     };
 
     try {
-        const docRef = await addDoc(kbCollectionRef, guideData);
-        console.log("Narrative Guide saved to Knowledge Base with ID: ", docRef.id);
-        // This action should trigger a backend Firebase Function to index this record in Algolia.
+        const docRef = await addDoc(kbCollectionRef, articleData);
+        console.log("Explanatory Article saved to Knowledge Base with ID: ", docRef.id);
+        // This action can trigger a backend Firebase Function to index this record in Algolia.
         statusEl.textContent = 'Successfully added to Knowledge Base!';
         setTimeout(() => { statusEl.textContent = ''; }, 4000);
     } catch (error) {
-        console.error("Error saving narrative guide to Knowledge Base:", error);
+        console.error("Error saving explanatory article to Knowledge Base:", error);
         statusEl.textContent = `Error: ${error.message}`;
     }
 }
@@ -608,10 +608,10 @@ function setupEventListeners() {
             } else {
                 console.error("Could not find parent card for explore button.");
             }
-        } else if (target.closest('.narrative-guide-button')) { // NEW
-            const button = target.closest('.narrative-guide-button');
+        } else if (target.closest('.explanatory-article-button')) { // [MODIFIED]
+            const button = target.closest('.explanatory-article-button');
             const { topicId, categoryId } = button.dataset;
-            handleNarrativeGuideRequest(topicId, categoryId);
+            handleExplanatoryArticleRequest(topicId, categoryId); // [MODIFIED]
         } else if (target.closest('.refine-button')) {
             toggleRefineUI(target.closest('.refine-button').parentElement);
         } else if (target.closest('.modal-refine-button')) {
@@ -731,7 +731,7 @@ async function handleSaveToDriveClick(button) {
         const hierarchyPathString = modalFooter.dataset.fullHierarchyPath;
 
         contentToSave = originalGeneratedText.get(fullTitle);
-        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: /g, '').trim();
+        topicTitle = fullTitle.replace(/In-Depth: |Custom Guide: |Complete Guide: |Explanatory Article: /g, '').trim();
         statusEl = modalFooter.querySelector('p[id$="status-message"]');
 
         let breadcrumbs = modalFooter.dataset.cardName || 'Guide';
@@ -1820,8 +1820,19 @@ Additional Context: ${additionalContext || 'None'}`;
     return '';
 }
 
-// NEW: Prompt builder for Narrative Guides
-function getNarrativeGuidePrompt(type, context) {
+/**
+ * [REPLACED] Generates a prompt for an AI to create a detailed explanatory article on a given topic.
+ * This is revised to focus on deep explanation rather than a procedural guide.
+ *
+ * @param {string} type - The type of prompt to generate ('introduction', 'expansion', 'review').
+ * @param {object} context - The contextual information for the topic.
+ * @param {string} [context.topicTitle=''] - The title of the topic.
+ * @param {Array<string|object>} [context.fullHierarchyPath=[]] - The breadcrumb path for the topic.
+ * @param {string} [context.introductionText=''] - The text of the introduction (for 'expansion' and 'review').
+ * @param {string} [context.expansionText=''] - The text of the main body (for 'review').
+ * @returns {string} The generated prompt for the AI.
+ */
+function getExplanatoryArticlePrompt(type, context) {
     const {
         topicTitle = '',
         fullHierarchyPath = [],
@@ -1829,22 +1840,26 @@ function getNarrativeGuidePrompt(type, context) {
         expansionText = ''
     } = context;
 
+    // Creates a breadcrumb string from the hierarchy path for context.
     const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
-    const persona = `You are a Senior Technical Writer and Subject Matter Expert in ${fullHierarchyPath[0]?.title || 'IT Administration'}. Your writing style is clear, authoritative, and engaging.`;
+    
+    // This persona primes the AI to act as an educator, not just a technical writer.
+    const persona = `You are an expert educator and writer, renowned for your ability to break down complex topics into clear, insightful, and comprehensive articles. Your writing style is authoritative yet accessible, making sophisticated subjects understandable to a broad audience.`;
 
     if (type === 'introduction') {
         return `
         //-- PERSONA & OBJECTIVE --//
         ${persona}
-        Your task is to write a single, compelling introductory paragraph for a technical guide on the topic: "${topicTitle}".
-        
+        Your task is to write a single, compelling introductory paragraph for a detailed article that explains the topic: "${topicTitle}".
+
         //-- CONTEXT --//
-        This guide is part of the knowledge base path: "${pathString}".
-        
+        This article is part of the knowledge base path: "${pathString}".
+
         //-- INSTRUCTIONS --//
-        - The introduction should be a single paragraph.
-        - It must clearly state the purpose and scope of the guide.
-        - It should engage the reader by explaining why this topic is important.
+        - The introduction should be a single, compelling paragraph.
+        - It must clearly define "${topicTitle}" in the context of its field.
+        - It should hook the reader by highlighting the topic's significance and what they will understand by the end of the article.
+        - Set the stage for a deep dive that explains the 'what', 'why', and 'how' of the topic, not just a procedural guide.
         - Do NOT use headers or markdown formatting.
         - Return ONLY the raw text of the paragraph.`;
     }
@@ -1853,40 +1868,46 @@ function getNarrativeGuidePrompt(type, context) {
         return `
         //-- PERSONA & OBJECTIVE --//
         ${persona}
-        Your task is to write the main body of a detailed, narrative-style guide on the topic: "${topicTitle}". You will expand upon the provided introduction.
+        Your task is to write the main body of a comprehensive article that provides a deep and detailed explanation of "${topicTitle}", expanding upon the provided introduction.
 
-        //-- CONTEXT: THE GUIDE'S INTRODUCTION (DO NOT REPEAT) --//
+        //-- CONTEXT: THE ARTICLE'S INTRODUCTION (DO NOT REPEAT) --//
         "${introductionText}"
 
         //-- INSTRUCTIONS --//
-        - Write a detailed, free-flowing guide that continues seamlessly from the introduction.
-        - Use a paragraph-based, narrative style. Avoid using lists or bullet points unless absolutely necessary for clarity (e.g., for a sequence of commands).
-        - Organize the content logically, but without using formal "###" headers. You can use bold text for emphasis on key terms or concepts.
-        - Cover the core concepts, key processes, best practices, and potential pitfalls related to "${topicTitle}".
-        - Return ONLY the raw text of the detailed guide.`;
+        - Write a detailed, free-flowing article that continues seamlessly from the introduction.
+        - Use a paragraph-based, narrative style. Use analogies, real-world examples, and clear explanations to illuminate complex ideas.
+        - Structure the content logically. While you should avoid formal "###" headers, you can use **bold text** to introduce new sub-topics or emphasize key terms, creating a clear but narrative structure.
+        - Instead of a procedural guide, focus on explaining the **'what', 'why', and 'how'** of the topic. Your explanation should cover:
+          - **Core Concepts:** Break down the fundamental principles and components of "${topicTitle}".
+          - **Underlying Mechanisms:** Explain how "${topicTitle}" works internally.
+          - **Context and Importance:** Why is this topic significant in its field? What problems does it solve?
+          - **Supporting Information & Examples:** Provide concrete examples or use cases to make the concepts tangible.
+          - **Connections & Implications:** Discuss how "${topicTitle}" relates to other topics and its broader implications.
+        - Avoid simple lists of steps or 'how-to' instructions unless they are illustrating a specific concept.
+        - Return ONLY the raw text of the detailed explanation.`;
     }
     
     if (type === 'review') {
         return `
         //-- PERSONA & OBJECTIVE --//
-        You are a meticulous Master Technical Editor. Your task is to review and polish a draft of a technical guide to ensure it is accurate, coherent, and well-written.
+        You are a meticulous Master Technical Editor. Your task is to review and polish a draft of an explanatory article to ensure it is accurate, coherent, and provides deep understanding.
 
         //-- DRAFT CONTENT TO REVIEW --//
         Introduction: "${introductionText}"
         Main Body: "${expansionText}"
 
         //-- INSTRUCTIONS --//
-        1.  **Combine and Refine:** Merge the introduction and the main body into a single, cohesive text.
-        2.  **Ensure Accuracy:** Correct any potential technical inaccuracies or unclear statements regarding "${topicTitle}".
-        3.  **Improve Flow:** Edit for clarity, conciseness, and logical flow. Ensure smooth transitions between paragraphs.
-        4.  **Final Polish:** Correct any grammar or spelling errors.
+        1.  **Combine and Synthesize:** Merge the introduction and the main body into a single, cohesive article.
+        2.  **Verify Clarity and Depth:** Ensure the explanation of "${topicTitle}" is not only technically accurate but also conceptually clear and sufficiently detailed for a reader looking to understand the topic, not just use it.
+        3.  **Improve Narrative Flow:** Edit for clarity, conciseness, and logical progression of ideas. Ensure smooth transitions between concepts.
+        4.  **Final Polish:** Correct any grammar, spelling, or punctuation errors.
         5.  **Format:** The final output should be a single block of markdown text. The first paragraph should be the introduction, followed by the detailed expansion.
         
         //-- REQUIRED OUTPUT --//
-        Return ONLY the final, polished, and complete markdown text for the guide. Do not include any headers, preambles, or notes about your changes.`;
+        Return ONLY the final, polished, and complete markdown text for the article. Do not include any headers, preambles, or notes about your changes.`;
     }
     
-    return '';
+    return ''; // Return an empty string if the type is invalid.
 }
 
 
@@ -2166,10 +2187,10 @@ function addDetailedModalActionButtons(buttonContainer, hasToken = false) {
     }
 }
 
-// [MODIFIED] Add action buttons for the Narrative Guide modal, including the new KB button
-function addNarrativeModalActionButtons(buttonContainer, hasToken = false) {
+// [MODIFIED] Add action buttons for the Explanatory Article modal.
+function addArticleModalActionButtons(buttonContainer, hasToken = false) {
     const saveDriveBtnHtml = hasToken ? `<button id="save-to-drive-btn" class="btn-secondary">Save to Google Drive</button>` : '';
-    const addToKbBtnHtml = `<button id="add-narrative-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
+    const addToKbBtnHtml = `<button id="add-article-to-kb-btn" class="btn-primary">Add to Knowledge Base</button>`;
     
     buttonContainer.innerHTML = `<button class="btn-secondary text-sm modal-refine-button">Refine with AI</button><button class="btn-secondary text-sm copy-button">Copy Text</button>${saveDriveBtnHtml}${addToKbBtnHtml}`;
 
@@ -2181,15 +2202,15 @@ function addNarrativeModalActionButtons(buttonContainer, hasToken = false) {
         });
     }
 
-    const addToKbButton = buttonContainer.querySelector('#add-narrative-to-kb-btn');
+    const addToKbButton = buttonContainer.querySelector('#add-article-to-kb-btn');
     if (addToKbButton) {
         addToKbButton.addEventListener('click', () => {
-            const narrativeFooterEl = document.getElementById('narrativeGuideModalFooter');
-            const title = narrativeFooterEl.dataset.fullTitle;
-            const hierarchyPathString = narrativeFooterEl.dataset.fullHierarchyPath;
+            const articleFooterEl = document.getElementById('explanatoryArticleModalFooter');
+            const title = articleFooterEl.dataset.fullTitle;
+            const hierarchyPathString = articleFooterEl.dataset.fullHierarchyPath;
             
             if (!title || !hierarchyPathString) {
-                 displayMessageInModal("Could not save. Guide data is missing.", "error");
+                 displayMessageInModal("Could not save. Article data is missing.", "error");
                  return;
             }
 
@@ -2197,10 +2218,10 @@ function addNarrativeModalActionButtons(buttonContainer, hasToken = false) {
             const markdownContent = originalGeneratedText.get(title);
 
             if (markdownContent) {
-                // Call the new save function for narrative guides
-                saveNarrativeToKB(title, markdownContent, hierarchyPath);
+                // Call the new save function for explanatory articles
+                saveArticleToKB(title, markdownContent, hierarchyPath);
             } else {
-                displayMessageInModal("Could not save. Guide content not found.", "error");
+                displayMessageInModal("Could not save. Article content not found.", "error");
             }
         });
     }
@@ -2227,7 +2248,7 @@ function handleTextSelection(e) {
         searchButton.classList.add('hidden');
         return;
     }
-    const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent');
+    const isInsideModal = e.target.closest('#inDepthModalContent, #inDepthDetailedModalContent, #promptsModalContent, #explanatoryArticleModalContent');
     if (selectedText && isInsideModal) {
         searchButton.classList.remove('hidden');
     } else {
@@ -2291,7 +2312,7 @@ function addPostGenerationButtons(container, topicId, categoryId) {
         <button class="btn-secondary text-sm refine-button">Refine with AI</button>
         <button class="btn-secondary text-sm copy-button">Copy Text</button>
         <button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Structured Guide</button>
-        <button class="btn-primary text-sm narrative-guide-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Narrative Guide</button>
+        <button class="btn-primary text-sm explanatory-article-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explanatory Article</button>
     `;
     
     buttonBar.querySelector('.copy-button').addEventListener('click', e => {
@@ -2302,8 +2323,8 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     container.appendChild(buttonBar);
 }
 
-// [MODIFIED] Implemented full AI logic and updated rendering for Narrative Guide Request
-async function handleNarrativeGuideRequest(topicId, categoryId) {
+// [MODIFIED] Implemented full AI logic and updated rendering for Explanatory Article Request
+async function handleExplanatoryArticleRequest(topicId, categoryId) {
     const card = document.getElementById(`selector-${categoryId}`).closest('.card');
     const fullHierarchyPath = JSON.parse(card.dataset.fullHierarchyPath);
     const item = allThemeData[categoryId]?.find(d => String(d.id) === String(topicId)) || 
@@ -2315,13 +2336,13 @@ async function handleNarrativeGuideRequest(topicId, categoryId) {
         return;
     }
 
-    const titleEl = document.getElementById('narrativeGuideModalTitle');
-    const contentEl = document.getElementById('narrativeGuideModalContent');
-    const footerEl = document.getElementById('narrativeGuideModalFooter');
-    const buttonContainer = document.getElementById('narrativeGuideModalButtons');
-    const statusEl = document.getElementById('narrative-modal-status-message');
+    const titleEl = document.getElementById('explanatoryArticleModalTitle');
+    const contentEl = document.getElementById('explanatoryArticleModalContent');
+    const footerEl = document.getElementById('explanatoryArticleModalFooter');
+    const buttonContainer = document.getElementById('explanatoryArticleModalButtons');
+    const statusEl = document.getElementById('article-modal-status-message');
     
-    const fullTitle = `Narrative Guide: ${item.title}`;
+    const fullTitle = `Explanatory Article: ${item.title}`;
     titleEl.textContent = fullTitle;
     buttonContainer.innerHTML = '';
     statusEl.textContent = '';
@@ -2329,28 +2350,28 @@ async function handleNarrativeGuideRequest(topicId, categoryId) {
     footerEl.dataset.fullTitle = fullTitle;
     footerEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
 
-    openModal('narrativeGuideModal');
+    openModal('explanatoryArticleModal');
 
     try {
         // Step 1: Generate Introduction
         contentEl.innerHTML = getLoaderHTML('Step 1/3: Generating Introduction...');
         const introContext = { topicTitle: item.title, fullHierarchyPath };
-        const introPrompt = getNarrativeGuidePrompt('introduction', introContext);
-        const introductionText = await callGeminiAPI(introPrompt, false, "Narrative Intro");
+        const introPrompt = getExplanatoryArticlePrompt('introduction', introContext);
+        const introductionText = await callGeminiAPI(introPrompt, false, "Explanatory Article Intro");
         if (!introductionText) throw new Error("AI failed to generate an introduction.");
 
         // Step 2: Generate Expansion
         contentEl.innerHTML = getLoaderHTML('Step 2/3: Expanding on the Topic...');
-        const expansionContext = { topicTitle: item.title, introductionText };
-        const expansionPrompt = getNarrativeGuidePrompt('expansion', expansionContext);
-        const expansionText = await callGeminiAPI(expansionPrompt, false, "Narrative Expansion");
-        if (!expansionText) throw new Error("AI failed to generate the guide's expansion.");
+        const expansionContext = { topicTitle: item.title, introductionText, fullHierarchyPath };
+        const expansionPrompt = getExplanatoryArticlePrompt('expansion', expansionContext);
+        const expansionText = await callGeminiAPI(expansionPrompt, false, "Explanatory Article Expansion");
+        if (!expansionText) throw new Error("AI failed to generate the article's expansion.");
 
         // Step 3: Perform Final Review
         contentEl.innerHTML = getLoaderHTML('Step 3/3: Performing Final Review...');
         const reviewContext = { topicTitle: item.title, introductionText, expansionText };
-        const reviewPrompt = getNarrativeGuidePrompt('review', reviewContext);
-        const finalMarkdown = await callGeminiAPI(reviewPrompt, false, "Narrative Review");
+        const reviewPrompt = getExplanatoryArticlePrompt('review', reviewContext);
+        const finalMarkdown = await callGeminiAPI(reviewPrompt, false, "Explanatory Article Review");
         if (!finalMarkdown) throw new Error("AI failed to complete the final review.");
 
         // Step 4: Render Final Content
@@ -2363,11 +2384,11 @@ async function handleNarrativeGuideRequest(topicId, categoryId) {
             </div>
         `;
         
-        addNarrativeModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
-        statusEl.textContent = 'Narrative guide generated successfully!';
+        addArticleModalActionButtons(buttonContainer, !!(oauthToken && oauthToken.access_token));
+        statusEl.textContent = 'Explanatory article generated successfully!';
 
     } catch (error) {
-        handleApiError(error, contentEl, 'narrative guide');
+        handleApiError(error, contentEl, 'explanatory article');
     }
 }
 
