@@ -18,6 +18,10 @@
                     flash: { 
                         '0%': { backgroundColor: 'rgba(59, 130, 246, 0.4)', boxShadow: 'inset 0 0 15px rgba(59, 130, 246, 0.5)' }, 
                         '100%': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0px transparent' } 
+                    },
+                    flashPanel: {
+                        '0%': { boxShadow: 'inset 0 0 25px rgba(59, 130, 246, 0.6)' },
+                        '100%': { boxShadow: 'inset 0 0 0px transparent' }
                     }
                 },
                 animation: {
@@ -25,7 +29,8 @@
                     'fade-in': 'fadeIn 0.3s ease-out forwards',
                     'fade-out': 'fadeOut 0.3s ease-in forwards',
                     'slide-in-up': 'slideInUp 0.3s ease-out forwards',
-                    'flash-update': 'flash 0.8s ease-out'
+                    'flash-update': 'flash 0.8s ease-out',
+                    'flash-panel': 'flashPanel 0.8s ease-out'
                 },
             }
         }
@@ -83,6 +88,7 @@
         .diff-removed { background-color: rgba(239, 68, 68, 0.15); }
         .output-content.flash-update > .code-display, .output-content.flash-update > .prose, .output-content.flash-update > .diff-view { animation: flash-update 0.8s ease-out; }
         #toast-container { display: flex; flex-direction: column-reverse; align-items: flex-end; }
+        .animate-flash-panel { animation: flashPanel 0.8s ease-out; }
     </style>
 </head>
 <body class="text-gray-200">
@@ -263,7 +269,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Application State ---
             const appState = {
-                version: '9.9.2',
+                version: '9.9.4',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -311,6 +317,7 @@
             const closePromptsModal = document.getElementById('close-prompts-modal');
             const tabsContainer = document.getElementById('tabs');
             const confirmationModal = document.getElementById('confirmation-modal');
+            const outputPanel = document.getElementById('output-panel');
 
             // --- Prompts & Rules ---
             const baseMetaPrompt = `You are a senior PowerShell automation engineer specializing in the specified [Target Environment].
@@ -327,7 +334,7 @@ Your task is to create a robust, secure, and efficient PowerShell script based o
     * **Use full cmdlet names.** No aliases (e.g., \`Get-ChildItem\`, not \`gci\`).
     * **Use \`[CmdletBinding()]\` and \`[Parameter()]\` attributes** for all parameterized scripts.
     * **Use \`Get-CimInstance\`** over the legacy \`Get-WmiObject\`.
-    * **Avoid \`Write-Host\` for output.** Return objects to the pipeline or use \`Write-Output\`.
+    * **Output Handling:** The script's primary function is to return raw PowerShell objects to the pipeline. It **MUST NOT** use \`Format-Table\`, \`Format-List\`, \`Format-Wide\`, or \`Write-Host\` to display output. The calling user is responsible for all formatting.
     * **Avoid \`+=\` for building collections in loops.** Capture pipeline output directly.
     * **NEVER use \`Invoke-Expression\`**.
 2.  **Error Handling & Reliability:**
@@ -353,7 +360,7 @@ Your mission is to analyze the script in conjunction with the user's request, id
 3.  **Adhere to Modern PowerShell Best Practices:** Your generated script MUST follow modern standards for reliability, security, and performance. Forbid the use of archaic or problematic techniques.
     * **CIM over WMI:** ALWAYS use \`Get-CimInstance\` instead of the legacy \`Get-WmiObject\`.
     * **No Aliases:** Do not use aliases (e.g., \`ls\`, \`gci\`, \`?\`, \`%\`). ALWAYS use the full cmdlet name (e.g., \`Get-ChildItem\`, \`Where-Object\`, \`ForEach-Object\`) for clarity and reliability in scripts.
-    * **Proper Output Handling:** Do NOT use \`Write-Host\` to return data from a function or script. Use \`Write-Output\`, the \`return\` keyword, or simply place objects on the pipeline to allow for redirection and variable assignment. \`Write-Host\` should only be used for informational messages displayed directly to the user.
+    * **Proper Output Handling:** The script's primary function is to return raw PowerShell objects to the pipeline. It **MUST NOT** use \`Format-Table\`, \`Format-List\`, \`Format-Wide\`, or \`Write-Host\` to display output. The calling user is responsible for all formatting. \`Write-Verbose\` for status messages is acceptable.
     * **Efficient Collection Handling:** Avoid using the \`+=\` operator to add items to an array inside a loop, as it is highly inefficient. Instead, capture the output of the loop on the pipeline or use a more performant collection type like \`System.Collections.Generic.List[object]\`.
     * **Avoid \`Invoke-Expression\`:** Do NOT use \`Invoke-Expression\` under any circumstances due to its significant security risks. There is always a safer, more robust method to achieve the same goal.
     * **Use Advanced Functions:** For any script that accepts parameters, structure it as an advanced function using \`[CmdletBinding()]\` and \`[Parameter()]\` attributes. This enables standard cmdlet behaviors like common parameters (\`-Verbose\`, \`-ErrorAction\`).
@@ -391,7 +398,7 @@ Do not include any other text.
 - **Modern Cmdlets:** All outdated cmdlets MUST be replaced with modern equivalents (e.g., \`Get-CimInstance\` instead of \`Get-WmiObject\`).
 - **Efficient Filtering:** Use "filter-left" principles. Employ provider-side filters (\`-Filter\`, \`-Include\`) instead of piping large datasets to \`Where-Object\`.
 - **No \`Win32_Product\`:** The script MUST NOT use the \`Win32_Product\` class. For software inventory, it must query the Windows Uninstall registry keys.
-- **Flat Objects for Exports:** If exporting to a CSV, the script must first create an array of flat \`[PSCustomObject]\`s. It MUST NOT pipe objects with nested properties directly to \`Export-Csv\`.
+- **Output Handling:** The script's primary function is to return raw PowerShell objects. It **MUST NOT** use \`Format-Table\`, \`Format-List\`, or \`Write-Host\` to display output. The calling user is responsible for all formatting.
 
 ---
 **[DRAFT SCRIPT]:**
@@ -531,7 +538,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
 
             async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${appState.geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${appState.geminiApiKey}`;
                 const payload = { contents: history };
 
                 let lastError = null;
@@ -724,10 +731,33 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                                 </div>`;
                             document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                         } else {
-                            loadScriptContainer.innerHTML += `<p class="text-red-400">Error: A database index is required. Please check the browser console for a link to create it.</p>`;
+                            loadScriptContainer.innerHTML = `
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-2xl font-bold text-white">Error Loading Scripts</h2>
+                                    <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                                </div>
+                                <div class="text-center p-4 bg-red-900/50 border border-red-700 rounded-lg">
+                                    <h3 class="font-bold text-lg text-red-300">An Unexpected Error Occurred</h3>
+                                    <p class="mt-2 text-red-200">
+                                        Your database needs an index, but we couldn't create the setup link. Please check the browser console for details.
+                                    </p>
+                                </div>`;
+                            document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                         }
                     } else {
-                        loadScriptContainer.innerHTML += `<p class="text-red-400">Error: ${errorMessage}</p>`;
+                        loadScriptContainer.innerHTML = `
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-2xl font-bold text-white">Error Loading Scripts</h2>
+                                <button id="close-load-script-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                            </div>
+                            <div class="text-center p-4 bg-red-900/50 border border-red-700 rounded-lg">
+                                <h3 class="font-bold text-lg text-red-300">An Unexpected Error Occurred</h3>
+                                <p class="mt-2 text-red-200">
+                                    We couldn't load your scripts. Please try again later.
+                                </p>
+                                <pre class="mt-2 text-xs text-left bg-gray-900 p-2 rounded-md whitespace-pre-wrap code-font">${errorMessage}</pre>
+                            </div>`;
+                        document.getElementById('close-load-script-modal').addEventListener('click', () => loadScriptModal.classList.remove('active'));
                     }
                 }
             }
@@ -924,21 +954,22 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                 }
             };
 
-            async function runBestPracticesAnalysis(scriptContent) {
-                const tabId = 'analysis-content';
-                const loadingMessage = `### Running analysis...\n\nPlease wait while the script is being analyzed for best practices.`;
-                renderContent(tabId, 'Analysis', loadingMessage, true, false);
+            async function getBestPracticesAnalysis(scriptContent) {
                 try {
                     const analysisPrompt = bestPracticesPrompt.replace('{{script_content}}', scriptContent);
-                    const analysisResult = await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
-                    appState.currentTabs[tabId] = analysisResult;
-                    renderContent(tabId, 'Analysis', analysisResult, true, false);
+                    return await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
                 } catch (error) {
                     console.error("Error during script analysis:", error);
-                    const errorMessage = `### Analysis Failed\n\nAn error occurred: ${error.message}`;
-                    renderContent(tabId, 'Analysis', errorMessage, true, false);
                     showToast(`Analysis failed: ${error.message}`, "error");
+                    return `### Analysis Failed\n\nAn error occurred: ${error.message}`;
                 }
+            }
+            
+            function renderAnalysisTab(analysisResult, setActive = false) {
+                const tabId = 'analysis-content';
+                 if (!analysisResult) return;
+                appState.currentTabs[tabId] = analysisResult;
+                renderContent(tabId, 'Analysis', analysisResult, true, setActive);
             }
 
             const handleGenerationSubmit = async (e) => {
@@ -954,6 +985,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                 promptInput.style.height = 'auto';
                 promptInput.rows = 2;
                 setLoadingState(true, 'submit-button');
+
                 try {
                     const targetEnvironment = targetEnvSelect.value;
                     const rules = environmentRules[targetEnvironment];
@@ -993,7 +1025,28 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     
                     if (finalCode) {
                         finalCode = finalCode.trim();
+                    } else {
+                        throw new Error("The AI returned an empty script. Please try again.");
                     }
+
+                    // --- Fix and Verify Loop ---
+                    if (outputType !== 'Command Snippet') {
+                        addMessageToHistory('model', 'Verifying script against PSScriptAnalyzer standards...', true);
+                        const analysisResult = await getBestPracticesAnalysis(finalCode);
+
+                        if (analysisResult && !analysisResult.includes("No best practice violations were found.")) {
+                            addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
+                            const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected script:\n\n${analysisResult}`;
+                            const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                            
+                            const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+                            const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
+                            if (trulyFinalCode) {
+                                finalCode = trulyFinalCode.trim(); 
+                            }
+                        }
+                    }
+                    // --- End of Fix and Verify Loop ---
 
                     appState.currentScript = finalCode;
                     appState.currentTabs = { 'script-content': finalCode };
@@ -1004,12 +1057,19 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     
                     addMessageToHistory('model', 'Script generated successfully.');
                     renderContent('script-content', 'Script', finalCode, false, true);
+
+                    outputPanel.classList.add('animate-flash-panel');
+                    outputPanel.addEventListener('animationend', () => {
+                        outputPanel.classList.remove('animate-flash-panel');
+                    }, { once: true });
+
                     if (isRefinement && oldScript !== finalCode) {
                         const diff = Diff.diffLines(oldScript, finalCode);
                         renderDiff('changes-content', 'Changes', diff, false);
                     }
                     
-                    runBestPracticesAnalysis(finalCode);
+                    const finalAnalysis = await getBestPracticesAnalysis(finalCode);
+                    renderAnalysisTab(finalAnalysis);
                 } catch (error) {
                     console.error("Error during script generation:", error);
                     const transientMsg = document.getElementById('transient-message');
@@ -1175,7 +1235,10 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                             appState.currentTabs = { 'script-content': versionData.content };
                             targetEnvSelect.value = scriptData.environment;
                             renderContent('script-content', 'Script', appState.currentScript);
-                            runBestPracticesAnalysis(appState.currentScript);
+                            
+                            const finalAnalysis = await getBestPracticesAnalysis(appState.currentScript);
+                            renderAnalysisTab(finalAnalysis);
+
                             addMessageToHistory('model', `Script "${scriptData.name}" (version from ${new Date(versionData.createdAt.toDate()).toLocaleString()}) loaded from cloud.`);
                             loadScriptModal.classList.remove('active');
                         }
