@@ -406,18 +406,58 @@ Do not include any other text.
 {{draft_script}}
 \`\`\`
 ---`;
-            const snippetMetaPrompt = `You are a PowerShell expert who provides quick, concise command-line solutions.
-**TASK:** Based on the user's request for the specified [Target Environment], provide ONLY the necessary PowerShell command(s) to accomplish the task.
-**CRITICAL RULES:**
-1.  **Be Direct:** Generate only the command(s). Do not wrap them in a full script structure.
-2.  **No Boilerplate:** You MUST NOT include comment-based help, [CmdletBinding()], [Parameter()] attributes, or full try/catch blocks.
-3.  **Placeholders:** For any values the user must provide, use clear placeholders in angle brackets (e.g., \`<Your-VM-Name>\`, \`<Path\\To\\File.csv>\`).
-4.  **Focus:** The goal is a command that can be copied and pasted directly into a PowerShell terminal.
-5.  **Output Format:** The final output MUST be only the PowerShell command(s) inside a single \`\`\`powershell code block. Do not add any introduction, explanation, or conversational text.
+            const selfCorrectionSnippetMetaPrompt = `You are a senior PowerShell DevOps engineer performing a strict, final code review on a PowerShell command snippet.
+Your task is to meticulously analyze the provided [DRAFT SNIPPET] against the [ORIGINAL USER REQUEST] and a checklist of standards for modern command-line usage.
+Your goal is to return a perfected, modern, and correct snippet. If the draft perfectly meets all criteria, return it unmodified.
+Otherwise, apply all necessary corrections while maintaining the snippet format.
+
+The final output MUST ONLY be the corrected PowerShell snippet in a \`\`\`powershell code block.
+Do not wrap it in a function or add comment help. Do not include any other text.
 
 ---
-**TARGET ENVIRONMENT:**
-[Target Environment]
+**[ORIGINAL USER REQUEST]:**
+{{user_request}}
+---
+
+**CRITICAL REVIEW CHECKLIST:**
+
+## 1. Logic and Intent
+- **Fulfillment:** Does the snippet's logic fully and correctly achieve the goal stated in the **[ORIGINAL USER REQUEST]**?
+- **Correct Tooling:** Are the cmdlets used the most direct and appropriate for the requested task and its implied environment?
+## 2. Best Practices & Modern Standards
+- **Modern Cmdlets:** All outdated cmdlets MUST be replaced with modern equivalents (e.g., \`Get-CimInstance\` instead of \`Get-WmiObject\`).
+- **No Aliases:** The snippet MUST use full cmdlet names (e.g., \`Where-Object\`, not \`?\`).
+- **Efficient Filtering:** It MUST use "filter-left" principles where possible (e.g., use a \`-Filter\` parameter instead of piping to \`Where-Object\`).
+- **No \`Win32_Product\`:** The snippet MUST NOT use the \`Win32_Product\` class.
+- **No Hardcoded Secrets:** The snippet should use placeholders for sensitive information.
+- **Output:** The snippet MUST NOT pipe its output to formatting cmdlets like \`Format-Table\` or \`Format-List\`.
+
+---
+**[DRAFT SNIPPET]:**
+\`\`\`powershell
+{{draft_snippet}}
+\`\`\`
+---`;
+            const snippetMetaPrompt = `You are a senior PowerShell automation engineer who provides quick, concise, and modern command-line solutions.
+Your task is to create an efficient and modern PowerShell command snippet based on the user's request for the specified [Target Environment].
+**ENVIRONMENT-SPECIFIC INSTRUCTIONS:**
+- The command is for: **[Target Environment]**.
+- Exclusively use cmdlets relevant to the specified environment. Do not mix cmdlets from different environments.
+[Specific Environment Rules]
+
+**CORE COMMAND PRINCIPLES:**
+1.  **Best Practices:** The command MUST follow modern PowerShell best practices.
+    * **Use full cmdlet names.** No aliases (e.g., \`Get-ChildItem\`, not \`gci\`).
+    * **Use \`Get-CimInstance\`** over the legacy \`Get-WmiObject\`.
+    * **NEVER use \`Invoke-Expression\`**.
+    * **Efficient Filtering:** Use "filter-left" principles. Employ provider-side filters (\`-Filter\`, \`-Include\`) instead of piping large datasets to \`Where-Object\`.
+2.  **Output Format & Structure:**
+    * The final output MUST be only the necessary PowerShell command(s) inside a single \`\`\`powershell code block.
+    * **Be Direct:** Generate only the command(s). Do not wrap them in a full script structure.
+    * **No Boilerplate:** You MUST NOT include comment-based help, [CmdletBinding()], [Parameter()] attributes, or full try/catch blocks.
+    * **Placeholders:** For any values the user must provide, use clear placeholders in angle brackets (e.g., \`<Your-VM-Name>\`, \`<Path\\To\\File.csv>\`).
+    * Do not add any introduction, explanation, or conversational text.
+
 ---
 **USER REQUEST:**
 [User's specific request goes here]
@@ -998,12 +1038,22 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: generationPrompt }] }]);
                         finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
                     } else if (outputType === 'Command Snippet') {
-                        addMessageToHistory('model', 'Generating command snippet...', true);
-                        let snippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
-                        snippetPrompt = snippetPrompt.replace("[User's specific request goes here]", userPrompt);
-                        appState.lastGenerationPrompt = snippetPrompt;
-                        const snippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: snippetPrompt }] }]);
-                        finalCode = snippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || snippetResponse;
+                        addMessageToHistory('model', 'Generating draft command snippet...', true);
+                        let draftSnippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
+                        draftSnippetPrompt = draftSnippetPrompt.replace('[Specific Environment Rules]', rules);
+                        draftSnippetPrompt = draftSnippetPrompt.replace("[User's specific request goes here]", userPrompt);
+                        appState.lastGenerationPrompt = draftSnippetPrompt;
+
+                        const draftSnippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: draftSnippetPrompt }] }]);
+                        const draftSnippet = draftSnippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftSnippetResponse;
+
+                        addMessageToHistory('model', 'Performing quality review on snippet...', true);
+                        let correctionPrompt = selfCorrectionSnippetMetaPrompt.replace('{{user_request}}', userPrompt);
+                        correctionPrompt = correctionPrompt.replace('{{draft_snippet}}', draftSnippet);
+                        appState.lastGenerationPrompt = correctionPrompt;
+
+                        const finalSnippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+                        finalCode = finalSnippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalSnippetResponse;
                     } else {
                         addMessageToHistory('model', 'Generating draft script...', true);
                         let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
@@ -1030,20 +1080,25 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     }
 
                     // --- Fix and Verify Loop ---
-                    if (outputType !== 'Command Snippet') {
-                        addMessageToHistory('model', 'Verifying script against PSScriptAnalyzer standards...', true);
-                        const analysisResult = await getBestPracticesAnalysis(finalCode);
+                    addMessageToHistory('model', 'Verifying script against PSScriptAnalyzer standards...', true);
+                    const analysisResult = await getBestPracticesAnalysis(finalCode);
 
-                        if (analysisResult && !analysisResult.includes("No best practice violations were found.")) {
-                            addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
-                            const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected script:\n\n${analysisResult}`;
-                            const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
-                            
-                            const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
-                            const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
-                            if (trulyFinalCode) {
-                                finalCode = trulyFinalCode.trim(); 
-                            }
+                    if (analysisResult && !analysisResult.includes("No best practice violations were found.")) {
+                        addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
+                        const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected code.\n\n${analysisResult}`;
+                        let correctionPrompt;
+
+                        if (outputType === 'Command Snippet') {
+                            correctionPrompt = selfCorrectionSnippetMetaPrompt.replace('{{user_request}}', fixRequest);
+                            correctionPrompt = correctionPrompt.replace('{{draft_snippet}}', finalCode);
+                        } else {
+                            correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        }
+                        
+                        const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+                        const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
+                        if (trulyFinalCode) {
+                            finalCode = trulyFinalCode.trim(); 
                         }
                     }
                     // --- End of Fix and Verify Loop ---
