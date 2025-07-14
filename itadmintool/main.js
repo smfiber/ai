@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.10"; // Updated version
+const APP_VERSION = "1.0.12"; // Updated version
 
 // --- Global State ---
 let db;
@@ -1560,10 +1560,14 @@ function getMasterGuidePrompt(type, context) {
 
     let personaAndObjective;
     let fullSubject = coreTask;
+    let targetEnvironment = 'general IT';
 
     if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
         const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
         const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        
+        targetEnvironment = fullHierarchyPath[0].title || 'general IT';
+
         if (fullHierarchyPath.length > 1) {
             fullSubject = \`\${coreTask} for \${fullHierarchyPath[0].title}\`;
         }
@@ -1614,7 +1618,6 @@ Additional Context: \${additionalContext || 'None'}\`;
         \${personaAndObjective}
         
         //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
-        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
         - **Actionable Content:** All instructions must be practical and clear for a technical audience.
 
         //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
@@ -1626,14 +1629,16 @@ Additional Context: \${additionalContext || 'None'}\`;
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
         - Give specific commands (e.g., \\\`ping <server>\\\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
-        - Any command provided **must** use modern, non-obsolete, and non-aliased cmdlets (e.g., use \\\`Get-Service\\\` not \\\`gsv\\\`). Prefer native cmdlets over those requiring third-party modules.
-        - Describe the exact expected output or visual confirmation of success.
         
         ### 7. Best Practices
         - List 3-5 actionable best practices directly related to the topic.
         
         ### 8. Automation Techniques
-        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        **CRITICAL: PowerShell Script Generation Rules**
+        - Provide a practical PowerShell script specifically for the **\${targetEnvironment}** environment.
+        - **Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for **\${targetEnvironment}**. Do not invent, guess, or hallucinate cmdlet or parameter names.
+        - The script **must** use modern, non-obsolete, non-aliased cmdlets (e.g., use \\\`Get-Service\\\` not \\\`gsv\\\`; avoid Send-MailMessage).
+        - It must be well-commented and include error handling.
         
         ### 9. Security Considerations
         - Detail specific security hardening steps (e.g., policies to enable, ports to check).
@@ -1746,10 +1751,15 @@ function getMasterGuidePrompt(type, context) {
 
     let personaAndObjective;
     let fullSubject = coreTask;
+    let targetEnvironment = 'general IT'; // Default environment
 
     if (fullHierarchyPath && Array.isArray(fullHierarchyPath) && fullHierarchyPath.length > 0) {
         const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
         const finalCategory = fullHierarchyPath[fullHierarchyPath.length - 1];
+        
+        // Use the top-level category as the target environment for PowerShell
+        targetEnvironment = fullHierarchyPath[0].title || 'general IT';
+
         if (fullHierarchyPath.length > 1) {
             fullSubject = `${coreTask} for ${fullHierarchyPath[0].title}`;
         }
@@ -1800,7 +1810,6 @@ Additional Context: ${additionalContext || 'None'}`;
         ${personaAndObjective}
         
         //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
-        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
         - **Actionable Content:** All instructions must be practical and clear for a technical audience.
 
         //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
@@ -1812,14 +1821,16 @@ Additional Context: ${additionalContext || 'None'}`;
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
         - Give specific commands (e.g., \`ping <server>\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
-        - Any command provided **must** use modern, non-obsolete, and non-aliased cmdlets (e.g., use \`Get-Service\` not \`gsv\`). Prefer native cmdlets over those requiring third-party modules.
-        - Describe the exact expected output or visual confirmation of success.
         
         ### 7. Best Practices
         - List 3-5 actionable best practices directly related to the topic.
         
         ### 8. Automation Techniques
-        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        **CRITICAL: PowerShell Script Generation Rules**
+        - Provide a practical PowerShell script specifically for the **${targetEnvironment}** environment.
+        - **Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for **${targetEnvironment}**. Do not invent, guess, or hallucinate cmdlet or parameter names.
+        - The script **must** use modern, non-obsolete, non-aliased cmdlets (e.g., use \`Get-Service\` not \`gsv\`; avoid Send-MailMessage).
+        - It must be well-commented and include error handling.
         
         ### 9. Security Considerations
         - Detail specific security hardening steps (e.g., policies to enable, ports to check).
@@ -1837,6 +1848,77 @@ Additional Context: ${additionalContext || 'None'}`;
     }
     return '';
 }
+
+/**
+ * [NEW] Validates a PowerShell script for a given environment and attempts to correct it if invalid.
+ * @param {string} script The PowerShell script to validate.
+ * @param {string} environment The target environment (e.g., 'Windows Server', 'Active Directory').
+ * @param {number} maxAttempts The maximum number of correction attempts.
+ * @returns {Promise<string>} The validated and potentially corrected PowerShell script.
+ */
+async function validateAndCorrectPowerShellScript(script, environment, maxAttempts = 2) {
+    let currentScript = script;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const validationPrompt = `
+            Persona: You are a PowerShell expert and linter. Your only task is to validate if the cmdlets in the provided script exist in a standard '${environment}' environment.
+            
+            //-- SCRIPT TO VALIDATE --//
+            \`\`\`powershell
+            ${currentScript}
+            \`\`\`
+            
+            //-- INSTRUCTIONS --//
+            Analyze the script. Respond with ONLY a valid JSON object with two keys:
+            1. "isValid": A boolean (true if all cmdlets are valid, false otherwise).
+            2. "invalidCmdlets": An array of strings, listing any non-existent or hallucinated cmdlet names. If all are valid, this should be an empty array.
+        `;
+        
+        try {
+            const validationJson = await callGeminiAPI(validationPrompt, true, `PowerShell Validation (Attempt ${attempt})`);
+            const validationResult = parseJsonWithCorrections(validationJson);
+
+            if (validationResult.isValid) {
+                console.log(`PowerShell script validated successfully for ${environment}.`);
+                return currentScript; // Success
+            }
+            
+            if (!validationResult.invalidCmdlets || validationResult.invalidCmdlets.length === 0) {
+                 console.warn("Validation failed but no invalid cmdlets were listed. Assuming script is OK.");
+                 return currentScript;
+            }
+
+            console.warn(`Attempt ${attempt}: Invalid cmdlets found:`, validationResult.invalidCmdlets);
+            document.getElementById('detailed-modal-status-message').textContent = `Correcting invalid script (Attempt ${attempt}/${maxAttempts})...`;
+
+            const correctionPrompt = `
+                Persona: You are a PowerShell expert.
+                The following script failed validation because it contains non-existent cmdlets for the '${environment}' environment: ${validationResult.invalidCmdlets.join(', ')}.
+                
+                //-- ORIGINAL INVALID SCRIPT --//
+                \`\`\`powershell
+                ${currentScript}
+                \`\`\`
+
+                //-- INSTRUCTIONS --//
+                Your task is to rewrite the script to perform the exact same original task, but you MUST replace the invalid cmdlets with valid ones for '${environment}'.
+                The corrected script must be a complete, functional replacement.
+                Return ONLY the raw, corrected PowerShell script. Do not wrap it in markdown fences.
+            `;
+            
+            currentScript = await callGeminiAPI(correctionPrompt, false, `PowerShell Correction (Attempt ${attempt})`);
+
+        } catch (error) {
+            console.error(`Error during PowerShell validation/correction loop (Attempt ${attempt}):`, error);
+            // If the loop itself fails, return the last known script to avoid breaking the whole guide generation
+            return currentScript;
+        }
+    }
+    
+    console.error(`Failed to produce a valid PowerShell script after ${maxAttempts} attempts.`);
+    // Return the last attempted script, even if it might still be invalid
+    return currentScript;
+}
+
 
 /**
  * [REPLACED/ENHANCED] Generates a prompt for an AI to create a detailed explanatory article on a given topic, now with citations.
@@ -2057,6 +2139,7 @@ async function generateFullDetailedGuide(button) {
     const detailedContentEl = document.getElementById('inDepthDetailedModalContent');
     const detailedFooterEl = document.getElementById('inDepthDetailedModalFooter');
     const detailedButtonContainer = document.getElementById('inDepthDetailedModalButtons');
+    const statusMessageEl = document.getElementById('detailed-modal-status-message');
     
     const detailedModalTitleText = fullTitleFromFirstModal.replace(/In-Depth: |Custom Guide: /g, '');
     const mainTitle = `Complete Guide: ${detailedModalTitleText}`;
@@ -2067,14 +2150,16 @@ async function generateFullDetailedGuide(button) {
     detailedTitleEl.innerHTML = `${breadcrumbHtml}${mainTitle}`;
     
     detailedButtonContainer.innerHTML = '';
+    statusMessageEl.textContent = '';
     detailedFooterEl.dataset.fullTitle = detailedModalTitleKey;
     detailedFooterEl.dataset.cardName = pathString;
     detailedFooterEl.dataset.fullHierarchyPath = JSON.stringify(fullHierarchyPath);
     openModal('inDepthDetailedModal');
 
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
+        statusMessageEl.textContent = 'Step 1/5: Writing first draft...';
         const coreTopic = detailedModalTitleText.trim();
+        const targetEnvironment = (fullHierarchyPath.length > 0 ? fullHierarchyPath[0].title : 'general IT');
         
         const context = {
             blueprintMarkdown: blueprintMarkdown,
@@ -2088,10 +2173,30 @@ async function generateFullDetailedGuide(button) {
         if (!firstDraftMarkdown) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
+        
+        // --- REFINED PowerShell Validation Step ---
+        statusMessageEl.textContent = 'Step 2/5: Validating PowerShell script...';
+        const automationSectionRegex = /(### 8\. Automation Techniques[\s\S]*?```powershell\n)([\s\S]*?)(\n```)/;
+        const scriptMatch = firstDraftMarkdown.match(automationSectionRegex);
+        let finalMarkdownWithScript = firstDraftMarkdown;
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
+        if (scriptMatch && scriptMatch[2]) {
+            const originalScript = scriptMatch[2].trim();
+            const correctedScript = await validateAndCorrectPowerShellScript(originalScript, targetEnvironment);
+            
+            // Rebuild the section with the corrected script
+            const newAutomationSection = scriptMatch[1] + correctedScript + scriptMatch[3];
+            
+            // Replace the entire original section to prevent side effects
+            finalMarkdownWithScript = firstDraftMarkdown.replace(scriptMatch[0], newAutomationSection);
+        } else {
+             console.warn("No PowerShell script found in section 8 to validate.");
+        }
+        // --- END REFINED Step ---
+
+        statusMessageEl.textContent = 'Step 3/5: Performing auto-refinement...';
         const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
-        const section5Match = firstDraftMarkdown.match(section5Regex);
+        const section5Match = finalMarkdownWithScript.match(section5Regex);
         const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
 
         if (!implementationGuideDraft) {
@@ -2109,13 +2214,13 @@ async function generateFullDetailedGuide(button) {
             refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching & validating web resources...');
+        statusMessageEl.textContent = 'Step 4/5: Searching & validating web resources...';
         const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopic, fullHierarchyPath);
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
+        statusMessageEl.textContent = 'Step 5/5: Assembling the final document...';
         
         const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
-        const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
+        const sections6to11Match = finalMarkdownWithScript.match(sections6to11Regex);
         const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
 
         const finalCompleteGuideMarkdown = [
@@ -2131,7 +2236,7 @@ async function generateFullDetailedGuide(button) {
         renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
         
         addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and verified successfully!';
+        statusMessageEl.textContent = 'Full guide generated and verified successfully!';
 
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -2299,14 +2404,22 @@ function convertMarkdownToHtml(text) {
         if (preBlock.parentElement.classList.contains('code-block-container')) return;
         const codeBlock = preBlock.querySelector('code');
         const lang = codeBlock ? (Array.from(codeBlock.classList).find(c => c.startsWith('language-'))?.replace('language-', '') || 'text') : 'text';
+        
+        const newPre = document.createElement('pre');
+        const newCode = document.createElement('code');
+        newCode.className = `language-${lang}`;
+        newCode.textContent = codeBlock ? codeBlock.textContent : preBlock.textContent;
+        newPre.appendChild(newCode);
+
         const container = document.createElement('div');
         container.className = 'code-block-container';
         const header = document.createElement('div');
         header.className = 'code-block-header';
         header.innerHTML = `<span>${lang}</span><button class="copy-code-button">Copy</button>`;
         container.appendChild(header);
-        preBlock.parentNode.insertBefore(container, preBlock);
-        container.appendChild(preBlock);
+        container.appendChild(newPre);
+        
+        preBlock.parentNode.replaceChild(container, preBlock);
     });
     return tempDiv.innerHTML;
 }
@@ -3449,7 +3562,11 @@ function initializeApplication() {
     populateTypographySettings();
     marked.setOptions({
         renderer: new marked.Renderer(),
-        highlight: (code, lang) => code,
+        highlight: (code, lang) => {
+            // This basic highlighter avoids extra dependencies. For more advanced syntax highlighting,
+            // you could integrate a library like Prism.js or highlight.js here.
+            return code;
+        },
         langPrefix: 'language-',
         gfm: true,
         breaks: true,
