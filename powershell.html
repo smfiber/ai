@@ -269,7 +269,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Application State ---
             const appState = {
-                version: '9.9.5',
+                version: '9.9.6',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -368,6 +368,12 @@ Your mission is to analyze the script in conjunction with the user's request, id
     * **Use Advanced Functions:** For any script that accepts parameters, structure it as an advanced function using \`[CmdletBinding()]\` and \`[Parameter()]\` attributes. This enables standard cmdlet behaviors like common parameters (\`-Verbose\`, \`-ErrorAction\`).
     * **Robust Error Handling:** Implement proper error handling using \`try\`/\`catch\` blocks. Set \`$ErrorActionPreference = "Stop"\` within the script or use the \`-ErrorAction Stop\` parameter on individual commands to ensure terminating errors can be caught.
 5.  **Output Format:** Return ONLY the complete, corrected PowerShell script inside a single \`powershell\` code block. Do not include any explanatory text, apologies, or introductory phrases.`;
+            const refinementSnippetMetaPrompt = `You are an expert-level PowerShell command analyzer. Your task is to receive a single-line PowerShell command, along with a request for a fix or an error. Your mission is to produce a corrected, single-line command.
+**CRITICAL INSTRUCTIONS:**
+1.  **Preserve Snippet Format:** The output MUST remain a single-line command or a simple, multi-line command chain. DO NOT wrap it in a \`function\`, \`[CmdletBinding()]\`, \`try/catch\` block, or add comment-based help.
+2.  **Fix the Error:** Analyze the request or error and apply the necessary correction to the command.
+3.  **Adhere to Best Practices:** Ensure the final command uses full cmdlet names and modern techniques appropriate for a single command.
+4.  **Output Format:** Return ONLY the corrected PowerShell command inside a single \`powershell\` code block. Do not include any explanatory text.`;
             const selfCorrectionMetaPrompt = `You are a senior PowerShell DevOps engineer performing a strict, final code review.
 Your task is to meticulously analyze the provided [DRAFT SCRIPT] against the [ORIGINAL USER REQUEST] and a checklist of production-readiness standards.
 Your goal is to return a perfected, production-ready script. If the draft perfectly meets all criteria, return it unmodified.
@@ -1077,7 +1083,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     }
                     finalCode = finalCode.trim();
 
-                    // --- NEW: Cmdlet Validation Loop ---
+                    // --- Cmdlet Validation Loop ---
                     const maxValidationLoops = 2;
                     let validationPassed = false;
                     for (let i = 0; i < maxValidationLoops; i++) {
@@ -1096,7 +1102,12 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         addMessageToHistory('model', `Invalid cmdlets found: ${validationResponse.trim()}. Attempting to auto-correct...`, true);
                         const fixRequest = `The previous script is invalid because it uses non-existent cmdlets: \n${validationResponse}\n Please correct the entire script to perform the original task ("${userPrompt}") using only valid cmdlets for the '${targetEnvironment}' environment.`;
                         
-                        const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        let correctionPrompt;
+                        if (outputType === 'Command Snippet') {
+                            correctionPrompt = `${refinementSnippetMetaPrompt}\n\n**EXISTING COMMAND:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**REFINEMENT REQUEST:**\n${fixRequest}`;
+                        } else {
+                            correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        }
                         appState.lastGenerationPrompt = correctionPrompt;
 
                         const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
@@ -1119,7 +1130,12 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
                         const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected code.\n\n${analysisResult}`;
                         
-                        const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        let correctionPrompt;
+                         if (outputType === 'Command Snippet') {
+                            correctionPrompt = `${refinementSnippetMetaPrompt}\n\n**EXISTING COMMAND:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**REFINEMENT REQUEST:**\n${fixRequest}`;
+                        } else {
+                            correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        }
                         
                         const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
                         const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
