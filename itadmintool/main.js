@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.7"; // Updated version
+const APP_VERSION = "1.0.8"; // Updated version
 
 // --- Global State ---
 let db;
@@ -746,7 +746,22 @@ async function handleSaveToDriveClick(button) {
         } catch (e) {
             console.error("Could not parse hierarchy path for filename, using fallback.", e);
         }
-        finalFileName = `${breadcrumbs} - ${topicTitle}.md`;
+        
+        // --- MODIFIED SECTION START ---
+        finalFileName = `${breadcrumbs} - ${topicTitle}.md`; // Default fallback
+
+        if (fullTitle) {
+            if (fullTitle.startsWith('Explanatory Article:')) {
+                finalFileName = `${breadcrumbs} - ${topicTitle} - article.md`;
+            } else if (
+                fullTitle.startsWith('In-Depth:') ||
+                fullTitle.startsWith('Custom Guide:') ||
+                fullTitle.startsWith('Complete Guide:')
+            ) {
+                finalFileName = `${breadcrumbs} - ${topicTitle} - guide.md`;
+            }
+        }
+        // --- MODIFIED SECTION END ---
     }
 
     if (!contentToSave) {
