@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.8"; // Updated version
+const APP_VERSION = "1.0.9"; // Updated version
 
 // --- Global State ---
 let db;
@@ -1626,6 +1626,7 @@ Additional Context: \${additionalContext || 'None'}\`;
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
         - Give specific commands (e.g., \\\`ping <server>\\\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Any command provided **must** use modern, non-obsolete, and non-aliased cmdlets (e.g., use \\\`Get-Service\\\` not \\\`gsv\\\`). Prefer native cmdlets over those requiring third-party modules.
         - Describe the exact expected output or visual confirmation of success.
         
         ### 7. Best Practices
@@ -1811,6 +1812,7 @@ Additional Context: ${additionalContext || 'None'}`;
         ### 6. Verification and Validation
         **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
         - Give specific commands (e.g., \`ping <server>\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
+        - Any command provided **must** use modern, non-obsolete, and non-aliased cmdlets (e.g., use \`Get-Service\` not \`gsv\`). Prefer native cmdlets over those requiring third-party modules.
         - Describe the exact expected output or visual confirmation of success.
         
         ### 7. Best Practices
