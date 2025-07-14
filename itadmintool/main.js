@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.9"; // Updated version
+const APP_VERSION = "1.0.10"; // Updated version
 
 // --- Global State ---
 let db;
@@ -36,7 +36,7 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-let GOOGLE_SEARCH_ENGINE_ID = '';
+let Google Search_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 let oauthToken = null;
@@ -188,7 +188,7 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
-    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
+    Google Search_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -206,7 +206,7 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
+        if (Google Search_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = Google Search_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -1985,7 +1985,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
  */
 async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
+    if (!Google Search_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
         return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
@@ -1995,7 +1995,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 
     try {
         // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
@@ -3347,7 +3347,9 @@ async function performSearch(event) {
     resultsContainer.innerHTML = getLoaderHTML(`Searching for "${query}"...`);
 
     try {
-        const { hits } = await algoliaIndex.search(query);
+        const { hits } = await algoliaIndex.search(query, {
+            attributesToRetrieve: ['title', 'hierarchyPath', 'type', 'objectID']
+        });
         displaySearchResults(hits);
     } catch (error) {
         console.error("Algolia search error:", error);
@@ -3361,12 +3363,20 @@ function displaySearchResults(hits) {
         resultsContainer.innerHTML = '<p class="themed-text-muted text-center">No results found.</p>';
         return;
     }
-    resultsContainer.innerHTML = hits.map(hit => `
-        <div class="search-result-item" data-id="${hit.objectID}">
-            <h3>${hit._highlightResult.title.value}</h3>
-            <p>${hit._highlightResult.hierarchyPath.value}</p>
+    resultsContainer.innerHTML = hits.map(hit => {
+        const type = hit.type || 'Structured Guide'; // Default for safety, assuming older records might not have it.
+        const typeBadgeClass = type === 'Explanatory Article' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
+        const typeBadge = `<span class="text-xs font-semibold px-2 py-1 rounded-full mb-2 ${typeBadgeClass}">${type}</span>`;
+        const titleHighlight = hit._highlightResult && hit._highlightResult.title ? hit._highlightResult.title.value : hit.title;
+        const pathHighlight = hit._highlightResult && hit._highlightResult.hierarchyPath ? hit._highlightResult.hierarchyPath.value : hit.hierarchyPath;
+
+        return `
+        <div class="search-result-item" data-id="${hit.objectID}" data-type="${type}">
+            ${typeBadge}
+            <h3 class="!mt-0">${titleHighlight}</h3>
+            <p>${pathHighlight}</p>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 async function handleSearchResultClick(objectID, type) {
@@ -3375,9 +3385,9 @@ async function handleSearchResultClick(objectID, type) {
     openModal('loadingStateModal');
     document.getElementById('loading-message').textContent = "Loading content from search...";
 
-    const appId = firebaseConfig.appId || 'it-admin-hub-global';
+    // If type is missing, default to 'knowledgeBase' for backward compatibility
     const collectionName = type === 'Explanatory Article' ? 'explanatoryArticles' : 'knowledgeBase';
-    const docRef = doc(db, `artifacts/${appId}/public/data/${collectionName}`, objectID);
+    const docRef = doc(db, `artifacts/${firebaseConfig.appId || 'it-admin-hub-global'}/public/data/${collectionName}`, objectID);
 
     try {
         const docSnap = await getDoc(docRef);
@@ -3409,13 +3419,27 @@ async function handleSearchResultClick(objectID, type) {
             
             openModal(modalToOpen);
         } else {
+             // Fallback search if not found in the expected collection
+            console.warn(`Doc ${objectID} not found in ${collectionName}. Trying fallback collection.`);
+            const fallbackCollection = collectionName === 'knowledgeBase' ? 'explanatoryArticles' : 'knowledgeBase';
+            const fallbackDocRef = doc(db, `artifacts/${firebaseConfig.appId || 'it-admin-hub-global'}/public/data/${fallbackCollection}`, objectID);
+            const fallbackSnap = await getDoc(fallbackDocRef);
+            if (fallbackSnap.exists()) {
+                // Found in the other collection, re-run with the correct type.
+                const correctType = fallbackCollection === 'explanatoryArticles' ? 'Explanatory Article' : 'Structured Guide';
+                closeModal('loadingStateModal');
+                handleSearchResultClick(objectID, correctType);
+                return;
+            }
             displayMessageInModal("Could not find the selected content in the database.", "error");
         }
     } catch (error) {
         console.error("Error loading content from Firestore:", error);
         displayMessageInModal(`Error loading content: ${error.message}`, "error");
     } finally {
-        closeModal('loadingStateModal');
+        if (!document.body.classList.contains('modal-open')) {
+            closeModal('loadingStateModal');
+        }
     }
 }
 
