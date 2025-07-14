@@ -2067,7 +2067,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
  */
 async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!Google Search_ENGINE_ID) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
         return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
