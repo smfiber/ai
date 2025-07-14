@@ -269,7 +269,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Application State ---
             const appState = {
-                version: '9.9.4',
+                version: '9.9.5',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -328,6 +328,7 @@ Your task is to create a robust, secure, and efficient PowerShell script based o
 - **Authentication:** Assume the script may be used in an automated context. Where possible, favor non-interactive authentication methods (e.g., service principal, managed identity) over methods requiring user prompts.
 - **Cmdlet Selection:** Exclusively use cmdlets relevant to the specified environment. Do not mix cmdlets from different environments (e.g., no \`Get-ADUser\` in an Azure script).
 [Specific Environment Rules]
+**Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for the specified **[Target Environment]**. Do not invent, guess, or hallucinate cmdlet or parameter names.
 
 **CORE SCRIPTING PRINCIPLES:**
 1.  **Best Practices:** The script MUST follow modern PowerShell best practices.
@@ -356,8 +357,9 @@ Your task is to receive a PowerShell script that contains a syntax error, logica
 Your mission is to analyze the script in conjunction with the user's request, identify the root cause of the problem, and produce a fully corrected, operational PowerShell script that implements the user's intent.
 **CRITICAL INSTRUCTIONS:**
 1.  **Analyze the Error:** The user's refinement request or error message is the key to understanding the problem. Use it to pinpoint the exact location and nature of the bug.
-2.  **Prioritize the Fix:** Your primary goal is to resolve the specified error. Do not add new functionality that is unrelated to the fix.
-3.  **Adhere to Modern PowerShell Best Practices:** Your generated script MUST follow modern standards for reliability, security, and performance. Forbid the use of archaic or problematic techniques.
+2.  **Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for the environment implied by the script. Do not invent, guess, or hallucinate cmdlet or parameter names.
+3.  **Prioritize the Fix:** Your primary goal is to resolve the specified error. Do not add new functionality that is unrelated to the fix.
+4.  **Adhere to Modern PowerShell Best Practices:** Your generated script MUST follow modern standards for reliability, security, and performance. Forbid the use of archaic or problematic techniques.
     * **CIM over WMI:** ALWAYS use \`Get-CimInstance\` instead of the legacy \`Get-WmiObject\`.
     * **No Aliases:** Do not use aliases (e.g., \`ls\`, \`gci\`, \`?\`, \`%\`). ALWAYS use the full cmdlet name (e.g., \`Get-ChildItem\`, \`Where-Object\`, \`ForEach-Object\`) for clarity and reliability in scripts.
     * **Proper Output Handling:** The script's primary function is to return raw PowerShell objects to the pipeline. It **MUST NOT** use \`Format-Table\`, \`Format-List\`, \`Format-Wide\`, or \`Write-Host\` to display output. The calling user is responsible for all formatting. \`Write-Verbose\` for status messages is acceptable.
@@ -365,7 +367,7 @@ Your mission is to analyze the script in conjunction with the user's request, id
     * **Avoid \`Invoke-Expression\`:** Do NOT use \`Invoke-Expression\` under any circumstances due to its significant security risks. There is always a safer, more robust method to achieve the same goal.
     * **Use Advanced Functions:** For any script that accepts parameters, structure it as an advanced function using \`[CmdletBinding()]\` and \`[Parameter()]\` attributes. This enables standard cmdlet behaviors like common parameters (\`-Verbose\`, \`-ErrorAction\`).
     * **Robust Error Handling:** Implement proper error handling using \`try\`/\`catch\` blocks. Set \`$ErrorActionPreference = "Stop"\` within the script or use the \`-ErrorAction Stop\` parameter on individual commands to ensure terminating errors can be caught.
-4.  **Output Format:** Return ONLY the complete, corrected PowerShell script inside a single \`powershell\` code block. Do not include any explanatory text, apologies, or introductory phrases.`;
+5.  **Output Format:** Return ONLY the complete, corrected PowerShell script inside a single \`powershell\` code block. Do not include any explanatory text, apologies, or introductory phrases.`;
             const selfCorrectionMetaPrompt = `You are a senior PowerShell DevOps engineer performing a strict, final code review.
 Your task is to meticulously analyze the provided [DRAFT SCRIPT] against the [ORIGINAL USER REQUEST] and a checklist of production-readiness standards.
 Your goal is to return a perfected, production-ready script. If the draft perfectly meets all criteria, return it unmodified.
@@ -438,29 +440,28 @@ Do not wrap it in a function or add comment help. Do not include any other text.
 {{draft_snippet}}
 \`\`\`
 ---`;
-            const snippetMetaPrompt = `You are a senior PowerShell automation engineer who provides quick, concise, and modern command-line solutions.
-Your task is to create an efficient and modern PowerShell command snippet based on the user's request for the specified [Target Environment].
-**ENVIRONMENT-SPECIFIC INSTRUCTIONS:**
-- The command is for: **[Target Environment]**.
-- Exclusively use cmdlets relevant to the specified environment. Do not mix cmdlets from different environments.
-[Specific Environment Rules]
+            const snippetMetaPrompt = `As a [Target Environment] expert, provide a single-line command for the task below.
 
-**CORE COMMAND PRINCIPLES:**
-1.  **Best Practices:** The command MUST follow modern PowerShell best practices.
-    * **Use full cmdlet names.** No aliases (e.g., \`Get-ChildItem\`, not \`gci\`).
-    * **Use \`Get-CimInstance\`** over the legacy \`Get-WmiObject\`.
-    * **NEVER use \`Invoke-Expression\`**.
-    * **Efficient Filtering:** Use "filter-left" principles. Employ provider-side filters (\`-Filter\`, \`-Include\`) instead of piping large datasets to \`Where-Object\`.
-2.  **Output Format & Structure:**
-    * The final output MUST be only the necessary PowerShell command(s) inside a single \`\`\`powershell code block.
-    * **Be Direct:** Generate only the command(s). Do not wrap them in a full script structure.
-    * **No Boilerplate:** You MUST NOT include comment-based help, [CmdletBinding()], [Parameter()] attributes, or full try/catch blocks.
-    * **Placeholders:** For any values the user must provide, use clear placeholders in angle brackets (e.g., \`<Your-VM-Name>\`, \`<Path\\To\\File.csv>\`).
-    * Do not add any introduction, explanation, or conversational text.
+Your response must strictly be the command itself in a \`\`\`powershell code block.
+- **Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for the specified **[Target Environment]**. Do not invent, guess, or hallucinate cmdlet or parameter names.
+- Adhere to modern best practices, use full cmdlet names, and use \`<placeholders>\` for user input.
+- Provide no explanation or extra text.
+
+**Task:** [User's specific request goes here]`;
+            const cmdletValidationPrompt = `You are a PowerShell cmdlet validator. Your only task is to analyze the provided PowerShell code and list any cmdlets that are not valid or do not exist in the standard modules for the specified **[Target Environment]**.
+- Check each command in the code.
+- If all cmdlets are valid and appropriate for the environment, respond with the single word: VALID
+- If you find any invalid, misspelled, or hallucinated cmdlets, list ONLY the incorrect cmdlet names, one per line.
+- Do not provide corrected code, explanations, or any other text.
 
 ---
-**USER REQUEST:**
-[User's specific request goes here]
+**[TARGET ENVIRONMENT]:**
+{{target_environment}}
+---
+**[CODE TO VALIDATE]:**
+\`\`\`powershell
+{{code_to_validate}}
+\`\`\`
 ---`;
             const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
 Your task is to analyze the provided PowerShell script for any violations of best practices.
@@ -1031,6 +1032,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     const rules = environmentRules[targetEnvironment];
                     const outputType = outputTypeSelect.value;
 
+                    // --- Initial Code Generation ---
                     if (isRefinement) {
                         addMessageToHistory('model', 'Refining script...', true);
                         const generationPrompt = `${refinementMetaPrompt}\n\n**ENVIRONMENT RULES:**\n${rules}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${appState.currentScript}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${userPrompt}`;
@@ -1040,7 +1042,6 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     } else if (outputType === 'Command Snippet') {
                         addMessageToHistory('model', 'Generating draft command snippet...', true);
                         let draftSnippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
-                        draftSnippetPrompt = draftSnippetPrompt.replace('[Specific Environment Rules]', rules);
                         draftSnippetPrompt = draftSnippetPrompt.replace("[User's specific request goes here]", userPrompt);
                         appState.lastGenerationPrompt = draftSnippetPrompt;
 
@@ -1050,19 +1051,17 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         addMessageToHistory('model', 'Performing quality review on snippet...', true);
                         let correctionPrompt = selfCorrectionSnippetMetaPrompt.replace('{{user_request}}', userPrompt);
                         correctionPrompt = correctionPrompt.replace('{{draft_snippet}}', draftSnippet);
-                        appState.lastGenerationPrompt = correctionPrompt;
-
+                        
                         const finalSnippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
                         finalCode = finalSnippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalSnippetResponse;
-                    } else {
+                    } else { // Full Script
                         addMessageToHistory('model', 'Generating draft script...', true);
                         let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
                         finalPrompt = finalPrompt.replace('[Specific Environment Rules]', rules);
                         finalPrompt = finalPrompt.replace("[User's specific request goes here]", userPrompt);
                         appState.lastGenerationPrompt = finalPrompt;
                         
-                        const draftApiHistory = [{ role: 'user', parts: [{ text: finalPrompt }] }];
-                        const draftScriptResponse = await callGeminiAPI(draftApiHistory);
+                        const draftScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: finalPrompt }] }]);
                         const draftScript = draftScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftScriptResponse;
                         
                         addMessageToHistory('model', 'Performing quality and security review...', true);
@@ -1073,27 +1072,54 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
                     }
                     
-                    if (finalCode) {
-                        finalCode = finalCode.trim();
-                    } else {
-                        throw new Error("The AI returned an empty script. Please try again.");
+                    if (!finalCode || finalCode.trim() === '') {
+                        throw new Error("The AI returned an empty response. Please try again.");
+                    }
+                    finalCode = finalCode.trim();
+
+                    // --- NEW: Cmdlet Validation Loop ---
+                    const maxValidationLoops = 2;
+                    let validationPassed = false;
+                    for (let i = 0; i < maxValidationLoops; i++) {
+                        addMessageToHistory('model', `Performing cmdlet validation (Attempt ${i + 1}/${maxValidationLoops})...`, true);
+                        let validationPromptText = cmdletValidationPrompt.replace('{{target_environment}}', targetEnvironment);
+                        validationPromptText = validationPromptText.replace('{{code_to_validate}}', finalCode);
+                        
+                        const validationResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: validationPromptText }] }]);
+                        
+                        if (validationResponse.trim().toUpperCase() === 'VALID') {
+                            addMessageToHistory('model', 'Cmdlet validation passed.', true);
+                            validationPassed = true;
+                            break;
+                        }
+
+                        addMessageToHistory('model', `Invalid cmdlets found: ${validationResponse.trim()}. Attempting to auto-correct...`, true);
+                        const fixRequest = `The previous script is invalid because it uses non-existent cmdlets: \n${validationResponse}\n Please correct the entire script to perform the original task ("${userPrompt}") using only valid cmdlets for the '${targetEnvironment}' environment.`;
+                        
+                        const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
+                        appState.lastGenerationPrompt = correctionPrompt;
+
+                        const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
+                        const correctedCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
+
+                        if (correctedCode) {
+                            finalCode = correctedCode.trim();
+                        }
                     }
 
-                    // --- Fix and Verify Loop ---
+                    if (!validationPassed) {
+                        throw new Error("Could not generate a valid script with correct cmdlets after multiple attempts.");
+                    }
+                    
+                    // --- Best Practices (PSScriptAnalyzer) Check ---
                     addMessageToHistory('model', 'Verifying script against PSScriptAnalyzer standards...', true);
                     const analysisResult = await getBestPracticesAnalysis(finalCode);
 
                     if (analysisResult && !analysisResult.includes("No best practice violations were found.")) {
                         addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
                         const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected code.\n\n${analysisResult}`;
-                        let correctionPrompt;
-
-                        if (outputType === 'Command Snippet') {
-                            correctionPrompt = selfCorrectionSnippetMetaPrompt.replace('{{user_request}}', fixRequest);
-                            correctionPrompt = correctionPrompt.replace('{{draft_snippet}}', finalCode);
-                        } else {
-                            correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
-                        }
+                        
+                        const correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
                         
                         const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
                         const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
@@ -1101,7 +1127,6 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                             finalCode = trulyFinalCode.trim(); 
                         }
                     }
-                    // --- End of Fix and Verify Loop ---
 
                     appState.currentScript = finalCode;
                     appState.currentTabs = { 'script-content': finalCode };
