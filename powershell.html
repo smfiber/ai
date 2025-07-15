@@ -226,7 +226,7 @@
                         <label for="output-type-select" class="text-lg font-semibold">Output Type</label>
                         <select id="output-type-select" class="mt-2 w-full p-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option>Full Script</option>
-                            <option>Command Snippet</option>
+                            <option>Cmdlet</option>
                         </select>
                     </div>
                 </div>
@@ -269,7 +269,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Application State ---
             const appState = {
-                version: '9.9.6',
+                version: '10.0.0',
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -439,6 +439,8 @@ Do not wrap it in a function or add comment help. Do not include any other text.
 - **No \`Win32_Product\`:** The snippet MUST NOT use the \`Win32_Product\` class.
 - **No Hardcoded Secrets:** The snippet should use placeholders for sensitive information.
 - **Output:** The snippet MUST NOT pipe its output to formatting cmdlets like \`Format-Table\` or \`Format-List\`.
+## 3. Format Compliance
+- **Automatic Failure:** Does the snippet contain the keyword 'function' or 'param('? If so, it is an automatic failure. The output MUST be a single command or a simple pipeline.
 
 ---
 **[DRAFT SNIPPET]:**
@@ -446,14 +448,7 @@ Do not wrap it in a function or add comment help. Do not include any other text.
 {{draft_snippet}}
 \`\`\`
 ---`;
-            const snippetMetaPrompt = `As a [Target Environment] expert, provide a single-line command for the task below.
-
-Your response must strictly be the command itself in a \`\`\`powershell code block.
-- **Cmdlet and Parameter Validity:** You MUST ensure that every cmdlet and parameter you use is valid and exists within the standard modules for the specified **[Target Environment]**. Do not invent, guess, or hallucinate cmdlet or parameter names.
-- Adhere to modern best practices, use full cmdlet names, and use \`<placeholders>\` for user input.
-- Provide no explanation or extra text.
-
-**Task:** [User's specific request goes here]`;
+            const snippetMetaPrompt = `CRITICAL: Respond with a single-line PowerShell command ONLY. NO functions, NO comments, NO variables, NO explanations. The command must accomplish this task: [User's specific request goes here]. Use full cmdlet names. Use <placeholder> for parameters. Your entire response MUST be a single \`\`\`powershell code block containing only the command.`;
             const cmdletValidationPrompt = `You are a PowerShell cmdlet validator. Your only task is to analyze the provided PowerShell code and list any cmdlets that are not valid or do not exist in the standard modules for the specified **[Target Environment]**.
 - Check each command in the code.
 - If all cmdlets are valid and appropriate for the environment, respond with the single word: VALID
@@ -1045,21 +1040,25 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         appState.lastGenerationPrompt = generationPrompt;
                         const finalScriptResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: generationPrompt }] }]);
                         finalCode = finalScriptResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalScriptResponse;
-                    } else if (outputType === 'Command Snippet') {
-                        addMessageToHistory('model', 'Generating draft command snippet...', true);
-                        let draftSnippetPrompt = snippetMetaPrompt.replace('[Target Environment]', targetEnvironment);
-                        draftSnippetPrompt = draftSnippetPrompt.replace("[User's specific request goes here]", userPrompt);
+                    } else if (outputType === 'Cmdlet') {
+                        addMessageToHistory('model', 'Generating draft cmdlet...', true);
+                        let draftSnippetPrompt = snippetMetaPrompt.replace('[User\'s specific request goes here]', userPrompt);
                         appState.lastGenerationPrompt = draftSnippetPrompt;
 
                         const draftSnippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: draftSnippetPrompt }] }]);
                         const draftSnippet = draftSnippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || draftSnippetResponse;
 
-                        addMessageToHistory('model', 'Performing quality review on snippet...', true);
+                        addMessageToHistory('model', 'Performing quality review on cmdlet...', true);
                         let correctionPrompt = selfCorrectionSnippetMetaPrompt.replace('{{user_request}}', userPrompt);
                         correctionPrompt = correctionPrompt.replace('{{draft_snippet}}', draftSnippet);
                         
                         const finalSnippetResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
                         finalCode = finalSnippetResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || finalSnippetResponse;
+
+                        if (finalCode && finalCode.trim().toLowerCase().startsWith('function')) {
+                            throw new Error("The AI failed to generate a valid cmdlet and returned a full script instead. Please try rephrasing your request, or switch to the 'Full Script' output type.");
+                        }
+
                     } else { // Full Script
                         addMessageToHistory('model', 'Generating draft script...', true);
                         let finalPrompt = baseMetaPrompt.replace(/\[Target Environment\]/g, targetEnvironment);
@@ -1103,7 +1102,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         const fixRequest = `The previous script is invalid because it uses non-existent cmdlets: \n${validationResponse}\n Please correct the entire script to perform the original task ("${userPrompt}") using only valid cmdlets for the '${targetEnvironment}' environment.`;
                         
                         let correctionPrompt;
-                        if (outputType === 'Command Snippet') {
+                        if (outputType === 'Cmdlet') {
                             correctionPrompt = `${refinementSnippetMetaPrompt}\n\n**EXISTING COMMAND:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**REFINEMENT REQUEST:**\n${fixRequest}`;
                         } else {
                             correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
@@ -1131,7 +1130,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected code.\n\n${analysisResult}`;
                         
                         let correctionPrompt;
-                         if (outputType === 'Command Snippet') {
+                         if (outputType === 'Cmdlet') {
                             correctionPrompt = `${refinementSnippetMetaPrompt}\n\n**EXISTING COMMAND:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**REFINEMENT REQUEST:**\n${fixRequest}`;
                         } else {
                             correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
