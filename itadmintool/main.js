@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.0"; // [MODIFIED] Enhanced AI prompts for content generation.
+const APP_VERSION = "1.5.1"; // [MODIFIED] Refined Security Considerations prompt for better formatting and content.
 
 // --- Global State ---
 let db;
@@ -2114,21 +2114,19 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
 async function generateSecurityConsiderationsModule(coreTopic) {
     const generationPrompt = `
         You are an expert cybersecurity consultant creating a "Security Considerations" section for a technical guide on: "${coreTopic}".
-        
+
         //-- OBJECTIVE --//
-        Generate a concise, actionable list of the 3-4 most critical security considerations for this topic.
-        
+        Generate a single, cohesive markdown block for the "Security Considerations" section. The content must be structured to appear within one single accordion item in the final UI.
+
         //-- INSTRUCTIONS --//
-        - **Identify Key Topics:** Select 3-4 highly relevant security topics (e.g., "Principle of Least Privilege," "Data Encryption," "Audit Logging").
-        - **Structure Content:** For each topic, use the following markdown structure:
-            #### [Name of the Security Topic]
-            **Concept:** Briefly explain the security concept and its importance for "${coreTopic}".
-            **Best Practices:** List 2-3 specific, actionable best practices.
-        - **No Filler:** Do not include conversational text, introductions, or conclusions. The output should be a direct, structured list.
-        - **No Links:** Do not include any URLs or "Further Reading" sections.
-        
-        //-- REQUIRED OUTPUT --//
-        Return ONLY the markdown for the security topics. Start directly with the first "####" header.
+        1.  **Identify Key Topics:** Select the 3-4 most critical and relevant security topics for "${coreTopic}".
+        2.  **Use Bold for Subheadings:** For each topic you identify, use bold markdown (e.g., "**Principle of Least Privilege**") for the subheading. DO NOT use '###' or '####' headers for these topics.
+        3.  **Provide Content:** For each topic, write a concise paragraph explaining the concept and its importance, followed by a bulleted list of 2-3 actionable best practices.
+        4.  **Include Links:** For each topic, provide 1-2 high-quality, relevant URLs from official documentation or reputable security sources.
+        5.  **Strict Formatting:** The entire output must be a single, continuous block of markdown.
+
+        //-- MANDATORY FINAL OUTPUT --//
+        Return ONLY the markdown for the security topics. Start directly with the first bolded subheading. DO NOT include a "### 9. Security Considerations" header, any introductory/concluding text, or any other content outside of this single, structured block.
     `;
 
     try {
@@ -2136,6 +2134,7 @@ async function generateSecurityConsiderationsModule(coreTopic) {
         if (!securityMarkdown) {
             throw new Error("AI did not return content for the security module.");
         }
+        // The prompt now instructs the AI *not* to include the main header, so we add it here for consistency.
         return `### 9. Security Considerations\n\n${securityMarkdown}`;
 
     } catch (error) {
@@ -2221,15 +2220,17 @@ async function generateFullDetailedGuide(button) {
         detailedContentEl.innerHTML = getLoaderHTML('Step 3/5: Generating Security Considerations...');
         
         const [securityModuleMarkdown, automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
-            generateSecurityConsiderationsModule(coreTopic), // [MODIFIED] Pass coreTopic
+            generateSecurityConsiderationsModule(coreTopic),
             generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
             generateVerifiedResources(coreTopic, fullHierarchyPath)
         ]);
         
         detailedContentEl.innerHTML = getLoaderHTML('Step 4/5: Integrating dynamic content...');
         
+        // Replace the placeholder with the generated module content.
+        // The security module now includes its own "### 9. ..." header.
         let finalCompleteGuideMarkdown = refinedDraftMarkdown
-            .replace('[SECURITY_CONSIDERATIONS_PLACEHOLDER]', securityModuleMarkdown)
+            .replace('[SECURITY_CONSIDERATIONS_PLACEHOLDER]', securityModuleMarkdown.replace(/^### 9\. Security Considerations\n\n/, ''))
             .replace(/### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/, `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`)
             .replace(/### 12\. Helpful Resources[\s\S]*?$/, `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`);
 
