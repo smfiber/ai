@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.1.0"; // [MODIFIED] Updated version for feature change
+const APP_VERSION = "1.1.1"; // [MODIFIED] Updated version for bug fix
 
 // --- Global State ---
 let db;
@@ -1791,7 +1791,6 @@ Additional Context: ${additionalContext || 'None'}`;
     }
 
     if (type === 'fullGuide') {
-        // [MODIFIED] Changed section 8 to use a placeholder instead of generating a script.
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
         You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
@@ -2138,7 +2137,7 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
 
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/3: Writing first draft...');
         const coreTopic = detailedModalTitleText.trim();
         
         const context = {
@@ -2147,7 +2146,6 @@ async function generateFullDetailedGuide(button) {
             coreTask: coreTopic
         };
 
-        // [MODIFIED] The prompt now includes the placeholder for automation.
         const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
         let firstDraftMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Draft)");
         firstDraftMarkdown = firstDraftMarkdown ? firstDraftMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
@@ -2156,27 +2154,27 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Finding automation resources...');
-        // [MODIFIED] Fetch automation and helpful resources concurrently.
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/3: Finding verified resources...');
         const [automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
             generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
             generateVerifiedResources(coreTopic, fullHierarchyPath)
         ]);
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Assembling the final document...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/3: Assembling the final document...');
         
-        // [MODIFIED] Replace placeholders in the generated draft.
-        let finalCompleteGuideMarkdown = firstDraftMarkdown
-            .replace('[AUTOMATION_RESOURCES_PLACEHOLDER]', automationResourcesMarkdown.trim());
+        // [MODIFIED] Forcefully replace the entire "Automation Techniques" section.
+        const automationRegex = /### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/;
+        let finalCompleteGuideMarkdown = firstDraftMarkdown.replace(
+            automationRegex, 
+            `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`
+        );
         
-        // This regex finds the last "Helpful Resources" section and replaces everything after it.
         const helpfulResourcesRegex = /### 12\. Helpful Resources[\s\S]*$/;
         finalCompleteGuideMarkdown = finalCompleteGuideMarkdown.replace(
             helpfulResourcesRegex, 
             `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`
         );
 
-        // Combine with the blueprint to form the full guide.
         const fullFinalMarkdown = [
             blueprintMarkdown,
             finalCompleteGuideMarkdown
@@ -2184,7 +2182,6 @@ async function generateFullDetailedGuide(button) {
         
         originalGeneratedText.set(detailedModalTitleKey, fullFinalMarkdown);
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Rendering final guide...');
         detailedContentEl.innerHTML = '';
         renderAccordionFromMarkdown(fullFinalMarkdown, detailedContentEl);
         
