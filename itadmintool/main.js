@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.1"; // [MODIFIED] Refined Security Considerations prompt for better formatting and content.
+const APP_VERSION = "1.5.2"; // [MODIFIED] Fixed bug where Section 9 was merged into Section 8.
 
 // --- Global State ---
 let db;
@@ -2227,10 +2227,9 @@ async function generateFullDetailedGuide(button) {
         
         detailedContentEl.innerHTML = getLoaderHTML('Step 4/5: Integrating dynamic content...');
         
-        // Replace the placeholder with the generated module content.
-        // The security module now includes its own "### 9. ..." header.
+        // [MODIFIED] Removed the replace() call that was stripping the header from the security module.
         let finalCompleteGuideMarkdown = refinedDraftMarkdown
-            .replace('[SECURITY_CONSIDERATIONS_PLACEHOLDER]', securityModuleMarkdown.replace(/^### 9\. Security Considerations\n\n/, ''))
+            .replace('[SECURITY_CONSIDERATIONS_PLACEHOLDER]', securityModuleMarkdown)
             .replace(/### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/, `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`)
             .replace(/### 12\. Helpful Resources[\s\S]*?$/, `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`);
 
