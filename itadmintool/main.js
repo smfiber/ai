@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.4.0"; // [MODIFIED] Updated version for new Security Module generation
+const APP_VERSION = "1.5.0"; // [MODIFIED] Enhanced AI prompts for content generation.
 
 // --- Global State ---
 let db;
@@ -1979,7 +1979,8 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 }
 
 /**
- * Performs a "Search, Validate, and Format" process for generating helpful resources.
+ * [MODIFIED] Performs a "Search, Validate, and Format" process for generating helpful resources.
+ * Now includes a summary for each link.
  * @param {string} topic The core topic of the guide.
  * @param {Array} fullHierarchyPath The hierarchical path of the topic.
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
@@ -2002,24 +2003,25 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
             throw new Error(`Google Search API request failed: ${errorData.error.message}`);
         }
         const searchResults = await searchResponse.json();
-        const searchItems = searchResults.items?.slice(0, 8) || []; // Get more results to filter
+        const searchItems = searchResults.items?.slice(0, 8) || [];
 
         if (searchItems.length === 0) {
             return `*No relevant online resources were found for "${contextualTopic}".*`;
         }
 
-        // 2. Validate
+        // 2. Validate and Summarize
         const validationPrompt = `
-            Persona: You are a senior ${mainCategory} expert.
-            Task: Review the following list of web search results. Your job is to critique and filter this list to find the most relevant, authoritative, and up-to-date resources for a technical guide about "${contextualTopic}".
+            Persona: You are a senior ${mainCategory} expert and technical content curator.
+            Task: Review the following list of web search results. Your job is to critique this list to find the most relevant, authoritative, and up-to-date resources for a technical guide about "${contextualTopic}".
             
             //-- SEARCH RESULTS --//
             ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
 
             //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Discard any links that are irrelevant (e.g., about different products), severely outdated (e.g., for hardware more than two generations old or deprecated software), or low-quality (e.g., forum posts with no clear answer, marketing pages).
+            1.  **Critically Evaluate:** Discard any links that are irrelevant, severely outdated, or low-quality (e.g., forum posts, marketing pages).
             2.  **Select the Best:** Choose the top 3-4 most valuable links.
-            3.  **Return JSON:** Your response MUST be a valid JSON array containing only the objects of the approved links. Do not add any other text.
+            3.  **Summarize:** For each selected link, write a concise, one-sentence summary of its content.
+            4.  **Return JSON:** Your response MUST be a valid JSON array of objects. Each object must have three keys: "title", "link", and "summary". Do not add any other text.
         `;
         const validatedLinksJson = await callGeminiAPI(validationPrompt, true, "Validate Search Results");
         const validatedLinks = parseJsonWithCorrections(validatedLinksJson);
@@ -2028,9 +2030,8 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
             return `*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
         }
         
-        // 3. Format for citation
-        return validatedLinks.map(link => `* [${link.title}](${link.link}) - ${link.snippet}`).join('\n');
-
+        // 3. Format for display
+        return validatedLinks.map(link => `* [${link.title}](${link.link}) - *${link.summary}*`).join('\n');
 
     } catch (error) {
         console.error("Could not fetch, validate, or format helpful resources:", error);
@@ -2039,7 +2040,8 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 }
 
 /**
- * [NEW] Performs a "Search, Validate, and Format" process for the "Automation Techniques" section.
+ * [MODIFIED] Performs a "Search, Validate, and Format" process for the "Automation Techniques" section.
+ * Now includes a description for each link.
  * @param {string} topic The core topic of the guide.
  * @param {Array} fullHierarchyPath The hierarchical path of the topic.
  * @returns {Promise<string>} A markdown string for the "Automation Techniques" section.
@@ -2076,12 +2078,14 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
             ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
 
             //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Discard any links that are low-quality, marketing pages, or irrelevant. Prioritize official documentation, detailed technical articles from reputable blogs, and popular, well-explained YouTube videos.
-            2.  **Select the Best:** Choose the top 3-4 most valuable links that provide practical, actionable automation techniques. Aim for a mix of resource types (e.g., one documentation link, one article, one video) if available and appropriate.
-            3.  **Key Concepts Summary:** Before the links, write a brief, 2-3 sentence summary of the core automation concepts or primary commands relevant to the topic.
+            1.  **Critically Evaluate:** Discard any links that are low-quality, marketing pages, or irrelevant. Prioritize official documentation, detailed technical articles, and popular, well-explained videos.
+            2.  **Select the Best:** Choose the top 3-4 most valuable links that provide practical automation techniques.
+            3.  **Summarize & Describe:**
+                * Write a brief, 2-3 sentence summary of the core automation concepts or primary commands relevant to the topic.
+                * For each selected link, write a one-sentence description of what the resource provides (e.g., "A PowerShell script for...", "A video tutorial on...").
             4.  **Return JSON:** Your response MUST be a valid JSON object with two keys:
                 * "keyConcepts": A string containing the summary you wrote.
-                * "links": An array containing the JSON objects of ONLY the approved links.
+                * "links": An array of objects, where each object has "title", "link", and "description".
         `;
         const validatedContentJson = await callGeminiAPI(validationPrompt, true, "Validate Automation Resources");
         const validatedContent = parseJsonWithCorrections(validatedContentJson);
@@ -2092,7 +2096,7 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
         
         // 3. Format for display
         const keyConceptsMarkdown = validatedContent.keyConcepts || '';
-        const linksMarkdown = validatedContent.links.map(link => `* [${link.title}](${link.link}) - *${truncateText(link.snippet, 100)}*`).join('\n');
+        const linksMarkdown = validatedContent.links.map(link => `* [${link.title}](${link.link}) - *${link.description}*`).join('\n');
         
         return `${keyConceptsMarkdown}\n\n${linksMarkdown}`;
 
@@ -2103,28 +2107,28 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
 }
 
 /**
- * [MODIFIED] Generates the "Security Considerations" module using a dynamic, context-aware prompt.
+ * [MODIFIED] Generates the "Security Considerations" module using a more direct, refined prompt.
  * @param {string} coreTopic The central topic of the guide to tailor the security advice.
  * @returns {Promise<string>} A markdown string for the complete, refined security section.
  */
 async function generateSecurityConsiderationsModule(coreTopic) {
     const generationPrompt = `
-        You are an expert cybersecurity consultant and technical writer creating a module for an educational app called 'IT Administrator Hub.'
-
-        //-- PRIMARY OBJECTIVE --//
-        Your task is to generate a "Security Considerations" section for a technical guide on the specific IT topic of: "${coreTopic}".
-
-        //-- REQUIRED PROCESS & STRUCTURE --//
-        1.  **Identify Topics:** First, based on your expertise, you must identify and select the 3 to 4 most critical and relevant security considerations for "${coreTopic}". Do not use a generic list; the topics must be highly specific to the technology in question.
-        2.  **Generate Content:** For EACH of the topics you identify, you MUST generate the content using the following strict markdown structure:
-
-            #### [The Name of the Security Topic You Identified]
-            **Concept:** Explain the core concept and why it is critical for securing "${coreTopic}".
-            **Best Practices:** Outline actionable best practices and specific strategies for implementing this security measure in a "${coreTopic}" environment.
-            **Further Reading:** Provide a curated list of 3-5 high-quality, up-to-date URLs (linking to official documentation, articles, or guides) from reputable sources that provide more detail on this specific security aspect.
-
-        //-- IMPORTANT CONSTRAINT --//
-        The entire output must focus on concepts, policies, and best practices. Do NOT include any code snippets, command-line syntax, or scripts.
+        You are an expert cybersecurity consultant creating a "Security Considerations" section for a technical guide on: "${coreTopic}".
+        
+        //-- OBJECTIVE --//
+        Generate a concise, actionable list of the 3-4 most critical security considerations for this topic.
+        
+        //-- INSTRUCTIONS --//
+        - **Identify Key Topics:** Select 3-4 highly relevant security topics (e.g., "Principle of Least Privilege," "Data Encryption," "Audit Logging").
+        - **Structure Content:** For each topic, use the following markdown structure:
+            #### [Name of the Security Topic]
+            **Concept:** Briefly explain the security concept and its importance for "${coreTopic}".
+            **Best Practices:** List 2-3 specific, actionable best practices.
+        - **No Filler:** Do not include conversational text, introductions, or conclusions. The output should be a direct, structured list.
+        - **No Links:** Do not include any URLs or "Further Reading" sections.
+        
+        //-- REQUIRED OUTPUT --//
+        Return ONLY the markdown for the security topics. Start directly with the first "####" header.
     `;
 
     try {
