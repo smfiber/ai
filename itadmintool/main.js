@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.2"; // [MODIFIED] Fixed bug where Section 9 was merged into Section 8.
+const APP_VERSION = "1.5.3"; // [MODIFIED] Improved contextual link generation.
 
 // --- Global State ---
 let db;
@@ -1980,7 +1980,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
 
 /**
  * [MODIFIED] Performs a "Search, Validate, and Format" process for generating helpful resources.
- * Now includes a summary for each link.
+ * Now includes a summary for each link and uses the full hierarchy for context.
  * @param {string} topic The core topic of the guide.
  * @param {Array} fullHierarchyPath The hierarchical path of the topic.
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
@@ -2009,17 +2009,22 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
             return `*No relevant online resources were found for "${contextualTopic}".*`;
         }
 
-        // 2. Validate and Summarize
+        // 2. Validate and Summarize with full context
         const validationPrompt = `
             Persona: You are a senior ${mainCategory} expert and technical content curator.
-            Task: Review the following list of web search results. Your job is to critique this list to find the most relevant, authoritative, and up-to-date resources for a technical guide about "${contextualTopic}".
-            
-            //-- SEARCH RESULTS --//
+            Task: Review the following list of web search results. Your job is to find the most relevant and authoritative resources.
+
+            //-- CRITICAL CONTEXT --//
+            The guide's full hierarchy is: "${fullHierarchyPath.map(p => p.title).join(' / ')}".
+            The specific topic is: "${topic}".
+            You MUST prioritize links that are relevant to this full context, not just the topic in isolation.
+
+            //-- SEARCH RESULTS TO EVALUATE --//
             ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
 
             //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Discard any links that are irrelevant, severely outdated, or low-quality (e.g., forum posts, marketing pages).
-            2.  **Select the Best:** Choose the top 3-4 most valuable links.
+            1.  **Critically Evaluate:** Based on the CRITICAL CONTEXT, discard any links that are irrelevant, severely outdated, or low-quality (e.g., forum posts, marketing pages).
+            2.  **Select the Best:** Choose the top 3-4 most valuable links that directly relate to the full hierarchy.
             3.  **Summarize:** For each selected link, write a concise, one-sentence summary of its content.
             4.  **Return JSON:** Your response MUST be a valid JSON array of objects. Each object must have three keys: "title", "link", and "summary". Do not add any other text.
         `;
@@ -2041,7 +2046,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 
 /**
  * [MODIFIED] Performs a "Search, Validate, and Format" process for the "Automation Techniques" section.
- * Now includes a description for each link.
+ * Now includes a description for each link and uses the full hierarchy for context.
  * @param {string} topic The core topic of the guide.
  * @param {Array} fullHierarchyPath The hierarchical path of the topic.
  * @returns {Promise<string>} A markdown string for the "Automation Techniques" section.
@@ -2052,6 +2057,7 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
         return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
 
+    const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
     const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic, "automation script", "tutorial"].join(' ');
 
     try {
@@ -2069,17 +2075,22 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
             return `*No relevant automation resources were found for "${contextualTopic}".*`;
         }
 
-        // 2. Validate and Summarize
+        // 2. Validate and Summarize with full context
         const validationPrompt = `
             Persona: You are a senior IT infrastructure specialist and technical content curator.
-            Task: Review the following list of web search results. Your job is to critique and filter this list to find the most relevant, high-quality resources for learning how to automate the task of: "${topic}".
+            Task: Review the following list of web search results to find high-quality automation resources.
 
-            //-- SEARCH RESULTS --//
+            //-- CRITICAL CONTEXT --//
+            The guide's full hierarchy is: "${fullHierarchyPath.map(p => p.title).join(' / ')}".
+            The specific topic is: "${topic}".
+            You MUST prioritize links that provide automation techniques (scripts, tutorials, API docs) relevant to this full context.
+
+            //-- SEARCH RESULTS TO EVALUATE --//
             ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
 
             //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Discard any links that are low-quality, marketing pages, or irrelevant. Prioritize official documentation, detailed technical articles, and popular, well-explained videos.
-            2.  **Select the Best:** Choose the top 3-4 most valuable links that provide practical automation techniques.
+            1.  **Critically Evaluate:** Based on the CRITICAL CONTEXT, discard links that are low-quality, marketing-focused, or irrelevant.
+            2.  **Select the Best:** Choose the top 3-4 most valuable links providing practical automation techniques for the full hierarchy.
             3.  **Summarize & Describe:**
                 * Write a brief, 2-3 sentence summary of the core automation concepts or primary commands relevant to the topic.
                 * For each selected link, write a one-sentence description of what the resource provides (e.g., "A PowerShell script for...", "A video tutorial on...").
