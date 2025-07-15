@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.1.1"; // [MODIFIED] Updated version for bug fix
+const APP_VERSION = "1.2.0"; // [MODIFIED] Updated version for feature change
 
 // --- Global State ---
 let db;
@@ -2137,7 +2137,7 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
 
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Step 1/3: Writing first draft...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/4: Writing first draft...');
         const coreTopic = detailedModalTitleText.trim();
         
         const context = {
@@ -2154,17 +2154,38 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/3: Finding verified resources...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
+        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
+        const section5Match = firstDraftMarkdown.match(section5Regex);
+        const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
+
+        if (!implementationGuideDraft) {
+            throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
+        }
+        
+        const refinementPrompt = `
+            Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
+            
+            Original Section:
+            ${implementationGuideDraft}
+        `;
+        let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
+        if (!refinedImplementationGuide.startsWith('### 5.')) {
+            refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
+        }
+        
+        let refinedDraftMarkdown = firstDraftMarkdown.replace(section5Regex, refinedImplementationGuide);
+
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Finding verified resources...');
         const [automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
             generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
             generateVerifiedResources(coreTopic, fullHierarchyPath)
         ]);
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/3: Assembling the final document...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
         
-        // [MODIFIED] Forcefully replace the entire "Automation Techniques" section.
         const automationRegex = /### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/;
-        let finalCompleteGuideMarkdown = firstDraftMarkdown.replace(
+        let finalCompleteGuideMarkdown = refinedDraftMarkdown.replace(
             automationRegex, 
             `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`
         );
