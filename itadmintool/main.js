@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.3.0"; // [MODIFIED] Updated version for new Security Module generation
+const APP_VERSION = "1.4.0"; // [MODIFIED] Updated version for new Security Module generation
 
 // --- Global State ---
 let db;
@@ -2103,79 +2103,36 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
 }
 
 /**
- * [NEW] Generates the "Security Considerations" module using a dedicated, high-quality prompt.
+ * [MODIFIED] Generates the "Security Considerations" module using a dynamic, context-aware prompt.
+ * @param {string} coreTopic The central topic of the guide to tailor the security advice.
  * @returns {Promise<string>} A markdown string for the complete, refined security section.
  */
-async function generateSecurityConsiderationsModule() {
+async function generateSecurityConsiderationsModule(coreTopic) {
     const generationPrompt = `
-        You are an expert cybersecurity consultant tasked with creating a new module for an educational app called 'IT Administrator Hub.' The app provides detailed, practical guides for IT professionals.
-        Generate a comprehensive guide for Module 9: Security Considerations for the Modern IT Administrator.
-        The guide must be structured using the following hierarchy. For each topic, first explain the core concept and its importance in simple terms, then outline actionable best practices and strategies. Finally, under each topic, provide a curated list of 3-5 high-quality, up-to-date URLs (linking to articles, how-to guides, or videos) from reputable sources like CISA, NIST, SANS Institute, Microsoft, and other respected tech authorities.
-        IMPORTANT CONSTRAINT: The entire output must focus on concepts, policies, and best practices. Do NOT include any code snippets, command-line syntax, or scripts (e.g., no PowerShell, bash, Python, etc.).
-        
-        Here is the required structure:
-        
-        ### 9. Security Considerations for the Modern IT Administrator
-        
-        #### 9.1 Foundational Principles: Access Control and Least Privilege
-        **Concept:** Explain the Principle of Least Privilege (PoLP) and Role-Based Access Control (RBAC).
-        **Best Practices:** How to audit existing permissions, strategies for implementing PoLP and RBAC, and the importance of regular access reviews.
-        **Resources:** Provide links to foundational guides on access control.
-        
-        #### 9.2 Hardening the Network Infrastructure
-        **Concept:** Define network hardening. Explain firewalls, network segmentation, and the basics of Intrusion Detection/Prevention Systems (IDS/IPS).
-        **Best Practices:** Strategies for firewall rule management, benefits of segregating networks (e.g., guest vs. corporate), and the role of monitoring.
-        **Resources:** Link to articles and guides on network security best practices.
-        
-        #### 9.3 Endpoint Protection and Management
-        **Concept:** Describe what constitutes an 'endpoint' (e.g., laptops, servers, mobile devices). Explain the goals of patch management and endpoint security software (antivirus/antimalware).
-        **Best Practices:** Creating a patch management schedule, configuring security software, and strategies for securing mobile devices (MDM).
-        **Resources:** Provide links to guides on patching and endpoint protection.
-        
-        #### 9.4 Data Security, Encryption, and Backups
-        **Concept:** Explain the difference between data at-rest and data in-transit. Define encryption and its role. Discuss the importance of a robust backup strategy.
-        **Best Practices:** The 3-2-1 backup rule, strategies for data classification, and when to use encryption for files, disks, and communications.
-        **Resources:** Link to articles and videos on encryption and data backup strategies.
-        
-        #### 9.5 Incident Response and Disaster Recovery
-        **Concept:** Define an IT security incident. Outline the core purpose of an Incident Response (IR) Plan and a Disaster Recovery (DR) Plan.
-        **Best Practices:** Key elements of an IR plan (identification, containment, eradication, recovery), the importance of communication during an incident, and testing your plans.
-        **Resources:** Link to guides on creating and testing IR and DR plans.
-        
-        #### 9.6 The Human Element: Security Awareness Training
-        **Concept:** Explain why employees are a critical part of the security posture. Define social engineering and phishing.
-        **Best Practices:** Developing a continuous security training program, running phishing simulations, and creating a positive security culture.
-        **Resources:** Link to resources for building security awareness training programs.
+        You are an expert cybersecurity consultant and technical writer creating a module for an educational app called 'IT Administrator Hub.'
+
+        //-- PRIMARY OBJECTIVE --//
+        Your task is to generate a "Security Considerations" section for a technical guide on the specific IT topic of: "${coreTopic}".
+
+        //-- REQUIRED PROCESS & STRUCTURE --//
+        1.  **Identify Topics:** First, based on your expertise, you must identify and select the 3 to 4 most critical and relevant security considerations for "${coreTopic}". Do not use a generic list; the topics must be highly specific to the technology in question.
+        2.  **Generate Content:** For EACH of the topics you identify, you MUST generate the content using the following strict markdown structure:
+
+            #### [The Name of the Security Topic You Identified]
+            **Concept:** Explain the core concept and why it is critical for securing "${coreTopic}".
+            **Best Practices:** Outline actionable best practices and specific strategies for implementing this security measure in a "${coreTopic}" environment.
+            **Further Reading:** Provide a curated list of 3-5 high-quality, up-to-date URLs (linking to official documentation, articles, or guides) from reputable sources that provide more detail on this specific security aspect.
+
+        //-- IMPORTANT CONSTRAINT --//
+        The entire output must focus on concepts, policies, and best practices. Do NOT include any code snippets, command-line syntax, or scripts.
     `;
 
     try {
-        const rawSecurityMarkdown = await callGeminiAPI(generationPrompt, false, "Generate Security Module");
-        if (!rawSecurityMarkdown) {
+        const securityMarkdown = await callGeminiAPI(generationPrompt, false, "Generate Security Module");
+        if (!securityMarkdown) {
             throw new Error("AI did not return content for the security module.");
         }
-
-        // Separate the descriptive text from the resource links for refinement
-        const resourceSections = [];
-        const textOnlyMarkdown = rawSecurityMarkdown.replace(/(\*\*Resources:\*\*[\s\S]*?)(?=\n####|\n###|$)/g, (match, p1) => {
-            resourceSections.push(p1.trim());
-            return '[RESOURCE_PLACEHOLDER]';
-        });
-
-        // Refine only the descriptive text
-        const refinementPrompt = getRefinementPrompt(textOnlyMarkdown, "Review this security guide. Enhance the clarity, flow, and professional tone of the concepts and best practices. Do not alter the [RESOURCE_PLACEHOLDER] tags.");
-        let refinedText = await callGeminiAPI(refinementPrompt, false, "Refine Security Module");
-        
-        // Re-integrate the resources back into the refined text
-        if (refinedText.includes('[RESOURCE_PLACEHOLDER]')) {
-             resourceSections.forEach(resourceSection => {
-                refinedText = refinedText.replace('[RESOURCE_PLACEHOLDER]', resourceSection);
-            });
-        } else {
-            // Fallback if placeholder is lost
-            refinedText += "\n\n" + resourceSections.join("\n\n");
-        }
-       
-        return refinedText;
+        return `### 9. Security Considerations\n\n${securityMarkdown}`;
 
     } catch (error) {
         console.error("Could not generate the Security Considerations module:", error);
@@ -2260,7 +2217,7 @@ async function generateFullDetailedGuide(button) {
         detailedContentEl.innerHTML = getLoaderHTML('Step 3/5: Generating Security Considerations...');
         
         const [securityModuleMarkdown, automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
-            generateSecurityConsiderationsModule(),
+            generateSecurityConsiderationsModule(coreTopic), // [MODIFIED] Pass coreTopic
             generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
             generateVerifiedResources(coreTopic, fullHierarchyPath)
         ]);
@@ -2650,11 +2607,11 @@ function renderAccordionFromMarkdown(markdownText, containerElement) {
     introContent.className = 'accordion-intro mb-4 prose max-w-none';
     let firstHeaderFound = false;
     nodes.forEach(node => {
-        if (!firstHeaderFound && node.tagName !== 'H3') {
+        if (!firstHeaderFound && node.tagName !== 'H3' && node.tagName !== 'H4') {
             introContent.appendChild(node.cloneNode(true));
             return;
         }
-        if (node.tagName === 'H3') {
+        if (node.tagName === 'H3' || node.tagName === 'H4') {
             firstHeaderFound = true;
             if (introContent.hasChildNodes()) {
                 containerElement.appendChild(introContent);
