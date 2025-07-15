@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.0.9"; // Updated version
+const APP_VERSION = "1.1.0"; // [MODIFIED] Updated version for feature change
 
 // --- Global State ---
 let db;
@@ -1633,7 +1633,7 @@ Additional Context: \${additionalContext || 'None'}\`;
         - List 3-5 actionable best practices directly related to the topic.
         
         ### 8. Automation Techniques
-        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        - [AUTOMATION_RESOURCES_PLACEHOLDER]
         
         ### 9. Security Considerations
         - Detail specific security hardening steps (e.g., policies to enable, ports to check).
@@ -1791,6 +1791,7 @@ Additional Context: ${additionalContext || 'None'}`;
     }
 
     if (type === 'fullGuide') {
+        // [MODIFIED] Changed section 8 to use a placeholder instead of generating a script.
         return `
         //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
         You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
@@ -1819,7 +1820,7 @@ Additional Context: ${additionalContext || 'None'}`;
         - List 3-5 actionable best practices directly related to the topic.
         
         ### 8. Automation Techniques
-        - Provide a practical PowerShell or Bash script. The script **must** use modern, non-obsolete cmdlets (e.g., avoid Send-MailMessage). It must be well-commented and include error handling.
+        - [AUTOMATION_RESOURCES_PLACEHOLDER]
         
         ### 9. Security Considerations
         - Detail specific security hardening steps (e.g., policies to enable, ports to check).
@@ -2038,6 +2039,70 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
     }
 }
 
+/**
+ * [NEW] Performs a "Search, Validate, and Format" process for the "Automation Techniques" section.
+ * @param {string} topic The core topic of the guide.
+ * @param {Array} fullHierarchyPath The hierarchical path of the topic.
+ * @returns {Promise<string>} A markdown string for the "Automation Techniques" section.
+ */
+async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
+        console.warn("Google Search Engine ID not configured. Skipping automation resource search.");
+        return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
+    }
+
+    const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic, "automation script", "tutorial"].join(' ');
+
+    try {
+        // 1. Search
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchResponse = await fetch(searchApiUrl);
+        if (!searchResponse.ok) {
+            const errorData = await searchResponse.json();
+            throw new Error(`Google Search API request failed for automation resources: ${errorData.error.message}`);
+        }
+        const searchResults = await searchResponse.json();
+        const searchItems = searchResults.items?.slice(0, 8) || [];
+
+        if (searchItems.length === 0) {
+            return `*No relevant automation resources were found for "${contextualTopic}".*`;
+        }
+
+        // 2. Validate and Summarize
+        const validationPrompt = `
+            Persona: You are a senior IT infrastructure specialist and technical content curator.
+            Task: Review the following list of web search results. Your job is to critique and filter this list to find the most relevant, high-quality resources for learning how to automate the task of: "${topic}".
+
+            //-- SEARCH RESULTS --//
+            ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
+
+            //-- INSTRUCTIONS --//
+            1.  **Critically Evaluate:** Discard any links that are low-quality, marketing pages, or irrelevant. Prioritize official documentation, detailed technical articles from reputable blogs, and popular, well-explained YouTube videos.
+            2.  **Select the Best:** Choose the top 3-4 most valuable links that provide practical, actionable automation techniques. Aim for a mix of resource types (e.g., one documentation link, one article, one video) if available and appropriate.
+            3.  **Key Concepts Summary:** Before the links, write a brief, 2-3 sentence summary of the core automation concepts or primary commands relevant to the topic.
+            4.  **Return JSON:** Your response MUST be a valid JSON object with two keys:
+                * "keyConcepts": A string containing the summary you wrote.
+                * "links": An array containing the JSON objects of ONLY the approved links.
+        `;
+        const validatedContentJson = await callGeminiAPI(validationPrompt, true, "Validate Automation Resources");
+        const validatedContent = parseJsonWithCorrections(validatedContentJson);
+
+        if (!validatedContent || !validatedContent.links || validatedContent.links.length === 0) {
+            return `*AI validation did not find any high-quality automation resources for "${topic}".*`;
+        }
+        
+        // 3. Format for display
+        const keyConceptsMarkdown = validatedContent.keyConcepts || '';
+        const linksMarkdown = validatedContent.links.map(link => `* [${link.title}](${link.link}) - *${truncateText(link.snippet, 100)}*`).join('\n');
+        
+        return `${keyConceptsMarkdown}\n\n${linksMarkdown}`;
+
+    } catch (error) {
+        console.error("Could not fetch, validate, or format automation resources:", error);
+        return `*An error occurred while trying to find automation resources: ${error.message}*`;
+    }
+}
+
 
 async function generateFullDetailedGuide(button) {
     const firstModalFooter = document.getElementById('inDepthModalFooter');
@@ -2081,6 +2146,8 @@ async function generateFullDetailedGuide(button) {
             fullHierarchyPath: fullHierarchyPath,
             coreTask: coreTopic
         };
+
+        // [MODIFIED] The prompt now includes the placeholder for automation.
         const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
         let firstDraftMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Draft)");
         firstDraftMarkdown = firstDraftMarkdown ? firstDraftMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
@@ -2089,46 +2156,37 @@ async function generateFullDetailedGuide(button) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Performing auto-refinement...');
-        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
-        const section5Match = firstDraftMarkdown.match(section5Regex);
-        const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/4: Finding automation resources...');
+        // [MODIFIED] Fetch automation and helpful resources concurrently.
+        const [automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
+            generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
+            generateVerifiedResources(coreTopic, fullHierarchyPath)
+        ]);
 
-        if (!implementationGuideDraft) {
-            throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
-        }
+        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Assembling the final document...');
         
-        const refinementPrompt = `
-            Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
-            
-            Original Section:
-            ${implementationGuideDraft}
-        `;
-        let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
-        if (!refinedImplementationGuide.startsWith('### 5.')) {
-            refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
-        }
-
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/4: Searching & validating web resources...');
-        const helpfulResourcesMarkdown = await generateVerifiedResources(coreTopic, fullHierarchyPath);
-
-        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Assembling the final document...');
+        // [MODIFIED] Replace placeholders in the generated draft.
+        let finalCompleteGuideMarkdown = firstDraftMarkdown
+            .replace('[AUTOMATION_RESOURCES_PLACEHOLDER]', automationResourcesMarkdown.trim());
         
-        const sections6to11Regex = /### 6\. Verification and Validation([\s\S]*?)### 12\. Helpful Resources/;
-        const sections6to11Match = firstDraftMarkdown.match(sections6to11Regex);
-        const sections6to11 = sections6to11Match ? `### 6. Verification and Validation${sections6to11Match[1]}` : '';
-
-        const finalCompleteGuideMarkdown = [
-            blueprintMarkdown,
-            refinedImplementationGuide,
-            sections6to11.trim(),
+        // This regex finds the last "Helpful Resources" section and replaces everything after it.
+        const helpfulResourcesRegex = /### 12\. Helpful Resources[\s\S]*$/;
+        finalCompleteGuideMarkdown = finalCompleteGuideMarkdown.replace(
+            helpfulResourcesRegex, 
             `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`
+        );
+
+        // Combine with the blueprint to form the full guide.
+        const fullFinalMarkdown = [
+            blueprintMarkdown,
+            finalCompleteGuideMarkdown
         ].join("\n\n").trim();
         
-        originalGeneratedText.set(detailedModalTitleKey, finalCompleteGuideMarkdown);
+        originalGeneratedText.set(detailedModalTitleKey, fullFinalMarkdown);
 
+        detailedContentEl.innerHTML = getLoaderHTML('Step 4/4: Rendering final guide...');
         detailedContentEl.innerHTML = '';
-        renderAccordionFromMarkdown(finalCompleteGuideMarkdown, detailedContentEl);
+        renderAccordionFromMarkdown(fullFinalMarkdown, detailedContentEl);
         
         addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
         document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and verified successfully!';
