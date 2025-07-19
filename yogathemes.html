@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v20.0.0</title>
+    <title>AI Yoga Class & Theme Generator v20.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -408,7 +408,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v20.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v20.1.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -798,14 +798,12 @@
             const isWeekByWeek = themeType === 'hipReplacement';
             const gridClass = isWeekByWeek ? 'week-by-week-grid' : 'card-grid-container';
         
-            const iconPromises = data.map(item => getIconForTheme(item.title));
-            const icons = await Promise.all(iconPromises);
-
             const itemsHtml = data.map((item, index) => {
                 const extraInfo = item.date || item.dateRange || item.founder || item.tradition || '';
+                const icon = getIconForTheme(); // Always use fallback
                 return `
                 <div class="grid-card-selector" data-theme-id="${item.id}" data-theme-type="${themeType}" title="${item.description || item.explanation || ''}">
-                    <div class="icon">${icons[index]}</div>
+                    <div class="icon">${icon}</div>
                     <div class="mt-2">
                         <strong class="text-sm leading-tight block">${item.title}</strong>
                         ${extraInfo ? `<small class="block text-xs themed-text-muted mt-1">${extraInfo}</small>` : ''}
@@ -1599,24 +1597,27 @@ A user has an existing plan you created and has a request to modify it. Your tas
 
         async function getThematicReading(theme) {
             const prompt = `
-            As an expert research assistant, your task is to find a thematic reading for a yoga class.
-            1. First, use your search tool to find poems, affirmations, or short stories related to the theme: "${theme}". Good search queries would be "poems about ${theme}" or "short stories about ${theme}".
-            2. From the search results, browse the top 2-3 most promising pages to find a specific text.
-            3. Analyze the text for its suitability in a yoga class.
-            4. Return a single, valid JSON object with the following structure:
+            You are an expert literary and spiritual research assistant for a yoga instructor.
+            Your task is to find a thematic reading (a poem, short story excerpt, or affirmation) for a yoga class with the theme: "${theme}".
+
+            **Your process must be:**
+            1.  **Deconstruct the Theme:** First, break down the theme into its core, searchable concepts. For example, if the theme is "Jazz Hands & Hamstring Love," the concepts are "jazz music," "improvisation," "joyful expression," "physical release," and "flexibility."
+            2.  **Smart Search:** Use your search tool to find content related to these DECONSTRUCTED concepts. Do NOT search for the literal, full theme string. Search for things like "poems about jazz" or "quotes on joyful expression."
+            3.  **Analyze & Select:** From the search results, browse the most promising pages to find a specific text that is suitable for a yoga class (i.e., mindful, introspective, calming, or inspiring).
+            4.  **Final Fallback - Generate:** If, after searching, you cannot find a suitable existing text, you MUST generate a new, original, short affirmation that captures the essence of the theme's core concepts.
+            5.  **Format Output:** Return a single, valid JSON object with the following structure:
                 {
-                  "type": "Poem" | "Affirmation" | "Story" | "None",
-                  "title": "Title of the work",
-                  "author": "Author's name",
+                  "type": "Poem" | "Affirmation" | "Story" | "Generated Affirmation",
+                  "title": "Title of the work (if applicable)",
+                  "author": "Author's name (or 'Original' if generated)",
                   "text": "The full text of the reading, using \\n for newlines.",
-                  "source": "The source URL where it was found or the author's name if it's a famous quote.",
-                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme."
+                  "source": "The source URL or publication. If generated, state 'AI-generated based on the class theme.'",
+                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme, connecting the deconstructed concepts back to the original theme."
                 }
-            If no suitable reading is found, return a JSON object with "type": "None".
             `;
 
             const jsonText = await callGeminiAPI(prompt, true);
-            if (!jsonText) throw new Error("The AI failed to find a thematic reading.");
+            if (!jsonText) throw new Error("The AI failed to find or generate a thematic reading.");
             return parseJsonWithCorrections(jsonText);
         }
 
@@ -1648,22 +1649,9 @@ A user has an existing plan you created and has a request to modify it. Your tas
             `;
         }
         
-        async function getIconForTheme(title) {
-            const fallbackIcon = `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zm-11.64 0a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zM12 12a2.143 2.143 0 1 1 0-4.286 2.143 2.143 0 0 1 0 4.286z"></path></svg>`;
-            try {
-                const prompt = `Generate a single, simple, modern, two-tone SVG icon representing "${title}" for a yoga app. The SVG should be a single path element inside an <svg> tag. Use 'currentColor' for the stroke. It must have viewBox="0 0 24 24", fill="none", stroke-width="1.5", stroke-linecap="round", stroke-linejoin="round". Return ONLY the <svg> element as a string.`;
-                const svgText = await callGeminiAPI(prompt);
-                
-                if (svgText && svgText.trim().startsWith('<svg') && svgText.trim().endsWith('</svg>')) {
-                    const cleanSvg = svgText.replace(/class=".*?"/g, ''); 
-                    return cleanSvg;
-                }
-                console.warn(`Received invalid SVG for "${title}", using fallback.`);
-                return fallbackIcon;
-            } catch (error) {
-                console.error(`Failed to generate icon for "${title}":`, error);
-                return fallbackIcon;
-            }
+        function getIconForTheme() {
+            // Removed dynamic SVG generation in favor of a reliable fallback to prevent console errors.
+            return `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zm-11.64 0a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zM12 12a2.143 2.143 0 1 1 0-4.286 2.143 2.143 0 0 1 0 4.286z"></path></svg>`;
         }
         
         function getLoaderHTML(message, asElement = false) {
