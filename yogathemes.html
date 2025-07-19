@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v22.3.0</title>
+    <title>AI Yoga Class & Theme Generator v22.5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -426,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.3.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.5.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1458,14 +1458,14 @@ You must transform the draft into a complete, detailed markdown plan. Follow the
 ### Per-Section Requirements:
 For each of the 9 sections, you must provide:
 1.  **Main Description:** The core narrative explaining the purpose and flow of this section for the student.
-2.  **Proposed Exercises:** This section should detail the specific poses or flows. For each exercise listed, you must add a concise, italicized sub-bullet explaining its primary benefits.
+2.  **Proposed Exercises:** This section should detail the specific poses or flows. For each exercise listed, add a nested bullet point beginning with the word 'Benefits:' followed by the description.
     * *Example:*
         * Downward-Facing Dog (Adho Mukha Svanasana)
-            * *Benefits: Stretches the hamstrings, calves, and shoulders; strengthens the arms and legs; improves spinal alignment.*
+            * Benefits: Stretches the hamstrings, calves, and shoulders; strengthens the arms and legs; improves spinal alignment.
 3.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
 4.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
 5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
-    * **Prop Integration:** Within the 'Options & Modifications' list, you **must** include specific, practical guidance on how to use Yoga Blocks, a Bolster, a Strap, and a **Blanket** for the exercises in that section. If a prop is not relevant for a specific exercise, briefly state that.
+    * **Prop Integration:** Within the 'Options & Modifications' list, you **must** list all four props (Blocks, Bolster, Strap, and Blanket) as individual bullet points. For each one, provide a specific use or explicitly state 'Not applicable for this exercise'.
 6.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section. **Format this cue as a markdown blockquote.**
 
 ### Formatting Rules:
@@ -1474,6 +1474,7 @@ For each of the 9 sections, you must provide:
 * Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
 * Add estimated timings for each of the 9 major sections.
 * For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
+* **Do not** wrap entire sections or lists in markdown quotes (\`"\`) or asterisks (\`*\`). The output should be clean markdown only.
 
 Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
@@ -2027,10 +2028,22 @@ A user has an existing plan you created and has a request to modify it. Your tas
             const title = document.getElementById('inDepthModalTitle').textContent;
             const contentContainer = document.getElementById('inDepthModalContent').cloneNode(true);
 
-            // Remove interactive elements from the clone for a clean export
-            contentContainer.querySelectorAll('button').forEach(btn => btn.remove());
+            // Create a temporary div to parse the content and extract headers
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = contentContainer.innerHTML;
+
+            // Make accordion headers visible and style them
+            const headers = tempDiv.querySelectorAll('.accordion-header');
+            headers.forEach(header => {
+                const titleSpan = header.querySelector('span');
+                if (titleSpan) {
+                    const h3 = document.createElement('h3');
+                    h3.innerHTML = titleSpan.innerHTML;
+                    header.parentNode.insertBefore(h3, header);
+                }
+            });
             
-            const contentHtml = contentContainer.innerHTML;
+            const contentHtml = tempDiv.innerHTML;
             
             const sourceHtml = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -2043,20 +2056,14 @@ A user has an existing plan you created and has a request to modify it. Your tas
                         h1, h2, h3, h4, h5, h6 { font-family: 'Calibri Light', sans-serif; color: #2F5496; margin-bottom: 0; }
                         h1 { font-size: 20pt; }
                         h2 { font-size: 16pt; }
-                        h3 { font-size: 14pt; color: #365F91; }
+                        h3 { font-size: 14pt; color: #365F91; font-weight: bold; margin-top: 20px; }
                         h4 { font-size: 12pt; color: #4981B3; font-style: italic; }
                         p { margin-top: 0; }
                         ul { margin-top: 0; }
-                        .accordion-header { display: none; } /* Hide the original accordion buttons */
-                        .accordion-content { display: block !important; padding-left: 0; } /* Ensure content is visible */
+                        .accordion-header { display: none; }
+                        .accordion-header .icon { display: none; }
+                        .accordion-content { display: block !important; padding-left: 0; }
                         .accordion-item { page-break-inside: avoid; margin-bottom: 20px; }
-                        .prose h3 { /* Make the original h3 (section titles) look good in Word */
-                            font-family: 'Calibri Light', sans-serif;
-                            font-size: 16pt;
-                            color: #2F5496;
-                            padding-bottom: 3px;
-                            border-bottom: 1px solid #BFBFBF;
-                        }
                     </style>
                 </head>
                 <body>
