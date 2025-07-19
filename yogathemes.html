@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v22.5.0</title>
+    <title>AI Yoga Class & Theme Generator v23.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -173,7 +173,11 @@
         .accordion-header .icon { transition: transform 0.3s ease; }
         .accordion-header.active .icon { transform: rotate(180deg); }
 
-        .refine-container { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-card-border); }
+        .refine-container { 
+            margin-top: 1rem; padding: 1.5rem; border-radius: 12px;
+            border: 1px solid var(--color-card-border);
+            background-color: rgba(255, 255, 255, 0.5);
+        }
         
         .card-grid-container {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -426,7 +430,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.5.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.0.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -436,9 +440,16 @@
             <div id="custom-plan-card" class="card">
                 <div class="p-8 card-content">
                     <h2 class="text-2xl font-bold mb-2 themed-text-primary">Custom Yoga Plan Generator</h2>
-                    <p class="mb-6 themed-text-muted">Feeling creative? Enter any keyword or concept, and let AI craft a unique class plan for you.</p>
-                    <form id="gemini-form">
-                        <input type="text" id="gemini-prompt" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Courage & Heart Opening'">
+                    <p class="mb-6 themed-text-muted">Define a focus, add a creative theme, and let AI craft a unique class plan for you.</p>
+                    <form id="gemini-form" class="space-y-4">
+                        <div>
+                            <label for="gemini-focus" class="block text-sm font-medium themed-text-muted mb-1">Core Focus (Required)</label>
+                            <input type="text" id="gemini-focus" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'Hip Opening & Flexibility'" required>
+                        </div>
+                        <div>
+                            <label for="gemini-theme" class="block text-sm font-medium themed-text-muted mb-1">Creative Theme (Optional)</label>
+                            <input type="text" id="gemini-theme" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., 'The Rhythm of the Seasons'">
+                        </div>
                         
                         <div id="tailor-accordion" class="my-4 border rounded-lg" style="border-color: var(--color-card-border);">
                             <div class="accordion-item">
@@ -535,7 +546,8 @@
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
-        
+        let originalPlanContext = {}; // NEW: Stores context for refinement
+
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
@@ -599,8 +611,8 @@
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
-                const tailorBtn = e.target.closest('#tailoring-buttons-container .btn-toggle');
-                if (tailorBtn) {
+                const tailorBtn = e.target.closest('.btn-toggle');
+                if (tailorBtn && e.target.closest('#tailoring-buttons-container, .refine-tailoring-container')) {
                     tailorBtn.classList.toggle('active');
                     return;
                 }
@@ -641,7 +653,7 @@
                 
                 const submitRefineBtn = e.target.closest('.submit-refinement-button');
                 if(submitRefineBtn) {
-                    handleRefineRequest(submitRefineBtn.closest('.refine-container'));
+                    handleRefineRequest(submitRefineBtn);
                     return;
                 }
                 
@@ -764,7 +776,7 @@
                     { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices for sensory regulation and grounding.", initialPrompt: `Generate 10 yoga themes for neurodiverse individuals. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` }
                 ];
 
-                await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders()]);
+                await Promise.allSettled([loadAITailoringOptions(), loadDynamicPlaceholders(), loadThemePlaceholders()]);
                 
                 const generationPromises = categoriesToGenerate.map(cat => {
                     if (loadingMessageEl) loadingMessageEl.textContent = `Generating themes for: ${cat.title}...`;
@@ -928,15 +940,26 @@
 
         async function handleGeminiSubmit(e) {
             e.preventDefault();
-            const promptInput = document.getElementById('gemini-prompt');
-            const userPrompt = promptInput.value.trim();
-            if (!userPrompt) return;
+            const focusInput = document.getElementById('gemini-focus');
+            const themeInput = document.getElementById('gemini-theme');
+            const focusPrompt = focusInput.value.trim();
+            const themePrompt = themeInput.value.trim();
+
+            if (!focusPrompt) {
+                showNotification('Please enter a Core Focus for your plan.', true);
+                focusInput.focus();
+                return;
+            }
 
             const resultContainer = document.getElementById('gemini-result-container');
             resultContainer.innerHTML = getLoaderHTML('Drafting your yoga plan summary...');
             
-            // Standardized Workflow: First, generate a summary.
-            const prompt = `Generate a very brief, condensed summary for a yoga class plan based on the theme: "${userPrompt}". For each section (Theme Introduction, Breathwork, Warm-up, Main Sequence, Cool-down, Savasana), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
+            let fullUserPrompt = `Core Focus: "${focusPrompt}"`;
+            if (themePrompt) {
+                fullUserPrompt += `, with a creative theme of "${themePrompt}"`;
+            }
+            
+            const prompt = `Generate a very brief, condensed summary for a yoga class plan based on the following: ${fullUserPrompt}. For each section (Theme Introduction, Breathwork, Warm-up, Main Sequence, Cool-down, Savasana), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
 
             try {
                 const resultText = await callGeminiAPI(prompt);
@@ -1093,23 +1116,23 @@ Return ONLY a valid JSON array of strings.`;
             }
         }
 
-        function populateTailoringButtons(options) {
-            const container = document.getElementById('tailoring-buttons-container');
+        function populateTailoringButtons(options, containerId = 'tailoring-buttons-container', selectedOptions = []) {
+            const container = document.getElementById(containerId);
             const staticButtons = `
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Blocks</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Bolster</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Strap</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Blanket</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Blocks') ? 'active' : ''}">Blocks</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Bolster') ? 'active' : ''}">Bolster</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Strap') ? 'active' : ''}">Strap</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Blanket') ? 'active' : ''}">Blanket</button>
             `;
             const dynamicButtons = options.map(option =>
-                `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full">${option}</button>`
+                `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes(option) ? 'active' : ''}">${option}</button>`
             ).join('');
             container.innerHTML = staticButtons + dynamicButtons;
         }
         
         async function loadDynamicPlaceholders() {
-            const promptInput = document.getElementById('gemini-prompt');
-            const prompt = `Generate a JSON array of 3 creative yoga class theme ideas for input placeholders. Examples: "Ocean Breath & Fluid Movement", "Finding Stillness in Chaos". Return ONLY the valid JSON array of strings.`;
+            const promptInput = document.getElementById('gemini-focus');
+            const prompt = `Generate a JSON array of 3 creative yoga class focus ideas for input placeholders. Examples: "Shoulder Mobility & Strength", "Full Body Unwind". Return ONLY the valid JSON array of strings.`;
             try {
                 const jsonText = await callGeminiAPI(prompt, true);
                 if(!jsonText) return;
@@ -1123,7 +1146,27 @@ Return ONLY a valid JSON array of strings.`;
                     }, 3000);
                 }
             } catch(error) {
-                console.error("Could not load dynamic placeholders", error);
+                console.error("Could not load dynamic placeholders for focus", error);
+            }
+        }
+
+        async function loadThemePlaceholders() {
+            const themeInput = document.getElementById('gemini-theme');
+            const prompt = `Generate a JSON array of 3 creative, evocative yoga class themes for input placeholders. Examples: "Finding Stillness in Chaos", "The Wisdom of the Forest". Return ONLY the valid JSON array of strings.`;
+            try {
+                const jsonText = await callGeminiAPI(prompt, true);
+                if(!jsonText) return;
+                const placeholders = parseJsonWithCorrections(jsonText);
+                if (placeholders && placeholders.length > 0) {
+                    let i = 0;
+                    themeInput.placeholder = `e.g., '${placeholders[i]}'`;
+                    setInterval(() => {
+                        i = (i + 1) % placeholders.length;
+                        themeInput.placeholder = `e.g., '${placeholders[i]}'`;
+                    }, 3500); // Stagger the interval
+                }
+            } catch(error) {
+                console.error("Could not load dynamic placeholders for theme", error);
             }
         }
 
@@ -1409,6 +1452,11 @@ Return ONLY a valid JSON array of strings.`;
         }
         
         function getDraftPrompt(context) {
+            let userThemePrompt = `a core focus on **${context.focus}**`;
+            if (context.theme) {
+                userThemePrompt += ` and inspired by the creative theme of **"${context.theme}"**`;
+            }
+
             return `## AI Persona:
 You are Kaia, a Syncretic Movement Guide. Your expertise is in blending traditional yoga with modern movement science.
 
@@ -1416,8 +1464,8 @@ You are Kaia, a Syncretic Movement Guide. Your expertise is in blending traditio
 Create a high-level DRAFT of a thematic movement practice that is structured as half Yang (active) and half Yin (passive). Your goal is to brainstorm the key poses and concepts for the routine.
 
 ## Context:
-* **User's Theme:** "${context.theme}"
-* **User's Focus Areas:** "${context.focus || 'None specified'}"
+* **User's Request:** A class with ${userThemePrompt}.
+* **User's Focus Areas:** "${context.tailoring || 'None specified'}"
 
 ## Output Requirements:
 Create a markdown draft. For each of the 9 sections below, list the key poses, movements, or concepts as bullet points. Be concise. This is a brainstorm draft, not the final detailed plan.
@@ -1496,7 +1544,7 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
 
         async function handleExploreInDepth(themeId, themeType) {
-            let item, context, themeTitle;
+            let context, themeTitle;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
@@ -1511,20 +1559,23 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             footerEl.dataset.themeType = themeType;
             modal.classList.remove('hidden');
 
-            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
+            const selectedTailoringOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
 
             if (themeType === 'custom') {
-                themeTitle = document.getElementById('gemini-prompt').value || 'Custom Plan';
-                context = { theme: themeTitle, focus: selectedOptions };
+                const focus = document.getElementById('gemini-focus').value.trim();
+                const theme = document.getElementById('gemini-theme').value.trim();
+                themeTitle = focus + (theme ? `: ${theme}` : '');
+                context = { focus, theme, tailoring: selectedTailoringOptions };
             } else {
-                item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+                const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
                 if (!item) return;
                 themeTitle = item.title;
-                context = { theme: themeTitle, focus: [item.description, selectedOptions].filter(Boolean).join('; ') };
+                context = { focus: item.title, theme: item.description, tailoring: selectedTailoringOptions };
             }
 
+            originalPlanContext[themeId] = context; // Save context for refinement
             titleEl.textContent = `In-Depth: ${themeTitle}`;
             
             try {
@@ -1539,90 +1590,109 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
         
         function toggleRefineUI(buttonContainer, isModal = false) {
-            let refineContainer = buttonContainer.nextElementSibling;
-            if (refineContainer && refineContainer.classList.contains('refine-container')) {
-                refineContainer.remove();
+            let existingRefineContainer = buttonContainer.parentElement.querySelector('.refine-container');
+            if (existingRefineContainer) {
+                existingRefineContainer.remove();
                 return;
             }
 
-            refineContainer = document.createElement('div');
+            const themeId = isModal 
+                ? document.getElementById('inDepthModalFooter').dataset.themeId
+                : buttonContainer.closest('.card-content').querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
+            
+            const context = originalPlanContext[themeId];
+            if (!context) {
+                showNotification("Could not find original plan details. Please generate the detailed plan first.", true);
+                return;
+            }
+            
+            const refineContainer = document.createElement('div');
             refineContainer.className = 'refine-container w-full';
-            refineContainer.innerHTML = `<textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it more gentle' or 'Add more hip openers'"></textarea><button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>`;
+            refineContainer.innerHTML = `
+                <h3 class="text-lg font-bold themed-text-accent mb-4">Refine and Regenerate Plan</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="refine-focus-${themeId}" class="block text-sm font-medium themed-text-muted mb-1">Core Focus</label>
+                        <input type="text" id="refine-focus-${themeId}" class="w-full p-3 themed-input border rounded-lg focus:ring-2" value="${context.focus || ''}">
+                    </div>
+                    <div>
+                        <label for="refine-theme-${themeId}" class="block text-sm font-medium themed-text-muted mb-1">Creative Theme</label>
+                        <input type="text" id="refine-theme-${themeId}" class="w-full p-3 themed-input border rounded-lg focus:ring-2" value="${context.theme || ''}">
+                    </div>
+                    <div id="refine-tailor-accordion-${themeId}" class="border rounded-lg" style="border-color: var(--color-card-border);">
+                        <div class="accordion-item">
+                            <button type="button" class="accordion-header active">
+                                <span>Tailoring Options:</span>
+                                <svg class="icon w-5 h-5 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content open">
+                                <div id="refine-tailoring-container-${themeId}" class="refine-tailoring-container flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}" data-theme-id="${themeId}">Regenerate Plan</button>
+                </div>
+            `;
             
             const robustButtonContainer = isModal ? buttonContainer : buttonContainer.closest('.button-bar');
             robustButtonContainer.insertAdjacentElement('afterend', refineContainer);
+
+            const allOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle')).map(b => b.textContent.trim());
+            const selectedOptions = context.tailoring ? context.tailoring.split(', ') : [];
+            populateTailoringButtons(allOptions.slice(4), `refine-tailoring-container-${themeId}`, selectedOptions);
         }
 
-        async function handleRefineRequest(refineContainer) {
-            const promptText = refineContainer.querySelector('textarea').value;
-            if (!promptText) return;
+        async function handleRefineRequest(refineButton) {
+            const { isModal, themeId } = refineButton.dataset;
+            const refineContainer = refineButton.closest('.refine-container');
 
-            const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
+            const newFocus = refineContainer.querySelector(`#refine-focus-${themeId}`).value.trim();
+            const newTheme = refineContainer.querySelector(`#refine-theme-${themeId}`).value.trim();
+            const newTailoring = Array.from(refineContainer.querySelectorAll(`#refine-tailoring-container-${themeId} .btn-toggle.active`))
+                                      .map(btn => btn.textContent.trim())
+                                      .join(', ');
             
-            const contentArea = isModal 
+            if (!newFocus) {
+                showNotification("Core Focus cannot be empty.", true);
+                return;
+            }
+
+            const contentArea = isModal === 'true'
                 ? document.getElementById('inDepthModalContent') 
                 : refineContainer.closest('.card-content').querySelector('.details-container, #gemini-result-container');
+            
             const footerEl = document.getElementById('inDepthModalFooter');
             
             if (!contentArea) {
                 console.error("Could not find content area for refinement.");
                 return;
             }
-
-            const themeId = isModal 
-                ? footerEl.dataset.themeId 
-                : contentArea.closest('.card-content').querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
-            const textKey = isModal ? themeId + '-full' : themeId;
             
-            const originalText = originalGeneratedText.get(textKey);
-
-            if (!originalText) {
-                handleApiError({message: "Could not find the original text to refine. Please generate the content again first."}, contentArea, "refinement");
-                return;
-            }
-            
-            const loaderMessageElement = getLoaderHTML('Refining plan based on your request...', true);
+            const loaderMessageElement = getLoaderHTML('Regenerating plan based on your new request...', true);
             contentArea.innerHTML = '';
             contentArea.appendChild(loaderMessageElement);
-            
-            const prompt = `## AI Persona:
-You are Kaia, the Syncretic Movement Guide.
+            refineContainer.remove(); // Remove the refine UI immediately
 
-## Core Task:
-A user has an existing plan you created and has a request to modify it. Your task is to rewrite the **entire** plan from scratch, thoughtfully integrating the user's request through your unique lens of blending yoga with modern movement science.
-
-## Context:
-* **Original Plan:**
-    ---
-    ${originalText}
-    ---
-* **User's Refinement Request:** "${promptText}"
-
-## Output Requirements:
-* Generate a completely new, rewritten plan that follows the full nine-part Yang/Yin structure.
-* The user's request should be the new primary filter for your choices.
-* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Proposed Exercises, Verbal Cues, Modifications, Prop Integration etc., for every section.**
-* Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown teaching guide.`;
+            const newContext = { focus: newFocus, theme: newTheme, tailoring: newTailoring };
+            originalPlanContext[themeId] = newContext; // Update the stored context
             
             try {
-                const newText = await callGeminiAPI(prompt);
+                const newText = await generatePlanIteratively(newContext, loaderMessageElement.querySelector('p'));
                 if (!newText || newText.trim() === '') {
                     handleApiError({ message: "The AI returned an empty response. Please try refining with a different request." }, contentArea, 'refinement');
                     return;
                 }
 
+                const textKey = themeId + '-full';
                 originalGeneratedText.set(textKey, newText);
                 
-                if (isModal) {
+                if (isModal === 'true') {
                     renderAccordionFromMarkdown(newText, contentArea);
                     addModalActionButtons(footerEl, themeId, footerEl.dataset.themeType);
                 } else {
+                    // This case is less likely with the new UI but kept for robustness
                     contentArea.innerHTML = convertMarkdownToHtml(newText);
-                    addPostGenerationButtons(contentArea, themeId, footerEl.dataset.themeType || 'custom');
-                }
-                
-                if (refineContainer) {
-                    refineContainer.remove();
+                    addPostGenerationButtons(contentArea, themeId, 'custom');
                 }
 
             } catch(error) {
@@ -1636,22 +1706,23 @@ A user has an existing plan you created and has a request to modify it. Your tas
             const titleEl = document.getElementById('readingModalTitle');
 
             const { themeId, themeType } = button.dataset;
-            const textKey = (themeType === 'custom') ? (themeId + '-full') : (themeId + '-full');
+            const textKey = themeId + '-full';
             const planText = originalGeneratedText.get(textKey);
-            const theme = document.getElementById('inDepthModalTitle').textContent.replace("In-Depth: ", "");
+            const context = originalPlanContext[themeId];
             
-            if (!planText || !theme) {
+            if (!planText || !context) {
                 showNotification('Could not find the plan text to generate a reading. Please explore the plan first.', true);
                 return;
             }
+            const themeTitle = context.focus + (context.theme ? `: ${context.theme}` : '');
 
-            titleEl.textContent = `Finding a reading for "${theme}"...`;
+            titleEl.textContent = `Finding a reading for "${themeTitle}"...`;
             contentEl.innerHTML = getLoaderHTML('Searching for inspiration based on the full plan...');
             modal.classList.remove('hidden');
 
             try {
-                const readingData = await getThematicReading(theme, planText);
-                renderReading(readingData, theme);
+                const readingData = await getThematicReading(themeTitle, planText);
+                renderReading(readingData, themeTitle);
             } catch (error) {
                 handleApiError(error, contentEl, 'thematic reading');
                 titleEl.textContent = 'Error Finding Reading';
@@ -1721,22 +1792,23 @@ A user has an existing plan you created and has a request to modify it. Your tas
         }
         
         function handleSuggestMusicClick(button) {
-            const { themeId, themeType } = button.dataset;
-            const textKey = (themeType === 'custom' || !themeType) ? (themeId + '-full') : (themeId + '-full');
+            const { themeId } = button.dataset;
+            const textKey = themeId + '-full';
             const planText = originalGeneratedText.get(textKey);
-            const theme = document.getElementById('inDepthModalTitle').textContent.replace("In-Depth: ", "");
+            const context = originalPlanContext[themeId];
              
-            if (!planText) {
+            if (!planText || !context) {
                 showNotification('Could not find the plan text to suggest music. Please generate the detailed plan first.', true);
                 return;
             }
+            const themeTitle = context.focus + (context.theme ? `: ${context.theme}` : '');
 
             const modal = document.getElementById('musicModal');
             const titleEl = document.getElementById('musicModalTitle');
             const genreContainer = document.getElementById('genre-buttons-container');
             const resultsContainer = document.getElementById('music-results-container');
             
-            titleEl.textContent = `Music for "${theme}"`;
+            titleEl.textContent = `Music for "${themeTitle}"`;
             modal.dataset.planText = planText; // Store the plan text on the modal
             resultsContainer.innerHTML = '';
             document.getElementById('music-selection-container').style.display = 'block';
@@ -1874,23 +1946,24 @@ A user has an existing plan you created and has a request to modify it. Your tas
             const modal = document.getElementById('inDepthModal');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
-            const titleEl = document.getElementById('inDepthModalTitle');
+            
+            const themeId = footerEl.dataset.themeId;
+            const context = originalPlanContext[themeId];
 
-            const theme = titleEl.textContent.replace("In-Depth: ", "");
-            if (!theme) {
+            if (!context) {
                 showNotification('Could not determine the theme to generate a new routine.', true);
                 return;
             }
+            const themeTitle = context.focus + (context.theme ? `: ${context.theme}` : '');
 
-            const context = { theme: theme, focus: "A completely new interpretation." };
-            const loaderMessageElement = getLoaderHTML(`Generating a completely new routine for "${theme}"...`, true);
+            const newContext = { ...context, tailoring: "A completely new interpretation." };
+            const loaderMessageElement = getLoaderHTML(`Generating a completely new routine for "${themeTitle}"...`, true);
             contentEl.innerHTML = '';
             contentEl.appendChild(loaderMessageElement);
             button.disabled = true;
 
             try {
-                const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
-                const themeId = footerEl.dataset.themeId || 'custom-plan';
+                const resultText = await generatePlanIteratively(newContext, loaderMessageElement.querySelector('p'));
                 originalGeneratedText.set(themeId + '-full', resultText);
                 renderAccordionFromMarkdown(resultText, contentEl);
             } catch (error) {
@@ -2092,7 +2165,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
             tourSteps = [
                 { title: 'Welcome!', content: 'This quick tour will show you the main features on this page. You can exit at any time.' },
                 { element: '#app-header', title: 'The Header', content: 'The header image and the app\'s color scheme are generated by AI. You can create your own version using the floating action button.' },
-                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by typing any theme, idea, or feeling into the prompt box to create a unique yoga plan.' },
+                { element: '#custom-plan-card', title: 'Custom Plan Generator', content: 'This is the heart of the app. Start by typing a focus and an optional theme to create a unique yoga plan.' },
                 { element: '#tailor-accordion', title: 'Tailor Your Plan', content: 'Click here to reveal dozens of options to fine-tune your request, such as adding a focus on "Balance" or "Deep Relaxation".' },
                 { element: '#main-grid', title: 'Pre-Built Categories', content: 'If you need inspiration, scroll down to discover many AI-generated categories, from yoga styles to seasonal themes. Click any item to generate a plan.' },
                 { element: '#discover-more-button', title: 'Discover More', content: 'Not seeing a category you like? Click this button to have the AI generate a brand new, random category of yoga themes for you to explore.' },
@@ -2109,7 +2182,8 @@ A user has an existing plan you created and has a request to modify it. Your tas
         
         function resetAppView() {
             document.getElementById('gemini-result-container').innerHTML = '';
-            document.getElementById('gemini-prompt').value = '';
+            document.getElementById('gemini-focus').value = '';
+            document.getElementById('gemini-theme').value = '';
             document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active').forEach(btn => btn.classList.remove('active'));
 
             document.querySelectorAll('.details-container').forEach(container => container.innerHTML = '');
