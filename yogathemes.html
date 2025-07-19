@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v21.0.1</title>
+    <title>AI Yoga Class & Theme Generator v21.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -426,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.0.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.1.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -917,7 +917,7 @@
         async function handleGeminiSubmit(e) {
             e.preventDefault();
             const promptInput = document.getElementById('gemini-prompt');
-            let userPrompt = promptInput.value.trim();
+            const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
             const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
@@ -925,20 +925,28 @@
                                          .join(', ');
 
             const resultContainer = document.getElementById('gemini-result-container');
-            const loaderMessageElement = getLoaderHTML('Drafting initial plan...', true);
-            resultContainer.innerHTML = '';
-            resultContainer.appendChild(loaderMessageElement);
+            resultContainer.innerHTML = getLoaderHTML('Drafting your full yoga plan...');
             
+            const modal = document.getElementById('inDepthModal');
+            const titleEl = document.getElementById('inDepthModalTitle');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+
             try {
                 const context = { theme: userPrompt, focus: selectedOptions };
-                const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
+                const resultText = await generatePlanIteratively(context, resultContainer.querySelector('p'));
                 
-                originalGeneratedText.set('custom-plan', resultText);
-                resultContainer.innerHTML = convertMarkdownToHtml(resultText);
-                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
+                originalGeneratedText.set('custom-plan-full', resultText);
+                
+                titleEl.textContent = `In-Depth: ${userPrompt}`;
+                renderAccordionFromMarkdown(resultText, contentEl);
+                addModalActionButtons(footerEl, 'custom-plan', 'custom');
+                modal.classList.remove('hidden');
 
             } catch(error) {
                 handleApiError(error, resultContainer, 'custom yoga plan');
+            } finally {
+                resultContainer.innerHTML = ''; // Clear the loader from the main page
             }
         }
         
@@ -1224,15 +1232,12 @@ Return ONLY a valid JSON array of strings.`;
             buttonBar = document.createElement('div');
             buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
             buttonBar.style.borderColor = 'var(--color-card-border)';
-
+            
+            // The "Explore In-Depth" button is no longer needed for custom plans as they go direct to modal.
+            // For other types, it remains.
             let exploreButtonHTML = '';
             if (themeType !== 'custom') { 
                 exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
-            } else {
-                // For custom plans, we need a way to trigger the in-depth view.
-                // We'll add a button that essentially does the same thing as handleExploreInDepth
-                // but for the custom-generated text.
-                 exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="custom-plan" data-theme-type="custom">Explore In-Depth</button>`;
             }
 
             buttonBar.innerHTML = `
@@ -1777,9 +1782,9 @@ A user has an existing plan you created and has a request to modify it. Your tas
             2.  **Filter by Genre:** Consider the user's preferred genres as your primary palette.
             3.  **Map Tracks to Flow:** Assign specific songs to the different sections of the yoga class. The music should match the intended energy of each part of the routine. For example, use more energetic music for the Yang section and calming, ambient music for the Yin and Savasana sections.
             4.  **Format Output:** Return a single, valid JSON object. The top-level keys should be the main sections of the yoga plan (e.g., "Yang Main Sequence"). The value for each key should be an array of track objects. Each track object must contain:
-                * \`"artist"\`: The name of the artist.
-                * \`"song"\`: The title of the song.
-                * \`"spotify_search_url"\`: A formatted URL to search for the track on Spotify, like 'https://open.spotify.com/search/Artist%20Name%20Song%20Title'.
+                * "artist": The name of the artist.
+                * "song": The title of the song.
+                * "spotify_search_url": A formatted URL to search for the track on Spotify, like 'https://open.spotify.com/search/Artist%20Name%20Song%20Title'.
 
             ## Yoga Class Context
             **Preferred Genres:** ${genres.join(', ')}
