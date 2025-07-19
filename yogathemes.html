@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v19.2.0</title>
+    <title>AI Yoga Class & Theme Generator v20.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -384,6 +384,17 @@
             </div>
         </div>
     </div>
+    <div id="readingModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
+                <h2 id="readingModalTitle" class="text-2xl font-bold themed-text-primary">Thematic Reading</h2>
+                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+            </div>
+            <div id="readingModalContent" class="p-6 overflow-y-auto prose max-w-none">
+                <!-- Content will be injected here -->
+            </div>
+        </div>
+    </div>
     
     <div class="container mx-auto">
         <header id="app-header" class="relative text-center mb-10 rounded-2xl overflow-hidden shadow-lg">
@@ -397,7 +408,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.2.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v20.0.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -556,7 +567,7 @@
             });
             
             // Modal Closing Listeners
-            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal'].forEach(id => {
+            ['themeGeneratorModal', 'inDepthModal', 'loadingStateModal', 'readingModal'].forEach(id => {
                  document.getElementById(id).addEventListener('click', (e) => {
                      if (e.target.closest('[id^="close"]')) {
                          document.getElementById(id).classList.add('hidden');
@@ -629,6 +640,12 @@
                         targetCard.style.boxShadow = '0 0 0 4px var(--color-primary)';
                         setTimeout(() => targetCard.style.boxShadow = '', 2000);
                     }
+                    return;
+                }
+
+                const readingBtn = e.target.closest('.reading-button');
+                if (readingBtn) {
+                    handleFindReadingClick(readingBtn);
                     return;
                 }
 
@@ -1184,6 +1201,7 @@ Return ONLY a valid JSON array of strings.`;
             buttonBar.innerHTML = `
                 <button class="btn-secondary text-sm refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Find Reading</button>
                 ${exploreButtonHTML}
             `;
             container.appendChild(buttonBar);
@@ -1197,6 +1215,7 @@ Return ONLY a valid JSON array of strings.`;
              container.innerHTML = `
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
+                <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Find Reading</button>
                 <button class="btn-secondary text-sm print-button">Print Plan</button>
             `;
              container.querySelector('.copy-button').addEventListener('click', e => {
@@ -1535,6 +1554,98 @@ A user has an existing plan you created and has a request to modify it. Your tas
             } catch(error) {
                 handleApiError(error, contentArea, 'refinement');
             }
+        }
+
+        async function handleFindReadingClick(button) {
+            const modal = document.getElementById('readingModal');
+            const contentEl = document.getElementById('readingModalContent');
+            const titleEl = document.getElementById('readingModalTitle');
+
+            const { themeId, themeType } = button.dataset;
+            let theme = '';
+
+            if (themeType === 'custom') {
+                const customPlanContainer = document.getElementById('gemini-result-container');
+                const firstHeader = customPlanContainer.querySelector('h1, h2, h3');
+                theme = firstHeader ? firstHeader.textContent.replace("In-Depth: ", "") : document.getElementById('gemini-prompt').value;
+            } else if (themeType) {
+                const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+                theme = item?.title;
+            } else {
+                 const inDepthTitle = document.getElementById('inDepthModalTitle').textContent;
+                 if(inDepthTitle.includes("In-Depth:")) {
+                    theme = inDepthTitle.replace("In-Depth: ", "");
+                 }
+            }
+
+
+            if (!theme) {
+                showNotification('Could not determine the theme for the reading.', true);
+                return;
+            }
+
+            titleEl.textContent = `Finding a reading for "${theme}"...`;
+            contentEl.innerHTML = getLoaderHTML('Searching the web for inspiration...');
+            modal.classList.remove('hidden');
+
+            try {
+                const readingData = await getThematicReading(theme);
+                renderReading(readingData, theme);
+            } catch (error) {
+                handleApiError(error, contentEl, 'thematic reading');
+                titleEl.textContent = 'Error Finding Reading';
+            }
+        }
+
+        async function getThematicReading(theme) {
+            const prompt = `
+            As an expert research assistant, your task is to find a thematic reading for a yoga class.
+            1. First, use your search tool to find poems, affirmations, or short stories related to the theme: "${theme}". Good search queries would be "poems about ${theme}" or "short stories about ${theme}".
+            2. From the search results, browse the top 2-3 most promising pages to find a specific text.
+            3. Analyze the text for its suitability in a yoga class.
+            4. Return a single, valid JSON object with the following structure:
+                {
+                  "type": "Poem" | "Affirmation" | "Story" | "None",
+                  "title": "Title of the work",
+                  "author": "Author's name",
+                  "text": "The full text of the reading, using \\n for newlines.",
+                  "source": "The source URL where it was found or the author's name if it's a famous quote.",
+                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme."
+                }
+            If no suitable reading is found, return a JSON object with "type": "None".
+            `;
+
+            const jsonText = await callGeminiAPI(prompt, true);
+            if (!jsonText) throw new Error("The AI failed to find a thematic reading.");
+            return parseJsonWithCorrections(jsonText);
+        }
+
+        function renderReading(data, theme) {
+            const contentEl = document.getElementById('readingModalContent');
+            const titleEl = document.getElementById('readingModalTitle');
+            titleEl.textContent = `Suggested Reading for "${theme}"`;
+
+            if (data.type === 'None' || !data.text) {
+                contentEl.innerHTML = `<p class="themed-text-muted">Sorry, I couldn't find a suitable reading for this theme at the moment. You could try refining the plan with a slightly different theme.</p>`;
+                return;
+            }
+
+            const formattedText = data.text.replace(/\n/g, '<br>');
+
+            contentEl.innerHTML = `
+                <div class="p-4 rounded-lg" style="background-color: rgba(0,0,0,0.02);">
+                    <h3 class="text-xl font-bold themed-text-accent">${data.title || data.type}</h3>
+                    ${data.author ? `<p class="themed-text-muted text-sm mb-4">by ${data.author}</p>` : ''}
+                    <blockquote class="border-l-4 pl-4 italic" style="border-color: var(--color-primary);">
+                        <p>${formattedText}</p>
+                    </blockquote>
+                </div>
+                <div class="mt-6">
+                    <h4 class="font-bold themed-text-primary">AI Analysis</h4>
+                    <p class="themed-text-muted">${data.analysis}</p>
+                    <p class="text-xs mt-4 themed-text-muted"><strong>Source:</strong> ${data.source || 'Not specified'}</p>
+                </div>
+            `;
         }
         
         async function getIconForTheme(title) {
