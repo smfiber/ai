@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v19.0.0</title>
+    <title>AI Yoga Class & Theme Generator v19.0.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -390,7 +390,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.0.1</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -493,7 +493,7 @@
 
     <script type="module">
         // --- Global State & Configuration ---
-        let apiKey = "";
+        let userApiKey = "";
         let temperature = 0.7; // Default creativity/temperature value
         const root = document.documentElement;
         const allThemeData = {};
@@ -523,7 +523,7 @@
             // Floating Action Buttons & Panels
             document.getElementById('new-plan-button').addEventListener('click', resetAppView);
             document.getElementById('theme-changer-button').addEventListener('click', () => {
-                if(!apiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
+                if(!userApiKey) { showNotification('Please enter your API key to use the theme generator.', true); return; }
                 document.getElementById('themeGeneratorModal').classList.remove('hidden');
             });
             document.getElementById('scroll-to-top-button').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -644,7 +644,7 @@
              e.preventDefault();
              const input = document.getElementById('apiKeyInput');
              if (!input.value.trim()) return;
-             apiKey = input.value.trim();
+             userApiKey = input.value.trim();
              document.getElementById('apiKeyModal').classList.add('hidden');
 
              const loadingModal = document.getElementById('loadingStateModal');
@@ -667,7 +667,7 @@
                     startTour();
                  }
              } catch (error) {
-                 console.error("A critical error occurred during app initialization:", error.message);
+                 console.error("A critical error occurred during app initialization:", error);
                 if (document.getElementById('apiKeyModal').classList.contains('hidden')) {
                     modalMessage.textContent = 'An error occurred during setup. Some content may have failed to load. Please check your API key and connection.';
                     modalMessage.classList.add('text-red-600', 'font-bold');
@@ -958,13 +958,13 @@
 
             payload.generationConfig = generationConfig;
             
-            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, payload);
+            const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${userApiKey}`, payload);
             return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
 
         async function callImageGenAPI(prompt) {
              const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, payload);
+             const result = await callApi(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${userApiKey}`, payload);
              const base64 = result?.predictions?.[0]?.bytesBase64Encoded;
              return base64 ? `data:image/png;base64,${base64}` : null;
         }
@@ -998,7 +998,7 @@
                 else throw imageResult.reason || new Error("Failed to generate header image.");
 
             } catch (error) {
-                 handleApiError(null, null, 'default theme');
+                 handleApiError(error, null, 'default theme');
                  throw error;
             } finally {
                 showThemeLoading(false);
@@ -1548,7 +1548,22 @@ A user has an existing plan you created and has a request to modify it. Your tas
             return html;
         }
         
-        function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
+        function generateErrorMessage(error, type = 'general') {
+            console.error(`Error during ${type} generation:`, error);
+            let message = `An unknown error occurred. ${(error && error.message) ? error.message : 'No additional details available.'}`;
+            const errText = (error && error.message) ? error.message.toLowerCase() : '';
+
+            if (errText.includes('safety') || errText.includes('blocked')) {
+                message = `Request blocked for safety reasons. Please try a different prompt.`;
+            } else if (errText.includes('api key not valid')) {
+                message = `Authentication failed. Your API Key is not valid.`;
+            } else if (errText.includes('429')) {
+                message = `Request limit exceeded. Please try again later.`;
+            } else if (errText.includes('timed out')) {
+                message = `The request timed out. Please check your connection and try again.`;
+            }
+            return `Sorry, a critical error occurred: ${message}`;
+        }
 
         function showNotification(message, isError = false) {
             const notification = document.createElement('div');
