@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v22.0.0</title>
+    <title>AI Yoga Class & Theme Generator v22.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -345,7 +345,7 @@
         </div>
     </div>
     <div id="inDepthModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="card w-full max-w-4xl m-4 flex flex-col" style="max-height: 90vh;">
+        <div class="card w-full max-w-5xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Exploration</h2>
                 <div class="flex items-center gap-4">
@@ -353,7 +353,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
                     </div>
-                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
+                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
                 </div>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto"></div>
@@ -369,7 +369,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
                     </div>
-                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
+                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
                 </div>
             </div>
             <div class="p-6">
@@ -388,23 +388,25 @@
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="readingModalTitle" class="text-2xl font-bold themed-text-primary">Thematic Reading</h2>
-                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
+                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="readingModalContent" class="p-6 overflow-y-auto prose max-w-none">
-                </div>
+                <!-- Content will be injected here -->
+            </div>
         </div>
     </div>
     <div id="musicModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="musicModalTitle" class="text-2xl font-bold themed-text-primary">AI Music Curator</h2>
-                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
+                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto">
                 <div id="music-selection-container">
                     <p class="themed-text-muted mb-2">Select one or more genres to influence the playlist:</p>
                     <div id="genre-buttons-container" class="flex flex-wrap gap-2 mb-6">
-                        </div>
+                        <!-- Genre buttons will be injected here -->
+                    </div>
                     <button id="generate-playlist-btn" class="btn-primary w-full">Generate Playlist</button>
                 </div>
                 <div id="music-results-container" class="mt-6 prose max-w-none"></div>
@@ -424,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.1.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
