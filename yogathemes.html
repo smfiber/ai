@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v21.1.0</title>
+    <title>AI Yoga Class & Theme Generator v21.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -426,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.1.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.2.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1803,6 +1803,40 @@ A user has an existing plan you created and has a request to modify it. Your tas
             const resultsContainer = document.getElementById('music-results-container');
             
             let html = '';
+            const hasTracks = Object.values(data).some(section => Array.isArray(section) && section.length > 0);
+
+            if (hasTracks) {
+                const exportButton = document.createElement('button');
+                exportButton.id = 'export-playlist-btn';
+                exportButton.className = 'btn-secondary mb-4';
+                exportButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+                    <span>Export Links</span>`;
+                
+                exportButton.addEventListener('click', (e) => {
+                    const links = Array.from(resultsContainer.querySelectorAll('a'))
+                                     .map(a => a.href)
+                                     .join('\n');
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.value = links;
+                    textarea.style.position = 'fixed'; 
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        const originalText = e.currentTarget.querySelector('span').textContent;
+                        e.currentTarget.querySelector('span').textContent = 'Copied!';
+                        setTimeout(() => { e.currentTarget.querySelector('span').textContent = originalText; }, 2000);
+                    } catch (err) {
+                        console.error('Fallback: Oops, unable to copy', err);
+                        showNotification('Could not copy links to clipboard.', true);
+                    }
+                    document.body.removeChild(textarea);
+                });
+                resultsContainer.appendChild(exportButton);
+            }
+
             for (const section in data) {
                 if (data.hasOwnProperty(section) && Array.isArray(data[section]) && data[section].length > 0) {
                     html += `<h3>${section}</h3><ul>`;
@@ -1826,7 +1860,9 @@ A user has an existing plan you created and has a request to modify it. Your tas
             if(html === '') {
                 resultsContainer.innerHTML = `<p class="themed-text-muted">Could not generate a playlist for this plan. You can close this window and try again.</p>`;
             } else {
-                 resultsContainer.innerHTML = html;
+                const listContainer = document.createElement('div');
+                listContainer.innerHTML = html;
+                resultsContainer.appendChild(listContainer);
             }
         }
         
