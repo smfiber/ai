@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v19.1.0</title>
+    <title>AI Yoga Class & Theme Generator v19.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -397,7 +397,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.1.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.2.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1377,34 +1377,39 @@ Create a markdown draft. For each of the 9 sections below, list the key poses, m
         
         function getRevisionPrompt(draft) {
              return `## AI Persona:
-You are Kaia, a Syncretic Movement Guide, and you are now acting as a critical editor to polish a draft into a final, high-quality routine.
+You are Kaia, a Syncretic Movement Guide, and you are now acting as a critical editor to polish a draft into a comprehensive teaching guide.
 
 ## Core Task:
-You will be given a DRAFT of a yoga plan. Your task is to expand this draft into a polished, final, and beautifully written routine. You must flesh out all details, add transitions, refine the language, and ensure it meets all quality guidelines.
+You will be given a DRAFT of a yoga plan. Your task is to expand this draft into a polished, final, and beautifully written teaching guide. You must flesh out all details, add instructor-specific sections, and ensure it meets all quality guidelines.
 
 ## The Draft to Revise:
 ---
 ${draft}
 ---
 
-## Output Requirements for Final Version:
-You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely.
-* **Add Timings:** For each of the 9 sections, add an estimated time duration on its own line right after the header (e.g., *Est. Time: 5-7 minutes*).
-* **Expand on Everything:** Convert the bullet points from the draft into full, descriptive paragraphs.
-* **Format Yang Sequences Correctly:** For the 'Yang Main Sequence' and 'Peak Yang Expression' sections, you **must** give each distinct flow or complex pose its own sub-header using '####' markdown (e.g., "#### Flow 1: Crescent Lunge to Warrior II"). This formatting is critical for readability.
-* **Add Transitions:** Describe the movements that connect the poses and flows smoothly.
-* **Explain the "Why":** For each section, explain the purpose of the chosen exercises or asanas.
-* **Suggest Props Everywhere:** Suggest the use of props (like blocks or straps) in **both** the Yang and Yin sections where appropriate to support alignment and accessibility.
-* **Yin Details are Crucial:** For the Yin sequence, you MUST specify a recommended **hold time** (e.g., "Hold for 3-5 minutes") and provide detailed instructions on using **props** for each pose.
-* **Refine Language & Theming:** Use encouraging, knowledgeable, and holistic language that fits the Kaia persona. Weave the user's original theme into the descriptive language and cues throughout the entire plan to create an immersive experience.
-* **Focused Breathwork:** For the 'Yang Breathwork' section, select only the **one or two most appropriate techniques** for the theme, rather than listing several.
+## Output Requirements for Final Instructor Guide:
+You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely, but add significant detail.
 
-## Quality Guidelines to Enforce:
-* **Balance:** Ensure the Yang and Yin sections are balanced in length and intensity.
-* **Flow & Logic:** The final sequence must be logical, build intelligently, and then cool down effectively.
-* **Safety:** Prioritize safe movement patterns.
+### Global Requirements (at the top):
+1.  **Props Needed:** Start with a bulleted list of all props required for the class.
+2.  **Key Contraindications:** Below props, add a section outlining major safety warnings or conditions where poses should be avoided/modified (e.g., pregnancy, high blood pressure, acute injuries).
 
-Return ONLY the final, polished, and complete markdown plan.`;
+### Per-Section Requirements:
+For each of the 9 sections, you must provide:
+1.  **Main Description:** The core narrative explaining the purpose and flow of this section for the student.
+2.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
+3.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
+4.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
+5.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section.
+
+### Formatting Rules:
+* Use '###' for the main 9 section titles (e.g., "### Part 1: Thematic Intent & Centering").
+* Use '####' for the sub-sections within each part (e.g., "#### Instructor Focus", "#### Verbal Cues").
+* Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
+* Add estimated timings for each of the 9 major sections.
+* For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
+
+Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
 
         async function generatePlanIteratively(context, loaderMessageElement) {
@@ -1507,7 +1512,8 @@ A user has an existing plan you created and has a request to modify it. Your tas
 ## Output Requirements:
 * Generate a completely new, rewritten plan that follows the full nine-part Yang/Yin structure.
 * The user's request should be the new primary filter for your choices.
-* Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown.`;
+* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Verbal Cues, Modifications, etc., for every section.**
+* Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown teaching guide.`;
             
             try {
                 const newText = await callGeminiAPI(prompt);
