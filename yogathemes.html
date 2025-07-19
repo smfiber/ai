@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v21.0.0</title>
+    <title>AI Yoga Class & Theme Generator v21.0.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -391,7 +391,8 @@
                 <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
             <div id="readingModalContent" class="p-6 overflow-y-auto prose max-w-none">
-                </div>
+                <!-- Content will be injected here -->
+            </div>
         </div>
     </div>
     <div id="musicModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -404,7 +405,8 @@
                 <div id="music-selection-container">
                     <p class="themed-text-muted mb-2">Select one or more genres to influence the playlist:</p>
                     <div id="genre-buttons-container" class="flex flex-wrap gap-2 mb-6">
-                        </div>
+                        <!-- Genre buttons will be injected here -->
+                    </div>
                     <button id="generate-playlist-btn" class="btn-primary w-full">Generate Playlist</button>
                 </div>
                 <div id="music-results-container" class="mt-6 prose max-w-none"></div>
@@ -424,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.0.1</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -746,7 +748,7 @@
                     { key: 'danceYoga', title: 'Dance & Movement Yoga', description: "Incorporate fluid dance-like movements into your flow.", initialPrompt: `Generate 10 yoga themes that incorporate dance and expressive movement. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes that incorporate dance, expressive movement, and rhythm. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
                     { key: 'yogaForAthletes', title: 'Yoga for Athletes', description: "Target specific muscle groups and improve recovery for athletic performance.", initialPrompt: `Generate 10 yoga themes for athletes (e.g., 'For Runners', 'For Cyclists'). For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for different types of athletes, focusing on recovery, flexibility, and injury prevention. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
                     { key: 'archetypes', title: 'Mythical & Archetypal Yoga', description: "Embody the qualities of gods, goddesses, and archetypes.", initialPrompt: `Generate 10 yoga themes based on archetypes or mythical figures (e.g., 'The Warrior', 'The Sage'). For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes based on global mythologies, archetypes, and legendary figures. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` },
-                    { key: 'holidays', title: 'Holidays & Celebrations', description: "Align your practice with a festive and seasonal holidays.", initialPrompt: `Generate data for 10 major Western holidays. For each, give "id", "title", "date" (MM/DD), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for 40-50 major global holidays and celebrations. For each, give "id", "title", "date" (MM/DD), and a detailed "explanation" for a yoga context. Return ONLY a valid JSON array.` },
+                    { key: 'holidays', title: 'Holidays & Celebrations', description: "Align your practice with festive and seasonal holidays.", initialPrompt: `Generate data for 10 major Western holidays. For each, give "id", "title", "date" (MM/DD), and a brief "explanation" for a yoga context. Return ONLY a valid JSON array.`, fullPrompt: `Generate data for 40-50 major global holidays and celebrations. For each, give "id", "title", "date" (MM/DD), and a detailed "explanation" for a yoga context. Return ONLY a valid JSON array.` },
                     { key: 'neurodiversity', title: 'Yoga for Neurodiversity', description: "Practices for sensory regulation and grounding.", initialPrompt: `Generate 10 yoga themes for neurodiverse individuals. For each, give a unique "id", "title", and a short "description". Return ONLY a valid JSON array.`, fullPrompt: `Generate 40-50 yoga themes for neurodiverse individuals, focusing on regulation and grounding. For each, give a unique "id", "title", and a "description". Return ONLY a valid JSON array.` }
                 ];
 
@@ -1134,7 +1136,7 @@ Return ONLY a valid JSON array of strings.`;
             if (!text || typeof text !== 'string') {
                 return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
-            let cleanText = text.replace(/```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            let cleanText = text.replace(/^```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
             if (!cleanText) {
                  return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
@@ -1226,6 +1228,11 @@ Return ONLY a valid JSON array of strings.`;
             let exploreButtonHTML = '';
             if (themeType !== 'custom') { 
                 exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
+            } else {
+                // For custom plans, we need a way to trigger the in-depth view.
+                // We'll add a button that essentially does the same thing as handleExploreInDepth
+                // but for the custom-generated text.
+                 exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="custom-plan" data-theme-type="custom">Explore In-Depth</button>`;
             }
 
             buttonBar.innerHTML = `
@@ -1478,15 +1485,45 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
 
         async function handleExploreInDepth(themeId, themeType) {
-            const item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
-            if (!item) return;
-
+            let item, context;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
+
+            if (themeType === 'custom') {
+                const originalSummary = originalGeneratedText.get('custom-plan');
+                if (!originalSummary) {
+                    showNotification("Could not find the original custom plan to explore.", true);
+                    return;
+                }
+                const themeTitle = document.getElementById('gemini-prompt').value || 'Custom Plan';
+                titleEl.textContent = `In-Depth: ${themeTitle}`;
+                context = { theme: themeTitle, focus: 'Based on user-provided summary' };
+                // We use the summary as the draft to be revised
+                const revisionPrompt = getRevisionPrompt(originalSummary);
+                const loaderMessageElement = getLoaderHTML(`Expanding on your custom plan...`, true);
+                contentEl.innerHTML = '';
+                contentEl.appendChild(loaderMessageElement);
+                modal.classList.remove('hidden');
+
+                try {
+                    const resultText = await callGeminiAPI(revisionPrompt);
+                    originalGeneratedText.set('custom-plan-full', resultText);
+                    renderAccordionFromMarkdown(resultText, contentEl);
+                    addModalActionButtons(footerEl, 'custom-plan', 'custom');
+                } catch (error) {
+                    handleApiError(error, contentEl, 'in-depth custom content');
+                }
+                return;
+
+            } else {
+                item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+                if (!item) return;
+                titleEl.textContent = `In-Depth: ${item.title}`;
+                context = { theme: item.title, focus: item.description };
+            }
             
-            titleEl.textContent = `In-Depth: ${item.title}`;
             const loaderMessageElement = getLoaderHTML(`Drafting plan for ${item.title}...`, true);
             contentEl.innerHTML = '';
             contentEl.appendChild(loaderMessageElement);
@@ -1498,7 +1535,6 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             modal.classList.remove('hidden');
             
             try {
-                const context = { theme: item.title, focus: item.description };
                 const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
 
                 originalGeneratedText.set(themeId + '-full', resultText); 
@@ -1531,7 +1567,7 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
             const footerEl = document.getElementById('inDepthModalFooter');
             
-            const themeId = isModal ? footerEl.dataset.themeId : contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
+            const themeId = isModal ? footerEl.dataset.themeId : (contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan');
             const textKey = isModal ? themeId + '-full' : themeId;
 
             const originalText = originalGeneratedText.get(textKey);
@@ -1592,7 +1628,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
             const titleEl = document.getElementById('readingModalTitle');
 
             const { themeId, themeType } = button.dataset;
-            const textKey = (themeType === 'custom') ? 'custom-plan-full' : (themeId + '-full');
+            const textKey = (themeType === 'custom') ? (themeId + '-full') : (themeId + '-full');
             const planText = originalGeneratedText.get(textKey);
             const theme = document.getElementById('inDepthModalTitle').textContent.replace("In-Depth: ", "");
             
@@ -1741,9 +1777,9 @@ A user has an existing plan you created and has a request to modify it. Your tas
             2.  **Filter by Genre:** Consider the user's preferred genres as your primary palette.
             3.  **Map Tracks to Flow:** Assign specific songs to the different sections of the yoga class. The music should match the intended energy of each part of the routine. For example, use more energetic music for the Yang section and calming, ambient music for the Yin and Savasana sections.
             4.  **Format Output:** Return a single, valid JSON object. The top-level keys should be the main sections of the yoga plan (e.g., "Yang Main Sequence"). The value for each key should be an array of track objects. Each track object must contain:
-                * `"artist"`: The name of the artist.
-                * `"song"`: The title of the song.
-                * `"spotify_search_url"`: A formatted URL to search for the track on Spotify, like \`https://open.spotify.com/search/Artist%20Name%20Song%20Title\`.
+                * \`"artist"\`: The name of the artist.
+                * \`"song"\`: The title of the song.
+                * \`"spotify_search_url"\`: A formatted URL to search for the track on Spotify, like 'https://open.spotify.com/search/Artist%20Name%20Song%20Title'.
 
             ## Yoga Class Context
             **Preferred Genres:** ${genres.join(', ')}
