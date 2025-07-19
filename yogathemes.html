@@ -426,7 +426,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.2.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.3.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -680,6 +680,12 @@
                 const musicBtn = e.target.closest('.music-button');
                 if(musicBtn) {
                     handleSuggestMusicClick(musicBtn);
+                    return;
+                }
+
+                const newRoutineBtn = e.target.closest('.new-routine-button');
+                if (newRoutineBtn) {
+                    handleNewRoutineRequest(newRoutineBtn);
                     return;
                 }
 
@@ -940,6 +946,11 @@
                 
                 titleEl.textContent = `In-Depth: ${userPrompt}`;
                 renderAccordionFromMarkdown(resultText, contentEl);
+                
+                // BUG FIX: Explicitly set dataset for custom plans
+                footerEl.dataset.themeId = 'custom-plan';
+                footerEl.dataset.themeType = 'custom';
+
                 addModalActionButtons(footerEl, 'custom-plan', 'custom');
                 modal.classList.remove('hidden');
 
@@ -1233,8 +1244,6 @@ Return ONLY a valid JSON array of strings.`;
             buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
             buttonBar.style.borderColor = 'var(--color-card-border)';
             
-            // The "Explore In-Depth" button is no longer needed for custom plans as they go direct to modal.
-            // For other types, it remains.
             let exploreButtonHTML = '';
             if (themeType !== 'custom') { 
                 exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
@@ -1254,6 +1263,7 @@ Return ONLY a valid JSON array of strings.`;
         
         function addModalActionButtons(container, themeId, themeType) {
              container.innerHTML = `
+                <button class="btn-primary text-sm new-routine-button">New Routine</button>
                 <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
                 <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Find Reading</button>
@@ -1458,14 +1468,15 @@ You must transform the draft into a complete, detailed markdown plan. Follow the
 ### Per-Section Requirements:
 For each of the 9 sections, you must provide:
 1.  **Main Description:** The core narrative explaining the purpose and flow of this section for the student.
-2.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
-3.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
-4.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
-5.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section.
+2.  **Proposed Exercises:** A bulleted list of the specific poses, flows, or drills for this section. This should be a quick, scannable summary.
+3.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
+4.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
+5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
+6.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section.
 
 ### Formatting Rules:
 * Use '###' for the main 9 section titles (e.g., "### Part 1: Thematic Intent & Centering").
-* Use '####' for the sub-sections within each part (e.g., "#### Instructor Focus", "#### Verbal Cues").
+* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Verbal Cues").
 * Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
 * Add estimated timings for each of the 9 major sections.
 * For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
@@ -1569,7 +1580,7 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.previousElementSibling;
+            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.previousElementSibling.previousElementSibling;
             const footerEl = document.getElementById('inDepthModalFooter');
             
             if (!contentArea) {
@@ -1577,9 +1588,9 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
                 return;
             }
 
-            const themeId = isModal ? footerEl.dataset.themeId : (contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan');
+            const themeId = isModal ? footerEl.dataset.themeId : (contentArea.parentElement.querySelector('.explore-button')?.dataset.themeId || 'custom-plan');
             const textKey = isModal ? themeId + '-full' : themeId;
-
+            
             const originalText = originalGeneratedText.get(textKey);
 
             if (!originalText) {
@@ -1607,7 +1618,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
 ## Output Requirements:
 * Generate a completely new, rewritten plan that follows the full nine-part Yang/Yin structure.
 * The user's request should be the new primary filter for your choices.
-* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Verbal Cues, Modifications, etc., for every section.**
+* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Proposed Exercises, Verbal Cues, Modifications, etc., for every section.**
 * Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown teaching guide.`;
             
             try {
@@ -1621,10 +1632,15 @@ A user has an existing plan you created and has a request to modify it. Your tas
                 
                 if (isModal) {
                     renderAccordionFromMarkdown(newText, contentArea);
-                    addModalActionButtons(footerEl, themeId, 'custom');
+                    addModalActionButtons(footerEl, themeId, footerEl.dataset.themeType);
                 } else {
                     contentArea.innerHTML = convertMarkdownToHtml(newText);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
+                }
+                
+                // BUG FIX: Remove the refinement UI after success
+                if (refineContainer) {
+                    refineContainer.remove();
                 }
 
             } catch(error) {
@@ -1872,6 +1888,36 @@ A user has an existing plan you created and has a request to modify it. Your tas
             }
         }
         
+        async function handleNewRoutineRequest(button) {
+            const modal = document.getElementById('inDepthModal');
+            const contentEl = document.getElementById('inDepthModalContent');
+            const footerEl = document.getElementById('inDepthModalFooter');
+            const titleEl = document.getElementById('inDepthModalTitle');
+
+            const theme = titleEl.textContent.replace("In-Depth: ", "");
+            if (!theme) {
+                showNotification('Could not determine the theme to generate a new routine.', true);
+                return;
+            }
+
+            const context = { theme: theme, focus: "A completely new interpretation." };
+            const loaderMessageElement = getLoaderHTML(`Generating a completely new routine for "${theme}"...`, true);
+            contentEl.innerHTML = '';
+            contentEl.appendChild(loaderMessageElement);
+            button.disabled = true;
+
+            try {
+                const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
+                const themeId = footerEl.dataset.themeId || 'custom-plan';
+                originalGeneratedText.set(themeId + '-full', resultText);
+                renderAccordionFromMarkdown(resultText, contentEl);
+            } catch (error) {
+                handleApiError(error, contentEl, 'new routine generation');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
         function getIconForTheme() {
             // Removed dynamic SVG generation in favor of a reliable fallback to prevent console errors.
             return `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zm-11.64 0a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zM12 12a2.143 2.143 0 1 1 0-4.286 2.143 2.143 0 0 1 0 4.286z"></path></svg>`;
@@ -2112,4 +2158,4 @@ A user has an existing plan you created and has a request to modify it. Your tas
 
     </script>
 </body>
-</ht
+</html>
