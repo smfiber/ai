@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v18.0</title>
+    <title>AI Yoga Class & Theme Generator v19.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -390,7 +390,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v18.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.0.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -418,7 +418,7 @@
 
                         <button id="generate-plan-btn" type="submit" class="btn-primary w-full mt-4" title="Generate a custom yoga plan based on your text">Generate AI Yoga Plan</button>
                     </form>
-                    <div id="gemini-result-container" class="mt-6"></div>
+                    <div id="gemini-result-container" class="mt-6 prose max-w-none"></div>
                 </div>
             </div>
 
@@ -868,27 +868,21 @@
                                          .map(btn => btn.textContent.trim())
                                          .join(', ');
 
-            const fullPrompt = getEnhancedPrompt(userPrompt, selectedOptions);
-
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
+            const resultContainer = document.getElementById('gemini-result-container');
+            const loaderMessageElement = getLoaderHTML('Drafting initial plan...', true);
+            resultContainer.innerHTML = '';
+            resultContainer.appendChild(loaderMessageElement);
             
-            titleEl.textContent = `Custom Plan: ${userPrompt}`;
-            contentEl.innerHTML = getLoaderHTML('Generating your custom AI yoga plan...');
-            footerEl.innerHTML = '';
-            modal.classList.remove('hidden');
-
             try {
-                const resultText = await callGeminiAPI(fullPrompt);
+                const context = { theme: userPrompt, focus: selectedOptions };
+                const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
                 
                 originalGeneratedText.set('custom-plan', resultText);
-                renderAccordionFromMarkdown(resultText, contentEl);
-                addModalActionButtons(footerEl, 'custom-plan', 'custom');
+                resultContainer.innerHTML = convertMarkdownToHtml(resultText);
+                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
 
             } catch(error) {
-                handleApiError(error, contentEl, 'custom yoga plan');
+                handleApiError(error, resultContainer, 'custom yoga plan');
             }
         }
         
@@ -1013,9 +1007,16 @@
         
         async function loadAITailoringOptions() {
             const container = document.getElementById('tailoring-buttons-container');
-            container.innerHTML = getLoaderHTML('Loading enhancement options...');
+            container.innerHTML = getLoaderHTML('Loading enhancement options...', true).innerHTML;
             try {
-                const prompt = `Generate a JSON array of 40-50 diverse yoga class enhancements and focus areas. These should be specific techniques or themes, not broad yoga styles. Include items like: Trataka, Yoga Nidra, specific Pranayama (e.g., Nadi Shodhana, Kapalabhati), Chanting (Mantra), Balance Focus, Core Strength, Deep Relaxation, Gratitude Meditation, Flexibility, Hip Opening, Shoulder Mobility, Restorative Poses. Return ONLY a valid JSON array of strings.`;
+                const prompt = `You are an expert in yoga, functional fitness, and somatic practices. Generate a JSON array of 40-50 diverse focus areas for a movement practice. The list should be a blend of concepts from multiple disciplines.
+
+**Include terms from:**
+* **Traditional Yoga:** (e.g., 'Hip Opening', 'Arm Balances', 'Nadi Shodhana Pranayama', 'Yoga Nidra').
+* **Functional Movement:** (e.g., 'Dynamic Core Stability', 'Gait & Proprioception', 'Shoulder Mobility Drills', 'Spinal Decompression').
+* **Somatic/Mindful Practice:** (e.g., 'Somatic Exploration', 'Mind-to-Muscle Connection', 'Proprioceptive Awareness', 'Deep Relaxation').
+
+Return ONLY a valid JSON array of strings.`;
                 const jsonText = await callGeminiAPI(prompt, true);
                 const options = parseJsonWithCorrections(jsonText);
                 if (!options || !Array.isArray(options)) {
@@ -1339,44 +1340,76 @@
             document.body.removeChild(textarea);
         }
         
-        function getEnhancedPrompt(task, options = '', originalText = '', context = {}) {
-            const optionsText = options ? `Incorporate these elements: ${options}.` : '';
+        function getDraftPrompt(context) {
+            return `## AI Persona:
+You are Kaia, a Syncretic Movement Guide. Your expertise is in blending traditional yoga with modern movement science.
 
-            if (originalText) {
-                return `You are an expert yoga instructor AI. A user has provided a yoga plan and a request to refine it. Your task is to rewrite the entire yoga plan to creatively incorporate the user's request.
+## Core Task:
+Create a high-level DRAFT of a thematic movement practice that is structured as half Yang (active) and half Yin (passive). Your goal is to brainstorm the key poses and concepts for the routine.
 
-**ORIGINAL YOGA PLAN:**
+## Context:
+* **User's Theme:** "${context.theme}"
+* **User's Focus Areas:** "${context.focus || 'None specified'}"
+
+## Output Requirements:
+Create a markdown draft. For each of the 9 sections below, list the key poses, movements, or concepts as bullet points. Be concise. This is a brainstorm draft, not the final detailed plan.
+
+### Part 1: The Yang Practice (Active & Warming)
+1.  **Thematic Intent & Centering:**
+2.  **Yang Breathwork (Pranayama):**
+3.  **Dynamic Warm-up & Mobility:**
+4.  **Yang Main Sequence (5-6 Flows):**
+5.  **Peak Yang Expression:**
+
+### Part 2: The Yin Practice (Passive & Cooling)
+6.  **The Transition:**
+7.  **Yin Breathwork & Intention:**
+8.  **Yin Sequence (5-6 Poses):**
+9.  **Savasana & Integration:**`;
+        }
+        
+        function getRevisionPrompt(draft) {
+             return `## AI Persona:
+You are Kaia, a Syncretic Movement Guide, and you are now acting as a critical editor to polish a draft into a final, high-quality routine.
+
+## Core Task:
+You will be given a DRAFT of a yoga plan. Your task is to expand this draft into a polished, final, and beautifully written routine. You must flesh out all details, add transitions, refine the language, and ensure it meets all quality guidelines.
+
+## The Draft to Revise:
 ---
-${originalText}
+${draft}
 ---
 
-**USER'S REFINEMENT REQUEST:**
-"${task}"
+## Output Requirements for Final Version:
+You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely.
+* **Expand on Everything:** Convert the bullet points from the draft into full, descriptive paragraphs.
+* **Add Transitions:** Describe the movements that connect the poses and flows smoothly.
+* **Explain the "Why":** For each section, explain the purpose of the chosen exercises or asanas.
+* **Yin Details are Crucial:** For the Yin sequence, you MUST specify a recommended **hold time** (e.g., "Hold for 3-5 minutes") and provide detailed instructions on using **props** (blocks, bolsters, blankets) for each pose.
+* **Refine Language:** Use encouraging, knowledgeable, and holistic language that fits the Kaia persona.
 
-**Instructions for rewriting:**
-1.  **Be Creative:** Don't just add the request; reimagine the plan to seamlessly and artfully integrate the new ideas.
-2.  **Structure:** Maintain clear, descriptive section headers using '###' markdown syntax.
-3.  **Completeness:** The entire rewritten guide must be a complete, stand-alone yoga plan.
+## Quality Guidelines to Enforce:
+* **Balance:** Ensure the Yang and Yin sections are balanced in length and intensity.
+* **Flow & Logic:** The final sequence must be logical, build intelligently, and then cool down effectively.
+* **Safety:** Prioritize safe movement patterns.
 
-Return only the new, complete, and rewritten markdown guide.`;
-            }
+Return ONLY the final, polished, and complete markdown plan.`;
+        }
 
-            let contextText = `for the theme: "${task}"`;
-            if (context.cardTitle) {
-                contextText = `for the following topic.
-- **Category:** "${context.cardTitle}"
-- **Topic Description:** "${context.cardDescription}"
-- **Specific Theme:** "${task}"`;
-            }
+        async function generatePlanIteratively(context, loaderMessageElement) {
+            // Step 1: Generate the Draft
+            if (loaderMessageElement) loaderMessageElement.textContent = 'Drafting initial plan...';
+            const draftPrompt = getDraftPrompt(context);
+            const draftText = await callGeminiAPI(draftPrompt);
+            if (!draftText) throw new Error("The AI failed to generate an initial draft.");
 
-            return `You are a highly creative and expert yoga instructor AI. Your task is to generate a unique, non-traditional, and inspiring yoga class plan ${contextText}. ${optionsText}
+            // Step 2: Revise the Draft into the Final Plan
+            if (loaderMessageElement) loaderMessageElement.textContent = 'Polishing final routine...';
+            const revisionPrompt = getRevisionPrompt(draftText);
+            const finalText = await callGeminiAPI(revisionPrompt);
+            if (!finalText) throw new Error("The AI failed to revise the draft into a final plan.");
 
-**Instructions:**
-1.  **Avoid Generic Sequences:** Think outside the box and create a plan that is truly distinct and memorable. Avoid the standard "Warm-up, Main Sequence, Cool-down" if a more creative structure fits the theme.
-2.  **Vary the Structure:** Do not use the same sequence of sections for every plan. Consider alternative formats. For example, you could structure the plan around a central story, a specific anatomical journey, or a progressive flow towards a single peak concept rather than just a peak pose.
-3.  **Incorporate Diverse Elements:** Seamlessly weave in elements of meditation, pranayama, mudra, and philosophy in unexpected ways throughout the class, not just in the opening and closing sections.
-
-Generate a complete, flowing markdown plan. Use '###' markdown for clear section headers. Return only the complete markdown plan.`;
+            return finalText;
         }
 
         async function handleExploreInDepth(themeId, themeType) {
@@ -1389,28 +1422,20 @@ Generate a complete, flowing markdown plan. Use '###' markdown for clear section
             const footerEl = document.getElementById('inDepthModalFooter');
             
             titleEl.textContent = `In-Depth: ${item.title}`;
-            contentEl.innerHTML = getLoaderHTML(`Generating detailed plan for ${item.title}...`);
+            const loaderMessageElement = getLoaderHTML(`Drafting plan for ${item.title}...`, true);
+            contentEl.innerHTML = '';
+            contentEl.appendChild(loaderMessageElement);
+            
             footerEl.innerHTML = '';
             footerEl.dataset.themeId = themeId;
             footerEl.dataset.themeType = themeType;
 
             modal.classList.remove('hidden');
             
-            const isWeeklyPlan = themeType === 'hipReplacement';
-            let prompt;
-
-            if (isWeeklyPlan) {
-                prompt = `Generate a detailed, in-depth yoga practice plan for the recovery phase: "${item.title}: ${item.description}". For this phase, provide a set of 3-4 distinct routines (e.g., "Morning Mobility", "Afternoon Breathwork"). For each routine, create a "title" and "content" with detailed, safety-focused instructions in markdown format. Structure the entire response as a single markdown document where each routine's title is a '###' header.`;
-            } else {
-                prompt = `You are a master yoga teacher AI. A student wants to explore the theme of "${item.title}" (${item.description}) in depth.
-
-Your task is to generate **two completely different, detailed class plans** for this single theme. Each plan must have a unique approach, focus, and sequence. For example, one could be a dynamic, power-based flow, and the other could be a slow, meditative, and restorative practice.
-
-Label each plan clearly with a unique title using a '##' header (e.g., "## Approach 1: Energetic Flow"). Use '###' for the sections within each plan. Ensure the asanas, transitions, and language used are distinct between the two versions. Return only the complete markdown for both plans.`;
-            }
-
             try {
-                let resultText = await callGeminiAPI(prompt);
+                const context = { theme: item.title, focus: item.description };
+                const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
+
                 originalGeneratedText.set(themeId + '-full', resultText); 
                 renderAccordionFromMarkdown(resultText, contentEl);
                 addModalActionButtons(footerEl, themeId, themeType);
@@ -1438,7 +1463,7 @@ Label each plan clearly with a unique title using a '##' header (e.g., "## Appro
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container');
+            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
             const footerEl = document.getElementById('inDepthModalFooter');
             
             const themeId = isModal ? footerEl.dataset.themeId : contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
@@ -1451,9 +1476,27 @@ Label each plan clearly with a unique title using a '##' header (e.g., "## Appro
                 return;
             }
             
-            contentArea.innerHTML = getLoaderHTML(`Refining plan based on your request...`);
+            const loaderMessageElement = getLoaderHTML('Refining plan based on your request...', true);
+            contentArea.innerHTML = '';
+            contentArea.appendChild(loaderMessageElement);
             
-            const prompt = getEnhancedPrompt(promptText, '', originalText);
+            const prompt = `## AI Persona:
+You are Kaia, the Syncretic Movement Guide.
+
+## Core Task:
+A user has an existing plan you created and has a request to modify it. Your task is to rewrite the **entire** plan from scratch, thoughtfully integrating the user's request through your unique lens of blending yoga with modern movement science.
+
+## Context:
+* **Original Plan:**
+    ---
+    ${originalText}
+    ---
+* **User's Refinement Request:** "${promptText}"
+
+## Output Requirements:
+* Generate a completely new, rewritten plan that follows the full nine-part Yang/Yin structure.
+* The user's request should be the new primary filter for your choices.
+* Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown.`;
             
             try {
                 const newText = await callGeminiAPI(prompt);
@@ -1466,7 +1509,7 @@ Label each plan clearly with a unique title using a '##' header (e.g., "## Appro
                 
                 if (isModal) {
                     renderAccordionFromMarkdown(newText, contentArea);
-                    if (refineContainer) refineContainer.remove();
+                    addModalActionButtons(footerEl, themeId, 'custom');
                 } else {
                     contentArea.innerHTML = convertMarkdownToHtml(newText);
                     addPostGenerationButtons(contentArea, themeId, 'custom');
@@ -1495,7 +1538,15 @@ Label each plan clearly with a unique title using a '##' header (e.g., "## Appro
             }
         }
         
-        function getLoaderHTML(message) { return `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`; }
+        function getLoaderHTML(message, asElement = false) {
+            const html = `<div class="flex justify-center items-center my-4"><div class="loader themed-loader"></div><p class="ml-4 themed-text-muted">${message}</p></div>`;
+            if (asElement) {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                return div.firstElementChild;
+            }
+            return html;
+        }
         
         function generateErrorMessage(error, type = 'general') { console.error(`Error during ${type} generation:`, error); let message = `An unknown error occurred. ${error.message}`; const errText = error.message.toLowerCase(); if (errText.includes('safety') || errText.includes('blocked')) message = `Request blocked for safety reasons. Please try a different prompt.`; else if (errText.includes('api key not valid')) message = `Authentication failed. Your API Key is not valid.`; else if (errText.includes('429')) message = `Request limit exceeded. Please try again later.`; else if (errText.includes('timed out')) message = `The request timed out. Please check your connection and try again.`; return `Sorry, a critical error occurred: ${message}`; }
 
