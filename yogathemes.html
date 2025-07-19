@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v21.3.1</title>
+    <title>AI Yoga Class & Theme Generator v22.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -353,7 +353,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
                     </div>
-                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
                 </div>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto"></div>
@@ -369,7 +369,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
                     </div>
-                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
                 </div>
             </div>
             <div class="p-6">
@@ -388,25 +388,23 @@
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="readingModalTitle" class="text-2xl font-bold themed-text-primary">Thematic Reading</h2>
-                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
             </div>
             <div id="readingModalContent" class="p-6 overflow-y-auto prose max-w-none">
-                <!-- Content will be injected here -->
-            </div>
+                </div>
         </div>
     </div>
     <div id="musicModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="musicModalTitle" class="text-2xl font-bold themed-text-primary">AI Music Curator</h2>
-                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
             </div>
             <div class="p-6 overflow-y-auto">
                 <div id="music-selection-container">
                     <p class="themed-text-muted mb-2">Select one or more genres to influence the playlist:</p>
                     <div id="genre-buttons-container" class="flex flex-wrap gap-2 mb-6">
-                        <!-- Genre buttons will be injected here -->
-                    </div>
+                        </div>
                     <button id="generate-playlist-btn" class="btn-primary w-full">Generate Playlist</button>
                 </div>
                 <div id="music-results-container" class="mt-6 prose max-w-none"></div>
@@ -426,7 +424,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v21.3.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v22.0.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -688,6 +686,12 @@
                     handleNewRoutineRequest(newRoutineBtn);
                     return;
                 }
+                
+                const exportWordBtn = e.target.closest('.export-word-button');
+                if (exportWordBtn) {
+                    handleExportToWord();
+                    return;
+                }
 
                 if (!settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
                     settingsPanel.classList.add('hidden');
@@ -926,38 +930,19 @@
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) return;
 
-            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
-                                         .map(btn => btn.textContent.trim())
-                                         .join(', ');
-
             const resultContainer = document.getElementById('gemini-result-container');
-            resultContainer.innerHTML = getLoaderHTML('Drafting your full yoga plan...');
+            resultContainer.innerHTML = getLoaderHTML('Drafting your yoga plan summary...');
             
-            const modal = document.getElementById('inDepthModal');
-            const titleEl = document.getElementById('inDepthModalTitle');
-            const contentEl = document.getElementById('inDepthModalContent');
-            const footerEl = document.getElementById('inDepthModalFooter');
+            // Standardized Workflow: First, generate a summary.
+            const prompt = `Generate a very brief, condensed summary for a yoga class plan based on the theme: "${userPrompt}". For each section (Theme Introduction, Breathwork, Warm-up, Main Sequence, Cool-down, Savasana), provide a single descriptive sentence. Return the response as a simple markdown string where each section is a bullet point, starting with '*'.`;
 
             try {
-                const context = { theme: userPrompt, focus: selectedOptions };
-                const resultText = await generatePlanIteratively(context, resultContainer.querySelector('p'));
-                
-                originalGeneratedText.set('custom-plan-full', resultText);
-                
-                titleEl.textContent = `In-Depth: ${userPrompt}`;
-                renderAccordionFromMarkdown(resultText, contentEl);
-                
-                // BUG FIX: Explicitly set dataset for custom plans
-                footerEl.dataset.themeId = 'custom-plan';
-                footerEl.dataset.themeType = 'custom';
-
-                addModalActionButtons(footerEl, 'custom-plan', 'custom');
-                modal.classList.remove('hidden');
-
+                const resultText = await callGeminiAPI(prompt);
+                originalGeneratedText.set('custom-plan', resultText);
+                resultContainer.innerHTML = convertMarkdownToHtml(resultText);
+                addPostGenerationButtons(resultContainer, 'custom-plan', 'custom');
             } catch(error) {
-                handleApiError(error, resultContainer, 'custom yoga plan');
-            } finally {
-                resultContainer.innerHTML = ''; // Clear the loader from the main page
+                handleApiError(error, resultContainer, 'custom yoga plan summary');
             }
         }
         
@@ -1108,9 +1093,15 @@ Return ONLY a valid JSON array of strings.`;
 
         function populateTailoringButtons(options) {
             const container = document.getElementById('tailoring-buttons-container');
-            container.innerHTML = options.map(option =>
+            const staticButtons = `
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Blocks</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Bolster</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full active">Strap</button>
+            `;
+            const dynamicButtons = options.map(option =>
                 `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full">${option}</button>`
             ).join('');
+            container.innerHTML = staticButtons + dynamicButtons;
         }
         
         async function loadDynamicPlaceholders() {
@@ -1244,15 +1235,10 @@ Return ONLY a valid JSON array of strings.`;
             buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
             buttonBar.style.borderColor = 'var(--color-card-border)';
             
-            let exploreButtonHTML = '';
-            if (themeType !== 'custom') { 
-                exploreButtonHTML = `<button class="btn-secondary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>`;
-            }
-
             buttonBar.innerHTML = `
+                <button class="btn-primary text-sm explore-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Explore In-Depth</button>
                 <button class="btn-secondary text-sm refine-button">Refine with AI</button>
                 <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                ${exploreButtonHTML}
             `;
             container.appendChild(buttonBar);
             buttonBar.querySelector('.copy-button').addEventListener('click', e => {
@@ -1269,6 +1255,7 @@ Return ONLY a valid JSON array of strings.`;
                 <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Find Reading</button>
                 <button class="btn-secondary text-sm music-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Suggest Music</button>
                 <button class="btn-secondary text-sm print-button">Print Plan</button>
+                <button class="btn-secondary text-sm export-word-button">Export to Word</button>
             `;
              container.querySelector('.copy-button').addEventListener('click', e => {
                  const contentToCopy = document.getElementById('inDepthModalContent');
@@ -1472,6 +1459,7 @@ For each of the 9 sections, you must provide:
 3.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
 4.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
 5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
+    * **Prop Integration:** Within the 'Options & Modifications' list, you **must** include specific, practical guidance on how to use Yoga Blocks, a Bolster, and a Strap for the exercises in that section. If a prop is not relevant for a specific exercise, briefly state that.
 6.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section.
 
 ### Formatting Rules:
@@ -1501,54 +1489,36 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
         }
 
         async function handleExploreInDepth(themeId, themeType) {
-            let item, context;
+            let item, context, themeTitle;
             const modal = document.getElementById('inDepthModal');
             const titleEl = document.getElementById('inDepthModalTitle');
             const contentEl = document.getElementById('inDepthModalContent');
             const footerEl = document.getElementById('inDepthModalFooter');
-
-            if (themeType === 'custom') {
-                const originalSummary = originalGeneratedText.get('custom-plan');
-                if (!originalSummary) {
-                    showNotification("Could not find the original custom plan to explore.", true);
-                    return;
-                }
-                const themeTitle = document.getElementById('gemini-prompt').value || 'Custom Plan';
-                titleEl.textContent = `In-Depth: ${themeTitle}`;
-                context = { theme: themeTitle, focus: 'Based on user-provided summary' };
-                // We use the summary as the draft to be revised
-                const revisionPrompt = getRevisionPrompt(originalSummary);
-                const loaderMessageElement = getLoaderHTML(`Expanding on your custom plan...`, true);
-                contentEl.innerHTML = '';
-                contentEl.appendChild(loaderMessageElement);
-                modal.classList.remove('hidden');
-
-                try {
-                    const resultText = await callGeminiAPI(revisionPrompt);
-                    originalGeneratedText.set('custom-plan-full', resultText);
-                    renderAccordionFromMarkdown(resultText, contentEl);
-                    addModalActionButtons(footerEl, 'custom-plan', 'custom');
-                } catch (error) {
-                    handleApiError(error, contentEl, 'in-depth custom content');
-                }
-                return;
-
-            } else {
-                item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
-                if (!item) return;
-                titleEl.textContent = `In-Depth: ${item.title}`;
-                context = { theme: item.title, focus: item.description };
-            }
             
-            const loaderMessageElement = getLoaderHTML(`Drafting plan for ${item.title}...`, true);
+            const loaderMessageElement = getLoaderHTML(`Drafting full plan...`, true);
             contentEl.innerHTML = '';
             contentEl.appendChild(loaderMessageElement);
             
             footerEl.innerHTML = '';
             footerEl.dataset.themeId = themeId;
             footerEl.dataset.themeType = themeType;
-
             modal.classList.remove('hidden');
+
+            const selectedOptions = Array.from(document.querySelectorAll('#tailoring-buttons-container .btn-toggle.active'))
+                                         .map(btn => btn.textContent.trim())
+                                         .join(', ');
+
+            if (themeType === 'custom') {
+                themeTitle = document.getElementById('gemini-prompt').value || 'Custom Plan';
+                context = { theme: themeTitle, focus: selectedOptions };
+            } else {
+                item = allThemeData[themeType]?.find(d => String(d.id) === String(themeId));
+                if (!item) return;
+                themeTitle = item.title;
+                context = { theme: themeTitle, focus: [item.description, selectedOptions].filter(Boolean).join('; ') };
+            }
+
+            titleEl.textContent = `In-Depth: ${themeTitle}`;
             
             try {
                 const resultText = await generatePlanIteratively(context, loaderMessageElement.querySelector('p'));
@@ -1571,7 +1541,9 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             refineContainer = document.createElement('div');
             refineContainer.className = 'refine-container w-full';
             refineContainer.innerHTML = `<textarea class="w-full p-2 themed-input border rounded-lg" rows="2" placeholder="e.g., 'Make it more gentle' or 'Add more hip openers'"></textarea><button class="btn-primary text-sm mt-2 submit-refinement-button" data-is-modal="${isModal}">Submit Refinement</button>`;
-            buttonContainer.insertAdjacentElement('afterend', refineContainer);
+            
+            const robustButtonContainer = isModal ? buttonContainer : buttonContainer.closest('.button-bar');
+            robustButtonContainer.insertAdjacentElement('afterend', refineContainer);
         }
 
         async function handleRefineRequest(refineContainer) {
@@ -1580,7 +1552,9 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.previousElementSibling.previousElementSibling;
+            const contentArea = isModal 
+                ? document.getElementById('inDepthModalContent') 
+                : refineContainer.closest('.card-content').querySelector('.details-container, #gemini-result-container');
             const footerEl = document.getElementById('inDepthModalFooter');
             
             if (!contentArea) {
@@ -1588,7 +1562,9 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
                 return;
             }
 
-            const themeId = isModal ? footerEl.dataset.themeId : (contentArea.parentElement.querySelector('.explore-button')?.dataset.themeId || 'custom-plan');
+            const themeId = isModal 
+                ? footerEl.dataset.themeId 
+                : contentArea.closest('.card-content').querySelector('.explore-button')?.dataset.themeId || 'custom-plan';
             const textKey = isModal ? themeId + '-full' : themeId;
             
             const originalText = originalGeneratedText.get(textKey);
@@ -1618,7 +1594,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
 ## Output Requirements:
 * Generate a completely new, rewritten plan that follows the full nine-part Yang/Yin structure.
 * The user's request should be the new primary filter for your choices.
-* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Proposed Exercises, Verbal Cues, Modifications, etc., for every section.**
+* **Crucially, the rewritten plan MUST follow the full instructor-focused format, including Props, Contraindications, Proposed Exercises, Verbal Cues, Modifications, Prop Integration etc., for every section.**
 * Maintain the high-quality standards of explaining the "why" behind your new choices. Return only the complete, rewritten markdown teaching guide.`;
             
             try {
@@ -1635,10 +1611,9 @@ A user has an existing plan you created and has a request to modify it. Your tas
                     addModalActionButtons(footerEl, themeId, footerEl.dataset.themeType);
                 } else {
                     contentArea.innerHTML = convertMarkdownToHtml(newText);
-                    addPostGenerationButtons(contentArea, themeId, 'custom');
+                    addPostGenerationButtons(contentArea, themeId, footerEl.dataset.themeType || 'custom');
                 }
                 
-                // BUG FIX: Remove the refinement UI after success
                 if (refineContainer) {
                     refineContainer.remove();
                 }
@@ -2040,6 +2015,61 @@ A user has an existing plan you created and has a request to modify it. Your tas
                 printFrame.contentWindow.print();
                 document.body.removeChild(printFrame);
             }, 250);
+        }
+        
+        function handleExportToWord() {
+            const title = document.getElementById('inDepthModalTitle').textContent;
+            const contentContainer = document.getElementById('inDepthModalContent').cloneNode(true);
+
+            // Remove interactive elements from the clone for a clean export
+            contentContainer.querySelectorAll('button').forEach(btn => btn.remove());
+            
+            const contentHtml = contentContainer.innerHTML;
+            
+            const sourceHtml = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${title}</title>
+                    <style>
+                        /* Word-specific styles */
+                        body { font-family: Calibri, sans-serif; font-size: 11pt; }
+                        h1, h2, h3, h4, h5, h6 { font-family: 'Calibri Light', sans-serif; color: #2F5496; margin-bottom: 0; }
+                        h1 { font-size: 20pt; }
+                        h2 { font-size: 16pt; }
+                        h3 { font-size: 14pt; color: #365F91; }
+                        h4 { font-size: 12pt; color: #4981B3; font-style: italic; }
+                        p { margin-top: 0; }
+                        ul { margin-top: 0; }
+                        .accordion-header { display: none; } /* Hide the original accordion buttons */
+                        .accordion-content { display: block !important; padding-left: 0; } /* Ensure content is visible */
+                        .accordion-item { page-break-inside: avoid; margin-bottom: 20px; }
+                        .prose h3 { /* Make the original h3 (section titles) look good in Word */
+                            font-family: 'Calibri Light', sans-serif;
+                            font-size: 16pt;
+                            color: #2F5496;
+                            padding-bottom: 3px;
+                            border-bottom: 1px solid #BFBFBF;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    ${contentHtml}
+                </body>
+                </html>
+            `;
+
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHtml);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            
+            // Sanitize title for filename
+            const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            fileDownload.download = `${cleanTitle || 'yoga_plan'}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
         }
 
         let tourSteps = [];
