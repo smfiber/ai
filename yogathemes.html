@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v21.2.0</title>
+    <title>AI Yoga Class & Theme Generator v21.3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1569,9 +1569,14 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
 
             const isModal = refineContainer.querySelector('.submit-refinement-button').dataset.isModal === 'true';
             
-            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.closest('.details-container, #gemini-result-container');
+            const contentArea = isModal ? document.getElementById('inDepthModalContent') : refineContainer.previousElementSibling;
             const footerEl = document.getElementById('inDepthModalFooter');
             
+            if (!contentArea) {
+                console.error("Could not find content area for refinement.");
+                return;
+            }
+
             const themeId = isModal ? footerEl.dataset.themeId : (contentArea.querySelector('.explore-button')?.dataset.themeId || 'custom-plan');
             const textKey = isModal ? themeId + '-full' : themeId;
 
@@ -1801,6 +1806,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
 
         function renderMusicSuggestions(data) {
             const resultsContainer = document.getElementById('music-results-container');
+            resultsContainer.innerHTML = ''; // Clear previous results
             
             let html = '';
             const hasTracks = Object.values(data).some(section => Array.isArray(section) && section.length > 0);
@@ -2106,4 +2112,4 @@ A user has an existing plan you created and has a request to modify it. Your tas
 
     </script>
 </body>
-</html>
+</ht
