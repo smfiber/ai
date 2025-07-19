@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v19.0.1</title>
+    <title>AI Yoga Class & Theme Generator v19.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,6 +46,13 @@
         }
         .prose ul { list-style-type: disc; }
         .prose li { margin-bottom: 0.5rem; padding-left: 0.25rem; }
+        .prose h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-accent);
+            margin-top: 1.25em;
+            margin-bottom: 0.25em;
+        }
         .prose h3 {
             font-size: 1.25rem;
             font-weight: 600;
@@ -390,7 +397,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.0.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v19.1.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1106,14 +1113,14 @@ Return ONLY a valid JSON array of strings.`;
             let firstHeaderFound = false;
 
             nodes.forEach(node => {
-                const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1');
+                const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1' || node.tagName === 'H4');
 
                 if (!firstHeaderFound && !isHeader) {
                     introContent.appendChild(node.cloneNode(true));
                     return;
                 }
                 
-                if (isHeader) {
+                if (isHeader && (node.tagName !== 'H4')) {
                     firstHeaderFound = true;
                     if (introContent.hasChildNodes()) {
                         containerElement.appendChild(introContent);
@@ -1382,11 +1389,15 @@ ${draft}
 
 ## Output Requirements for Final Version:
 You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely.
+* **Add Timings:** For each of the 9 sections, add an estimated time duration on its own line right after the header (e.g., *Est. Time: 5-7 minutes*).
 * **Expand on Everything:** Convert the bullet points from the draft into full, descriptive paragraphs.
+* **Format Yang Sequences Correctly:** For the 'Yang Main Sequence' and 'Peak Yang Expression' sections, you **must** give each distinct flow or complex pose its own sub-header using '####' markdown (e.g., "#### Flow 1: Crescent Lunge to Warrior II"). This formatting is critical for readability.
 * **Add Transitions:** Describe the movements that connect the poses and flows smoothly.
 * **Explain the "Why":** For each section, explain the purpose of the chosen exercises or asanas.
-* **Yin Details are Crucial:** For the Yin sequence, you MUST specify a recommended **hold time** (e.g., "Hold for 3-5 minutes") and provide detailed instructions on using **props** (blocks, bolsters, blankets) for each pose.
-* **Refine Language:** Use encouraging, knowledgeable, and holistic language that fits the Kaia persona.
+* **Suggest Props Everywhere:** Suggest the use of props (like blocks or straps) in **both** the Yang and Yin sections where appropriate to support alignment and accessibility.
+* **Yin Details are Crucial:** For the Yin sequence, you MUST specify a recommended **hold time** (e.g., "Hold for 3-5 minutes") and provide detailed instructions on using **props** for each pose.
+* **Refine Language & Theming:** Use encouraging, knowledgeable, and holistic language that fits the Kaia persona. Weave the user's original theme into the descriptive language and cues throughout the entire plan to create an immersive experience.
+* **Focused Breathwork:** For the 'Yang Breathwork' section, select only the **one or two most appropriate techniques** for the theme, rather than listing several.
 
 ## Quality Guidelines to Enforce:
 * **Balance:** Ensure the Yang and Yin sections are balanced in length and intensity.
@@ -1617,7 +1628,7 @@ A user has an existing plan you created and has a request to modify it. Your tas
                         .prose { font-size: 12pt; line-height: 1.4; }
                         .prose p { margin-bottom: 0.75rem; }
                         .prose ul, .prose ol { margin-bottom: 0.75rem; padding-left: 1.5rem; }
-                        .prose h1, .prose h2, .prose h3 {
+                        .prose h1, .prose h2, .prose h3, .prose h4 {
                              color: var(--color-accent);
                              margin-top: 1.25em;
                              margin-bottom: 0.5em;
