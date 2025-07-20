@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.3.1</title>
+    <title>AI Yoga Class & Theme Generator v23.5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -357,7 +357,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
                     </div>
-                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                    <button id="closeInDepthModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
                 </div>
             </div>
             <div id="inDepthModalContent" class="p-6 overflow-y-auto"></div>
@@ -373,7 +373,7 @@
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">Describe a mood or scene (e.g., "Misty forest at dawn") and the AI will generate a new color palette and header image for the entire app.</div>
                     </div>
-                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                    <button id="closeThemeGeneratorModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
                 </div>
             </div>
             <div class="p-6">
@@ -392,7 +392,7 @@
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="readingModalTitle" class="text-2xl font-bold themed-text-primary">Thematic Reading</h2>
-                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
             </div>
             <div id="readingModalContent" class="p-6 overflow-y-auto">
                 <div id="reading-input-container" class="mb-6">
@@ -405,27 +405,18 @@
                     </div>
                 </div>
                 <div id="reading-result-container" class="prose max-w-none">
-                    <!-- Loader and results will appear here -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
     <div id="musicModal" class="fixed hidden inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="card w-full max-w-2xl m-4 flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
-                <h2 id="musicModalTitle" class="text-2xl font-bold themed-text-primary">AI Music Curator</h2>
-                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
+                <h2 id="musicModalTitle" class="text-2xl font-bold themed-text-primary">Sonic Sanctuary</h2>
+                <button id="closeMusicModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">×</button>
             </div>
-            <div class="p-6 overflow-y-auto">
-                <div id="music-selection-container">
-                    <p class="themed-text-muted mb-2">Select one or more genres to influence the playlist:</p>
-                    <div id="genre-buttons-container" class="flex flex-wrap gap-2 mb-6">
-                        <!-- Genre buttons will be injected here -->
-                    </div>
-                    <button id="generate-playlist-btn" class="btn-primary w-full">Generate Playlist</button>
+            <div id="music-results-container" class="p-6 overflow-y-auto prose max-w-none">
                 </div>
-                <div id="music-results-container" class="mt-6 prose max-w-none"></div>
-            </div>
         </div>
     </div>
     
@@ -441,7 +432,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.3.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.5.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -616,10 +607,6 @@
                      }
                  });
             });
-            
-            // Music Modal Specific Listener
-            document.getElementById('generate-playlist-btn').addEventListener('click', handleGeneratePlaylist);
-
 
             // Global Clicks for dynamic content and closing panels
             document.addEventListener('click', (e) => {
@@ -629,12 +616,6 @@
                     return;
                 }
                 
-                const genreBtn = e.target.closest('#genre-buttons-container .btn-toggle');
-                if (genreBtn) {
-                    genreBtn.classList.toggle('active');
-                    return;
-                }
-
                 const gridSelector = e.target.closest('.grid-card-selector');
                 if (gridSelector) {
                     const container = gridSelector.closest('.card-grid-container, .week-by-week-grid').parentElement;
@@ -715,7 +696,7 @@
 
                 const exportReadingsBtn = e.target.closest('.export-readings-button');
                 if (exportReadingsBtn) {
-                    handleExportReadings();
+                    handleExportReadings(exportReadingsBtn);
                     return;
                 }
 
@@ -1013,13 +994,9 @@
             if (typeof jsonString !== 'string') {
                 console.warn("parseJsonWithCorrections received non-string input:", jsonString);
                 if (typeof jsonString === 'object' && jsonString !== null) {
-                    try {
-                        jsonString = JSON.stringify(jsonString);
-                    } catch (e) {
-                         throw new Error("Input is a non-stringifiable object.");
-                    }
+                    return jsonString; // It's already an object, return it directly.
                 } else {
-                    throw new Error("Invalid input: not a string or stringifiable object.");
+                     throw new Error("Invalid input: not a string or a valid object.");
                 }
             }
             
@@ -1233,7 +1210,6 @@ Return ONLY a valid JSON array of strings.`;
                 return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
             let cleanText = text.replace(/^```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
-            // FIX: Standardize list markers from * to - to ensure proper rendering
             cleanText = cleanText.replace(/^[\s]*\*[\s]/gm, '- ');
             if (!cleanText) {
                  return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
@@ -1263,7 +1239,15 @@ Return ONLY a valid JSON array of strings.`;
                 const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1' || node.tagName === 'H4');
 
                 if (!firstHeaderFound && !isHeader) {
-                    introContent.appendChild(node.cloneNode(true));
+                    // Capture props and contraindications before the first H3
+                    if (node.tagName === 'P' && node.textContent.startsWith('Props Needed:')) {
+                         const propsText = node.textContent.replace('Props Needed:', '').trim();
+                         const p = document.createElement('p');
+                         p.innerHTML = `<strong>Props Needed:</strong> ${propsText}`;
+                         introContent.appendChild(p);
+                    } else {
+                        introContent.appendChild(node.cloneNode(true));
+                    }
                     return;
                 }
                 
@@ -1337,13 +1321,13 @@ Return ONLY a valid JSON array of strings.`;
         
         function addModalActionButtons(container, themeId, themeType) {
              container.innerHTML = `
-                <button class="btn-primary text-sm new-routine-button">New Routine</button>
-                <button class="btn-secondary text-sm modal-refine-button">Refine with AI</button>
-                <button class="btn-secondary text-sm copy-button">Copy Text</button>
-                <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Find Reading</button>
-                <button class="btn-secondary text-sm music-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Suggest Music</button>
-                <button class="btn-secondary text-sm print-button">Print Plan</button>
-                <button class="btn-secondary text-sm export-word-button">Export to Word</button>
+                <button class="btn-secondary text-sm new-routine-button">New Plan</button>
+                <button class="btn-secondary text-sm modal-refine-button">Refine</button>
+                <button class="btn-secondary text-sm copy-button">Copy</button>
+                <button class="btn-secondary text-sm reading-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Reading</button>
+                <button class="btn-secondary text-sm music-button" data-theme-id="${themeId}" data-theme-type="${themeType}">Sanctuary</button>
+                <button class="btn-secondary text-sm print-button">Print</button>
+                <button class="btn-secondary text-sm export-word-button">Export</button>
             `;
              container.querySelector('.copy-button').addEventListener('click', e => {
                  const contentToCopy = document.getElementById('inDepthModalContent');
@@ -1542,25 +1526,26 @@ ${draft}
 You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely, but add significant detail.
 
 ### Global Requirements (at the top):
-1.  **Props Needed:** Start with a bulleted list of all props required for the class.
+1.  **Props Needed:** Start with a single line of text that lists all props required for the class, formatted as a comma-separated list. Example: "Props Needed: Yoga Mat, Blocks (2), Bolster, Strap, Blanket".
 2.  **Key Contraindications:** Below props, add a section outlining major safety warnings or conditions where poses should be avoided/modified (e.g., pregnancy, high blood pressure, acute injuries).
 
 ### Per-Section Requirements:
 For each of the 9 sections, you must provide:
 1.  **Main Description:** The core narrative explaining the purpose and flow of this section for the student.
 2.  **Proposed Exercises:** This section should detail the specific poses or flows. For each exercise listed, add a nested bullet point beginning with the word 'Benefits:' followed by the description.
-    * *Example:*
-        * Downward-Facing Dog (Adho Mukha Svanasana)
-            * Benefits: Stretches the hamstrings, calves, and shoulders; strengthens the arms and legs; improves spinal alignment.
 3.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
 4.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
 5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
     * **Prop Integration:** Within the 'Options & Modifications' list, you **must** list all four props (Blocks, Bolster, Strap, and Blanket) as individual bullet points. For each one, provide a specific use or explicitly state 'Not applicable for this exercise'.
-6.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section. **Format this cue as a markdown blockquote.**
+6.  **Mudra/Mantra:** Suggest one relevant mudra or mantra for this section. Provide its name and a brief explanation of its meaning or purpose in relation to the theme.
+7.  **Thematic Inspiration:** This section should contain three distinct subheadings:
+    * #### AI Generated Affirmation: A short, positive affirmation related to the section's theme.
+    * #### Poem: A short, relevant poem or poetic excerpt (either well-known or AI-generated).
+    * #### Words of Wisdom: A brief, insightful quote or thought-provoking statement.
 
 ### Formatting Rules:
 * Use '###' for the main 9 section titles (e.g., "### Part 1: Thematic Intent & Centering").
-* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Verbal Cues").
+* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Mudra/Mantra").
 * Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
 * Add estimated timings for each of the 9 major sections.
 * For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
@@ -1950,7 +1935,6 @@ Return ONLY the final, valid JSON array.`;
                 return;
             }
             
-            // Handle both single object and array responses
             const readingsArray = Array.isArray(readings) ? readings : [readings];
 
             let html = '';
@@ -1986,7 +1970,7 @@ Return ONLY the final, valid JSON array.`;
             }
         }
         
-        function handleSuggestMusicClick(button) {
+        async function handleSuggestMusicClick(button) {
             const { themeId } = button.dataset;
             const textKey = themeId + '-full';
             const planText = originalGeneratedText.get(textKey);
@@ -2000,66 +1984,73 @@ Return ONLY the final, valid JSON array.`;
 
             const modal = document.getElementById('musicModal');
             const titleEl = document.getElementById('musicModalTitle');
-            const genreContainer = document.getElementById('genre-buttons-container');
             const resultsContainer = document.getElementById('music-results-container');
             
-            titleEl.textContent = `Music for "${themeTitle}"`;
-            modal.dataset.planText = planText; // Store the plan text on the modal
-            resultsContainer.innerHTML = '';
-            document.getElementById('music-selection-container').style.display = 'block';
-
-
-            const genres = ['Ambient & Drone', 'Lofi & Chillhop', 'Jazz', 'Dance', 'Electronic', '60s Hits', '70s Classics', '80s Pop & Rock', '90s Alternative & Pop', 'Award-Winning Songs', 'Traditional Indian & Chants', 'Modern Classical & Piano', 'Nature Sounds & Soundscapes', 'World Fusion & Medicine Music', 'Acoustic & Folk', 'Ethereal Vocals'];
-            genreContainer.innerHTML = genres.map(genre => 
-                `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full">${genre}</button>`
-            ).join('');
-
+            titleEl.textContent = `Sonic Sanctuary for "${themeTitle}"`;
             modal.classList.remove('hidden');
-        }
-        
-        async function handleGeneratePlaylist() {
-            const modal = document.getElementById('musicModal');
-            const planText = modal.dataset.planText;
-            const resultsContainer = document.getElementById('music-results-container');
-            
-            const selectedGenres = Array.from(document.querySelectorAll('#genre-buttons-container .btn-toggle.active'))
-                                      .map(btn => btn.textContent.trim());
-
-            if (selectedGenres.length === 0) {
-                showNotification('Please select at least one genre.', true);
-                return;
-            }
-            
-            document.getElementById('music-selection-container').style.display = 'none';
-            resultsContainer.innerHTML = getLoaderHTML('Curating your playlist...');
+            resultsContainer.innerHTML = getLoaderHTML('Curating your sonic playlist...');
 
             try {
-                const playlistData = await getMusicSuggestions(planText, selectedGenres);
+                const playlistData = await getMusicSuggestions(planText);
                 renderMusicSuggestions(playlistData);
             } catch (error) {
-                handleApiError(error, resultsContainer, 'music playlist');
-                document.getElementById('music-selection-container').style.display = 'block';
+                handleApiError(error, resultsContainer, 'sonic sanctuary playlist');
             }
         }
         
-        async function getMusicSuggestions(planText, genres) {
+        async function getMusicSuggestions(planText) {
+            const sonicSanctuaryGuide = `
+                The Sonic Sanctuary: Exploring the Instruments of Yoga
+                From the serene strums of a sitar to the resonant hum of a singing bowl, music has become an integral part of the modern yoga experience. While the physical postures, or asanas, are central to the practice, sound has the profound ability to deepen meditation, guide the flow of movement, and create a sacred atmosphere. The instruments used in yoga are diverse, drawing from ancient Indian traditions and contemporary acoustic soundscapes.
+                The role of music in yoga extends beyond mere background ambiance. In many yogic philosophies, sound itself is a path to enlightenment. This concept is most deeply explored in Nada Yoga, the "yoga of sound," which posits that the universe is composed of vibrations (Nada) and that by attuning to these sounds, one can achieve a state of unity and inner peace.
+                The instruments of yoga can be broadly categorized into three groups: Traditional Indian Instruments, which carry a rich cultural and spiritual heritage; Western and Contemporary Instruments, often used to create a soothing and melodic environment; and Sound Healing Instruments, which are specifically chosen for their vibrational qualities.
+                
+                Traditional Indian Instruments: A Legacy of Sound and Spirit
+                These instruments are deeply embedded in the cultural and spiritual fabric of India and are often central to devotional practices like kirtan (call-and-response chanting).
+                - Harmonium: A portable, hand-pumped reed organ. A cornerstone of kirtan and devotional chanting, its sustained notes provide a melodic foundation for mantras and call-and-response singing.
+                - Tabla: A pair of small hand drums. Providing rhythmic structure to kirtan and other forms of yogic music, the intricate rhythms of the tabla can energize or soothe the practice.
+                - Sitar: A long-necked, fretted string instrument with sympathetic strings. Its resonant and complex sound is often used for meditation and relaxation, capable of evoking deep emotional and spiritual states.
+                - Bansuri: A side-blown bamboo flute. The ethereal and soulful tones of the bansuri are ideal for creating a serene and meditative atmosphere during asana practice or Savasana (corpse pose).
+                - Tanpura: A long-necked, fretless string instrument that provides a continuous drone. The drone of the tanpura is central to creating a meditative soundscape, helping to still the mind and facilitate a deeper state of awareness.
+                - Mridanga & Khol: A two-headed clay drum used in kirtan. Similar to the tabla, these drums provide the rhythmic backbone for devotional chanting, their earthy tones grounding the practice.
+                - Kartals: Small hand cymbals. Used to keep time and add a bright, percussive element to kirtan and chanting.
+                - Sarangi: A bowed, short-necked string instrument. Known for its ability to closely mimic the nuances of the human voice, the sarangi's emotive sound can be profoundly moving and is used in more classical and devotional settings.
+
+                Western and Contemporary Instruments: Melodies for Modern Practice
+                As yoga has gained global popularity, a wider range of instruments have been incorporated into classes to create a variety of moods.
+                - Acoustic Guitar: The familiar sound of the acoustic guitar can be used to create gentle melodies or more upbeat rhythms for Vinyasa or flow-style classes.
+                - Handpan/Hang Drum: A convex steel drum played with the hands. Its ethereal and resonant tones are often used to create a hypnotic and meditative atmosphere, perfect for slower-paced classes and relaxation.
+                - Cello: The deep, resonant tones of the cello can be incredibly grounding and emotionally evocative, often used for introspective and restorative practices.
+                - Djembe & other hand drums: These drums can provide a powerful, rhythmic pulse for more dynamic and energetic yoga styles, fostering a sense of community and shared energy.
+
+                Sound Healing Instruments: The Power of Vibration
+                These instruments are chosen specifically for their resonant frequencies and their perceived ability to affect the body's energy centers (chakras) and promote healing.
+                - Singing Bowls (Tibetan & Crystal): Bowls that produce a rich, resonant sound when struck or rimmed with a mallet. Used during meditation, Savasana, and sound baths, the vibrations of singing bowls are believed to calm the nervous system, reduce stress, and promote a state of deep relaxation. Crystal bowls are often tuned to specific frequencies associated with the chakras.
+                - Gongs: Large, flat, circular metal discs that are struck with a mallet. The powerful and complex vibrations of a gong can be transformative, leading to a state of deep meditation and emotional release. Gong baths are a popular form of sound healing.
+                - Tuning Forks: Calibrated metal forks that vibrate at specific frequencies. Used in sound therapy, tuning forks can be placed on or near the body to promote energetic balance and healing.
+                - Chimes (Koshi & Zaphir): Sets of tuned metal rods that produce delicate, bell-like tones. The gentle and uplifting sounds of chimes are often used at the beginning or end of a yoga class to signal a transition and create a sense of peace.
+                - Ocean Drum: A frame drum with small beads inside that create the sound of waves. This instrument is used to create a soothing and calming soundscape, evoking the natural rhythm of the ocean and promoting relaxation.
+            `;
+
             const prompt = `
-            You are an expert music curator and DJ for yoga and wellness experiences.
-            Your task is to create a thematic playlist for a specific, detailed yoga class plan.
+            You are an expert music curator and DJ for yoga and wellness experiences, acting as a "Sonic Architect."
+            Your task is to create a thematic playlist of specific, real songs for a detailed yoga class plan.
 
             **Your process must be:**
             1.  **Deeply Analyze the Plan:** Read the entire yoga plan provided below. Pay close attention to the structure (e.g., Warm-up, Yang Sequence, Yin Sequence, Savasana), the described energy levels, the emotional tone, and specific thematic cues.
-            2.  **Filter by Genre:** Consider the user's preferred genres as your primary palette.
-            3.  **Map Tracks to Flow:** Assign specific songs to the different sections of the yoga class. The music should match the intended energy of each part of the routine. For example, use more energetic music for the Yang section and calming, ambient music for the Yin and Savasana sections.
+            2.  **Consult the Sonic Sanctuary Guide:** Your ONLY source of inspiration for musical styles and instrumentation is the "Sonic Sanctuary Guide" provided below. You must select songs that prominently feature or evoke the instruments and moods described in this guide. For example, for a warm-up, you might choose a song with gentle acoustic guitar. for a dynamic Yang sequence, a track with Djembe or Tabla. For Savasana, a track featuring singing bowls or a Tanpura drone.
+            3.  **Map Tracks to Flow:** Assign specific, real songs to the different sections of the yoga class. The music must match the intended energy of each part of the routine, based on your analysis of the plan and the Sonic Sanctuary Guide.
             4.  **Format Output:** Return a single, valid JSON object. The top-level keys should be the main sections of the yoga plan (e.g., "Yang Main Sequence"). The value for each key should be an array of track objects. Each track object must contain:
                 * "artist": The name of the artist.
                 * "song": The title of the song.
-                * "spotify_search_url": A formatted URL to search for the track on Spotify, like 'https://open.spotify.com/search/Artist%20Name%20Song%20Title'.
+                * "spotify_search_url": A formatted URL to search for the track on Spotify, like 'https://open.spotify.com/search/'.
 
-            ## Yoga Class Context
-            **Preferred Genres:** ${genres.join(', ')}
+            ## Sonic Sanctuary Guide (Your ONLY Music Palette)
+            ---
+            ${sonicSanctuaryGuide}
+            ---
 
-            **Full Plan:**
+            ## Yoga Class Plan To Analyze
             ---
             ${planText}
             ---
@@ -2112,13 +2103,16 @@ Return ONLY the final, valid JSON array.`;
                 if (data.hasOwnProperty(section) && Array.isArray(data[section]) && data[section].length > 0) {
                     html += `<h3>${section}</h3><ul>`;
                     data[section].forEach(track => {
+                        const searchUrl = track.spotify_search_url.includes('spotify.com') 
+                            ? track.spotify_search_url 
+                            : `https://open.spotify.com/search/${encodeURIComponent(track.song + ' ' + track.artist)}`;
                         html += `
                             <li class="flex justify-between items-center py-2">
                                 <div>
                                     <strong class="block">${track.song}</strong>
                                     <span class="text-sm themed-text-muted">${track.artist}</span>
                                 </div>
-                                <a href="${track.spotify_search_url}" target="_blank" class="btn-secondary text-sm !no-underline" title="Search on Spotify">
+                                <a href="${searchUrl}" target="_blank" class="btn-secondary text-sm !no-underline" title="Search on Spotify">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                                     <span>Find</span>
                                 </a>
@@ -2169,7 +2163,6 @@ Return ONLY the final, valid JSON array.`;
         }
 
         function getIconForTheme() {
-            // Removed dynamic SVG generation in favor of a reliable fallback to prevent console errors.
             return `<svg class="w-8 h-8 mx-auto themed-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zm-11.64 0a2.143 2.143 0 0 1-3.214-3.214 2.143 2.143 0 0 1 3.214 3.214zM12 12a2.143 2.143 0 1 1 0-4.286 2.143 2.143 0 0 1 0 4.286z"></path></svg>`;
         }
         
@@ -2292,15 +2285,43 @@ Return ONLY the final, valid JSON array.`;
             }, 250);
         }
         
+        function handleExportReadings(button) {
+            const readingContainer = button.closest('#readingModalContent');
+            const title = document.getElementById('readingModalTitle').textContent;
+            const contentHtml = readingContainer.querySelector('#reading-result-container').innerHTML;
+
+            const sourceHtml = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${title}</title>
+                 <style>
+                    body { font-family: Calibri, sans-serif; font-size: 11pt; }
+                    h3 { font-family: 'Calibri Light', sans-serif; color: #2F5496; font-size: 14pt; }
+                    h4 { font-family: 'Calibri Light', sans-serif; color: #4981B3; font-size: 12pt; }
+                    blockquote { border-left: 2px solid #ccc; margin-left: 20px; padding-left: 10px; font-style: italic; }
+                </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    ${contentHtml}
+                </body></html>`;
+
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHtml);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            fileDownload.download = `${cleanTitle || 'thematic_readings'}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+
         function handleExportToWord() {
             const title = document.getElementById('inDepthModalTitle').textContent;
             const contentContainer = document.getElementById('inDepthModalContent').cloneNode(true);
 
-            // Create a temporary div to parse the content and extract headers
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = contentContainer.innerHTML;
 
-            // Make accordion headers visible and style them
             const headers = tempDiv.querySelectorAll('.accordion-header');
             headers.forEach(header => {
                 const titleSpan = header.querySelector('span');
@@ -2319,7 +2340,6 @@ Return ONLY the final, valid JSON array.`;
                     <meta charset='utf-8'>
                     <title>${title}</title>
                     <style>
-                        /* Word-specific styles */
                         body { font-family: Calibri, sans-serif; font-size: 11pt; }
                         h1, h2, h3, h4, h5, h6 { font-family: 'Calibri Light', sans-serif; color: #2F5496; margin-bottom: 0; }
                         h1 { font-size: 20pt; }
@@ -2329,9 +2349,9 @@ Return ONLY the final, valid JSON array.`;
                         p { margin-top: 0; }
                         ul { margin-top: 0; }
                         .accordion-header { display: none; }
-                        .accordion-header .icon { display: none; }
                         .accordion-content { display: block !important; padding-left: 0; }
                         .accordion-item { page-break-inside: avoid; margin-bottom: 20px; }
+                        blockquote { border-left: 2px solid #ccc; margin-left: 20px; padding-left: 10px; font-style: italic; }
                     </style>
                 </head>
                 <body>
@@ -2346,7 +2366,6 @@ Return ONLY the final, valid JSON array.`;
             document.body.appendChild(fileDownload);
             fileDownload.href = source;
             
-            // Sanitize title for filename
             const cleanTitle = title.replace("In-Depth: ", "").replace(/[^a-z0-9]/gi, '_').toLowerCase();
             fileDownload.download = `${cleanTitle || 'yoga_plan'}.doc`;
             fileDownload.click();
