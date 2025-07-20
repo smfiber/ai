@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.0.0</title>
+    <title>AI Yoga Class & Theme Generator v23.0.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -430,7 +430,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.0.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.0.1</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1118,11 +1118,13 @@ Return ONLY a valid JSON array of strings.`;
 
         function populateTailoringButtons(options, containerId = 'tailoring-buttons-container', selectedOptions = []) {
             const container = document.getElementById(containerId);
+            const isRefineUI = containerId.startsWith('refine-tailoring-container');
+
             const staticButtons = `
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Blocks') ? 'active' : ''}">Blocks</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Bolster') ? 'active' : ''}">Bolster</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Strap') ? 'active' : ''}">Strap</button>
-                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes('Blanket') ? 'active' : ''}">Blanket</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${!isRefineUI || selectedOptions.includes('Blocks') ? 'active' : ''}">Blocks</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${!isRefineUI || selectedOptions.includes('Bolster') ? 'active' : ''}">Bolster</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${!isRefineUI || selectedOptions.includes('Strap') ? 'active' : ''}">Strap</button>
+                <button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${!isRefineUI || selectedOptions.includes('Blanket') ? 'active' : ''}">Blanket</button>
             `;
             const dynamicButtons = options.map(option =>
                 `<button type="button" class="btn-toggle text-sm px-3 py-1 rounded-full ${selectedOptions.includes(option) ? 'active' : ''}">${option}</button>`
@@ -1193,6 +1195,8 @@ Return ONLY a valid JSON array of strings.`;
                 return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
             let cleanText = text.replace(/^```(markdown|json)?\s*/g, '').replace(/```/g, '').trim();
+            // FIX: Standardize list markers from * to - to ensure proper rendering
+            cleanText = cleanText.replace(/^[\s]*\*[\s]/gm, '- ');
             if (!cleanText) {
                  return '<p class="themed-text-muted">No content was generated or content was invalid.</p>';
             }
