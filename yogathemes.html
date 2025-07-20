@@ -1526,7 +1526,7 @@ ${draft}
 You must transform the draft into a complete, detailed markdown plan. Follow the original 9-part structure precisely, but add significant detail.
 
 ### Global Requirements (at the top):
-1.  **Props Needed:** Start with a single line of text that lists all props required for the class, formatted as a comma-separated list. Example: "Props Needed: Yoga Mat, Blocks (2), Bolster, Strap, Blanket".
+1.  **Props Needed:** Start with a single line of text that lists all props required for the class, formatted as a comma-separated list. It must begin with "Props Needed:". Example: "Props Needed: Yoga Mat, Blocks (2), Bolster, Strap, Blanket".
 2.  **Key Contraindications:** Below props, add a section outlining major safety warnings or conditions where poses should be avoided/modified (e.g., pregnancy, high blood pressure, acute injuries).
 
 ### Per-Section Requirements:
@@ -1538,14 +1538,15 @@ For each of the 9 sections, you must provide:
 5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
     * **Prop Integration:** Within the 'Options & Modifications' list, you **must** list all four props (Blocks, Bolster, Strap, and Blanket) as individual bullet points. For each one, provide a specific use or explicitly state 'Not applicable for this exercise'.
 6.  **Mudra/Mantra:** Suggest one relevant mudra or mantra for this section. Provide its name and a brief explanation of its meaning or purpose in relation to the theme.
-7.  **Thematic Inspiration:** This section should contain three distinct subheadings:
+7.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section. **Format this cue as a markdown blockquote.**
+8.  **Thematic Inspiration:** This section must contain the following three distinct subheadings:
     * #### AI Generated Affirmation: A short, positive affirmation related to the section's theme.
     * #### Poem: A short, relevant poem or poetic excerpt (either well-known or AI-generated).
     * #### Words of Wisdom: A brief, insightful quote or thought-provoking statement.
 
 ### Formatting Rules:
 * Use '###' for the main 9 section titles (e.g., "### Part 1: Thematic Intent & Centering").
-* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Mudra/Mantra").
+* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Mudra/Mantra", "#### Thematic Inspiration").
 * Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
 * Add estimated timings for each of the 9 major sections.
 * For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
