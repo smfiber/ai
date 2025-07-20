@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.5.0</title>
+    <title>AI Yoga Class & Theme Generator v23.5.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -353,6 +353,14 @@
             <div class="p-6 border-b flex justify-between items-center" style="border-color: var(--color-card-border);">
                 <h2 id="inDepthModalTitle" class="text-2xl font-bold themed-text-primary">In-Depth Exploration</h2>
                 <div class="flex items-center gap-4">
+                    <div id="accordion-controls" class="flex items-center gap-3">
+                        <button id="collapse-all-btn" class="themed-text-muted hover:themed-text-accent" title="Collapse All">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>
+                        </button>
+                        <button id="expand-all-btn" class="themed-text-muted hover:themed-text-accent" title="Expand All">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-6h6"/><path d="M20 4v6h-6"/><path d="M14 10l7 7"/><path d="M3 3l7 7"/></svg>
+                        </button>
+                    </div>
                     <div class="tooltip-container">
                          <svg class="tooltip-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          <div class="tooltip">This view provides a more detailed, descriptive version of the selected yoga plan, broken down into sections.</div>
@@ -432,7 +440,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.5.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.5.1</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -549,7 +557,7 @@
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
         let originalPlanContext = {};
-        let masterAuthorList = []; // NEW: Stores the master list of 50 authors
+        let masterAuthorList = []; 
 
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -662,6 +670,18 @@
                     const icon = accordionHeader.querySelector('.icon');
                     if (icon) icon.style.transform = accordionHeader.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
                     accordionHeader.nextElementSibling.classList.toggle('open'); 
+                    return;
+                }
+
+                const expandAllBtn = e.target.closest('#expand-all-btn');
+                if (expandAllBtn) {
+                    toggleAllAccordions(true);
+                    return;
+                }
+
+                const collapseAllBtn = e.target.closest('#collapse-all-btn');
+                if (collapseAllBtn) {
+                    toggleAllAccordions(false);
                     return;
                 }
                 
@@ -1234,31 +1254,40 @@ Return ONLY a valid JSON array of strings.`;
             introContent.className = 'accordion-intro mb-4 prose max-w-none';
 
             let firstHeaderFound = false;
+            let introTextCombined = '';
+
+            nodes.forEach(node => {
+                 const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1');
+                if (!firstHeaderFound && !isHeader) {
+                    introTextCombined += node.outerHTML || node.textContent;
+                }
+            });
+
+            const propsRegex = /<strong>Props Needed:<\/strong>\s*(.*)/i;
+            const contraRegex = /<strong>Key Contraindications:<\/strong>([\s\S]*)/i;
+
+            const propsMatch = introTextCombined.match(propsRegex);
+            const contraMatch = introTextCombined.match(contraRegex);
+
+            if (propsMatch) {
+                const p = document.createElement('p');
+                p.innerHTML = `<strong>Props Needed:</strong> ${propsMatch[1].split(/<br>|<strong>/)[0].trim()}`;
+                introContent.appendChild(p);
+            }
+
+            if (contraMatch) {
+                const contraContent = contraMatch[1].trim();
+                const p = document.createElement('p');
+                p.innerHTML = `<strong>Key Contraindications:</strong> ${contraContent}`;
+                introContent.appendChild(p);
+            }
+            containerElement.appendChild(introContent);
+
 
             nodes.forEach(node => {
                 const isHeader = (node.tagName === 'H3' || node.tagName === 'H2' || node.tagName === 'H1' || node.tagName === 'H4');
-
-                if (!firstHeaderFound && !isHeader) {
-                    // Capture props and contraindications before the first H3
-                    if (node.tagName === 'P' && node.textContent.startsWith('Props Needed:')) {
-                         const propsText = node.textContent.replace('Props Needed:', '').trim();
-                         const p = document.createElement('p');
-                         p.innerHTML = `<strong>Props Needed:</strong> ${propsText}`;
-                         introContent.appendChild(p);
-                    } else {
-                        introContent.appendChild(node.cloneNode(true));
-                    }
-                    return;
-                }
-                
                 if (isHeader && (node.tagName !== 'H4')) {
                     firstHeaderFound = true;
-                    if (introContent.hasChildNodes()) {
-                        containerElement.appendChild(introContent);
-                        introContent = document.createElement('div'); 
-                        introContent.className = 'accordion-intro mb-4 prose max-w-none';
-                    }
-
                     currentAccordionItem = document.createElement('div');
                     currentAccordionItem.className = 'accordion-item';
 
@@ -1274,30 +1303,33 @@ Return ONLY a valid JSON array of strings.`;
                     `;
                     currentAccordionItem.appendChild(contentDiv);
                     containerElement.appendChild(currentAccordionItem);
-                } else if (currentAccordionItem) {
+                } else if (currentAccordionItem && firstHeaderFound) {
                     const contentDiv = currentAccordionItem.querySelector('.accordion-content');
                     contentDiv.appendChild(node.cloneNode(true));
                 }
             });
-            
-            if (!firstHeaderFound) {
+
+            if (!firstHeaderFound && !propsMatch && !contraMatch) {
                 containerElement.innerHTML = fullHtml;
-                return;
             }
-
-            if (introContent.hasChildNodes()) {
-                containerElement.appendChild(introContent);
-            }
-
-            const firstItem = containerElement.querySelector('.accordion-item');
-            if (firstItem) {
-                const header = firstItem.querySelector('.accordion-header');
-                header.classList.add('active');
-                header.querySelector('.icon').style.transform = 'rotate(180deg)';
-                firstItem.querySelector('.accordion-content').classList.add('open');
-            }
+            
+            toggleAllAccordions(true); // Expand all by default
         }
 
+        function toggleAllAccordions(expand) {
+            const accordionItems = document.querySelectorAll('#inDepthModalContent .accordion-item');
+            accordionItems.forEach(item => {
+                const header = item.querySelector('.accordion-header');
+                const content = item.querySelector('.accordion-content');
+                const icon = header.querySelector('.icon');
+
+                header.classList.toggle('active', expand);
+                content.classList.toggle('open', expand);
+                if (icon) {
+                    icon.style.transform = expand ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            });
+        }
 
         function addPostGenerationButtons(container, themeId, themeType) {
             let buttonBar = container.querySelector('.button-bar');
@@ -1527,7 +1559,7 @@ You must transform the draft into a complete, detailed markdown plan. Follow the
 
 ### Global Requirements (at the top):
 1.  **Props Needed:** Start with a single line of text that lists all props required for the class, formatted as a comma-separated list. It must begin with "Props Needed:". Example: "Props Needed: Yoga Mat, Blocks (2), Bolster, Strap, Blanket".
-2.  **Key Contraindications:** Below props, add a section outlining major safety warnings or conditions where poses should be avoided/modified (e.g., pregnancy, high blood pressure, acute injuries).
+2.  **Key Contraindications:** On a NEW LINE immediately after the props line, add a section outlining major safety warnings or conditions where poses should be avoided/modified (e.g., pregnancy, high blood pressure, acute injuries). Ensure there is a clear line break between these two sections.
 
 ### Per-Section Requirements:
 For each of the 9 sections, you must provide:
