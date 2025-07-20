@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.1.0</title>
+    <title>AI Yoga Class & Theme Generator v23.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -398,6 +398,7 @@
                 <div id="reading-input-container" class="mb-6">
                     <label for="reading-authors" class="block text-sm font-medium themed-text-muted mb-1">Preferred Authors (Optional)</label>
                     <input type="text" id="reading-authors" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., Rumi, Mary Oliver, Thich Nhat Hanh">
+                    <div id="reading-author-suggestions" class="mt-2"></div>
                     <button id="generate-reading-btn" class="btn-primary w-full mt-4">Generate Reading</button>
                 </div>
                 <div id="reading-result-container" class="prose max-w-none">
@@ -437,7 +438,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.1.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.2.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -699,6 +700,14 @@
                 const generateReadingBtn = e.target.closest('#generate-reading-btn');
                 if (generateReadingBtn) {
                     handleGenerateReadingRequest(generateReadingBtn);
+                    return;
+                }
+
+                const authorSuggestionBtn = e.target.closest('.author-suggestion-button');
+                if (authorSuggestionBtn) {
+                    const authorName = authorSuggestionBtn.dataset.author;
+                    const authorsInput = document.getElementById('reading-authors');
+                    authorsInput.value = authorsInput.value ? `${authorsInput.value}, ${authorName}` : authorName;
                     return;
                 }
                 
@@ -1717,11 +1726,12 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             }
         }
 
-        function handleFindReadingClick(button) {
+        async function handleFindReadingClick(button) {
             const modal = document.getElementById('readingModal');
             const titleEl = document.getElementById('readingModalTitle');
             const resultContainer = document.getElementById('reading-result-container');
             const authorsInput = document.getElementById('reading-authors');
+            const suggestionsContainer = document.getElementById('reading-author-suggestions');
 
             const { themeId } = button.dataset;
             const textKey = themeId + '-full';
@@ -1741,8 +1751,17 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
 
             authorsInput.value = '';
             resultContainer.innerHTML = '<p class="themed-text-muted">Enter preferred authors above, or leave blank for a general suggestion, then click "Generate Reading".</p>';
+            suggestionsContainer.innerHTML = getLoaderHTML('Getting author suggestions...');
             
             modal.classList.remove('hidden');
+
+            try {
+                const authors = await getAuthorSuggestions(themeTitle);
+                renderAuthorSuggestions(authors);
+            } catch (error) {
+                suggestionsContainer.innerHTML = `<p class="text-sm text-red-600">Could not load author suggestions.</p>`;
+                console.error("Error getting author suggestions:", error);
+            }
         }
 
         async function handleGenerateReadingRequest(button) {
@@ -1772,10 +1791,31 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             }
         }
 
+        async function getAuthorSuggestions(themeTitle) {
+            const prompt = `Based on the yoga theme "${themeTitle}", suggest a list of 5-7 authors (writers, poets, philosophers) whose work resonates with this theme. Return ONLY a valid JSON array of strings.`;
+            const jsonText = await callGeminiAPI(prompt, true);
+            if (!jsonText) throw new Error("AI did not return author suggestions.");
+            return parseJsonWithCorrections(jsonText);
+        }
+
+        function renderAuthorSuggestions(authors) {
+            const container = document.getElementById('reading-author-suggestions');
+            if (!authors || authors.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            const buttonsHtml = authors.map(author => 
+                `<button class="author-suggestion-button btn-toggle text-xs px-2 py-1 rounded-full" data-author="${author}">${author}</button>`
+            ).join('');
+            container.innerHTML = `<p class="text-sm themed-text-muted mb-2">Suggestions:</p><div class="flex flex-wrap gap-2">${buttonsHtml}</div>`;
+        }
+
         async function getThematicReading(theme, planText, authors = '') {
-            let authorInstruction = '';
+            let authorInstruction;
             if (authors) {
-                authorInstruction = `**Crucially, you MUST prioritize finding a relevant reading from one of these preferred authors: ${authors}.** If, and only if, you cannot find a suitable piece from them, you may then broaden your search to other sources or generate an affirmation as a last resort. When you use a preferred author, mention it in your analysis.`;
+                authorInstruction = `Your primary and most important task is to find a relevant quote or excerpt from the specified authors: ${authors}. Do not generate an original piece if an author is provided. If you have searched your knowledge base and cannot find a relevant passage from the specified authors that connects to the yoga plan's theme, you must return a response explicitly stating that you were unable to find a suitable reading from them and suggest the user try a different author.`;
+            } else {
+                authorInstruction = `Use your vast internal knowledge of literature, poetry, and spiritual texts to find a suitable reading. If you cannot find a suitable existing text, you MUST generate a new, original, short affirmation that captures the essence of the plan's core concepts.`;
             }
 
             const prompt = `
@@ -1785,16 +1825,15 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             **Your process must be:**
             1.  **Analyze the Full Context:** You will be given both a high-level theme and the full, detailed yoga plan. Analyze the entire plan—including the sequence, poses, and instructor cues—to understand its narrative arc, emotional tone, and physical focus.
             2.  **Deconstruct Core Concepts:** From your analysis, identify the core concepts. For example, a plan focused on warrior poses and hip openers might have concepts of "courage," "stability," "release," "grounding," and "emotional freedom."
-            3.  **Smart Search (Internal Knowledge First):** Use your vast internal knowledge of literature, poetry, and spiritual texts to find a suitable reading. ${authorInstruction}
-            4.  **Final Fallback - Generate:** If you cannot find a suitable existing text, you MUST generate a new, original, short affirmation that captures the essence of the plan's core concepts.
-            5.  **Format Output:** Return a single, valid JSON object with the following structure:
+            3.  **Smart Search:** ${authorInstruction}
+            4.  **Format Output:** Return a single, valid JSON object with the following structure:
                 {
-                  "type": "Poem" | "Affirmation" | "Story" | "Generated Affirmation",
-                  "title": "Title of the work (if applicable)",
-                  "author": "Author's name (or 'Original' if generated)",
-                  "text": "The full text of the reading, using \\n for newlines.",
+                  "type": "Poem" | "Affirmation" | "Story" | "Generated Affirmation" | "Error",
+                  "title": "Title of the work (if applicable, otherwise a descriptive title)",
+                  "author": "Author's name (or 'Original' if generated, or 'System Message' for errors)",
+                  "text": "The full text of the reading, or the error message. Use \\n for newlines.",
                   "source": "The source URL or publication. If generated, state 'AI-generated based on the class theme.'",
-                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme, connecting the reading's message directly to the specific elements of the provided yoga plan."
+                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme, connecting the reading's message directly to the specific elements of the provided yoga plan. If no reading was found, this should be empty."
                 }
             
             ## Yoga Class Context
@@ -1814,8 +1853,8 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
         function renderReading(data) {
             const contentEl = document.getElementById('reading-result-container');
 
-            if (data.type === 'None' || !data.text) {
-                contentEl.innerHTML = `<p class="themed-text-muted">Sorry, I couldn't find a suitable reading for this theme at the moment. You could try refining the plan with a slightly different theme.</p>`;
+            if (data.type === 'Error' || data.type === 'None' || !data.text) {
+                contentEl.innerHTML = `<p class="themed-text-muted">${data.text || "Sorry, I couldn't find a suitable reading for this theme at the moment. You could try different authors or a more general search."}</p>`;
                 return;
             }
 
