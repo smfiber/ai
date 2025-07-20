@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.2.0</title>
+    <title>AI Yoga Class & Theme Generator v23.3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -399,7 +399,10 @@
                     <label for="reading-authors" class="block text-sm font-medium themed-text-muted mb-1">Preferred Authors (Optional)</label>
                     <input type="text" id="reading-authors" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., Rumi, Mary Oliver, Thich Nhat Hanh">
                     <div id="reading-author-suggestions" class="mt-2"></div>
-                    <button id="generate-reading-btn" class="btn-primary w-full mt-4">Generate Reading</button>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <button id="generate-reading-btn" class="btn-primary flex-grow">Generate Reading</button>
+                        <button id="search-all-authors-btn" class="btn-secondary" disabled>Search All Authors</button>
+                    </div>
                 </div>
                 <div id="reading-result-container" class="prose max-w-none">
                     <!-- Loader and results will appear here -->
@@ -438,7 +441,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.2.0</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.3.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -554,7 +557,8 @@
         const allThemeData = {};
         const fullPrompts = {}; 
         let originalGeneratedText = new Map();
-        let originalPlanContext = {}; // NEW: Stores context for refinement
+        let originalPlanContext = {};
+        let masterAuthorList = []; // NEW: Stores the master list of 50 authors
 
         // --- App Initialization & Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -700,6 +704,18 @@
                 const generateReadingBtn = e.target.closest('#generate-reading-btn');
                 if (generateReadingBtn) {
                     handleGenerateReadingRequest(generateReadingBtn);
+                    return;
+                }
+
+                const searchAllAuthorsBtn = e.target.closest('#search-all-authors-btn');
+                if (searchAllAuthorsBtn) {
+                    handleBulkReadingRequest(searchAllAuthorsBtn);
+                    return;
+                }
+
+                const exportReadingsBtn = e.target.closest('.export-readings-button');
+                if (exportReadingsBtn) {
+                    handleExportReadings();
                     return;
                 }
 
@@ -1732,6 +1748,7 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             const resultContainer = document.getElementById('reading-result-container');
             const authorsInput = document.getElementById('reading-authors');
             const suggestionsContainer = document.getElementById('reading-author-suggestions');
+            const searchAllBtn = document.getElementById('search-all-authors-btn');
 
             const { themeId } = button.dataset;
             const textKey = themeId + '-full';
@@ -1750,10 +1767,24 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             modal.dataset.themeTitle = themeTitle;
 
             authorsInput.value = '';
-            resultContainer.innerHTML = '<p class="themed-text-muted">Enter preferred authors above, or leave blank for a general suggestion, then click "Generate Reading".</p>';
+            resultContainer.innerHTML = '<p class="themed-text-muted">Enter preferred authors, use the suggestions, or search all authors.</p>';
             suggestionsContainer.innerHTML = getLoaderHTML('Getting author suggestions...');
             
             modal.classList.remove('hidden');
+
+            // Generate master list on first open only
+            if (masterAuthorList.length === 0) {
+                searchAllBtn.disabled = true;
+                searchAllBtn.textContent = 'Curating Master List...';
+                try {
+                    await generateMasterAuthorList();
+                    searchAllBtn.disabled = false;
+                    searchAllBtn.textContent = 'Search All Authors';
+                } catch (error) {
+                    searchAllBtn.textContent = 'Error Loading List';
+                    console.error("Failed to generate master author list:", error);
+                }
+            }
 
             try {
                 const authors = await getAuthorSuggestions(themeTitle);
@@ -1780,15 +1811,64 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
 
             resultContainer.innerHTML = getLoaderHTML('Searching for inspiration...');
             button.disabled = true;
+            document.getElementById('search-all-authors-btn').disabled = true;
 
             try {
                 const readingData = await getThematicReading(themeTitle, planText, authors);
-                renderReading(readingData);
+                renderReadings([readingData]); // Render as an array
             } catch (error) {
                 handleApiError(error, resultContainer, 'thematic reading');
             } finally {
                 button.disabled = false;
+                document.getElementById('search-all-authors-btn').disabled = masterAuthorList.length === 0;
             }
+        }
+
+        async function handleBulkReadingRequest(button) {
+            const modal = document.getElementById('readingModal');
+            const resultContainer = document.getElementById('reading-result-container');
+            
+            const planText = modal.dataset.planText;
+            const themeTitle = modal.dataset.themeTitle;
+
+            if (!planText || !themeTitle || masterAuthorList.length === 0) {
+                showNotification('Error: Could not find plan context or master author list.', true);
+                return;
+            }
+
+            resultContainer.innerHTML = getLoaderHTML(`Searching for readings from ${masterAuthorList.length} authors...`);
+            button.disabled = true;
+            document.getElementById('generate-reading-btn').disabled = true;
+
+            try {
+                const readings = await getThematicReading(themeTitle, planText, masterAuthorList.join(', '), true);
+                renderReadings(readings);
+            } catch (error) {
+                handleApiError(error, resultContainer, 'bulk thematic readings');
+            } finally {
+                button.disabled = false;
+                 document.getElementById('generate-reading-btn').disabled = false;
+            }
+        }
+
+        async function generateMasterAuthorList() {
+            const prompt = `## AI Persona:
+You are an expert librarian and literary curator specializing in spiritual and contemplative traditions.
+
+## Core Task:
+Your goal is to produce a definitive list of 50 authors whose work is highly relevant to the practices of yoga, mindfulness, and spiritual inquiry.
+
+## Process:
+1.  **Brainstorming:** Generate an initial, broad list of 70-80 potential authors across these categories: Yoga philosophy (classical and modern), Buddhism (Zen, Tibetan, Vipassana), Hinduism (especially Advaita Vedanta), spiritual poetry (e.g., Rumi, Hafiz, Rilke), and modern mindfulness teachers.
+2.  **Curation and Filtering:** Review your brainstormed list. Remove any authors who are too obscure, primarily academic without a strong spiritual/practical focus, or do not fit the contemplative theme. Ensure a diverse and balanced representation across the specified categories.
+3.  **Final Selection:** From your curated list, select the top 50 most influential, relevant, and widely-read authors.
+4.  **Formatting:** Format the final list of 50 as a simple JSON array of strings.
+
+Return ONLY the final, valid JSON array.`;
+
+            const jsonText = await callGeminiAPI(prompt, true);
+            if (!jsonText) throw new Error("AI did not return master author list.");
+            masterAuthorList = parseJsonWithCorrections(jsonText);
         }
 
         async function getAuthorSuggestions(themeTitle) {
@@ -1810,31 +1890,42 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             container.innerHTML = `<p class="text-sm themed-text-muted mb-2">Suggestions:</p><div class="flex flex-wrap gap-2">${buttonsHtml}</div>`;
         }
 
-        async function getThematicReading(theme, planText, authors = '') {
+        async function getThematicReading(theme, planText, authors = '', isBulk = false) {
             let authorInstruction;
+            let outputFormat;
+
             if (authors) {
-                authorInstruction = `Your primary and most important task is to find a relevant quote or excerpt from the specified authors: ${authors}. Do not generate an original piece if an author is provided. If you have searched your knowledge base and cannot find a relevant passage from the specified authors that connects to the yoga plan's theme, you must return a response explicitly stating that you were unable to find a suitable reading from them and suggest the user try a different author.`;
+                 if (isBulk) {
+                    authorInstruction = `Your primary task is to find one relevant quote or excerpt from as many of the specified authors as possible from this list: ${authors}. It is okay if you cannot find a relevant quote for every single author, but find as many as you can.`;
+                    outputFormat = `Return a single, valid JSON array where each element is an object following the structure defined below. If you find no relevant readings, return an empty array.`;
+                 } else {
+                    authorInstruction = `Your primary and most important task is to find a relevant quote or excerpt from the specified authors: ${authors}. Do not generate an original piece if an author is provided. If you have searched your knowledge base and cannot find a relevant passage from the specified authors that connects to the yoga plan's theme, you must return a response explicitly stating that you were unable to find a suitable reading from them and suggest the user try a different author.`;
+                    outputFormat = `Return a single, valid JSON object following the structure defined below.`;
+                 }
             } else {
                 authorInstruction = `Use your vast internal knowledge of literature, poetry, and spiritual texts to find a suitable reading. If you cannot find a suitable existing text, you MUST generate a new, original, short affirmation that captures the essence of the plan's core concepts.`;
+                outputFormat = `Return a single, valid JSON object following the structure defined below.`;
             }
 
             const prompt = `
             You are an expert literary and spiritual research assistant for a yoga instructor.
-            Your task is to find or create a thematic reading (a poem, short story excerpt, or affirmation) that is deeply resonant with a specific yoga class.
+            Your task is to find thematic readings (poems, excerpts, or affirmations) that are deeply resonant with a specific yoga class.
 
             **Your process must be:**
             1.  **Analyze the Full Context:** You will be given both a high-level theme and the full, detailed yoga plan. Analyze the entire plan—including the sequence, poses, and instructor cues—to understand its narrative arc, emotional tone, and physical focus.
             2.  **Deconstruct Core Concepts:** From your analysis, identify the core concepts. For example, a plan focused on warrior poses and hip openers might have concepts of "courage," "stability," "release," "grounding," and "emotional freedom."
             3.  **Smart Search:** ${authorInstruction}
-            4.  **Format Output:** Return a single, valid JSON object with the following structure:
-                {
-                  "type": "Poem" | "Affirmation" | "Story" | "Generated Affirmation" | "Error",
-                  "title": "Title of the work (if applicable, otherwise a descriptive title)",
-                  "author": "Author's name (or 'Original' if generated, or 'System Message' for errors)",
-                  "text": "The full text of the reading, or the error message. Use \\n for newlines.",
-                  "source": "The source URL or publication. If generated, state 'AI-generated based on the class theme.'",
-                  "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme, connecting the reading's message directly to the specific elements of the provided yoga plan. If no reading was found, this should be empty."
-                }
+            4.  **Format Output:** ${outputFormat}
+            
+            **JSON Object Structure:**
+            {
+              "type": "Poem" | "Affirmation" | "Story" | "Generated Affirmation" | "Error",
+              "title": "Title of the work (if applicable, otherwise a descriptive title)",
+              "author": "Author's name (or 'Original' if generated, or 'System Message' for errors)",
+              "text": "The full text of the reading, or the error message. Use \\n for newlines.",
+              "source": "The source URL or publication. If generated, state 'AI-generated based on the class theme.'",
+              "analysis": "A brief explanation of why this reading is a good fit for the yoga class theme, connecting the reading's message directly to the specific elements of the provided yoga plan. If no reading was found, this should be empty."
+            }
             
             ## Yoga Class Context
             **Theme:** "${theme}"
@@ -1850,30 +1941,49 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             return parseJsonWithCorrections(jsonText);
         }
 
-        function renderReading(data) {
+        function renderReadings(readings) { // Now plural
             const contentEl = document.getElementById('reading-result-container');
+            contentEl.innerHTML = ''; // Clear previous results
 
-            if (data.type === 'Error' || data.type === 'None' || !data.text) {
-                contentEl.innerHTML = `<p class="themed-text-muted">${data.text || "Sorry, I couldn't find a suitable reading for this theme at the moment. You could try different authors or a more general search."}</p>`;
+            if (!readings || (Array.isArray(readings) && readings.length === 0)) {
+                 contentEl.innerHTML = `<p class="themed-text-muted">Sorry, I couldn't find any suitable readings for this theme. You could try different authors or a more general search.</p>`;
                 return;
             }
+            
+            // Handle both single object and array responses
+            const readingsArray = Array.isArray(readings) ? readings : [readings];
 
-            const formattedText = data.text.replace(/\n/g, '<br>');
+            let html = '';
+            readingsArray.forEach(data => {
+                if (data.type === 'Error' || data.type === 'None' || !data.text) {
+                    html += `<div class="p-4 rounded-lg mb-4" style="background-color: rgba(0,0,0,0.02);"><p class="themed-text-muted">${data.text || "A suitable reading could not be generated for one of the requests."}</p></div>`;
+                } else {
+                    const formattedText = data.text.replace(/\n/g, '<br>');
+                    html += `
+                        <div class="mb-6 p-4 rounded-lg" style="background-color: rgba(0,0,0,0.02);">
+                            <h3 class="text-xl font-bold themed-text-accent">${data.title || data.type}</h3>
+                            ${data.author ? `<p class="themed-text-muted text-sm mb-4">by ${data.author}</p>` : ''}
+                            <blockquote class="border-l-4 pl-4 italic" style="border-color: var(--color-primary);">
+                                <p>${formattedText}</p>
+                            </blockquote>
+                            <div class="mt-6">
+                                <h4 class="font-bold themed-text-primary">AI Analysis</h4>
+                                <p class="themed-text-muted">${data.analysis}</p>
+                                <p class="text-xs mt-4 themed-text-muted"><strong>Source:</strong> ${data.source || 'Not specified'}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
 
-            contentEl.innerHTML = `
-                <div class="p-4 rounded-lg" style="background-color: rgba(0,0,0,0.02);">
-                    <h3 class="text-xl font-bold themed-text-accent">${data.title || data.type}</h3>
-                    ${data.author ? `<p class="themed-text-muted text-sm mb-4">by ${data.author}</p>` : ''}
-                    <blockquote class="border-l-4 pl-4 italic" style="border-color: var(--color-primary);">
-                        <p>${formattedText}</p>
-                    </blockquote>
-                </div>
-                <div class="mt-6">
-                    <h4 class="font-bold themed-text-primary">AI Analysis</h4>
-                    <p class="themed-text-muted">${data.analysis}</p>
-                    <p class="text-xs mt-4 themed-text-muted"><strong>Source:</strong> ${data.source || 'Not specified'}</p>
-                </div>
-            `;
+            contentEl.innerHTML = html;
+
+            if (readingsArray.length > 1) {
+                const exportButton = document.createElement('button');
+                exportButton.className = 'btn-secondary export-readings-button mt-4';
+                exportButton.innerHTML = 'Export Readings to Word';
+                contentEl.insertAdjacentElement('afterbegin', exportButton);
+            }
         }
         
         function handleSuggestMusicClick(button) {
