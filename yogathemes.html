@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.5.1</title>
+    <title>AI Yoga Class & Theme Generator v23.5.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,6 +46,13 @@
         }
         .prose ul { list-style-type: disc; }
         .prose li { margin-bottom: 0.5rem; padding-left: 0.25rem; }
+        .prose h5 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-text);
+            margin-top: 1.25em;
+            margin-bottom: 0.25em;
+        }
         .prose h4 {
             font-size: 1.1rem;
             font-weight: 600;
@@ -440,7 +447,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.5.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.5.3</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -1564,22 +1571,28 @@ You must transform the draft into a complete, detailed markdown plan. Follow the
 ### Per-Section Requirements:
 For each of the 9 sections, you must provide:
 1.  **Main Description:** The core narrative explaining the purpose and flow of this section for the student.
-2.  **Proposed Exercises:** This section should detail the specific poses or flows. For each exercise listed, add a nested bullet point beginning with the word 'Benefits:' followed by the description.
+2.  **Proposed Exercises:** Detail the specific poses or flows. Use a '#####' markdown heading for each exercise name (e.g., "##### Warrior II to Reverse Warrior"). Below each heading, write a paragraph describing the benefits, starting with the word "Benefits:". Do not use a bullet point for the benefits.
 3.  **Instructor Focus:** A paragraph or bullet points explaining the specific anatomical, energetic, or pedagogical goals for the instructor.
-4.  **Verbal Cues:** A bulleted list of concise, actionable cues the instructor can say during the class.
+4.  **Verbal Cues:** For EACH exercise listed in the "Proposed Exercises" section above, provide a corresponding bulleted list of 2-3 verbal cues. Use the exercise name as a bolded subheading (e.g., **Warrior II to Reverse Warrior**) for each list of cues.
 5.  **Options & Modifications:** A bulleted list detailing how to make poses easier (regressions) or more challenging (progressions).
     * **Prop Integration:** Within the 'Options & Modifications' list, you **must** list all four props (Blocks, Bolster, Strap, and Blanket) as individual bullet points. For each one, provide a specific use or explicitly state 'Not applicable for this exercise'.
 6.  **Mudra/Mantra:** Suggest one relevant mudra or mantra for this section. Provide its name and a brief explanation of its meaning or purpose in relation to the theme.
 7.  **Thematic Cue:** A short, evocative sentence that weaves the user's original theme into the experience of a key pose in that section. **Format this cue as a markdown blockquote.**
-8.  **Thematic Inspiration:** This section must contain the following three distinct subheadings:
-    * #### AI Generated Affirmation: A short, positive affirmation related to the section's theme.
-    * #### Poem: A short, relevant poem or poetic excerpt (either well-known or AI-generated).
-    * #### Words of Wisdom: A brief, insightful quote or thought-provoking statement.
+8.  **Thematic Inspiration:** This section must contain the following three distinct subheadings. Do NOT format this as a list. Each item should be its own subheading with text below it.
+    
+    #### AI Generated Affirmation
+    Provide a short, positive affirmation related to the section's theme.
+
+    #### Poem
+    Provide a short, relevant poem or poetic excerpt (either well-known or AI-generated).
+
+    #### Words of Wisdom
+    Provide a brief, insightful quote or thought-provoking statement.
 
 ### Formatting Rules:
 * Use '###' for the main 9 section titles (e.g., "### Part 1: Thematic Intent & Centering").
-* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Mudra/Mantra", "#### Thematic Inspiration").
-* Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' to create clear visual separation.
+* Use '####' for the sub-sections within each part (e.g., "#### Proposed Exercises", "#### Thematic Inspiration", "#### AI Generated Affirmation").
+* Use '##### ' for individual poses or flows within the 'Yang Main Sequence' and 'Yin Sequence' and in the 'Proposed Exercises' section.
 * Add estimated timings for each of the 9 major sections.
 * For the Yin sequence, you MUST specify a recommended **hold time** for each pose.
 * **Do not** wrap entire sections or lists in markdown quotes (\`"\`) or asterisks (\`*\`). The output should be clean markdown only.
@@ -2278,7 +2291,7 @@ Return ONLY the final, valid JSON array.`;
                         .prose { font-size: 12pt; line-height: 1.4; }
                         .prose p { margin-bottom: 0.75rem; }
                         .prose ul, .prose ol { margin-bottom: 0.75rem; padding-left: 1.5rem; }
-                        .prose h1, .prose h2, .prose h3, .prose h4 {
+                        .prose h1, .prose h2, .prose h3, .prose h4, .prose h5 {
                              color: var(--color-accent);
                              margin-top: 1.25em;
                              margin-bottom: 0.5em;
@@ -2379,6 +2392,7 @@ Return ONLY the final, valid JSON array.`;
                         h2 { font-size: 16pt; }
                         h3 { font-size: 14pt; color: #365F91; font-weight: bold; margin-top: 20px; }
                         h4 { font-size: 12pt; color: #4981B3; font-style: italic; }
+                        h5 { font-size: 11pt; color: #333; font-weight: bold; }
                         p { margin-top: 0; }
                         ul { margin-top: 0; }
                         .accordion-header { display: none; }
