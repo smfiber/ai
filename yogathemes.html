@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Yoga Class & Theme Generator v23.0.1</title>
+    <title>AI Yoga Class & Theme Generator v23.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -394,8 +394,15 @@
                 <h2 id="readingModalTitle" class="text-2xl font-bold themed-text-primary">Thematic Reading</h2>
                 <button id="closeReadingModal" class="themed-text-muted hover:themed-text-accent text-3xl leading-none" title="Close Modal">&times;</button>
             </div>
-            <div id="readingModalContent" class="p-6 overflow-y-auto prose max-w-none">
-                <!-- Content will be injected here -->
+            <div id="readingModalContent" class="p-6 overflow-y-auto">
+                <div id="reading-input-container" class="mb-6">
+                    <label for="reading-authors" class="block text-sm font-medium themed-text-muted mb-1">Preferred Authors (Optional)</label>
+                    <input type="text" id="reading-authors" class="w-full p-3 themed-input border rounded-lg focus:ring-2" placeholder="e.g., Rumi, Mary Oliver, Thich Nhat Hanh">
+                    <button id="generate-reading-btn" class="btn-primary w-full mt-4">Generate Reading</button>
+                </div>
+                <div id="reading-result-container" class="prose max-w-none">
+                    <!-- Loader and results will appear here -->
+                </div>
             </div>
         </div>
     </div>
@@ -430,7 +437,7 @@
                  <h1 class="text-4xl md:text-5xl font-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">AI Yoga Class & Theme Generator</h1>
                 <p class="text-lg text-purple-200 mt-2" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.6);">AI-powered inspiration and design for your practice.</p>
             </div>
-            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.0.1</div>
+            <div id="version-display" class="absolute bottom-2 right-4 text-white text-xs opacity-70">v23.1.0</div>
         </header>
 
         <nav id="jump-to-nav-container" class="hidden text-center mb-8"></nav>
@@ -686,6 +693,12 @@
                 const readingBtn = e.target.closest('.reading-button');
                 if (readingBtn) {
                     handleFindReadingClick(readingBtn);
+                    return;
+                }
+
+                const generateReadingBtn = e.target.closest('#generate-reading-btn');
+                if (generateReadingBtn) {
+                    handleGenerateReadingRequest(generateReadingBtn);
                     return;
                 }
                 
@@ -1704,12 +1717,13 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             }
         }
 
-        async function handleFindReadingClick(button) {
+        function handleFindReadingClick(button) {
             const modal = document.getElementById('readingModal');
-            const contentEl = document.getElementById('readingModalContent');
             const titleEl = document.getElementById('readingModalTitle');
+            const resultContainer = document.getElementById('reading-result-container');
+            const authorsInput = document.getElementById('reading-authors');
 
-            const { themeId, themeType } = button.dataset;
+            const { themeId } = button.dataset;
             const textKey = themeId + '-full';
             const planText = originalGeneratedText.get(textKey);
             const context = originalPlanContext[themeId];
@@ -1720,20 +1734,50 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             }
             const themeTitle = context.focus + (context.theme ? `: ${context.theme}` : '');
 
-            titleEl.textContent = `Finding a reading for "${themeTitle}"...`;
-            contentEl.innerHTML = getLoaderHTML('Searching for inspiration based on the full plan...');
+            titleEl.textContent = `Reading for "${themeTitle}"`;
+            
+            modal.dataset.planText = planText;
+            modal.dataset.themeTitle = themeTitle;
+
+            authorsInput.value = '';
+            resultContainer.innerHTML = '<p class="themed-text-muted">Enter preferred authors above, or leave blank for a general suggestion, then click "Generate Reading".</p>';
+            
             modal.classList.remove('hidden');
+        }
+
+        async function handleGenerateReadingRequest(button) {
+            const modal = document.getElementById('readingModal');
+            const resultContainer = document.getElementById('reading-result-container');
+            const authorsInput = document.getElementById('reading-authors');
+            
+            const planText = modal.dataset.planText;
+            const themeTitle = modal.dataset.themeTitle;
+            const authors = authorsInput.value.trim();
+
+            if (!planText || !themeTitle) {
+                showNotification('Error: Could not find plan context.', true);
+                return;
+            }
+
+            resultContainer.innerHTML = getLoaderHTML('Searching for inspiration...');
+            button.disabled = true;
 
             try {
-                const readingData = await getThematicReading(themeTitle, planText);
-                renderReading(readingData, themeTitle);
+                const readingData = await getThematicReading(themeTitle, planText, authors);
+                renderReading(readingData);
             } catch (error) {
-                handleApiError(error, contentEl, 'thematic reading');
-                titleEl.textContent = 'Error Finding Reading';
+                handleApiError(error, resultContainer, 'thematic reading');
+            } finally {
+                button.disabled = false;
             }
         }
 
-        async function getThematicReading(theme, planText) {
+        async function getThematicReading(theme, planText, authors = '') {
+            let authorInstruction = '';
+            if (authors) {
+                authorInstruction = `**Crucially, you MUST prioritize finding a relevant reading from one of these preferred authors: ${authors}.** If, and only if, you cannot find a suitable piece from them, you may then broaden your search to other sources or generate an affirmation as a last resort. When you use a preferred author, mention it in your analysis.`;
+            }
+
             const prompt = `
             You are an expert literary and spiritual research assistant for a yoga instructor.
             Your task is to find or create a thematic reading (a poem, short story excerpt, or affirmation) that is deeply resonant with a specific yoga class.
@@ -1741,7 +1785,7 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             **Your process must be:**
             1.  **Analyze the Full Context:** You will be given both a high-level theme and the full, detailed yoga plan. Analyze the entire plan—including the sequence, poses, and instructor cues—to understand its narrative arc, emotional tone, and physical focus.
             2.  **Deconstruct Core Concepts:** From your analysis, identify the core concepts. For example, a plan focused on warrior poses and hip openers might have concepts of "courage," "stability," "release," "grounding," and "emotional freedom."
-            3.  **Smart Search (Internal Knowledge First):** Use your vast internal knowledge of literature, poetry, and spiritual texts to find a suitable reading.
+            3.  **Smart Search (Internal Knowledge First):** Use your vast internal knowledge of literature, poetry, and spiritual texts to find a suitable reading. ${authorInstruction}
             4.  **Final Fallback - Generate:** If you cannot find a suitable existing text, you MUST generate a new, original, short affirmation that captures the essence of the plan's core concepts.
             5.  **Format Output:** Return a single, valid JSON object with the following structure:
                 {
@@ -1767,10 +1811,8 @@ Return ONLY the final, polished, and complete markdown teaching guide.`;
             return parseJsonWithCorrections(jsonText);
         }
 
-        function renderReading(data, theme) {
-            const contentEl = document.getElementById('readingModalContent');
-            const titleEl = document.getElementById('readingModalTitle');
-            titleEl.textContent = `Suggested Reading for "${theme}"`;
+        function renderReading(data) {
+            const contentEl = document.getElementById('reading-result-container');
 
             if (data.type === 'None' || !data.text) {
                 contentEl.innerHTML = `<p class="themed-text-muted">Sorry, I couldn't find a suitable reading for this theme at the moment. You could try refining the plan with a slightly different theme.</p>`;
