@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "2.2.0"; 
+const APP_VERSION = "2.2.1"; 
 
 // --- Global State ---
 let db;
@@ -517,14 +517,19 @@ async function generateAndApplyDefaultTheme() {
  * Handles the click event to generate a new custom theme.
  */
 async function handleCustomVisualThemeGeneration() {
-    const prompt = document.getElementById('theme-prompt').value;
+    const promptInput = document.getElementById('theme-prompt');
+    const prompt = promptInput.value;
     if(!prompt) return;
+
     const loader = document.getElementById('theme-loader-container');
     const errorContainer = document.getElementById('theme-error-container');
     const generateBtn = document.getElementById('generate-theme-btn');
+    
     loader.classList.remove('hidden');
     errorContainer.classList.add('hidden');
     generateBtn.disabled = true;
+    promptInput.disabled = true;
+
     try {
         const colors = await callColorGenAPI(prompt);
         applyTheme(colors);
@@ -535,6 +540,7 @@ async function handleCustomVisualThemeGeneration() {
     } finally {
         loader.classList.add('hidden');
         generateBtn.disabled = false;
+        promptInput.disabled = false;
     }
 }
 
