@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "2.2.1"; 
+const APP_VERSION = "3.0.0"; 
 
 // --- Global State ---
 let db;
@@ -81,21 +81,13 @@ async function initializeAppContent() {
     appIsInitialized = true;
 
     openModal('loadingStateModal');
-    document.getElementById('loading-message').textContent = "Waking up the AI...";
+    document.getElementById('loading-message').textContent = "Initializing...";
     
-    try {
-        await generateAndApplyDefaultTheme();
+    // Simple delay to show the message before closing
+    setTimeout(() => {
         document.getElementById('loading-message').textContent = "Application ready.";
-    } catch (error) {
-        console.error("A critical error occurred during app initialization:", error);
-        openModal('apiKeyModal');
-        const errorEl = document.getElementById('api-key-error');
-        if (errorEl) {
-            errorEl.textContent = `Setup failed: ${error.message}. Please check and re-enter your keys.`;
-        }
-    } finally {
         closeModal('loadingStateModal');
-    }
+    }, 500);
 }
 
 /**
@@ -134,7 +126,7 @@ function initializeFirebase() {
 }
 
 /**
- * Handles the submission of the API key form. This is now the main entry point for the app logic.
+ * Handles the submission of the API key form.
  * @param {Event} e The form submission event.
  */
 async function handleApiKeySubmit(e) {
@@ -164,13 +156,10 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
-    // Assign keys to global variables for the session instead of localStorage
     geminiApiKey = tempGeminiKey;
     alphaVantageApiKey = tempAlphaVantageKey;
     firebaseConfig = tempFirebaseConfig;
     
-    // With keys now in memory, initialize Firebase.
-    // The onAuthStateChanged listener will handle the rest of the app flow.
     initializeFirebase();
 }
 
@@ -213,7 +202,6 @@ function setupAuthUI(user) {
  * Handles the Google login popup flow.
  */
 async function handleLogin() {
-    // Only proceed if Firebase auth is initialized
     if (!auth) {
         displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
         return;
@@ -247,7 +235,7 @@ function handleLogout() {
  */
 async function callApi(url, options = {}) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
@@ -317,7 +305,6 @@ async function handleResearchSubmit(e) {
     document.getElementById('loading-message').textContent = `Researching ${symbol}...`;
 
     try {
-        // Fetch all data in parallel
         const [overview, news] = await Promise.all([
             fetchAlphaVantageData('OVERVIEW', symbol),
             fetchAlphaVantageData('NEWS_SENTIMENT', symbol)
@@ -325,13 +312,11 @@ async function handleResearchSubmit(e) {
         
         document.getElementById('loading-message').textContent = `Analyzing news for ${symbol}...`;
 
-        // Render what we have so far
         renderOverviewCard(overview);
 
-        // Process news with AI
         const newsFeed = news.feed || [];
         if (newsFeed.length > 0) {
-            const summarizedNews = await processNewsWithAI(newsFeed.slice(0, 10)); // Limit to 10 for performance
+            const summarizedNews = await processNewsWithAI(newsFeed.slice(0, 10));
             renderNewsCard(summarizedNews, symbol);
         } else {
              container.insertAdjacentHTML('beforeend', `<div class="card p-6"><h3 class="font-bold text-lg themed-text-accent">Recent News</h3><p class="themed-text-muted">No recent news found for ${symbol}.</p></div>`);
@@ -362,10 +347,10 @@ async function processNewsWithAI(articles) {
 
         try {
             const summary = await callGeminiAPI(prompt);
-            return { ...article, ai_summary: summary || article.summary }; // Fallback to original summary
+            return { ...article, ai_summary: summary || article.summary };
         } catch (error) {
             console.warn(`Could not summarize article: "${article.title}"`, error);
-            return { ...article, ai_summary: article.summary }; // Use original on error
+            return { ...article, ai_summary: article.summary };
         }
     });
 
@@ -460,116 +445,12 @@ function renderNewsCard(newsItems, symbol) {
     container.insertAdjacentHTML('beforeend', cardHtml);
 }
 
-// --- THEMING ---
-
-/**
- * Calls the Gemini API to generate a color theme based on a prompt.
- * @param {string} prompt The theme description (e.g., "Cyberpunk Sunset").
- * @returns {Promise<object>} A promise that resolves to a color palette object.
- */
-async function callColorGenAPI(prompt) {
-    const fullPrompt = `Based on the theme "${prompt}", generate a color palette for a financial web app. I need a JSON object with keys: "bg", "text", "primary", "primaryDark", "accent", "cardBg", "cardBorder", "textMuted", "inputBg", "inputBorder", "buttonText". Determine if the "primary" color is light or dark to set the "buttonText" appropriately (#FFFFFF for dark, #111827 for light). ${jsonInstruction}`;
-    const jsonText = await callGeminiAPI(fullPrompt);
-    if (jsonText) return JSON.parse(jsonText);
-    throw new Error("Could not parse a valid color theme from API response.");
-}
-
-/**
- * Applies a color palette object to the document's CSS variables.
- * @param {object} colors The color palette object.
- */
-function applyTheme(colors) {
-    Object.entries(colors).forEach(([key, value]) => {
-        const cssVar = `--color-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-        root.style.setProperty(cssVar, value);
-    });
-}
-
-/**
- * Shows or hides the main header loading spinner.
- * @param {boolean} isLoading True to show the loader, false to hide.
- */
-function showThemeLoading(isLoading) {
-    const loader = document.getElementById('header-loader');
-    if (loader) {
-        loader.classList.toggle('hidden', !isLoading);
-        loader.classList.toggle('flex', isLoading);
-    }
-}
-
-/**
- * Generates and applies a default theme on application startup.
- */
-async function generateAndApplyDefaultTheme() {
-    showThemeLoading(true);
-    const themePrompt = "Modern Fintech";
-    try {
-        const colors = await callColorGenAPI(themePrompt);
-        applyTheme(colors);
-    } catch (error) {
-        console.error("Failed to generate default theme, continuing with default styles.", error);
-    } finally {
-        showThemeLoading(false);
-    }
-}
-
-/**
- * Handles the click event to generate a new custom theme.
- */
-async function handleCustomVisualThemeGeneration() {
-    const promptInput = document.getElementById('theme-prompt');
-    const prompt = promptInput.value;
-    if(!prompt) return;
-
-    const loader = document.getElementById('theme-loader-container');
-    const errorContainer = document.getElementById('theme-error-container');
-    const generateBtn = document.getElementById('generate-theme-btn');
-    
-    loader.classList.remove('hidden');
-    errorContainer.classList.add('hidden');
-    generateBtn.disabled = true;
-    promptInput.disabled = true;
-
-    try {
-        const colors = await callColorGenAPI(prompt);
-        applyTheme(colors);
-        closeModal('themeGeneratorModal');
-    } catch (error) {
-        errorContainer.textContent = error.message;
-        errorContainer.classList.remove('hidden');
-    } finally {
-        loader.classList.add('hidden');
-        generateBtn.disabled = false;
-        promptInput.disabled = false;
-    }
-}
-
 // --- EVENT LISTENERS ---
 
 function setupEventListeners() {
     document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById('stock-research-form')?.addEventListener('submit', handleResearchSubmit);
     
-    // Modal close buttons
-    const closeThemeBtn = document.getElementById('closeThemeGeneratorModal');
-    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => closeModal('themeGeneratorModal'));
-
-    // Settings and Theme buttons
-    const settingsBtn = document.getElementById('settings-button');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.getElementById('settings-panel').classList.toggle('hidden');
-        });
-    }
-
-    const themeChangerBtn = document.getElementById('theme-changer-button');
-    if (themeChangerBtn) themeChangerBtn.addEventListener('click', () => openModal('themeGeneratorModal'));
-
-    const generateThemeBtn = document.getElementById('generate-theme-btn');
-    if (generateThemeBtn) generateThemeBtn.addEventListener('click', handleCustomVisualThemeGeneration);
-
-    // Generic click/scroll listeners
     const scrollTopBtn = document.getElementById('scroll-to-top-button');
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     
@@ -577,14 +458,6 @@ function setupEventListeners() {
         const scrollTopButton = document.getElementById('scroll-to-top-button');
         if (scrollTopButton) {
             scrollTopButton.classList.toggle('hidden', window.scrollY <= 300);
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        const settingsPanel = document.getElementById('settings-panel');
-        const settingsButton = document.getElementById('settings-button');
-        if (settingsPanel && !settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
-            settingsPanel.classList.add('hidden');
         }
     });
 }
@@ -599,7 +472,6 @@ function initializeApplication() {
         breaks: true,
     });
 
-    // Always prompt for keys on load, removing the need for localStorage checks.
     openModal('apiKeyModal');
 }
 
