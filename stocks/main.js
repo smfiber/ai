@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "2.1.0"; 
+const APP_VERSION = "2.2.0"; 
 
 // --- Global State ---
 let db;
@@ -169,9 +169,9 @@ async function handleApiKeySubmit(e) {
     alphaVantageApiKey = tempAlphaVantageKey;
     firebaseConfig = tempFirebaseConfig;
     
-    // With keys now in memory, initialize Firebase and attempt login
+    // With keys now in memory, initialize Firebase.
+    // The onAuthStateChanged listener will handle the rest of the app flow.
     initializeFirebase();
-    handleLogin(); 
 }
 
 // --- AUTHENTICATION ---
