@@ -67,7 +67,8 @@
 
     <!-- Modals -->
     <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100] p-4 modal">
-        <div class="card p-8 w-full max-w-lg m-4">
+        <!-- FIX: Added bg-opacity-100 to reset the background opacity inherited from the backdrop -->
+        <div class="card bg-opacity-100 p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
             <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
             <form id="apiKeyForm">
@@ -100,7 +101,6 @@
         </div>
     </div>
 
-    <!-- FIX: Increased z-index to ensure messages appear above the API key modal -->
     <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[110] p-4 modal"></div>
     <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[110] p-4 modal"></div>
 
