@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.2.1"; 
+const APP_VERSION = "3.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -125,30 +125,25 @@ function displayMessageInModal(message, type = 'info') {
 // --- CONFIG & INITIALIZATION ---
 
 /**
- * Safely parses a string that might be a JavaScript object literal into a standard JSON object.
+ * Parses a string as JSON, expecting a Firebase config object.
  * This is a security enhancement to avoid using eval-like constructs.
- * @param {string} str The string to parse, expected to be a Firebase config object.
+ * @param {string} jsonString The string to parse, which must be valid JSON.
  * @returns {object} The parsed object.
- * @throws {Error} If the string cannot be parsed.
+ * @throws {Error} If the string is not valid JSON.
  */
-function safeParseConfig(str) {
+function safeParseConfig(jsonString) {
     try {
-        // Find the start of the object
-        const startIndex = str.indexOf('{');
-        if (startIndex === -1) {
-            throw new Error("Could not find a '{' in the config string.");
+        // Attempt to remove common non-JSON artifacts like leading variable declarations
+        const startIndex = jsonString.indexOf('{');
+        const endIndex = jsonString.lastIndexOf('}');
+        if (startIndex === -1 || endIndex === -1) {
+            throw new Error("Could not find a '{' or '}' in the config string.");
         }
-        const objectStr = str.substring(startIndex);
-
-        // A safer way to convert JS object literal to JSON.
-        // 1. Add quotes to keys that don't have them.
-        // This regex finds keys (alphanumeric, can include _) that are not enclosed in quotes.
-        const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-
-        return JSON.parse(jsonLike);
+        const objectStr = jsonString.substring(startIndex, endIndex + 1);
+        return JSON.parse(objectStr);
     } catch (error) {
-        console.error("Failed to parse config string:", error);
-        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console.");
+        console.error("Failed to parse config string as JSON:", error);
+        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console, ensuring it is valid JSON.");
     }
 }
 
@@ -157,6 +152,12 @@ async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
 
+    // Set header background image
+    const headerBg = document.getElementById('header-bg-image');
+    if (headerBg) {
+        headerBg.style.backgroundImage = "url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2070&auto=format&fit=crop')";
+    }
+    
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
     
@@ -438,20 +439,25 @@ function renderOverviewCard(data) {
  * @returns {Date} A JavaScript Date object.
  */
 function parseAlphaVantageDate(timeString) {
-    if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
+    try {
+        if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
 
-    const year = timeString.substring(0, 4);
-    const month = timeString.substring(4, 6);
-    const day = timeString.substring(6, 8);
-    const hours = timeString.substring(9, 11);
-    const minutes = timeString.substring(11, 13);
-    const seconds = timeString.substring(13, 15);
-    
-    // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
-    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+        const year = timeString.substring(0, 4);
+        const month = timeString.substring(4, 6);
+        const day = timeString.substring(6, 8);
+        const hours = timeString.substring(9, 11);
+        const minutes = timeString.substring(11, 13);
+        const seconds = timeString.substring(13, 15);
+        
+        // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
+        const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
 
-    const parsedDate = new Date(isoString);
-    return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
+        const parsedDate = new Date(isoString);
+        return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
+    } catch (error) {
+        console.warn(`Could not parse date string: "${timeString}". Falling back to current date.`, error);
+        return new Date();
+    }
 }
 
 
