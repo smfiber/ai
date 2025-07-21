@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.3.0"; 
+const APP_VERSION = "3.2.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -32,6 +32,38 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let geminiApiKey = "";
 let alphaVantageApiKey = "";
+
+// --- UTILITY HELPERS ---
+
+/**
+ * Formats a large number into a readable string with a suffix (K, M, B, T).
+ * Prepends a dollar sign for valid numbers.
+ * @param {string | number} value The numeric value to format.
+ * @returns {string} The formatted string (e.g., "$2.95T") or "N/A".
+ */
+function formatMarketCap(value) {
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num <= 0) {
+        return "N/A";
+    }
+    
+    const tiers = [
+        { value: 1e12, suffix: 'T' },
+        { value: 1e9,  suffix: 'B' },
+        { value: 1e6,  suffix: 'M' },
+        { value: 1e3,  suffix: 'K' },
+    ];
+    
+    const tier = tiers.find(t => num >= t.value);
+
+    if (tier) {
+        const formattedNum = (num / tier.value).toFixed(2);
+        return `$${formattedNum}${tier.suffix}`;
+    }
+    
+    return `$${num}`;
+}
+
 
 // --- SECURITY HELPERS ---
 
@@ -88,15 +120,15 @@ function displayMessageInModal(message, type = 'info') {
     
     if (modal && modalContent) {
         const card = document.createElement('div');
-        card.className = 'card p-8 w-full max-w-sm m-4 text-center';
+        card.className = 'bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center';
         const titleEl = document.createElement('h2');
         titleEl.className = 'text-2xl font-bold mb-4';
         const contentEl = document.createElement('p');
-        contentEl.className = 'mb-6 themed-text-muted';
+        contentEl.className = 'mb-6 text-gray-500';
         contentEl.textContent = message;
         const okButton = document.createElement('button');
         okButton.textContent = 'OK';
-        okButton.className = 'btn-primary w-full';
+        okButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 w-full';
         okButton.addEventListener('click', () => closeModal(modalId));
 
         switch (type) {
@@ -110,7 +142,7 @@ function displayMessageInModal(message, type = 'info') {
                 break;
             default:
                 titleEl.textContent = 'Info';
-                titleEl.classList.add('themed-text-primary');
+                titleEl.classList.add('text-gray-800');
         }
 
         card.append(titleEl, contentEl, okButton);
@@ -125,25 +157,30 @@ function displayMessageInModal(message, type = 'info') {
 // --- CONFIG & INITIALIZATION ---
 
 /**
- * Parses a string as JSON, expecting a Firebase config object.
+ * Safely parses a string that might be a JavaScript object literal into a standard JSON object.
  * This is a security enhancement to avoid using eval-like constructs.
- * @param {string} jsonString The string to parse, which must be valid JSON.
+ * @param {string} str The string to parse, expected to be a Firebase config object.
  * @returns {object} The parsed object.
- * @throws {Error} If the string is not valid JSON.
+ * @throws {Error} If the string cannot be parsed.
  */
-function safeParseConfig(jsonString) {
+function safeParseConfig(str) {
     try {
-        // Attempt to remove common non-JSON artifacts like leading variable declarations
-        const startIndex = jsonString.indexOf('{');
-        const endIndex = jsonString.lastIndexOf('}');
-        if (startIndex === -1 || endIndex === -1) {
-            throw new Error("Could not find a '{' or '}' in the config string.");
+        // Find the start of the object
+        const startIndex = str.indexOf('{');
+        if (startIndex === -1) {
+            throw new Error("Could not find a '{' in the config string.");
         }
-        const objectStr = jsonString.substring(startIndex, endIndex + 1);
-        return JSON.parse(objectStr);
+        const objectStr = str.substring(startIndex);
+
+        // A safer way to convert JS object literal to JSON.
+        // 1. Add quotes to keys that don't have them.
+        // This regex finds keys (alphanumeric, can include _) that are not enclosed in quotes.
+        const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+
+        return JSON.parse(jsonLike);
     } catch (error) {
-        console.error("Failed to parse config string as JSON:", error);
-        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console, ensuring it is valid JSON.");
+        console.error("Failed to parse config string:", error);
+        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console.");
     }
 }
 
@@ -152,12 +189,6 @@ async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
 
-    // Set header background image
-    const headerBg = document.getElementById('header-bg-image');
-    if (headerBg) {
-        headerBg.style.backgroundImage = "url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2070&auto=format&fit=crop')";
-    }
-    
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
     
@@ -222,7 +253,6 @@ async function handleApiKeySubmit(e) {
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
-    // [BUG FIX] Close the modal to allow the user to proceed to the login step.
     closeModal(CONSTANTS.MODAL_API_KEY);
 }
 
@@ -305,7 +335,16 @@ async function callGeminiAPI(prompt) {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
     const payload = { contents: [{ parts: [{ text: prompt }] }] };
     const result = await callApi(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
+    // [ROBUSTNESS] Check for API errors in the response body, which can occur even with a 200 status.
+    if (result.error) {
+        throw new Error(`Gemini API Error: ${result.error.message}`);
+    }
+    if (!result.candidates || result.candidates.length === 0) {
+        throw new Error('Invalid response from Gemini API: No candidates returned.');
+    }
+    
+    return result.candidates[0]?.content?.parts?.[0]?.text || null;
 }
 
 async function fetchAlphaVantageData(functionName, symbol) {
@@ -325,7 +364,6 @@ async function handleResearchSubmit(e) {
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
     
-    // [UX] Validate ticker format before making an API call.
     const tickerRegex = /^[A-Z.]{1,10}$/;
     if (!tickerRegex.test(symbol)) {
         displayMessageInModal("Please enter a valid stock ticker symbol (e.g., 'AAPL', 'GOOG').", "warning");
@@ -352,7 +390,7 @@ async function handleResearchSubmit(e) {
             const summarizedNews = await processNewsWithAI(newsFeed.slice(0, CONSTANTS.MAX_NEWS_ARTICLES));
             renderNewsCard(summarizedNews, symbol);
         } else {
-             container.insertAdjacentHTML('beforeend', `<div class="card p-6"><h3 class="font-bold text-lg themed-text-accent">Recent News</h3><p class="themed-text-muted">No recent news found for ${symbol}.</p></div>`);
+             container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent news found for ${symbol}.</p></div>`);
         }
         
         tickerInput.value = '';
@@ -379,7 +417,8 @@ async function processNewsWithAI(articles) {
             return { ...article, ai_summary: summary || article.summary };
         } catch (error) {
             console.warn(`Could not summarize article: "${article.title}"`, error);
-            return { ...article, ai_summary: article.summary };
+            // [ROBUSTNESS] Make the failure visible in the UI instead of failing silently.
+            return { ...article, ai_summary: "[AI summary could not be generated.]" };
         }
     });
 
@@ -392,39 +431,37 @@ async function processNewsWithAI(articles) {
 function renderOverviewCard(data) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     
-    const marketCapValue = parseInt(data.MarketCapitalization, 10);
-    const marketCap = !isNaN(marketCapValue) && marketCapValue > 0 ? (marketCapValue / 1_000_000_000).toFixed(2) + 'B' : "N/A";
-
+    // [UI FIX] Use new formatter for market cap.
+    const marketCap = formatMarketCap(data.MarketCapitalization);
     const peRatio = data.PERatio !== "None" ? data.PERatio : "N/A";
     const eps = data.EPS !== "None" ? data.EPS : "N/A";
-    // [UX] Prepend the dollar sign only if the value is available, preventing "$N/A".
     const weekHigh = data['52WeekHigh'] !== "None" && data['52WeekHigh'] ? `$${data['52WeekHigh']}` : "N/A";
 
     const cardHtml = `
-        <div class="card p-6">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
             <div class="flex justify-between items-start">
                 <div>
-                    <h2 class="text-2xl font-bold themed-text-primary">${sanitizeText(data.Name)} (${sanitizeText(data.Symbol)})</h2>
-                    <p class="themed-text-muted">${sanitizeText(data.Exchange)} | ${sanitizeText(data.Sector)}</p>
+                    <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(data.Name)} (${sanitizeText(data.Symbol)})</h2>
+                    <p class="text-gray-500">${sanitizeText(data.Exchange)} | ${sanitizeText(data.Sector)}</p>
                 </div>
                 <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${sanitizeText(data.AssetType)}</span>
             </div>
             <p class="mt-4 text-sm">${sanitizeText(data.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div>
-                    <p class="text-sm themed-text-muted">Market Cap</p>
-                    <p class="text-lg font-semibold">$${sanitizeText(marketCap)}</p>
+                    <p class="text-sm text-gray-500">Market Cap</p>
+                    <p class="text-lg font-semibold">${sanitizeText(marketCap)}</p>
                 </div>
                 <div>
-                    <p class="text-sm themed-text-muted">P/E Ratio</p>
+                    <p class="text-sm text-gray-500">P/E Ratio</p>
                     <p class="text-lg font-semibold">${sanitizeText(peRatio)}</p>
                 </div>
                 <div>
-                    <p class="text-sm themed-text-muted">EPS</p>
+                    <p class="text-sm text-gray-500">EPS</p>
                     <p class="text-lg font-semibold">${sanitizeText(eps)}</p>
                 </div>
                  <div>
-                    <p class="text-sm themed-text-muted">52 Week High</p>
+                    <p class="text-sm text-gray-500">52 Week High</p>
                     <p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p>
                 </div>
             </div>
@@ -439,25 +476,20 @@ function renderOverviewCard(data) {
  * @returns {Date} A JavaScript Date object.
  */
 function parseAlphaVantageDate(timeString) {
-    try {
-        if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
+    if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
 
-        const year = timeString.substring(0, 4);
-        const month = timeString.substring(4, 6);
-        const day = timeString.substring(6, 8);
-        const hours = timeString.substring(9, 11);
-        const minutes = timeString.substring(11, 13);
-        const seconds = timeString.substring(13, 15);
-        
-        // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
-        const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+    const year = timeString.substring(0, 4);
+    const month = timeString.substring(4, 6);
+    const day = timeString.substring(6, 8);
+    const hours = timeString.substring(9, 11);
+    const minutes = timeString.substring(11, 13);
+    const seconds = timeString.substring(13, 15);
+    
+    // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
+    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
 
-        const parsedDate = new Date(isoString);
-        return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
-    } catch (error) {
-        console.warn(`Could not parse date string: "${timeString}". Falling back to current date.`, error);
-        return new Date();
-    }
+    const parsedDate = new Date(isoString);
+    return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
 }
 
 
@@ -478,8 +510,8 @@ function renderNewsCard(newsItems, symbol) {
         return `
             <li class="py-4 border-b">
                 <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
-                    <p class="text-sm themed-text-muted">${sanitizeText(item.source)} &bull; ${sanitizeText(publishedDate.toLocaleDateString())}</p>
-                    <h4 class="font-semibold themed-text-accent">${sanitizeText(item.title)}</h4>
+                    <p class="text-sm text-gray-500">${sanitizeText(item.source)} &bull; ${sanitizeText(publishedDate.toLocaleDateString())}</p>
+                    <h4 class="font-semibold text-emerald-500">${sanitizeText(item.title)}</h4>
                     <div class="text-sm mt-1 prose prose-sm max-w-none">${sanitizeAndParseMarkdown(item.ai_summary)}</div>
                     <div class="mt-2">
                         <span class="text-xs font-semibold px-2 py-1 rounded-full ${sentimentColorClass}">${sanitizeText(sentimentLabel)}</span>
@@ -490,8 +522,8 @@ function renderNewsCard(newsItems, symbol) {
     }).join('');
 
     const cardHtml = `
-        <div class="card p-6">
-            <h3 class="font-bold text-lg themed-text-accent mb-2">Recent News & AI Summary</h3>
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+            <h3 class="font-bold text-lg text-emerald-500 mb-2">Recent News & AI Summary</h3>
             <ul class="divide-y">${articlesHtml}</ul>
         </div>
     `;
