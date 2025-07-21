@@ -1,17 +1,16 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 3.3.0
- * Description: Centralized styling using Tailwind CSS directives and theme variables.
+ * Version: 3.2.2
+ * Description: Centralized theme variables and essential boilerplate. All component styling
+ * is now handled directly by Tailwind CSS utility classes in the HTML.
  */
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /*
  * =================================================================
  * THEME & COLOR VARIABLES
  * =================================================================
+ * These are kept for reference but are now mapped to Tailwind classes
+ * in the HTML for a CDN-first approach.
  */
 :root {
     --color-bg: #f3f4f6;
@@ -36,92 +35,6 @@ body {
 
 /*
  * =================================================================
- * REUSABLE COMPONENT STYLES
- * =================================================================
- */
-@layer components {
-    /* --- Buttons --- */
-    .btn-primary {
-        /* Removed redundant color classes; now solely driven by CSS variables for better theming. */
-        @apply font-semibold py-2 px-5 rounded-lg shadow-md;
-        @apply transition-all duration-200 ease-in-out;
-        @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-        background-color: var(--color-primary);
-        color: var(--color-button-text);
-        --tw-ring-color: var(--color-primary); /* Ensures focus ring matches theme */
-    }
-    .btn-primary:hover {
-        background-color: var(--color-primary-dark);
-    }
-    .btn-secondary {
-        @apply bg-gray-200 text-gray-800 font-semibold py-2 px-5 rounded-lg;
-        @apply transition-colors duration-200 ease-in-out;
-        @apply hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400;
-    }
-
-    /* --- Cards --- */
-    .card {
-        @apply bg-white rounded-2xl shadow-lg border;
-        background-color: var(--color-card-bg);
-        border-color: var(--color-card-border);
-    }
-
-    /* --- Form Inputs --- */
-    .themed-input {
-        @apply border rounded-lg w-full;
-        @apply transition-all duration-200 ease-in-out;
-        @apply focus:ring-2 focus:border-transparent;
-        background-color: var(--color-input-bg);
-        border-color: var(--color-input-border);
-        color: var(--color-text);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .themed-input:focus {
-        --tw-ring-color: var(--color-primary);
-    }
-
-    /* --- Themed Text --- */
-    .themed-text-primary { color: var(--color-text); }
-    .themed-text-accent { color: var(--color-accent); }
-    .themed-text-muted { color: var(--color-text-muted); }
-
-    /* --- Floating Action Buttons --- */
-    .floating-action-button {
-        /* Removed redundant color classes for better theming. */
-        @apply fixed w-14 h-14 rounded-full shadow-lg text-2xl;
-        @apply flex items-center justify-center;
-        @apply transition-transform duration-200 hover:scale-110;
-        background-color: var(--color-primary);
-        color: var(--color-button-text);
-        z-index: 30;
-    }
-    .floating-action-button:hover {
-        background-color: var(--color-primary-dark);
-    }
-}
-
-/*
- * =================================================================
- * UTILITY STYLES
- * =================================================================
- */
-@layer utilities {
-    /* Visually hide an element while keeping it accessible to screen readers */
-    .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
-    }
-}
-
-/*
- * =================================================================
  * MODAL STYLES
  * =================================================================
  */
@@ -141,6 +54,21 @@ body.modal-open {
  * =================================================================
  */
 .loader {
-    @apply w-16 h-16 border-4 border-t-4 border-gray-200 rounded-full animate-spin;
+    width: 4rem; /* 16px * 4 = 64px */
+    height: 4rem;
+    border-width: 4px;
+    border-style: solid;
+    border-radius: 9999px; /* rounded-full */
+    border-color: #e5e7eb; /* border-gray-200 */
+    animation: spin 1s linear infinite;
     border-top-color: var(--color-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
