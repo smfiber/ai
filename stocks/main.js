@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "2.0.0-beta"; 
+const APP_VERSION = "2.0.1-beta"; 
 
 // --- Global State ---
 let db;
@@ -91,9 +91,16 @@ function loadConfigFromStorage() {
     }
 
     if (geminiApiKey && alphaVantageApiKey && firebaseConfig) {
-        document.getElementById('geminiApiKeyInput').value = geminiApiKey;
-        document.getElementById('alphaVantageApiKeyInput').value = alphaVantageApiKey;
-        document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
+        // Add null checks to prevent errors if HTML is not yet loaded or is mismatched.
+        const geminiInput = document.getElementById('geminiApiKeyInput');
+        if (geminiInput) geminiInput.value = geminiApiKey;
+
+        const alphaInput = document.getElementById('alphaVantageApiKeyInput');
+        if (alphaInput) alphaInput.value = alphaVantageApiKey;
+
+        const firebaseInput = document.getElementById('firebaseConfigInput');
+        if (firebaseInput) firebaseInput.value = JSON.stringify(firebaseConfig, null, 2);
+        
         return true;
     }
     return false;
@@ -227,7 +234,7 @@ function setupAuthUI(user) {
         `;
         document.getElementById('login-button').addEventListener('click', handleLogin);
         document.getElementById('app-container').classList.add('hidden');
-        if (!localStorage.getItem('geminiApiKey')) {
+        if (!localStorage.getItem('geminiApiKey') || !localStorage.getItem('alphaVantageApiKey') || !localStorage.getItem('firebaseConfig')) {
              openModal('apiKeyModal');
         }
     }
@@ -518,7 +525,7 @@ async function generateAndApplyDefaultTheme() {
     showThemeLoading(true);
     const themePrompt = "Modern Fintech";
     try {
-        const colors = await callColorGenAPI(themePrompt);
+        const colors = await callColorGenAPI(prompt);
         applyTheme(colors);
     } catch (error) {
         console.error("Failed to generate default theme, continuing with default styles.", error);
