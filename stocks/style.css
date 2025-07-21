@@ -1,7 +1,7 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 3.0.0
- * Description: Centralized styling using Tailwind CSS directives.
+ * Version: 3.1.0
+ * Description: Centralized styling using Tailwind CSS directives and theme variables.
  */
 
 @tailwind base;
@@ -42,11 +42,13 @@ body {
 @layer components {
     /* --- Buttons --- */
     .btn-primary {
-        @apply bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg shadow-md;
+        /* Removed redundant color classes; now solely driven by CSS variables for better theming. */
+        @apply font-semibold py-2 px-5 rounded-lg shadow-md;
         @apply transition-all duration-200 ease-in-out;
-        @apply hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+        @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
         background-color: var(--color-primary);
         color: var(--color-button-text);
+        --tw-ring-color: var(--color-primary); /* Ensures focus ring matches theme */
     }
     .btn-primary:hover {
         background-color: var(--color-primary-dark);
@@ -85,13 +87,36 @@ body {
 
     /* --- Floating Action Buttons --- */
     .floating-action-button {
+        /* Removed redundant color classes for better theming. */
         @apply fixed w-14 h-14 rounded-full shadow-lg text-2xl;
         @apply flex items-center justify-center;
-        @apply bg-blue-600 text-white;
-        @apply hover:bg-blue-700 transition-transform duration-200 hover:scale-110;
+        @apply transition-transform duration-200 hover:scale-110;
         background-color: var(--color-primary);
         color: var(--color-button-text);
         z-index: 30;
+    }
+    .floating-action-button:hover {
+        background-color: var(--color-primary-dark);
+    }
+}
+
+/*
+ * =================================================================
+ * UTILITY STYLES
+ * =================================================================
+ */
+@layer utilities {
+    /* Visually hide an element while keeping it accessible to screen readers */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
     }
 }
 
