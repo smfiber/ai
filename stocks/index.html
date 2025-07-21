@@ -85,7 +85,6 @@
                         <textarea id="firebaseConfigInput" class="themed-input w-full p-2 rounded-lg" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                     </div>
                 </div>
-                <!-- Note: The error paragraph below is no longer used for primary error reporting but is kept for potential future use or non-critical hints. -->
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="btn-primary">Save and Continue</button>
@@ -94,18 +93,18 @@
         </div>
     </div>
     
-    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex-col items-center justify-center z-50 p-4 modal">
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex-col items-center justify-center z-[110] p-4 modal">
         <div class="flex flex-col items-center">
             <div class="loader themed-loader"></div>
             <p id="loading-message" class="text-white mt-4"></p>
         </div>
     </div>
 
-    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
-    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
+    <!-- FIX: Increased z-index to ensure messages appear above the API key modal -->
+    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[110] p-4 modal"></div>
+    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[110] p-4 modal"></div>
 
     <!-- App Logic -->
-    <!-- FIX: Removed redundant Firebase script tags. They are now correctly imported only within main.js -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
