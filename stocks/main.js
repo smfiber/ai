@@ -3,7 +3,23 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.0.1"; 
+const APP_VERSION = "3.1.0"; 
+
+// --- Constants ---
+const CONSTANTS = {
+    MODAL_API_KEY: 'apiKeyModal',
+    MODAL_LOADING: 'loadingStateModal',
+    MODAL_MESSAGE: 'messageModal',
+    FORM_API_KEY: 'apiKeyForm',
+    FORM_STOCK_RESEARCH: 'stock-research-form',
+    INPUT_TICKER: 'ticker-input',
+    CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
+    BUTTON_SCROLL_TOP: 'scroll-to-top-button',
+    ELEMENT_LOADING_MESSAGE: 'loading-message',
+    CLASS_MODAL_OPEN: 'is-open',
+    CLASS_BODY_MODAL_OPEN: 'modal-open',
+    CLASS_HIDDEN: 'hidden'
+};
 
 // --- Global State ---
 let db;
@@ -13,10 +29,38 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let geminiApiKey = "";
 let alphaVantageApiKey = "";
-const root = document.documentElement;
 
-// --- Prompt Engineering Constants ---
-const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON object. All strings must be enclosed in double quotes. Any double quotes or backslashes within a string value must be properly escaped (e.g., "This is a \\"sample\\" description." or "C:\\\\Users\\\\Admin"). Do not wrap the JSON in markdown code fences.`;
+// --- SECURITY HELPERS ---
+
+/**
+ * Sanitizes a string of HTML to prevent XSS attacks. It first converts Markdown to HTML,
+ * then purifies the result.
+ * @param {string} dirtyMarkdown The potentially unsafe string, which may contain Markdown.
+ * @returns {string} The sanitized HTML string, safe to insert into the DOM.
+ */
+function sanitizeAndParseMarkdown(dirtyMarkdown) {
+    if (typeof dirtyMarkdown !== 'string' || !dirtyMarkdown) {
+        return '';
+    }
+    // 1. Convert Markdown to HTML using the 'marked' library.
+    const rawHtml = marked.parse(dirtyMarkdown);
+    // 2. Sanitize the resulting HTML using DOMPurify to prevent XSS.
+    // DOMPurify is loaded from a script tag in index.html.
+    return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+}
+
+/**
+ * Sanitizes a plain text string to prevent it from being interpreted as HTML.
+ * This is for data that should not contain any HTML tags.
+ * @param {string} text The plain text to sanitize.
+ * @returns {string} The sanitized text.
+ */
+function sanitizeText(text) {
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = text;
+    return tempDiv.innerHTML;
+}
+
 
 // --- MODAL HELPERS ---
 
@@ -27,8 +71,8 @@ const jsonInstruction = ` IMPORTANT: Ensure your response is ONLY a valid JSON o
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        document.body.classList.add('modal-open');
-        modal.classList.add('is-open');
+        document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
+        modal.classList.add(CONSTANTS.CLASS_MODAL_OPEN);
     }
 }
 
@@ -39,9 +83,10 @@ function openModal(modalId) {
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        modal.classList.remove('is-open');
+        modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
+        // Only remove the body class if no other modals are open
         if (document.querySelectorAll('.modal.is-open').length === 0) {
-             document.body.classList.remove('modal-open');
+             document.body.classList.remove(CONSTANTS.CLASS_BODY_MODAL_OPEN);
         }
     }
 }
@@ -52,19 +97,45 @@ function closeModal(modalId) {
  * @param {'info' | 'success' | 'warning' | 'error'} type The type of message.
  */
 function displayMessageInModal(message, type = 'info') {
-    const modalId = 'messageModal';
-    let modal = document.getElementById(modalId);
+    const modalId = CONSTANTS.MODAL_MESSAGE;
+    const modal = document.getElementById(modalId);
     
     if (modal) {
-        modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
-        modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
+        // Create the modal content structure
+        const card = document.createElement('div');
+        card.className = 'card p-8 w-full max-w-sm m-4 text-center';
 
-        const titleEl = modal.querySelector('#messageModalTitle');
-        const contentEl = modal.querySelector('#messageModalContent');
+        const titleEl = document.createElement('h2');
+        titleEl.className = 'text-2xl font-bold mb-4';
         
-        titleEl.textContent = type === 'error' ? 'Error!' : (type === 'warning' ? 'Warning!' : 'Info');
-        titleEl.className = `text-2xl font-bold mb-4 ${type === 'error' ? 'text-red-600' : (type === 'warning' ? 'text-yellow-600' : 'themed-text-primary')}`;
+        const contentEl = document.createElement('p');
+        contentEl.className = 'mb-6 themed-text-muted';
         contentEl.textContent = message;
+
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.className = 'btn-primary w-full';
+        okButton.addEventListener('click', () => closeModal(modalId));
+
+        // Set title and color based on type
+        switch (type) {
+            case 'error':
+                titleEl.textContent = 'Error!';
+                titleEl.classList.add('text-red-600');
+                break;
+            case 'warning':
+                titleEl.textContent = 'Warning!';
+                titleEl.classList.add('text-yellow-600');
+                break;
+            default:
+                titleEl.textContent = 'Info';
+                titleEl.classList.add('themed-text-primary');
+        }
+
+        // Assemble and clear previous content
+        card.append(titleEl, contentEl, okButton);
+        modal.innerHTML = '';
+        modal.appendChild(card);
         
         openModal(modalId);
     }
@@ -81,9 +152,7 @@ function displayMessageInModal(message, type = 'info') {
 function parseJavaScriptObject(str) {
     try {
         const startIndex = str.indexOf('{');
-        if (startIndex === -1) {
-            throw new Error("Could not find a '{' in the config string.");
-        }
+        if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
         // The Function constructor provides a safer way to evaluate the object string than eval().
         return (new Function(`return ${str.substring(startIndex)}`))();
     } catch (e) {
@@ -99,12 +168,12 @@ async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
 
-    openModal('loadingStateModal');
-    document.getElementById('loading-message').textContent = "Initializing...";
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
     
     setTimeout(() => {
-        document.getElementById('loading-message').textContent = "Application ready.";
-        closeModal('loadingStateModal');
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Application ready.";
+        closeModal(CONSTANTS.MODAL_LOADING);
     }, 500);
 }
 
@@ -135,11 +204,7 @@ function initializeFirebase() {
         });
     } catch (error) {
         console.error("Firebase initialization error:", error);
-        openModal('apiKeyModal');
-        const errorEl = document.getElementById('api-key-error');
-        if (errorEl) {
-            errorEl.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
-        }
+        displayMessageInModal(`Firebase Error: ${error.message}. Please check your config object.`, 'error');
     }
 }
 
@@ -154,22 +219,18 @@ async function handleApiKeySubmit(e) {
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    const errorEl = document.getElementById('api-key-error');
-    errorEl.textContent = '';
-
     if (!tempGeminiKey || !tempFirebaseConfigText || !tempAlphaVantageKey) {
-        errorEl.textContent = "All API Keys and the Firebase Config are required.";
+        displayMessageInModal("All API Keys and the Firebase Config are required.", "warning");
         return;
     }
     
     try {
-        // Use the flexible parser for the Firebase config object.
         tempFirebaseConfig = parseJavaScriptObject(tempFirebaseConfigText);
         if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
             throw new Error("The parsed Firebase config is invalid or missing required properties.");
         }
     } catch (err) {
-        errorEl.textContent = `Invalid Firebase Config: ${err.message}. Please paste the complete object.`;
+        displayMessageInModal(`Invalid Firebase Config: ${err.message}. Please paste the complete object.`, "error");
         return;
     }
     
@@ -192,13 +253,13 @@ function setupAuthUI(user) {
     if (!authStatusEl || !appContainer) return;
 
     if (user) {
-        appContainer.classList.remove('hidden');
-        closeModal('apiKeyModal');
+        appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
+        closeModal(CONSTANTS.MODAL_API_KEY);
         
         authStatusEl.innerHTML = `
             <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
-                <img src="${user.photoURL}" alt="User photo" class="w-8 h-8 rounded-full">
-                <span class="font-medium pr-2">${user.displayName}</span>
+                <img src="${sanitizeText(user.photoURL)}" alt="User photo" class="w-8 h-8 rounded-full">
+                <span class="font-medium pr-2">${sanitizeText(user.displayName)}</span>
                 <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>
         `;
@@ -208,10 +269,8 @@ function setupAuthUI(user) {
              <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>
         `;
         const loginButton = document.getElementById('login-button');
-        if (loginButton) {
-            loginButton.addEventListener('click', handleLogin);
-        }
-        appContainer.classList.add('hidden');
+        if (loginButton) loginButton.addEventListener('click', handleLogin);
+        appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
     }
 }
 
@@ -309,17 +368,17 @@ async function fetchAlphaVantageData(functionName, symbol) {
  */
 async function handleResearchSubmit(e) {
     e.preventDefault();
-    const tickerInput = document.getElementById('ticker-input');
+    const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
     if (!symbol) {
         displayMessageInModal("Please enter a stock ticker symbol.", "warning");
         return;
     }
 
-    const container = document.getElementById('dynamic-content-container');
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     container.innerHTML = ''; // Clear previous results
-    openModal('loadingStateModal');
-    document.getElementById('loading-message').textContent = `Researching ${symbol}...`;
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Researching ${symbol}...`;
 
     try {
         const [overview, news] = await Promise.all([
@@ -327,7 +386,7 @@ async function handleResearchSubmit(e) {
             fetchAlphaVantageData('NEWS_SENTIMENT', symbol)
         ]);
         
-        document.getElementById('loading-message').textContent = `Analyzing news for ${symbol}...`;
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing news for ${symbol}...`;
 
         renderOverviewCard(overview);
 
@@ -344,7 +403,7 @@ async function handleResearchSubmit(e) {
         displayMessageInModal(error.message, 'error');
     } finally {
         tickerInput.value = '';
-        closeModal('loadingStateModal');
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
@@ -382,37 +441,39 @@ async function processNewsWithAI(articles) {
  * @param {object} data The overview data from Alpha Vantage.
  */
 function renderOverviewCard(data) {
-    const container = document.getElementById('dynamic-content-container');
-    const marketCap = (parseInt(data.MarketCapitalization) / 1_000_000_000).toFixed(2);
-    const peRatio = data.PERatio;
-    const eps = data.EPS;
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
+    const marketCap = data.MarketCapitalization !== "None" ? (parseInt(data.MarketCapitalization) / 1_000_000_000).toFixed(2) : "N/A";
+    const peRatio = data.PERatio !== "None" ? data.PERatio : "N/A";
+    const eps = data.EPS !== "None" ? data.EPS : "N/A";
+    const weekHigh = data['52WeekHigh'] !== "None" ? data['52WeekHigh'] : "N/A";
 
+    // Sanitize all data before rendering
     const cardHtml = `
         <div class="card p-6">
             <div class="flex justify-between items-start">
                 <div>
-                    <h2 class="text-2xl font-bold themed-text-primary">${data.Name} (${data.Symbol})</h2>
-                    <p class="themed-text-muted">${data.Exchange} | ${data.Sector}</p>
+                    <h2 class="text-2xl font-bold themed-text-primary">${sanitizeText(data.Name)} (${sanitizeText(data.Symbol)})</h2>
+                    <p class="themed-text-muted">${sanitizeText(data.Exchange)} | ${sanitizeText(data.Sector)}</p>
                 </div>
-                <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${data.AssetType}</span>
+                <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${sanitizeText(data.AssetType)}</span>
             </div>
-            <p class="mt-4 text-sm">${data.Description}</p>
+            <p class="mt-4 text-sm">${sanitizeText(data.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div>
                     <p class="text-sm themed-text-muted">Market Cap</p>
-                    <p class="text-lg font-semibold">$${marketCap}B</p>
+                    <p class="text-lg font-semibold">$${sanitizeText(marketCap)}B</p>
                 </div>
                 <div>
                     <p class="text-sm themed-text-muted">P/E Ratio</p>
-                    <p class="text-lg font-semibold">${peRatio}</p>
+                    <p class="text-lg font-semibold">${sanitizeText(peRatio)}</p>
                 </div>
                 <div>
                     <p class="text-sm themed-text-muted">EPS</p>
-                    <p class="text-lg font-semibold">${eps}</p>
+                    <p class="text-lg font-semibold">${sanitizeText(eps)}</p>
                 </div>
                  <div>
                     <p class="text-sm themed-text-muted">52 Week High</p>
-                    <p class="text-lg font-semibold">$${data['52WeekHigh']}</p>
+                    <p class="text-lg font-semibold">$${sanitizeText(weekHigh)}</p>
                 </div>
             </div>
         </div>
@@ -426,7 +487,7 @@ function renderOverviewCard(data) {
  * @param {string} symbol The stock ticker symbol.
  */
 function renderNewsCard(newsItems, symbol) {
-    const container = document.getElementById('dynamic-content-container');
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     const articlesHtml = newsItems.map(item => {
         const sentiment = item.ticker_sentiment.find(t => t.ticker === symbol) || { ticker_sentiment_label: 'Neutral' };
         const sentimentLabel = sentiment.ticker_sentiment_label;
@@ -439,14 +500,15 @@ function renderNewsCard(newsItems, symbol) {
 
         const publishedDate = new Date(item.time_published.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
 
+        // Sanitize all dynamic content before rendering. Use sanitizeAndParseMarkdown for the AI summary.
         return `
             <li class="py-4 border-b">
-                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
-                    <p class="text-sm themed-text-muted">${item.source} &bull; ${publishedDate.toLocaleDateString()}</p>
-                    <h4 class="font-semibold themed-text-accent">${item.title}</h4>
-                    <p class="text-sm mt-1">${item.ai_summary}</p>
+                <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
+                    <p class="text-sm themed-text-muted">${sanitizeText(item.source)} &bull; ${sanitizeText(publishedDate.toLocaleDateString())}</p>
+                    <h4 class="font-semibold themed-text-accent">${sanitizeText(item.title)}</h4>
+                    <div class="text-sm mt-1 prose prose-sm max-w-none">${sanitizeAndParseMarkdown(item.ai_summary)}</div>
                     <div class="mt-2">
-                        <span class="text-xs font-semibold px-2 py-1 rounded-full ${sentimentColorClass}">${sentimentLabel}</span>
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full ${sentimentColorClass}">${sanitizeText(sentimentLabel)}</span>
                     </div>
                 </a>
             </li>
@@ -465,16 +527,16 @@ function renderNewsCard(newsItems, symbol) {
 // --- EVENT LISTENERS ---
 
 function setupEventListeners() {
-    document.getElementById('apiKeyForm')?.addEventListener('submit', handleApiKeySubmit);
-    document.getElementById('stock-research-form')?.addEventListener('submit', handleResearchSubmit);
+    document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
+    document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
     
-    const scrollTopBtn = document.getElementById('scroll-to-top-button');
+    const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     
     window.addEventListener('scroll', () => {
-        const scrollTopButton = document.getElementById('scroll-to-top-button');
+        const scrollTopButton = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
         if (scrollTopButton) {
-            scrollTopButton.classList.toggle('hidden', window.scrollY <= 300);
+            scrollTopButton.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
         }
     });
 }
@@ -483,13 +545,17 @@ function setupEventListeners() {
 
 function initializeApplication() {
     setupEventListeners();
+    // Configure marked.js library options
     marked.setOptions({
         renderer: new marked.Renderer(),
-        gfm: true,
-        breaks: true,
+        gfm: true, // Use GitHub Flavored Markdown
+        breaks: true, // Convert single line breaks to <br>
+        pedantic: false,
+        smartLists: true,
+        smartypants: false
     });
 
-    openModal('apiKeyModal');
+    openModal(CONSTANTS.MODAL_API_KEY);
 }
 
 document.addEventListener('DOMContentLoaded', initializeApplication);
