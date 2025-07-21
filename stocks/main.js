@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.0.0"; 
+const APP_VERSION = "3.0.1"; 
 
 // --- Global State ---
 let db;
@@ -74,6 +74,25 @@ function displayMessageInModal(message, type = 'info') {
 // --- CONFIG & INITIALIZATION ---
 
 /**
+ * Safely parses a string that represents a JavaScript object (like the Firebase config).
+ * @param {string} str The string to parse.
+ * @returns {object} The parsed object.
+ */
+function parseJavaScriptObject(str) {
+    try {
+        const startIndex = str.indexOf('{');
+        if (startIndex === -1) {
+            throw new Error("Could not find a '{' in the config string.");
+        }
+        // The Function constructor provides a safer way to evaluate the object string than eval().
+        return (new Function(`return ${str.substring(startIndex)}`))();
+    } catch (e) {
+        console.error("Failed to parse JS object string:", e);
+        throw new Error("The provided config string is not a valid JavaScript object.");
+    }
+}
+
+/**
  * Initializes the main application content after keys are verified.
  */
 async function initializeAppContent() {
@@ -83,7 +102,6 @@ async function initializeAppContent() {
     openModal('loadingStateModal');
     document.getElementById('loading-message').textContent = "Initializing...";
     
-    // Simple delay to show the message before closing
     setTimeout(() => {
         document.getElementById('loading-message').textContent = "Application ready.";
         closeModal('loadingStateModal');
@@ -145,9 +163,8 @@ async function handleApiKeySubmit(e) {
     }
     
     try {
-        const match = tempFirebaseConfigText.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("Could not find a config object starting with '{'.");
-        tempFirebaseConfig = JSON.parse(match[0]);
+        // Use the flexible parser for the Firebase config object.
+        tempFirebaseConfig = parseJavaScriptObject(tempFirebaseConfigText);
         if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
             throw new Error("The parsed Firebase config is invalid or missing required properties.");
         }
