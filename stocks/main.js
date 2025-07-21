@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.1.3"; 
+const APP_VERSION = "3.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -81,8 +81,9 @@ function closeModal(modalId) {
 function displayMessageInModal(message, type = 'info') {
     const modalId = CONSTANTS.MODAL_MESSAGE;
     const modal = document.getElementById(modalId);
+    const modalContent = modal ? modal.querySelector('.modal-content') : null;
     
-    if (modal) {
+    if (modal && modalContent) {
         const card = document.createElement('div');
         card.className = 'card p-8 w-full max-w-sm m-4 text-center';
         const titleEl = document.createElement('h2');
@@ -110,8 +111,8 @@ function displayMessageInModal(message, type = 'info') {
         }
 
         card.append(titleEl, contentEl, okButton);
-        modal.innerHTML = '';
-        modal.appendChild(card);
+        modalContent.innerHTML = '';
+        modalContent.appendChild(card);
         
         openModal(modalId);
     }
@@ -121,29 +122,33 @@ function displayMessageInModal(message, type = 'info') {
 // --- CONFIG & INITIALIZATION ---
 
 /**
- * Flexibly parses a string that could be either a strict JSON object or a JavaScript object literal.
- * @param {string} str The string to parse.
+ * Safely parses a string that might be a JavaScript object literal into a standard JSON object.
+ * This is a security enhancement to avoid using eval-like constructs.
+ * @param {string} str The string to parse, expected to be a Firebase config object.
  * @returns {object} The parsed object.
+ * @throws {Error} If the string cannot be parsed.
  */
-function parseJavaScriptObject(str) {
-    const trimmedStr = str.trim();
-    // First, try to parse as strict JSON. This is safer and more standard.
+function safeParseConfig(str) {
     try {
-        return JSON.parse(trimmedStr);
-    } catch (jsonError) {
-        // If JSON.parse fails, it might be a JS object literal (keys without quotes).
-        // Fallback to the Function constructor method.
-        try {
-            const startIndex = trimmedStr.indexOf('{');
-            if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
-            // The Function constructor provides a way to evaluate the object string.
-            return (new Function(`return ${trimmedStr.substring(startIndex)}`))();
-        } catch (functionError) {
-            console.error("Failed to parse config string as JSON or JS object:", { jsonError, functionError });
-            throw new Error("The provided config is not valid. Please paste the complete object from Firebase.");
+        // Find the start of the object
+        const startIndex = str.indexOf('{');
+        if (startIndex === -1) {
+            throw new Error("Could not find a '{' in the config string.");
         }
+        const objectStr = str.substring(startIndex);
+
+        // A safer way to convert JS object literal to JSON.
+        // 1. Add quotes to keys that don't have them.
+        // This regex finds keys (alphanumeric, can include _) that are not enclosed in quotes.
+        const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+
+        return JSON.parse(jsonLike);
+    } catch (error) {
+        console.error("Failed to parse config string:", error);
+        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console.");
     }
 }
+
 
 async function initializeAppContent() {
     if (appIsInitialized) return;
@@ -199,12 +204,12 @@ async function handleApiKeySubmit(e) {
     }
     
     try {
-        tempFirebaseConfig = parseJavaScriptObject(tempFirebaseConfigText);
+        tempFirebaseConfig = safeParseConfig(tempFirebaseConfigText);
         if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
             throw new Error("The parsed Firebase config is invalid or missing required properties.");
         }
     } catch (err) {
-        displayMessageInModal(`Invalid Firebase Config: ${err.message}. Please paste the complete object.`, "error");
+        displayMessageInModal(`Invalid Firebase Config: ${err.message}`, "error");
         return;
     }
     
@@ -340,12 +345,14 @@ async function handleResearchSubmit(e) {
         } else {
              container.insertAdjacentHTML('beforeend', `<div class="card p-6"><h3 class="font-bold text-lg themed-text-accent">Recent News</h3><p class="themed-text-muted">No recent news found for ${symbol}.</p></div>`);
         }
+        
+        // UX Improvement: Only clear the input on a successful search.
+        tickerInput.value = '';
 
     } catch (error) {
         console.error("Error during stock research:", error);
         displayMessageInModal(error.message, 'error');
     } finally {
-        tickerInput.value = '';
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
@@ -376,7 +383,11 @@ async function processNewsWithAI(articles) {
 
 function renderOverviewCard(data) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    const marketCap = data.MarketCapitalization !== "None" ? (parseInt(data.MarketCapitalization) / 1_000_000_000).toFixed(2) : "N/A";
+    
+    // Bug Fix: Gracefully handle non-numeric or missing Market Cap
+    const marketCapValue = parseInt(data.MarketCapitalization, 10);
+    const marketCap = !isNaN(marketCapValue) && marketCapValue > 0 ? (marketCapValue / 1_000_000_000).toFixed(2) + 'B' : "N/A";
+
     const peRatio = data.PERatio !== "None" ? data.PERatio : "N/A";
     const eps = data.EPS !== "None" ? data.EPS : "N/A";
     const weekHigh = data['52WeekHigh'] !== "None" ? data['52WeekHigh'] : "N/A";
@@ -394,7 +405,7 @@ function renderOverviewCard(data) {
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div>
                     <p class="text-sm themed-text-muted">Market Cap</p>
-                    <p class="text-lg font-semibold">$${sanitizeText(marketCap)}B</p>
+                    <p class="text-lg font-semibold">$${sanitizeText(marketCap)}</p>
                 </div>
                 <div>
                     <p class="text-sm themed-text-muted">P/E Ratio</p>
