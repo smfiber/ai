@@ -31,9 +31,6 @@
                 <!-- Auth UI will be rendered here by main.js -->
             </div>
         </div>
-        <div id="header-loader" class="absolute inset-0 bg-gray-800 bg-opacity-50 items-center justify-center hidden">
-            <div class="header-loader-spinner animate-spin rounded-full"></div>
-        </div>
     </header>
 
     <!-- Main Application Container -->
@@ -60,21 +57,15 @@
 
         </main>
 
-        <!-- Floating Action Buttons & Settings Panel (Moved Here) -->
+        <!-- Floating Action Buttons -->
         <button id="scroll-to-top-button" class="floating-action-button hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
-        <button id="settings-button" class="floating-action-button" style="bottom: 2rem; right: 2rem;">&#9881;</button>
-
-        <div id="settings-panel" class="hidden fixed bottom-[6rem] right-[2rem] card p-4 w-72 z-40" style="transform-origin: bottom right;">
-            <h3 class="font-semibold mb-2 themed-text-primary">Theme</h3>
-            <button id="theme-changer-button" class="btn-secondary w-full">Generate New Theme</button>
-        </div>
     </div>
 
     <!-- Modals -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="apiKeyModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100] p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
-            <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are stored locally in your browser and are required for the application to function.</p>
+            <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
                     <div>
@@ -107,20 +98,6 @@
 
     <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
     <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
-
-    <!-- Theme Generator Modal -->
-    <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
-        <div class="card p-8 w-full max-w-lg m-4">
-            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Generate Custom Theme</h2>
-            <input id="theme-prompt" class="themed-input w-full p-2 rounded-lg mb-4" placeholder="e.g., 'Bull Market' or 'Tech Bubble'">
-            <div id="theme-loader-container" class="hidden flex justify-center py-4">
-                <div class="loader themed-loader"></div>
-            </div>
-            <p id="theme-error-container" class="text-red-500 text-sm mt-2 hidden"></p>
-            <button id="generate-theme-btn" class="btn-primary w-full mt-4">Generate</button>
-            <button id="closeThemeGeneratorModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
-        </div>
-    </div>
 
     <!-- Firebase and App Logic -->
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
