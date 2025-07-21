@@ -104,10 +104,8 @@
     <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
     <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
 
-    <!-- Firebase and App Logic -->
-    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    <!-- App Logic -->
+    <!-- FIX: Removed redundant Firebase script tags. They are now correctly imported only within main.js -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
