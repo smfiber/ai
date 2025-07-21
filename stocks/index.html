@@ -7,6 +7,8 @@
     
     <!-- Scripts -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DOMPurify: Sanitizes HTML to prevent XSS attacks. Must be loaded before main.js -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <!-- Fonts -->
@@ -42,6 +44,8 @@
                 <h2 class="text-xl font-bold mb-1 themed-text-accent">Stock Screener</h2>
                 <p class="text-sm themed-text-muted mb-4">Enter a stock ticker symbol to begin your research.</p>
                 <form id="stock-research-form" class="flex items-center gap-4">
+                    <!-- Accessibility: Added a screen-reader-only label for the input -->
+                    <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
                     <input type="text" id="ticker-input" class="themed-input flex-grow p-3 text-lg rounded-lg w-full uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
                     <button type="submit" id="research-button" class="btn-primary">Research</button>
                 </form>
@@ -81,6 +85,7 @@
                         <textarea id="firebaseConfigInput" class="themed-input w-full p-2 rounded-lg" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                     </div>
                 </div>
+                <!-- Note: The error paragraph below is no longer used for primary error reporting but is kept for potential future use or non-critical hints. -->
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="btn-primary">Save and Continue</button>
