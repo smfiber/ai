@@ -89,7 +89,7 @@
         </div>
     </div>
     
-    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
+    <div id="loadingStateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex-col items-center justify-center z-50 p-4 modal">
         <div class="flex flex-col items-center">
             <div class="loader themed-loader"></div>
             <p id="loading-message" class="text-white mt-4"></p>
@@ -104,22 +104,22 @@
     <button id="settings-button" class="floating-action-button" style="bottom: 2rem; right: 2rem;">&#9881;</button>
 
     <!-- Settings Panel -->
-    <div id="settings-panel" class="hidden fixed bottom: 6rem; right: 2rem; background-color: var(--color-card-bg); border: 1px solid var(--color-card-border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); padding: 1rem; width: 280px; z-index: 40; transform-origin: bottom right;">
-        <h3 class="font-semibold mb-2">Theme</h3>
+    <div id="settings-panel" class="hidden fixed bottom-[6rem] right-[2rem] card p-4 w-72 z-40" style="transform-origin: bottom right;">
+        <h3 class="font-semibold mb-2 themed-text-primary">Theme</h3>
         <button id="theme-changer-button" class="btn-secondary w-full">Generate New Theme</button>
     </div>
 
     <!-- Theme Generator Modal -->
     <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
         <div class="card p-8 w-full max-w-lg m-4">
-            <h2 class="text-2xl font-bold mb-4">Generate Custom Theme</h2>
+            <h2 class="text-2xl font-bold mb-4 themed-text-primary">Generate Custom Theme</h2>
             <input id="theme-prompt" class="themed-input w-full p-2 rounded-lg mb-4" placeholder="e.g., 'Bull Market' or 'Tech Bubble'">
-            <div id="theme-loader-container" class="hidden">
+            <div id="theme-loader-container" class="hidden flex justify-center py-4">
                 <div class="loader themed-loader"></div>
             </div>
             <p id="theme-error-container" class="text-red-500 text-sm mt-2 hidden"></p>
             <button id="generate-theme-btn" class="btn-primary w-full mt-4">Generate</button>
-            <button id="closeThemeGeneratorModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">&times;</button>
+            <button id="closeThemeGeneratorModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
         </div>
     </div>
 
@@ -130,4 +130,3 @@
     <script type="module" src="main.js"></script>
 </body>
 </html>
-
