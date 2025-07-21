@@ -32,15 +32,15 @@
     <div id="app-container" class="hidden">
         <main class="container mx-auto p-4 sm:p-6 lg:p-8">
             
-            <div class="card p-6 mb-8">
-                <h2 class="text-xl font-bold mb-1 themed-text-accent">Stock Screener</h2>
-                <p class="text-sm themed-text-muted mb-4">Enter a stock ticker symbol to begin your research.</p>
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
+                <h2 class="text-xl font-bold mb-1 text-emerald-500">Stock Screener</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker symbol to begin your research.</p>
                 <form id="stock-research-form" class="flex items-center gap-4">
                     <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
-                    <input type="text" id="ticker-input" class="themed-input flex-grow p-3 text-lg rounded-lg w-full uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
-                    <button type="submit" id="research-button" class="btn-primary">Research</button>
+                    <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
+                    <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Research</button>
                 </form>
-                <div id="disclaimer" class="mt-4 text-xs themed-text-muted">
+                <div id="disclaimer" class="mt-4 text-xs text-gray-500">
                     <strong>Disclaimer:</strong> This tool is for informational purposes only and does not constitute financial advice. All data is provided by third-party APIs and may have delays.
                 </div>
             </div>
@@ -50,32 +50,32 @@
 
         </main>
 
-        <button id="scroll-to-top-button" class="floating-action-button hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
+        <button id="scroll-to-top-button" class="fixed w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30 hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
     </div>
 
     <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
-        <div class="relative card p-8 w-full max-w-lg m-4">
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
-            <p class="themed-text-muted mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
                     <div>
-                        <label for="geminiApiKeyInput" class="block text-sm font-semibold themed-text-primary mb-1">Google Gemini API Key</label>
-                        <textarea id="geminiApiKeyInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Google Gemini API Key"></textarea>
+                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
+                        <textarea id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Google Gemini API Key"></textarea>
                     </div>
                     <div>
-                        <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold themed-text-primary mb-1">Alpha Vantage API Key</label>
-                        <textarea id="alphaVantageApiKeyInput" class="themed-input w-full p-2 rounded-lg" rows="2" placeholder="Enter your Alpha Vantage API Key"></textarea>
+                        <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Alpha Vantage API Key</label>
+                        <textarea id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Alpha Vantage API Key"></textarea>
                     </div>
                     <div>
-                        <label for="firebaseConfigInput" class="block text-sm font-semibold themed-text-primary mb-1">Firebase Web App Config</label>
-                        <textarea id="firebaseConfigInput" class="themed-input w-full p-2 rounded-lg" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
                     </div>
                 </div>
                 <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="btn-primary">Save and Continue</button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Save and Continue</button>
                 </div>
             </form>
         </div>
@@ -84,16 +84,18 @@
     <div id="loadingStateModal" class="fixed inset-0 z-[110] flex-col items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative flex flex-col items-center">
-            <div class="loader themed-loader"></div>
+            <div class="loader"></div>
             <p id="loading-message" class="text-white mt-4"></p>
         </div>
     </div>
 
-    <div id="messageModal" class="fixed inset-0 z-[120] items-center justify-center p-4 modal">
+    <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative modal-content">
             </div>
     </div>
+
+    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"></div>
 
     <script type="module" src="main.js"></script>
 </body>
