@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "2.0.1-beta"; 
+const APP_VERSION = "2.1.0"; 
 
 // --- Global State ---
 let db;
@@ -55,56 +55,23 @@ function displayMessageInModal(message, type = 'info') {
     const modalId = 'messageModal';
     let modal = document.getElementById(modalId);
     
-    modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
-    modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
+    if (modal) {
+        modal.innerHTML = `<div class="card p-8 w-full max-w-sm m-4 text-center"><h2 id="messageModalTitle" class="text-2xl font-bold mb-4"></h2><p id="messageModalContent" class="mb-6 themed-text-muted"></p><button id="closeMessageModal" class="btn-primary w-full">OK</button></div>`;
+        modal.querySelector('#closeMessageModal').addEventListener('click', () => closeModal(modalId));
 
-    const titleEl = modal.querySelector('#messageModalTitle');
-    const contentEl = modal.querySelector('#messageModalContent');
-    
-    titleEl.textContent = type === 'error' ? 'Error!' : (type === 'warning' ? 'Warning!' : 'Info');
-    titleEl.className = `text-2xl font-bold mb-4 ${type === 'error' ? 'text-red-600' : (type === 'warning' ? 'text-yellow-600' : 'themed-text-primary')}`;
-    contentEl.textContent = message;
-    
-    openModal(modalId);
+        const titleEl = modal.querySelector('#messageModalTitle');
+        const contentEl = modal.querySelector('#messageModalContent');
+        
+        titleEl.textContent = type === 'error' ? 'Error!' : (type === 'warning' ? 'Warning!' : 'Info');
+        titleEl.className = `text-2xl font-bold mb-4 ${type === 'error' ? 'text-red-600' : (type === 'warning' ? 'text-yellow-600' : 'themed-text-primary')}`;
+        contentEl.textContent = message;
+        
+        openModal(modalId);
+    }
 }
 
 
 // --- CONFIG & INITIALIZATION ---
-
-/**
- * Loads API keys and configuration from localStorage.
- * @returns {boolean} True if essential keys are found, otherwise false.
- */
-function loadConfigFromStorage() {
-    geminiApiKey = localStorage.getItem('geminiApiKey');
-    alphaVantageApiKey = localStorage.getItem('alphaVantageApiKey');
-    const firebaseConfigString = localStorage.getItem('firebaseConfig');
-
-    if (firebaseConfigString) {
-        try {
-            firebaseConfig = JSON.parse(firebaseConfigString);
-        } catch (e) {
-            console.error("Failed to parse Firebase config from localStorage", e);
-            localStorage.clear();
-            return false;
-        }
-    }
-
-    if (geminiApiKey && alphaVantageApiKey && firebaseConfig) {
-        // Add null checks to prevent errors if HTML is not yet loaded or is mismatched.
-        const geminiInput = document.getElementById('geminiApiKeyInput');
-        if (geminiInput) geminiInput.value = geminiApiKey;
-
-        const alphaInput = document.getElementById('alphaVantageApiKeyInput');
-        if (alphaInput) alphaInput.value = alphaVantageApiKey;
-
-        const firebaseInput = document.getElementById('firebaseConfigInput');
-        if (firebaseInput) firebaseInput.value = JSON.stringify(firebaseConfig, null, 2);
-        
-        return true;
-    }
-    return false;
-}
 
 /**
  * Initializes the main application content after keys are verified.
@@ -121,9 +88,11 @@ async function initializeAppContent() {
         document.getElementById('loading-message').textContent = "Application ready.";
     } catch (error) {
         console.error("A critical error occurred during app initialization:", error);
-        localStorage.clear();
         openModal('apiKeyModal');
-        document.getElementById('api-key-error').textContent = `Setup failed: ${error.message}. Your keys have been cleared. Please check and re-enter them.`;
+        const errorEl = document.getElementById('api-key-error');
+        if (errorEl) {
+            errorEl.textContent = `Setup failed: ${error.message}. Please check and re-enter your keys.`;
+        }
     } finally {
         closeModal('loadingStateModal');
     }
@@ -157,12 +126,15 @@ function initializeFirebase() {
     } catch (error) {
         console.error("Firebase initialization error:", error);
         openModal('apiKeyModal');
-        document.getElementById('api-key-error').textContent = `Firebase Error: ${error.message}. Please check your config object.`;
+        const errorEl = document.getElementById('api-key-error');
+        if (errorEl) {
+            errorEl.textContent = `Firebase Error: ${error.message}. Please check your config object.`;
+        }
     }
 }
 
 /**
- * Handles the submission of the API key form.
+ * Handles the submission of the API key form. This is now the main entry point for the app logic.
  * @param {Event} e The form submission event.
  */
 async function handleApiKeySubmit(e) {
@@ -181,13 +153,9 @@ async function handleApiKeySubmit(e) {
     }
     
     try {
-        // Basic validation to ensure it's a JS object string
         const match = tempFirebaseConfigText.match(/\{[\s\S]*\}/);
         if (!match) throw new Error("Could not find a config object starting with '{'.");
-        
-        // A safer way to parse the config object without using eval or Function
         tempFirebaseConfig = JSON.parse(match[0]);
-
         if (!tempFirebaseConfig.apiKey || !tempFirebaseConfig.projectId) {
             throw new Error("The parsed Firebase config is invalid or missing required properties.");
         }
@@ -196,14 +164,14 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
-    localStorage.setItem('geminiApiKey', tempGeminiKey);
-    localStorage.setItem('alphaVantageApiKey', tempAlphaVantageKey);
-    localStorage.setItem('firebaseConfig', JSON.stringify(tempFirebaseConfig));
+    // Assign keys to global variables for the session instead of localStorage
+    geminiApiKey = tempGeminiKey;
+    alphaVantageApiKey = tempAlphaVantageKey;
+    firebaseConfig = tempFirebaseConfig;
     
-    if (loadConfigFromStorage()) {
-        initializeFirebase();
-        handleLogin(); // Attempt to log in the user after they provide keys
-    }
+    // With keys now in memory, initialize Firebase and attempt login
+    initializeFirebase();
+    handleLogin(); 
 }
 
 // --- AUTHENTICATION ---
@@ -214,10 +182,11 @@ async function handleApiKeySubmit(e) {
  */
 function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
-    if (!authStatusEl) return;
+    const appContainer = document.getElementById('app-container');
+    if (!authStatusEl || !appContainer) return;
 
     if (user) {
-        document.getElementById('app-container').classList.remove('hidden');
+        appContainer.classList.remove('hidden');
         closeModal('apiKeyModal');
         
         authStatusEl.innerHTML = `
@@ -232,11 +201,11 @@ function setupAuthUI(user) {
          authStatusEl.innerHTML = `
              <button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>
         `;
-        document.getElementById('login-button').addEventListener('click', handleLogin);
-        document.getElementById('app-container').classList.add('hidden');
-        if (!localStorage.getItem('geminiApiKey') || !localStorage.getItem('alphaVantageApiKey') || !localStorage.getItem('firebaseConfig')) {
-             openModal('apiKeyModal');
+        const loginButton = document.getElementById('login-button');
+        if (loginButton) {
+            loginButton.addEventListener('click', handleLogin);
         }
+        appContainer.classList.add('hidden');
     }
 }
 
@@ -244,6 +213,11 @@ function setupAuthUI(user) {
  * Handles the Google login popup flow.
  */
 async function handleLogin() {
+    // Only proceed if Firebase auth is initialized
+    if (!auth) {
+        displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
         await signInWithPopup(auth, provider);
@@ -257,7 +231,9 @@ async function handleLogin() {
  * Handles the user logout flow.
  */
 function handleLogout() {
-    signOut(auth).catch(error => console.error("Sign out failed:", error));
+    if (auth) {
+        signOut(auth).catch(error => console.error("Sign out failed:", error));
+    }
 }
 
 
@@ -514,8 +490,11 @@ function applyTheme(colors) {
  * @param {boolean} isLoading True to show the loader, false to hide.
  */
 function showThemeLoading(isLoading) {
-    document.getElementById('header-loader').classList.toggle('hidden', !isLoading);
-    document.getElementById('header-loader').classList.toggle('flex', isLoading);
+    const loader = document.getElementById('header-loader');
+    if (loader) {
+        loader.classList.toggle('hidden', !isLoading);
+        loader.classList.toggle('flex', isLoading);
+    }
 }
 
 /**
@@ -525,7 +504,7 @@ async function generateAndApplyDefaultTheme() {
     showThemeLoading(true);
     const themePrompt = "Modern Fintech";
     try {
-        const colors = await callColorGenAPI(prompt);
+        const colors = await callColorGenAPI(themePrompt);
         applyTheme(colors);
     } catch (error) {
         console.error("Failed to generate default theme, continuing with default styles.", error);
@@ -566,26 +545,38 @@ function setupEventListeners() {
     document.getElementById('stock-research-form')?.addEventListener('submit', handleResearchSubmit);
     
     // Modal close buttons
-    document.getElementById('closeThemeGeneratorModal')?.addEventListener('click', () => closeModal('themeGeneratorModal'));
+    const closeThemeBtn = document.getElementById('closeThemeGeneratorModal');
+    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => closeModal('themeGeneratorModal'));
 
     // Settings and Theme buttons
-    document.getElementById('settings-button')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.getElementById('settings-panel').classList.toggle('hidden');
-    });
-    document.getElementById('theme-changer-button')?.addEventListener('click', () => openModal('themeGeneratorModal'));
-    document.getElementById('generate-theme-btn')?.addEventListener('click', handleCustomVisualThemeGeneration);
+    const settingsBtn = document.getElementById('settings-button');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('settings-panel').classList.toggle('hidden');
+        });
+    }
+
+    const themeChangerBtn = document.getElementById('theme-changer-button');
+    if (themeChangerBtn) themeChangerBtn.addEventListener('click', () => openModal('themeGeneratorModal'));
+
+    const generateThemeBtn = document.getElementById('generate-theme-btn');
+    if (generateThemeBtn) generateThemeBtn.addEventListener('click', handleCustomVisualThemeGeneration);
 
     // Generic click/scroll listeners
-    document.getElementById('scroll-to-top-button')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    const scrollTopBtn = document.getElementById('scroll-to-top-button');
+    if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    
     window.addEventListener('scroll', () => {
         const scrollTopButton = document.getElementById('scroll-to-top-button');
         if (scrollTopButton) {
             scrollTopButton.classList.toggle('hidden', window.scrollY <= 300);
         }
     });
+
     document.addEventListener('click', (e) => {
         const settingsPanel = document.getElementById('settings-panel');
+        const settingsButton = document.getElementById('settings-button');
         if (settingsPanel && !settingsPanel.classList.contains('hidden') && !settingsPanel.contains(e.target) && !e.target.closest('#settings-button')) {
             settingsPanel.classList.add('hidden');
         }
@@ -602,11 +593,8 @@ function initializeApplication() {
         breaks: true,
     });
 
-    if (loadConfigFromStorage()) {
-        initializeFirebase();
-    } else {
-        openModal('apiKeyModal');
-    }
+    // Always prompt for keys on load, removing the need for localStorage checks.
+    openModal('apiKeyModal');
 }
 
 document.addEventListener('DOMContentLoaded', initializeApplication);
