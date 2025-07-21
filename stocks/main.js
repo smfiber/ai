@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.2.2"; 
+const APP_VERSION = "3.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -32,6 +32,12 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let geminiApiKey = "";
 let alphaVantageApiKey = "";
+// Default cache settings; will be overwritten by Firestore config if it exists.
+let cacheSettings = {
+    OVERVIEW_TTL: 24,
+    NEWS_SENTIMENT_TTL: 4,
+    AI_OVERVIEW_TTL: 24
+};
 
 // --- UTILITY HELPERS ---
 
@@ -165,18 +171,12 @@ function displayMessageInModal(message, type = 'info') {
  */
 function safeParseConfig(str) {
     try {
-        // Find the start of the object
         const startIndex = str.indexOf('{');
         if (startIndex === -1) {
             throw new Error("Could not find a '{' in the config string.");
         }
         const objectStr = str.substring(startIndex);
-
-        // A safer way to convert JS object literal to JSON.
-        // 1. Add quotes to keys that don't have them.
-        // This regex finds keys (alphanumeric, can include _) that are not enclosed in quotes.
         const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-
         return JSON.parse(jsonLike);
     } catch (error) {
         console.error("Failed to parse config string:", error);
@@ -184,10 +184,32 @@ function safeParseConfig(str) {
     }
 }
 
+/**
+ * Fetches cache TTL settings from Firestore and applies them to the app's state.
+ * This allows for dynamic control over cache durations without code changes.
+ */
+async function fetchAndApplyCacheSettings() {
+    if (!db) return;
+    try {
+        const configRef = doc(db, 'app_config', 'cache_settings');
+        const docSnap = await getDoc(configRef);
+        if (docSnap.exists()) {
+            console.log("Applying remote cache settings...");
+            const remoteSettings = docSnap.data();
+            cacheSettings = { ...cacheSettings, ...remoteSettings };
+        } else {
+            console.log("Using default cache settings. Create 'app_config/cache_settings' document in Firestore to override.");
+        }
+    } catch (error) {
+        console.error("Could not fetch remote cache settings. Using defaults.", error);
+    }
+}
 
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
+    
+    await fetchAndApplyCacheSettings();
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
@@ -336,7 +358,6 @@ async function callGeminiAPI(prompt) {
     const payload = { contents: [{ parts: [{ text: prompt }] }] };
     const result = await callApi(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
-    // [ROBUSTNESS] Check for API errors in the response body, which can occur even with a 200 status.
     if (result.error) {
         throw new Error(`Gemini API Error: ${result.error.message}`);
     }
@@ -359,38 +380,125 @@ async function fetchAlphaVantageData(functionName, symbol) {
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
+/**
+ * [NEW] Generates a dynamic, AI-powered company overview based on recent news.
+ * @param {string} symbol The stock symbol.
+ * @param {Array} newsFeed The array of news articles from Alpha Vantage.
+ * @returns {Promise<string>} A promise that resolves to the AI-generated overview.
+ */
+async function generateAiOverview(symbol, newsFeed) {
+    if (!newsFeed || newsFeed.length === 0) {
+        return "No recent news available to generate a dynamic overview.";
+    }
+    const headlines = newsFeed
+        .slice(0, 10) // Use top 10 articles
+        .map(article => `- ${article.title}`)
+        .join('\n');
+    
+    const prompt = `As a financial analyst reviewing recent news for ${symbol}, write a concise, one-paragraph company overview. Focus on the current primary business drivers, strategic initiatives, and market position revealed in these headlines. Do not list the headlines themselves.
+
+Recent Headlines:
+${headlines}
+
+Modern, news-driven company overview:`;
+
+    try {
+        const overview = await callGeminiAPI(prompt);
+        return overview || "AI overview could not be generated at this time.";
+    } catch (error) {
+        console.error("Failed to generate AI overview:", error);
+        return "AI overview could not be generated due to an error.";
+    }
+}
+
+/**
+ * [REFACTORED] Main handler for stock research, now with a cache-first architecture.
+ */
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
-    
+
     const tickerRegex = /^[A-Z.]{1,10}$/;
     if (!tickerRegex.test(symbol)) {
         displayMessageInModal("Please enter a valid stock ticker symbol (e.g., 'AAPL', 'GOOG').", "warning");
         return;
     }
-
+    
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     container.innerHTML = '';
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Researching ${symbol}...`;
-
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking cache for ${symbol}...`;
+    
     try {
-        const [overview, news] = await Promise.all([
-            fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol),
-            fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol)
-        ]);
+        const docRef = doc(db, 'cached_stock_data', symbol);
+        const cachedDoc = await getDoc(docRef);
+        const cachedData = cachedDoc.exists() ? cachedDoc.data() : {};
         
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing news for ${symbol}...`;
+        let overview, aiOverview, summarizedNews;
+        let overviewTimestamp, newsTimestamp;
+        const dataToUpdate = {};
+        const now = Date.now();
 
-        renderOverviewCard(overview);
+        // --- 1. Check Cache Freshness for Each Data Type ---
+        const overviewTTL = (cacheSettings.OVERVIEW_TTL || 24) * 3600 * 1000;
+        const newsTTL = (cacheSettings.NEWS_SENTIMENT_TTL || 4) * 3600 * 1000;
+        const aiOverviewTTL = (cacheSettings.AI_OVERVIEW_TTL || 24) * 3600 * 1000;
 
-        const newsFeed = news.feed || [];
-        if (newsFeed.length > 0) {
-            const summarizedNews = await processNewsWithAI(newsFeed.slice(0, CONSTANTS.MAX_NEWS_ARTICLES));
-            renderNewsCard(summarizedNews, symbol);
+        const isOverviewFresh = cachedData.overview && (now - cachedData.overview.cachedAt.toMillis() < overviewTTL);
+        const isNewsFresh = cachedData.news && (now - cachedData.news.cachedAt.toMillis() < newsTTL);
+        const isAiOverviewFresh = cachedData.aiOverview && (now - cachedData.aiOverview.cachedAt.toMillis() < aiOverviewTTL);
+
+        // --- 2. Fetch Data Selectively ---
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching data for ${symbol}...`;
+        
+        // Get Company Overview
+        if (isOverviewFresh) {
+            overview = cachedData.overview.data;
+            overviewTimestamp = cachedData.overview.cachedAt;
+        } else {
+            overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
+            overviewTimestamp = Timestamp.now();
+            dataToUpdate.overview = { data: overview, cachedAt: overviewTimestamp };
+        }
+        
+        // Get News & Summaries
+        let rawNewsFeed;
+        if (isNewsFresh) {
+            summarizedNews = cachedData.news.data;
+            newsTimestamp = cachedData.news.cachedAt;
+        } else {
+            const rawNews = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
+            rawNewsFeed = rawNews.feed || [];
+            summarizedNews = await processNewsWithAI(rawNewsFeed);
+            newsTimestamp = Timestamp.now();
+            dataToUpdate.news = { data: summarizedNews, cachedAt: newsTimestamp };
+        }
+        
+        // Get AI-Generated Overview
+        if (isAiOverviewFresh) {
+            aiOverview = cachedData.aiOverview.data;
+        } else {
+            if (!rawNewsFeed) {
+                 const rawNews = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
+                 rawNewsFeed = rawNews.feed || [];
+            }
+            aiOverview = await generateAiOverview(symbol, rawNewsFeed);
+            dataToUpdate.aiOverview = { data: aiOverview, cachedAt: Timestamp.now() };
+        }
+
+        // --- 3. Render UI ---
+        renderOverviewCard(overview, aiOverview, overviewTimestamp);
+        if (summarizedNews && summarizedNews.length > 0) {
+            renderNewsCard(summarizedNews, symbol, newsTimestamp);
         } else {
              container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent news found for ${symbol}.</p></div>`);
+        }
+
+        // --- 4. Update Cache in Firestore ---
+        if (Object.keys(dataToUpdate).length > 0) {
+            console.log(`Updating cache for ${symbol}...`);
+            await setDoc(docRef, dataToUpdate, { merge: true });
         }
         
         tickerInput.value = '';
@@ -417,7 +525,6 @@ async function processNewsWithAI(articles) {
             return { ...article, ai_summary: summary || article.summary };
         } catch (error) {
             console.warn(`Could not summarize article: "${article.title}"`, error);
-            // [ROBUSTNESS] Make the failure visible in the UI instead of failing silently.
             return { ...article, ai_summary: "[AI summary could not be generated.]" };
         }
     });
@@ -428,25 +535,32 @@ async function processNewsWithAI(articles) {
 
 // --- UI RENDERING ---
 
-function renderOverviewCard(data) {
+/**
+ * [REFACTORED] Renders the main company overview card.
+ * @param {object} overviewData The raw data from the OVERVIEW API call.
+ * @param {string} aiOverview The AI-generated dynamic overview text.
+ * @param {Timestamp} cacheTimestamp The timestamp of when the data was cached.
+ */
+function renderOverviewCard(overviewData, aiOverview, cacheTimestamp) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     
-    // [UI FIX] Use new formatter for market cap.
-    const marketCap = formatMarketCap(data.MarketCapitalization);
-    const peRatio = data.PERatio !== "None" ? data.PERatio : "N/A";
-    const eps = data.EPS !== "None" ? data.EPS : "N/A";
-    const weekHigh = data['52WeekHigh'] !== "None" && data['52WeekHigh'] ? `$${data['52WeekHigh']}` : "N/A";
+    const marketCap = formatMarketCap(overviewData.MarketCapitalization);
+    const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
+    const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
+    const weekHigh = overviewData['52WeekHigh'] !== "None" && overviewData['52WeekHigh'] ? `$${overviewData['52WeekHigh']}` : "N/A";
+    const timestampString = cacheTimestamp ? `Data as of: ${cacheTimestamp.toDate().toLocaleString()}` : '';
 
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
             <div class="flex justify-between items-start">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(data.Name)} (${sanitizeText(data.Symbol)})</h2>
-                    <p class="text-gray-500">${sanitizeText(data.Exchange)} | ${sanitizeText(data.Sector)}</p>
+                    <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
+                    <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${sanitizeText(data.AssetType)}</span>
+                <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${sanitizeText(overviewData.AssetType)}</span>
             </div>
-            <p class="mt-4 text-sm">${sanitizeText(data.Description)}</p>
+            <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-1">AI-Powered Overview</h3>
+            <p class="mt-1 text-sm prose prose-sm max-w-none">${sanitizeAndParseMarkdown(aiOverview)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div>
                     <p class="text-sm text-gray-500">Market Cap</p>
@@ -465,6 +579,7 @@ function renderOverviewCard(data) {
                     <p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p>
                 </div>
             </div>
+            <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
@@ -485,15 +600,19 @@ function parseAlphaVantageDate(timeString) {
     const minutes = timeString.substring(11, 13);
     const seconds = timeString.substring(13, 15);
     
-    // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
     const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
 
     const parsedDate = new Date(isoString);
-    return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
+    return isNaN(parsedDate) ? new Date() : parsedDate;
 }
 
-
-function renderNewsCard(newsItems, symbol) {
+/**
+ * [REFACTORED] Renders the news card with a timestamp.
+ * @param {Array} newsItems The array of summarized news articles.
+ * @param {string} symbol The stock symbol.
+ * @param {Timestamp} cacheTimestamp The timestamp of when the news was cached.
+ */
+function renderNewsCard(newsItems, symbol, cacheTimestamp) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     const articlesHtml = newsItems.map(item => {
         const sentiment = item.ticker_sentiment.find(t => t.ticker === symbol) || { ticker_sentiment_label: 'Neutral' };
@@ -508,7 +627,7 @@ function renderNewsCard(newsItems, symbol) {
         const publishedDate = parseAlphaVantageDate(item.time_published);
 
         return `
-            <li class="py-4 border-b">
+            <li class="py-4 border-b border-gray-200 last:border-b-0">
                 <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
                     <p class="text-sm text-gray-500">${sanitizeText(item.source)} &bull; ${sanitizeText(publishedDate.toLocaleDateString())}</p>
                     <h4 class="font-semibold text-emerald-500">${sanitizeText(item.title)}</h4>
@@ -521,10 +640,13 @@ function renderNewsCard(newsItems, symbol) {
         `;
     }).join('');
 
+    const timestampString = cacheTimestamp ? `News as of: ${cacheTimestamp.toDate().toLocaleString()}` : '';
+
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
             <h3 class="font-bold text-lg text-emerald-500 mb-2">Recent News & AI Summary</h3>
-            <ul class="divide-y">${articlesHtml}</ul>
+            <ul class="divide-y divide-gray-200">${articlesHtml}</ul>
+            <div class="text-right text-xs text-gray-400 mt-2">${timestampString}</div>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
