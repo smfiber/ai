@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.1.1"; 
+const APP_VERSION = "3.1.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -42,16 +42,12 @@ function sanitizeAndParseMarkdown(dirtyMarkdown) {
     if (typeof dirtyMarkdown !== 'string' || !dirtyMarkdown) {
         return '';
     }
-    // 1. Convert Markdown to HTML using the 'marked' library.
     const rawHtml = marked.parse(dirtyMarkdown);
-    // 2. Sanitize the resulting HTML using DOMPurify to prevent XSS.
-    // DOMPurify is loaded from a script tag in index.html.
     return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
 }
 
 /**
  * Sanitizes a plain text string to prevent it from being interpreted as HTML.
- * This is for data that should not contain any HTML tags.
  * @param {string} text The plain text to sanitize.
  * @returns {string} The sanitized text.
  */
@@ -64,10 +60,6 @@ function sanitizeText(text) {
 
 // --- MODAL HELPERS ---
 
-/**
- * Opens a modal and manages body classes for scroll locking.
- * @param {string} modalId The ID of the modal element to open.
- */
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
@@ -76,48 +68,33 @@ function openModal(modalId) {
     }
 }
 
-/**
- * Closes a modal and intelligently manages body classes.
- * @param {string} modalId The ID of the modal element to close.
- */
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
         modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
-        // Only remove the body class if no other modals are open
         if (document.querySelectorAll('.modal.is-open').length === 0) {
              document.body.classList.remove(CONSTANTS.CLASS_BODY_MODAL_OPEN);
         }
     }
 }
 
-/**
- * Displays a generic message to the user in a modal.
- * @param {string} message The message to display.
- * @param {'info' | 'success' | 'warning' | 'error'} type The type of message.
- */
 function displayMessageInModal(message, type = 'info') {
     const modalId = CONSTANTS.MODAL_MESSAGE;
     const modal = document.getElementById(modalId);
     
     if (modal) {
-        // Create the modal content structure
         const card = document.createElement('div');
         card.className = 'card p-8 w-full max-w-sm m-4 text-center';
-
         const titleEl = document.createElement('h2');
         titleEl.className = 'text-2xl font-bold mb-4';
-        
         const contentEl = document.createElement('p');
         contentEl.className = 'mb-6 themed-text-muted';
         contentEl.textContent = message;
-
         const okButton = document.createElement('button');
         okButton.textContent = 'OK';
         okButton.className = 'btn-primary w-full';
         okButton.addEventListener('click', () => closeModal(modalId));
 
-        // Set title and color based on type
         switch (type) {
             case 'error':
                 titleEl.textContent = 'Error!';
@@ -132,7 +109,6 @@ function displayMessageInModal(message, type = 'info') {
                 titleEl.classList.add('themed-text-primary');
         }
 
-        // Assemble and clear previous content
         card.append(titleEl, contentEl, okButton);
         modal.innerHTML = '';
         modal.appendChild(card);
@@ -145,25 +121,30 @@ function displayMessageInModal(message, type = 'info') {
 // --- CONFIG & INITIALIZATION ---
 
 /**
- * Safely parses a string that represents a JavaScript object (like the Firebase config).
+ * Flexibly parses a string that could be either a strict JSON object or a JavaScript object literal.
  * @param {string} str The string to parse.
  * @returns {object} The parsed object.
  */
 function parseJavaScriptObject(str) {
+    const trimmedStr = str.trim();
+    // First, try to parse as strict JSON. This is safer and more standard.
     try {
-        const startIndex = str.indexOf('{');
-        if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
-        // The Function constructor provides a safer way to evaluate the object string than eval().
-        return (new Function(`return ${str.substring(startIndex)}`))();
-    } catch (e) {
-        console.error("Failed to parse JS object string:", e);
-        throw new Error("The provided config string is not a valid JavaScript object.");
+        return JSON.parse(trimmedStr);
+    } catch (jsonError) {
+        // If JSON.parse fails, it might be a JS object literal (keys without quotes).
+        // Fallback to the Function constructor method.
+        try {
+            const startIndex = trimmedStr.indexOf('{');
+            if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
+            // The Function constructor provides a way to evaluate the object string.
+            return (new Function(`return ${trimmedStr.substring(startIndex)}`))();
+        } catch (functionError) {
+            console.error("Failed to parse config string as JSON or JS object:", { jsonError, functionError });
+            throw new Error("The provided config is not valid. Please paste the complete object from Firebase.");
+        }
     }
 }
 
-/**
- * Initializes the main application content after keys are verified.
- */
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
@@ -177,9 +158,6 @@ async function initializeAppContent() {
     }, 500);
 }
 
-/**
- * Initializes Firebase services (Auth, Firestore).
- */
 function initializeFirebase() {
     if (!firebaseConfig) {
         console.warn("Firebase config is missing. Firebase initialization skipped.");
@@ -208,10 +186,6 @@ function initializeFirebase() {
     }
 }
 
-/**
- * Handles the submission of the API key form.
- * @param {Event} e The form submission event.
- */
 async function handleApiKeySubmit(e) {
     e.preventDefault();
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
@@ -243,10 +217,6 @@ async function handleApiKeySubmit(e) {
 
 // --- AUTHENTICATION ---
 
-/**
- * Sets up the login/logout UI based on user's auth state.
- * @param {object|null} user The Firebase user object.
- */
 function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
     const appContainer = document.getElementById('app-container');
@@ -274,9 +244,6 @@ function setupAuthUI(user) {
     }
 }
 
-/**
- * Handles the Google login popup flow.
- */
 async function handleLogin() {
     if (!auth) {
         displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
@@ -291,9 +258,6 @@ async function handleLogin() {
     }
 }
 
-/**
- * Handles the user logout flow.
- */
 function handleLogout() {
     if (auth) {
         signOut(auth).catch(error => console.error("Sign out failed:", error));
@@ -303,12 +267,6 @@ function handleLogout() {
 
 // --- API CALLS ---
 
-/**
- * A generic, cancellable fetch wrapper for API calls.
- * @param {string} url The URL to fetch.
- * @param {object} options The options for the fetch call.
- * @returns {Promise<object>} The JSON response from the API.
- */
 async function callApi(url, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -331,11 +289,6 @@ async function callApi(url, options = {}) {
     }
 }
 
-/**
- * Calls the Gemini API to process a prompt.
- * @param {string} prompt The prompt to send to the AI.
- * @returns {Promise<string>} The text response from the AI.
- */
 async function callGeminiAPI(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API Key is not set.");
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
@@ -344,12 +297,6 @@ async function callGeminiAPI(prompt) {
     return result?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
-/**
- * Fetches data from the Alpha Vantage API for a specific function.
- * @param {string} functionName The Alpha Vantage function name (e.g., 'OVERVIEW', 'NEWS_SENTIMENT').
- * @param {string} symbol The stock ticker symbol.
- * @returns {Promise<object>} The JSON response from Alpha Vantage.
- */
 async function fetchAlphaVantageData(functionName, symbol) {
     if (!alphaVantageApiKey) throw new Error("Alpha Vantage API Key is not set.");
     const url = `https://www.alphavantage.co/query?function=${functionName}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
@@ -362,10 +309,6 @@ async function fetchAlphaVantageData(functionName, symbol) {
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
-/**
- * Main handler for the research form submission.
- * @param {Event} e The form submission event.
- */
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
@@ -376,7 +319,7 @@ async function handleResearchSubmit(e) {
     }
 
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.innerHTML = ''; // Clear previous results
+    container.innerHTML = '';
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Researching ${symbol}...`;
 
@@ -407,11 +350,6 @@ async function handleResearchSubmit(e) {
     }
 }
 
-/**
- * Processes a list of news articles with Gemini for summarization.
- * @param {Array<object>} articles An array of news article objects from Alpha Vantage.
- * @returns {Promise<Array<object>>} A promise that resolves to the array of articles with summaries.
- */
 async function processNewsWithAI(articles) {
     const summaryPromises = articles.map(async (article) => {
         const prompt = `Please provide a neutral, one-sentence summary of the following news article title and summary. Focus only on the key information.
@@ -436,10 +374,6 @@ async function processNewsWithAI(articles) {
 
 // --- UI RENDERING ---
 
-/**
- * Renders the company overview card.
- * @param {object} data The overview data from Alpha Vantage.
- */
 function renderOverviewCard(data) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     const marketCap = data.MarketCapitalization !== "None" ? (parseInt(data.MarketCapitalization) / 1_000_000_000).toFixed(2) : "N/A";
@@ -447,7 +381,6 @@ function renderOverviewCard(data) {
     const eps = data.EPS !== "None" ? data.EPS : "N/A";
     const weekHigh = data['52WeekHigh'] !== "None" ? data['52WeekHigh'] : "N/A";
 
-    // Sanitize all data before rendering
     const cardHtml = `
         <div class="card p-6">
             <div class="flex justify-between items-start">
@@ -481,11 +414,6 @@ function renderOverviewCard(data) {
     container.insertAdjacentHTML('beforeend', cardHtml);
 }
 
-/**
- * Renders the news and sentiment card.
- * @param {Array<object>} newsItems The processed news items.
- * @param {string} symbol The stock ticker symbol.
- */
 function renderNewsCard(newsItems, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     const articlesHtml = newsItems.map(item => {
@@ -500,7 +428,6 @@ function renderNewsCard(newsItems, symbol) {
 
         const publishedDate = new Date(item.time_published.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
 
-        // Sanitize all dynamic content before rendering. Use sanitizeAndParseMarkdown for the AI summary.
         return `
             <li class="py-4 border-b">
                 <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
@@ -545,11 +472,10 @@ function setupEventListeners() {
 
 function initializeApplication() {
     setupEventListeners();
-    // Configure marked.js library options
     marked.setOptions({
         renderer: new marked.Renderer(),
-        gfm: true, // Use GitHub Flavored Markdown
-        breaks: true, // Convert single line breaks to <br>
+        gfm: true,
+        breaks: true,
         pedantic: false,
         smartLists: true,
         smartypants: false
