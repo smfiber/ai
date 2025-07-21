@@ -59,6 +59,15 @@
             </div>
 
         </main>
+
+        <!-- Floating Action Buttons & Settings Panel (Moved Here) -->
+        <button id="scroll-to-top-button" class="floating-action-button hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
+        <button id="settings-button" class="floating-action-button" style="bottom: 2rem; right: 2rem;">&#9881;</button>
+
+        <div id="settings-panel" class="hidden fixed bottom-[6rem] right-[2rem] card p-4 w-72 z-40" style="transform-origin: bottom right;">
+            <h3 class="font-semibold mb-2 themed-text-primary">Theme</h3>
+            <button id="theme-changer-button" class="btn-secondary w-full">Generate New Theme</button>
+        </div>
     </div>
 
     <!-- Modals -->
@@ -98,16 +107,6 @@
 
     <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
     <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal"></div>
-
-    <!-- Floating Action Buttons -->
-    <button id="scroll-to-top-button" class="floating-action-button hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
-    <button id="settings-button" class="floating-action-button" style="bottom: 2rem; right: 2rem;">&#9881;</button>
-
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="hidden fixed bottom-[6rem] right-[2rem] card p-4 w-72 z-40" style="transform-origin: bottom right;">
-        <h3 class="font-semibold mb-2 themed-text-primary">Theme</h3>
-        <button id="theme-changer-button" class="btn-secondary w-full">Generate New Theme</button>
-    </div>
 
     <!-- Theme Generator Modal -->
     <div id="themeGeneratorModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 modal">
