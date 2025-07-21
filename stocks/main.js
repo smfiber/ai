@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.2.0"; 
+const APP_VERSION = "3.2.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -18,7 +18,10 @@ const CONSTANTS = {
     ELEMENT_LOADING_MESSAGE: 'loading-message',
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
-    CLASS_HIDDEN: 'hidden'
+    CLASS_HIDDEN: 'hidden',
+    MAX_NEWS_ARTICLES: 10,
+    API_FUNC_OVERVIEW: 'OVERVIEW',
+    API_FUNC_NEWS: 'NEWS_SENTIMENT',
 };
 
 // --- Global State ---
@@ -218,6 +221,8 @@ async function handleApiKeySubmit(e) {
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
+    // [BUG FIX] Close the modal to allow the user to proceed to the login step.
+    closeModal(CONSTANTS.MODAL_API_KEY);
 }
 
 // --- AUTHENTICATION ---
@@ -318,8 +323,11 @@ async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
-    if (!symbol) {
-        displayMessageInModal("Please enter a stock ticker symbol.", "warning");
+    
+    // [UX] Validate ticker format before making an API call.
+    const tickerRegex = /^[A-Z.]{1,10}$/;
+    if (!tickerRegex.test(symbol)) {
+        displayMessageInModal("Please enter a valid stock ticker symbol (e.g., 'AAPL', 'GOOG').", "warning");
         return;
     }
 
@@ -330,8 +338,8 @@ async function handleResearchSubmit(e) {
 
     try {
         const [overview, news] = await Promise.all([
-            fetchAlphaVantageData('OVERVIEW', symbol),
-            fetchAlphaVantageData('NEWS_SENTIMENT', symbol)
+            fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol),
+            fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol)
         ]);
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing news for ${symbol}...`;
@@ -340,13 +348,12 @@ async function handleResearchSubmit(e) {
 
         const newsFeed = news.feed || [];
         if (newsFeed.length > 0) {
-            const summarizedNews = await processNewsWithAI(newsFeed.slice(0, 10));
+            const summarizedNews = await processNewsWithAI(newsFeed.slice(0, CONSTANTS.MAX_NEWS_ARTICLES));
             renderNewsCard(summarizedNews, symbol);
         } else {
              container.insertAdjacentHTML('beforeend', `<div class="card p-6"><h3 class="font-bold text-lg themed-text-accent">Recent News</h3><p class="themed-text-muted">No recent news found for ${symbol}.</p></div>`);
         }
         
-        // UX Improvement: Only clear the input on a successful search.
         tickerInput.value = '';
 
     } catch (error) {
@@ -384,13 +391,13 @@ async function processNewsWithAI(articles) {
 function renderOverviewCard(data) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     
-    // Bug Fix: Gracefully handle non-numeric or missing Market Cap
     const marketCapValue = parseInt(data.MarketCapitalization, 10);
     const marketCap = !isNaN(marketCapValue) && marketCapValue > 0 ? (marketCapValue / 1_000_000_000).toFixed(2) + 'B' : "N/A";
 
     const peRatio = data.PERatio !== "None" ? data.PERatio : "N/A";
     const eps = data.EPS !== "None" ? data.EPS : "N/A";
-    const weekHigh = data['52WeekHigh'] !== "None" ? data['52WeekHigh'] : "N/A";
+    // [UX] Prepend the dollar sign only if the value is available, preventing "$N/A".
+    const weekHigh = data['52WeekHigh'] !== "None" && data['52WeekHigh'] ? `$${data['52WeekHigh']}` : "N/A";
 
     const cardHtml = `
         <div class="card p-6">
@@ -417,13 +424,36 @@ function renderOverviewCard(data) {
                 </div>
                  <div>
                     <p class="text-sm themed-text-muted">52 Week High</p>
-                    <p class="text-lg font-semibold">$${sanitizeText(weekHigh)}</p>
+                    <p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p>
                 </div>
             </div>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
 }
+
+/**
+ * [ROBUSTNESS] Parses non-standard YYYYMMDDTHHMMSS date strings safely.
+ * @param {string} timeString The date string from the API.
+ * @returns {Date} A JavaScript Date object.
+ */
+function parseAlphaVantageDate(timeString) {
+    if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
+
+    const year = timeString.substring(0, 4);
+    const month = timeString.substring(4, 6);
+    const day = timeString.substring(6, 8);
+    const hours = timeString.substring(9, 11);
+    const minutes = timeString.substring(11, 13);
+    const seconds = timeString.substring(13, 15);
+    
+    // Constructs an ISO-8601 formatted string which is reliably parsed by the Date constructor.
+    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+
+    const parsedDate = new Date(isoString);
+    return isNaN(parsedDate) ? new Date() : parsedDate; // Check for invalid date
+}
+
 
 function renderNewsCard(newsItems, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
@@ -437,7 +467,7 @@ function renderNewsCard(newsItems, symbol) {
             sentimentColorClass = 'bg-red-100 text-red-800';
         }
 
-        const publishedDate = new Date(item.time_published.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
+        const publishedDate = parseAlphaVantageDate(item.time_published);
 
         return `
             <li class="py-4 border-b">
