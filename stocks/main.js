@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.0.0"; 
+const APP_VERSION = "5.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -339,6 +339,59 @@ async function callGeminiApi(prompt) {
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
+async function fetchAndCacheStockData(symbol) {
+    const dataToCache = {};
+    const failedFetches = [];
+
+    const promises = API_FUNCTIONS.map(async (func) => {
+        try {
+            const data = await callApi(`https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
+            if (data.Note || Object.keys(data).length === 0 || data.Information) {
+                throw new Error(data.Note || data.Information || 'No data returned.');
+            }
+            return { func, data };
+        } catch (error) {
+            console.error(`Failed to fetch ${func} for ${symbol}:`, error);
+            failedFetches.push(func);
+            return null; // Return null for failed fetches
+        }
+    });
+
+    const results = await Promise.all(promises);
+
+    if (failedFetches.length > 0) {
+        throw new Error(`Could not retrieve all required data. Failed to fetch: ${failedFetches.join(', ')}.`);
+    }
+
+    results.forEach(result => {
+        if (result) dataToCache[result.func] = result.data;
+    });
+
+    if (!dataToCache.OVERVIEW) {
+        throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched. The symbol may be invalid.`);
+    }
+
+    dataToCache.cachedAt = Timestamp.now();
+    await setDoc(doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol), dataToCache);
+
+    return dataToCache;
+}
+
+async function handleRefreshData(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing all data for ${symbol}...`;
+    try {
+        await fetchAndCacheStockData(symbol);
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
+        await loadAllCachedStocks();
+    } catch (error) {
+        console.error("Error refreshing stock data:", error);
+        displayMessageInModal(error.message, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 async function loadAllCachedStocks() {
     if (!db) return;
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
@@ -349,31 +402,12 @@ async function loadAllCachedStocks() {
             container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
             return;
         }
-        querySnapshot.forEach(doc => renderOverviewCard(doc.data(), doc.id));
+        const sortedDocs = querySnapshot.docs.sort((a, b) => a.data().OVERVIEW.Symbol.localeCompare(b.data().OVERVIEW.Symbol));
+        sortedDocs.forEach(doc => renderOverviewCard(doc.data(), doc.id));
     } catch (error) {
         console.error("Error loading cached stocks: ", error);
         displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
     }
-}
-
-function handleClearCache(symbol) {
-    openConfirmationModal(
-        'Clear Cache?', `This will permanently delete all stored data for ${symbol}.`,
-        async () => {
-            openModal(CONSTANTS.MODAL_LOADING);
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
-            try {
-                await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol));
-                await loadAllCachedStocks();
-                displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
-            } catch (error) {
-                console.error("Error clearing cache:", error);
-                displayMessageInModal(`Failed to clear cache: ${error.message}`, 'error');
-            } finally {
-                closeModal(CONSTANTS.MODAL_LOADING);
-            }
-        }
-    );
 }
 
 async function handleResearchSubmit(e) {
@@ -384,7 +418,9 @@ async function handleResearchSubmit(e) {
         displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
         return;
     }
+    
     openModal(CONSTANTS.MODAL_LOADING);
+    
     try {
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking for existing data for ${symbol}...`;
         const docRef = doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol);
@@ -395,31 +431,12 @@ async function handleResearchSubmit(e) {
         }
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all data for ${symbol}... This may take a moment.`;
-        const dataToCache = { errors: {} };
-        const promises = API_FUNCTIONS.map(async (func) => {
-            try {
-                const data = await callApi(`https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
-                if (data.Note || Object.keys(data).length === 0 || data.Information) throw new Error(data.Note || data.Information || 'No data returned.');
-                return { func, data };
-            } catch (error) {
-                console.error(`Failed to fetch ${func} for ${symbol}:`, error);
-                dataToCache.errors[func] = error.message;
-                return null;
-            }
-        });
-        const results = await Promise.all(promises);
-        results.forEach(result => {
-            if (result) dataToCache[result.func] = result.data;
-        });
-        
-        if (!dataToCache.OVERVIEW) throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched.`);
-        
-        dataToCache.cachedAt = Timestamp.now();
-        await setDoc(docRef, dataToCache);
+        await fetchAndCacheStockData(symbol);
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
         await loadAllCachedStocks();
         tickerInput.value = '';
+
     } catch (error) {
         console.error("Error during stock research:", error);
         displayMessageInModal(error.message, 'error');
@@ -524,7 +541,7 @@ function renderOverviewCard(data, symbol) {
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <div class="flex-shrink-0"><button data-symbol="${symbol}" class="clear-cache-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button></div>
+                <div class="flex-shrink-0"><button data-symbol="${symbol}" class="refresh-data-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button></div>
             </div>
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
@@ -553,7 +570,7 @@ function setupGlobalEventListeners() {
         if (!target) return;
         const symbol = target.dataset.symbol;
         if (!symbol) return;
-        if (target.classList.contains('clear-cache-button')) handleClearCache(symbol);
+        if (target.classList.contains('refresh-data-button')) handleRefreshData(symbol);
         if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
@@ -566,9 +583,9 @@ function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    ['full-data-modal', 'financial-analysis-modal', 'undervalued-analysis-modal'].forEach(id => {
-        document.getElementById(`close-${id}`)?.addEventListener('click', () => closeModal(id.replace('close-', '')));
-        document.getElementById(`close-${id}-bg`)?.addEventListener('click', () => closeModal(id.replace('-bg', '')));
+    ['fullDataModal', 'financialAnalysisModal', 'undervaluedAnalysisModal'].forEach(id => {
+        document.getElementById(`close-${id}`)?.addEventListener('click', () => closeModal(id));
+        document.getElementById(`close-${id}-bg`)?.addEventListener('click', () => closeModal(id));
     });
     window.addEventListener('scroll', () => {
         const btn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
