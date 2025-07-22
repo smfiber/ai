@@ -757,47 +757,52 @@ async function handleUndervaluedAnalysis(symbol) {
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
         const prompt = `
-Role: You are an expert investment broker AI. Your task is to determine if a stock is undervalued by synthesizing fundamental and technical data.
-Output Format: The output must be in professional markdown format for an investor. Use '#' for the main title, '##' for section headings, and '###' for sub-sections. Use '*' for bullet points. Do NOT use any emojis.
+Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.
+Output Format: The analysis must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required. Do NOT use any emojis.
+Conduct a comprehensive valuation analysis for ${companyName} (Ticker: ${tickerSymbol}) using the complete JSON data provided below:
+JSON Data:
+JSON
 
-Analyze the following full JSON data for ${companyName} (Ticker: ${tickerSymbol}):
-JSON:
 ${JSON.stringify(data, null, 2)}
+Based on the data, generate the following in-depth report:
+Investment Valuation Report: companyName({tickerSymbol})
+1. Executive Verdict
+Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.
+2. Fundamental Valuation Deep Dive
+Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.
+2.1. Relative Valuation Multiples
+Price-to-Earnings (P/E) Ratio: [Value from PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?
+Price-to-Book (P/B) Ratio: [Value from PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.
+Price-to-Sales (P/S) Ratio: [Value from PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?
+Enterprise Value-to-EBITDA (EV/EBITDA): [Value from EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.
+2.2. Growth and Profitability-Adjusted Value
+PEG Ratio: [Value from PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.
+Return on Equity (ROE): [Value from ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.
+Dividend Analysis:
+Dividend Yield: [Value from DividendYield]%.
+Sustainability Check: Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.
+2.3. Wall Street Consensus
+Current Price: $[Value from GLOBAL_QUOTE.price].
+Analyst Target Price: $[Value from AnalystTargetPrice].
+Implied Upside/Downside: Calculate and state the percentage difference between the current price and the analyst target.
+3. Technical Analysis & Market Dynamics
+Assess the stock's current price action and market sentiment to determine if the timing is opportune.
+3.1. Trend Analysis
+Current Price vs. Moving Averages:
+50-Day MA: $[50DayMovingAverage]
+200-Day MA: $[200DayMovingAverage]
+Interpretation: Analyze the current price's position relative to these key averages. Is the stock in a bullish trend (above both MAs), a bearish trend (below both), or at an inflection point (e.g., testing an MA as support/resistance)? Note if a "Golden Cross" (50-day crosses above 200-day) or "Death Cross" (50-day crosses below 200-day) is present or imminent.
+3.2. Momentum and Volatility
+52-Week Range: The stock has traded between $[52WeekLow] and $[52WeekHigh]. Where is the current price situated within this range?
+Market Volatility (Beta): [Value from Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?
+Relative Strength Index (RSI): If available in the technical_indicators data, state the [RSI Value]. Interpret it: a reading below 30 typically signals an "oversold" (and potentially undervalued) condition, while a reading above 70 signals an "overbought" condition.
+4. Synthesized Conclusion: Framing the Opportunity
+Combine the fundamental and technical findings into a final, actionable synthesis.
 
-Based on the provided data, generate the following analysis:
-
-# Undervalued Analysis for ${companyName} (${tickerSymbol})
-An investment broker assesses a stock's value by combining fundamental financial health with market sentiment (technical analysis). Here is a breakdown for **${tickerSymbol}**.
-
-## 1. Fundamental Analysis: Company Worth
-Assess the company's intrinsic value using key valuation ratios from the JSON data.
-
-### Key Valuation Ratios
-- **P/E Ratio**: **[Value]** (Comment on whether this is high or low, if possible).
-- **P/B Ratio**: **[Value]** (Interpret this value, especially if it's below 1).
-- **PEG Ratio**: **[Value]** (Explain the significance, especially if it's below 1).
-- **Dividend Yield**: **[Value]**% (Comment on its attractiveness and sustainability if possible by checking the cash flow statement).
-- **Return on Equity (ROE)**: **[Value]**% (Comment on the company's profitability from shareholder equity).
-
-### Analyst Consensus
-- **Analyst Target Price**: **$[Value]** (Compare this to the current market price if available in the data).
-
-## 2. Technical Analysis: Market Sentiment
-Assess the current market sentiment using technical indicators from the JSON data.
-
-- **52-Week Range**: The stock has traded between **$[52WeekLow]** and **$[52WeekHigh]**.
-- **Moving Averages**:
-  - **50-Day MA**: $[50DayMovingAverage]
-  - **200-Day MA**: $[200DayMovingAverage]
-(Comment on the current price relative to these averages to determine the trend).
-
-## Synthesis: The Broker's Conclusion
-Synthesize all the points above to provide a final verdict.
-- **Fundamental View**: Summarize the findings from the valuation ratios.
-- **Technical View**: Summarize the findings from the market sentiment indicators.
-- **Final Verdict**: Conclude whether the stock appears to be truly undervalued, fairly valued, or overvalued. Explain *why* based on the evidence. Is it a good investment opportunity right now?
-
-*Disclaimer: This is an automated analysis for informational purposes and is not investment advice.*
+Fundamental Case: Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?
+Technical Case: Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?
+Final Verdict & Investment Profile: State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted. This opportunity may best suit a long-term value investor who is willing to tolerate near-term price weakness."
+Disclaimer: This AI-generated analysis is for informational and educational purposes only. It is not financial advice, and all investment decisions should be made with the consultation of a qualified financial professional. Data may not be real-time.
 `;
         
         const report = await callGeminiApi(prompt);
