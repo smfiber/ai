@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.5.0"; 
+const APP_VERSION = "3.6.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -22,7 +22,7 @@ const CONSTANTS = {
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
-    MAX_NEWS_ARTICLES: 5, // Increased for better AI context
+    MAX_NEWS_ARTICLES: 5,
     API_FUNC_OVERVIEW: 'OVERVIEW',
     API_FUNC_NEWS: 'NEWS_SENTIMENT',
 };
@@ -48,12 +48,13 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let geminiApiKey = "";
 let alphaVantageApiKey = "";
-// Cache settings updated to 24 hours for all data points
+// Cache settings are no longer based on TTL, but this object can remain for reference
 let cacheSettings = {
-    OVERVIEW_TTL: 24,
-    NEWS_SENTIMENT_TTL: 24,
-    AI_OVERVIEW_TTL: 24,
-    COMPREHENSIVE_TTL: 24
+    // These values are no longer used in the fetching logic
+    OVERVIEW_TTL: -1, // -1 signifies indefinite caching
+    NEWS_SENTIMENT_TTL: -1,
+    AI_OVERVIEW_TTL: -1,
+    COMPREHENSIVE_TTL: -1
 };
 
 // --- UTILITY HELPERS ---
@@ -242,33 +243,10 @@ function safeParseConfig(str) {
     }
 }
 
-/**
- * Fetches cache TTL settings from Firestore and applies them to the app's state.
- * This allows for dynamic control over cache durations without code changes.
- */
-async function fetchAndApplyCacheSettings() {
-    if (!db) return;
-    try {
-        const configRef = doc(db, 'app_config', 'cache_settings');
-        const docSnap = await getDoc(configRef);
-        if (docSnap.exists()) {
-            console.log("Applying remote cache settings...");
-            const remoteSettings = docSnap.data();
-            cacheSettings = { ...cacheSettings, ...remoteSettings };
-        } else {
-            console.log("Using default cache settings. Create 'app_config/cache_settings' document in Firestore to override.");
-        }
-    } catch (error) {
-        console.error("Could not fetch remote cache settings. Using defaults.", error);
-    }
-}
-
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
     
-    await fetchAndApplyCacheSettings();
-
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
     
@@ -449,7 +427,7 @@ async function fetchAlphaVantageData(functionName, symbol) {
 function handleClearCache(symbol) {
     openConfirmationModal(
         'Clear All Cache?',
-        `Are you sure you want to delete ALL cached data for ${symbol}, including the comprehensive dataset? The next search will fetch fresh data from all APIs.`,
+        `This will permanently delete all stored data for ${symbol}. The next time you search for it, fresh data will be fetched from the APIs. Are you sure?`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
@@ -464,7 +442,7 @@ function handleClearCache(symbol) {
                 ]);
 
                 document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
-                displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
+                displayMessageInModal(`Cache for ${symbol} has been cleared. You can now research it again to get fresh data.`, 'info');
             } catch (error) {
                 console.error("Error clearing cache:", error);
                 displayMessageInModal(`Failed to clear cache: ${error.message}`, 'error');
@@ -488,6 +466,8 @@ async function fetchAndCacheComprehensiveData(symbol) {
     for (const func of COMPREHENSIVE_API_FUNCTIONS) {
         try {
             console.log(`Fetching ${func} for ${symbol}...`);
+            // Add a small delay between calls to be kind to the API
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const data = await fetchAlphaVantageData(func, symbol);
             comprehensiveData[func] = data;
         } catch (error) {
@@ -544,7 +524,7 @@ Modern, news-driven company overview for ${symbol}:`;
 }
 
 /**
- * Main handler for stock research, with a cache-first architecture.
+ * Main handler for stock research, with a "fetch-once" cache architecture.
  */
 async function handleResearchSubmit(e) {
     e.preventDefault();
@@ -560,91 +540,69 @@ async function handleResearchSubmit(e) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     container.innerHTML = '';
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking cache for ${symbol}...`;
     
     try {
         const mainCacheRef = doc(db, 'cached_stock_data', symbol);
         const cachedDoc = await getDoc(mainCacheRef);
-        const cachedData = cachedDoc.exists() ? cachedDoc.data() : {};
-        
-        let overview, aiOverview, summarizedNews, rawNewsFeed;
-        let overviewTimestamp, newsTimestamp;
-        const dataToUpdate = {};
-        const now = Date.now();
 
-        // 1. Check Cache Freshness
-        const overviewTTL = (cacheSettings.OVERVIEW_TTL || 24) * 3600 * 1000;
-        const newsTTL = (cacheSettings.NEWS_SENTIMENT_TTL || 24) * 3600 * 1000;
-        const aiOverviewTTL = (cacheSettings.AI_OVERVIEW_TTL || 24) * 3600 * 1000;
+        let overview, aiOverview, summarizedNews, overviewTimestamp, newsTimestamp;
 
-        const isOverviewFresh = cachedData.overview && (now - cachedData.overview.cachedAt.toMillis() < overviewTTL);
-        const isNewsFresh = cachedData.news && (now - cachedData.news.cachedAt.toMillis() < newsTTL);
-        const isAiOverviewFresh = cachedData.aiOverview && (now - cachedData.aiOverview.cachedAt.toMillis() < aiOverviewTTL);
-
-        // 2. Fetch Data Selectively
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching data for ${symbol}...`;
-        
-        // Get Company Overview
-        if (isOverviewFresh) {
+        if (cachedDoc.exists()) {
+            // --- DATA EXISTS IN CACHE: USE IT ---
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Retrieving stored data for ${symbol}...`;
+            console.log(`Using cached data for ${symbol}.`);
+            
+            const cachedData = cachedDoc.data();
             overview = cachedData.overview.data;
             overviewTimestamp = cachedData.overview.cachedAt;
-        } else {
-            overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
-            overviewTimestamp = Timestamp.now();
-            dataToUpdate.overview = { data: overview, cachedAt: overviewTimestamp };
-        }
-        
-        // Fetch news feed ONCE if either news or AI overview is stale
-        if (!isNewsFresh || !isAiOverviewFresh) {
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching news for ${symbol}...`;
-            const rawNewsData = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
-            
-            rawNewsFeed = (rawNewsData.feed || [])
-                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol && parseFloat(t.relevance_score) >= 0.5))
-                .slice(0, CONSTANTS.MAX_NEWS_ARTICLES);
-        }
-
-        // Get News & Summaries
-        if (isNewsFresh) {
+            aiOverview = cachedData.aiOverview.data;
             summarizedNews = cachedData.news.data;
             newsTimestamp = cachedData.news.cachedAt;
+
         } else {
+            // --- NO CACHE: FETCH FROM APIs AND STORE PERMANENTLY ---
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
+            console.log(`No cache found for ${symbol}. Fetching new data...`);
+
+            // 1. Fetch Overview
+            overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
+            overviewTimestamp = Timestamp.now();
+            
+            // 2. Fetch News
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching news for ${symbol}...`;
+            const rawNewsData = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
+            const rawNewsFeed = (rawNewsData.feed || [])
+                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol && parseFloat(t.relevance_score) >= 0.5))
+                .slice(0, CONSTANTS.MAX_NEWS_ARTICLES);
+
+            // 3. Process News with AI
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI summaries...`;
             summarizedNews = await processNewsWithAI(rawNewsFeed, symbol);
             newsTimestamp = Timestamp.now();
-            dataToUpdate.news = { data: summarizedNews, cachedAt: newsTimestamp };
-        }
-        
-        // Get AI-Generated Overview
-        if (isAiOverviewFresh) {
-            aiOverview = cachedData.aiOverview.data;
-        } else {
+
+            // 4. Generate AI Overview
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI overview...`;
-            aiOverview = await generateAiOverview(symbol, rawNewsFeed || summarizedNews);
-            dataToUpdate.aiOverview = { data: aiOverview, cachedAt: Timestamp.now() };
+            aiOverview = await generateAiOverview(symbol, rawNewsFeed);
+
+            // 5. Save all generated data to the main cache
+            const dataToUpdate = {
+                overview: { data: overview, cachedAt: overviewTimestamp },
+                news: { data: summarizedNews, cachedAt: newsTimestamp },
+                aiOverview: { data: aiOverview, cachedAt: Timestamp.now() }
+            };
+            await setDoc(mainCacheRef, dataToUpdate);
+            
+            // 6. Trigger comprehensive data fetch in the background
+            fetchAndCacheComprehensiveData(symbol);
         }
 
-        // 3. Render UI
+        // --- RENDER UI ---
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
         renderOverviewCard(overview, aiOverview, overviewTimestamp, symbol);
         if (summarizedNews && summarizedNews.length > 0) {
             renderNewsCard(summarizedNews, symbol, newsTimestamp);
         } else {
              container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent, relevant news found for ${symbol}.</p></div>`);
-        }
-
-        // 4. Update Main Cache in Firestore
-        if (Object.keys(dataToUpdate).length > 0) {
-            console.log(`Updating main cache for ${symbol}...`);
-            await setDoc(mainCacheRef, dataToUpdate, { merge: true });
-        }
-        
-        // 5. Check and trigger comprehensive data fetch
-        const comprehensiveCacheRef = doc(db, 'comprehensive_stock_data', symbol);
-        const comprehensiveCacheDoc = await getDoc(comprehensiveCacheRef);
-        const comprehensiveTTL = (cacheSettings.COMPREHENSIVE_TTL || 24) * 3600 * 1000;
-        if (!comprehensiveCacheDoc.exists() || (now - comprehensiveCacheDoc.data().cachedAt.toMillis() > comprehensiveTTL)) {
-            // Run in the background, don't wait for it to complete
-            fetchAndCacheComprehensiveData(symbol);
         }
 
         tickerInput.value = '';
@@ -702,11 +660,11 @@ async function handleViewFullData(symbol) {
             contentEl.textContent = JSON.stringify(fullData, null, 2);
 
             document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
-            document.getElementById('full-data-modal-timestamp').textContent = `Data as of: ${fullData.cachedAt.toDate().toLocaleString()}`;
+            document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullData.cachedAt.toDate().toLocaleString()}`;
             
             openModal(CONSTANTS.MODAL_FULL_DATA);
         } else {
-            displayMessageInModal(`Comprehensive data for ${symbol} has not been cached yet. It is being fetched in the background. Please try again in a few moments.`, 'info');
+            displayMessageInModal(`Comprehensive data for ${symbol} has not been stored yet. It is likely being fetched in the background. Please try again in a few moments.`, 'info');
         }
     } catch (error) {
         console.error("Failed to load full data:", error);
@@ -730,7 +688,7 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
     const weekHigh = overviewData['52WeekHigh'] !== "None" && overviewData['52WeekHigh'] ? `$${overviewData['52WeekHigh']}` : "N/A";
-    const timestampString = cacheTimestamp ? `Data as of: ${cacheTimestamp.toDate().toLocaleString()}` : '';
+    const timestampString = cacheTimestamp ? `Data Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
 
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
@@ -741,7 +699,7 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
                 </div>
                 <div class="flex-shrink-0 flex gap-2">
                     <button id="view-full-data-button" class="text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">View Full Data</button>
-                    <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Clear Cache</button>
+                    <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 </div>
             </div>
             <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-1">AI-Powered Overview</h3>
@@ -830,7 +788,7 @@ function renderNewsCard(newsItems, symbol, cacheTimestamp) {
         `;
     }).join('');
 
-    const timestampString = cacheTimestamp ? `News as of: ${cacheTimestamp.toDate().toLocaleString()}` : '';
+    const timestampString = cacheTimestamp ? `News Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
 
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
