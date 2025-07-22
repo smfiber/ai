@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.7.0"; 
+const APP_VERSION = "4.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -12,6 +12,8 @@ const CONSTANTS = {
     MODAL_MESSAGE: 'messageModal',
     MODAL_CONFIRMATION: 'confirmationModal',
     MODAL_FULL_DATA: 'fullDataModal',
+    MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
+    MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
@@ -19,6 +21,8 @@ const CONSTANTS = {
     BUTTON_SCROLL_TOP: 'scroll-to-top-button',
     ELEMENT_LOADING_MESSAGE: 'loading-message',
     ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
+    ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
+    ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
@@ -31,10 +35,6 @@ const COMPREHENSIVE_API_FUNCTIONS = [
     'BALANCE_SHEET',
     'CASH_FLOW',
     'EARNINGS',
-    'LISTING_DELISTING_STATUS',
-    'TIME_SERIES_DAILY_ADJUSTED',
-    'TIME_SERIES_WEEKLY_ADJUSTED',
-    'TIME_SERIES_MONTHLY_ADJUSTED'
 ];
 
 
@@ -49,16 +49,15 @@ let alphaVantageApiKey = "";
 // --- UTILITY HELPERS ---
 
 /**
- * Formats a large number into a readable string with a suffix (K, M, B, T).
- * Prepends a dollar sign for valid numbers.
+ * Formats a large number into a readable string with a suffix (B, M, K).
+ * Returns "N/A" for invalid or zero values.
  * @param {string | number} value The numeric value to format.
+ * @param {number} precision The number of decimal places.
  * @returns {string} The formatted string (e.g., "$2.95T") or "N/A".
  */
-function formatMarketCap(value) {
+function formatLargeNumber(value, precision = 2) {
     const num = parseFloat(value);
-    if (isNaN(num) || num <= 0) {
-        return "N/A";
-    }
+    if (isNaN(num) || num === 0) return "N/A";
     
     const tiers = [
         { value: 1e12, suffix: 'T' },
@@ -67,24 +66,19 @@ function formatMarketCap(value) {
         { value: 1e3,  suffix: 'K' },
     ];
     
-    const tier = tiers.find(t => num >= t.value);
+    const tier = tiers.find(t => Math.abs(num) >= t.value);
 
     if (tier) {
-        const formattedNum = (num / tier.value).toFixed(2);
-        return `$${formattedNum}${tier.suffix}`;
+        const formattedNum = (num / tier.value).toFixed(precision);
+        return `${formattedNum}${tier.suffix}`;
     }
     
-    return `$${num}`;
+    return num.toFixed(precision);
 }
 
 
 // --- SECURITY HELPERS ---
 
-/**
- * Sanitizes a plain text string to prevent it from being interpreted as HTML.
- * @param {string} text The plain text to sanitize.
- * @returns {string} The sanitized text.
- */
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
     const tempDiv = document.createElement('div');
@@ -92,11 +86,6 @@ function sanitizeText(text) {
     return tempDiv.innerHTML;
 }
 
-/**
- * Validates if a string is a valid HTTP/HTTPS URL.
- * @param {string} urlString The string to validate.
- * @returns {boolean} True if the URL is valid, false otherwise.
- */
 function isValidHttpUrl(urlString) {
     if (typeof urlString !== 'string' || !urlString) return false;
     try {
@@ -213,8 +202,10 @@ async function initializeAppContent() {
     appIsInitialized = true;
     
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing & loading dashboard...";
     
+    await loadAllCachedStocks();
+
     setTimeout(() => {
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Application ready.";
         closeModal(CONSTANTS.MODAL_LOADING);
@@ -240,6 +231,7 @@ function initializeFirebase() {
             } else {
                 userId = null;
                 appIsInitialized = false;
+                document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = ''; // Clear content on logout
             }
             setupAuthUI(user);
         });
@@ -367,10 +359,34 @@ async function fetchAlphaVantageData(functionName, symbol) {
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
+async function loadAllCachedStocks() {
+    if (!db) return;
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
+    container.innerHTML = ''; // Clear previous content
+
+    try {
+        const querySnapshot = await getDocs(collection(db, "cached_stock_data"));
+        if (querySnapshot.empty) {
+            container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
+            return;
+        }
+        querySnapshot.forEach((doc) => {
+            const symbol = doc.id;
+            const data = doc.data();
+            if (data.overview && data.overview.data) {
+                renderOverviewCard(data.overview.data, data.overview.cachedAt, symbol);
+            }
+        });
+    } catch (error) {
+        console.error("Error loading cached stocks: ", error);
+        displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
+    }
+}
+
 function handleClearCache(symbol) {
     openConfirmationModal(
         'Clear All Cache?',
-        `This will permanently delete all stored data for ${symbol}. The next time you search for it, fresh data will be fetched from the API. Are you sure?`,
+        `This will permanently delete all stored data for ${symbol}, and it will be removed from your dashboard. Are you sure?`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
@@ -383,8 +399,8 @@ function handleClearCache(symbol) {
                     deleteDoc(comprehensiveDocRef)
                 ]);
 
-                document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
-                displayMessageInModal(`Cache for ${symbol} has been cleared. You can now research it again to get fresh data.`, 'info');
+                await loadAllCachedStocks(); // Refresh the dashboard
+                displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
             } catch (error) {
                 console.error("Error clearing cache:", error);
                 displayMessageInModal(`Failed to clear cache: ${error.message}`, 'error');
@@ -400,17 +416,28 @@ async function fetchAndCacheComprehensiveData(symbol) {
     const comprehensiveData = {};
     const errors = {};
 
-    for (const func of COMPREHENSIVE_API_FUNCTIONS) {
+    const promises = COMPREHENSIVE_API_FUNCTIONS.map(async (func) => {
         try {
             console.log(`Fetching ${func} for ${symbol}...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
             const data = await fetchAlphaVantageData(func, symbol);
-            comprehensiveData[func] = data;
+            return { func, data, status: 'fulfilled' };
         } catch (error) {
             console.error(`Failed to fetch ${func} for ${symbol}:`, error);
-            errors[func] = error.message;
+            return { func, error: error.message, status: 'rejected' };
         }
-    }
+    });
+
+    const results = await Promise.allSettled(promises);
+
+    results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+            const { func, data } = result.value;
+            comprehensiveData[func] = data;
+        } else if (result.status === 'rejected' || (result.value && result.value.status === 'rejected')) {
+             const { func, error } = result.reason || result.value;
+             errors[func] = error;
+        }
+    });
 
     const docRef = doc(db, 'comprehensive_stock_data', symbol);
     const dataToCache = {
@@ -427,12 +454,11 @@ async function fetchAndCacheComprehensiveData(symbol) {
     }
 }
 
+
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    const previousContent = container.innerHTML;
 
     const tickerRegex = /^[A-Z.]{1,10}$/;
     if (!tickerRegex.test(symbol)) {
@@ -443,42 +469,34 @@ async function handleResearchSubmit(e) {
     openModal(CONSTANTS.MODAL_LOADING);
     
     try {
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking for existing data for ${symbol}...`;
         const mainCacheRef = doc(db, 'cached_stock_data', symbol);
         const cachedDoc = await getDoc(mainCacheRef);
 
-        let overview, overviewTimestamp;
-
         if (cachedDoc.exists()) {
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Retrieving stored data for ${symbol}...`;
-            console.log(`Using cached data for ${symbol}.`);
-            
-            const cachedData = cachedDoc.data();
-            overview = cachedData.overview.data;
-            overviewTimestamp = cachedData.overview.cachedAt;
-        } else {
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
-            console.log(`No cache found for ${symbol}. Fetching new data...`);
-
-            overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
-            overviewTimestamp = Timestamp.now();
-            
-            const dataToCache = {
-                overview: { data: overview, cachedAt: overviewTimestamp },
-            };
-            await setDoc(mainCacheRef, dataToCache);
-            
-            fetchAndCacheComprehensiveData(symbol);
+             displayMessageInModal(`${symbol} is already on your dashboard. To get fresh data, please use the 'Refresh Data' button on its card.`, 'info');
+             tickerInput.value = '';
+             return;
         }
-
+        
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
+        const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
+        const overviewTimestamp = Timestamp.now();
+        
+        const dataToCache = {
+            overview: { data: overview, cachedAt: overviewTimestamp },
+        };
+        await setDoc(mainCacheRef, dataToCache);
+        
+        // This runs in the background and does not block the UI
+        fetchAndCacheComprehensiveData(symbol);
+        
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        container.innerHTML = '';
-        renderOverviewCard(overview, overviewTimestamp, symbol);
-
+        await loadAllCachedStocks(); // Refresh the entire dashboard
         tickerInput.value = '';
 
     } catch (error) {
         console.error("Error during stock research:", error);
-        container.innerHTML = previousContent; // Restore previous content on error
         displayMessageInModal(error.message, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
@@ -496,19 +514,24 @@ async function handleViewFullData(symbol) {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const fullData = docSnap.data();
+            const overviewDoc = await getDoc(doc(db, 'cached_stock_data', symbol));
+            const overviewData = overviewDoc.exists() ? overviewDoc.data().overview.data : {};
+            
+            // Combine overview with comprehensive data for a complete picture
+            const combinedData = {
+                OVERVIEW: overviewData,
+                ...fullData.data
+            };
+
             const contentEl = document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT);
             
             document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
             document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullData.cachedAt.toDate().toLocaleString()}`;
 
             if (fullData.errors && Object.keys(fullData.errors).length > 0) {
-                let errorText = 'The following errors occurred during the background data fetch:\n\n';
-                for (const [key, value] of Object.entries(fullData.errors)) {
-                    errorText += `- ${key}: ${value}\n`;
-                }
-                contentEl.textContent = errorText;
+                 contentEl.textContent = `Errors occurred during the background fetch:\n\n${JSON.stringify(fullData.errors, null, 2)}\n\nAvailable data:\n\n${JSON.stringify(combinedData, null, 2)}`;
             } else {
-                contentEl.textContent = JSON.stringify(fullData.data, null, 2);
+                 contentEl.textContent = JSON.stringify(combinedData, null, 2);
             }
             
             openModal(CONSTANTS.MODAL_FULL_DATA);
@@ -525,68 +548,69 @@ async function handleViewFullData(symbol) {
 
 function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    
-    const marketCap = formatMarketCap(overviewData.MarketCapitalization);
+    if (!overviewData || !overviewData.Symbol) {
+        console.warn(`Skipping render for ${symbol} due to missing overview data.`);
+        return;
+    }
+
+    // If the container has the placeholder message, clear it
+    if (container.innerHTML.includes('No stocks researched yet')) {
+        container.innerHTML = '';
+    }
+
+    const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
     const weekHigh = overviewData['52WeekHigh'] && overviewData['52WeekHigh'] !== "None" ? `$${overviewData['52WeekHigh']}` : "N/A";
     const timestampString = cacheTimestamp ? `Data Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
 
     const cardHtml = `
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <div class="flex-shrink-0 flex gap-2">
-                    <button id="view-full-data-button" class="text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">View Full Data</button>
-                    <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
+                <div class="flex-shrink-0">
+                    <button data-symbol="${symbol}" class="clear-cache-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 </div>
             </div>
-            <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Company Overview</h3>
-            <p class="mt-1 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
+            <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
-                <div>
-                    <p class="text-sm text-gray-500">Market Cap</p>
-                    <p class="text-lg font-semibold">${sanitizeText(marketCap)}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">P/E Ratio</p>
-                    <p class="text-lg font-semibold">${sanitizeText(peRatio)}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">EPS</p>
-                    <p class="text-lg font-semibold">${sanitizeText(eps)}</p>
-                </div>
-                 <div>
-                    <p class="text-sm text-gray-500">52 Week High</p>
-                    <p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p>
-                </div>
+                <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
+                <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
+                <div><p class="text-sm text-gray-500">EPS</p><p class="text-lg font-semibold">${sanitizeText(eps)}</p></div>
+                <div><p class="text-sm text-gray-500">52 Week High</p><p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p></div>
+            </div>
+             <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-end">
+                <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View JSON</button>
+                <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
+                <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
-    
-    document.getElementById('clear-cache-button')?.addEventListener('click', () => handleClearCache(symbol));
-    document.getElementById('view-full-data-button')?.addEventListener('click', () => handleViewFullData(symbol));
 }
 
-function parseAlphaVantageDate(timeString) {
-    if (!timeString) return "Invalid Date";
-    
-    const match = timeString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
-    if (!match) return "Invalid Date";
+// --- EVENT LISTENER SETUP ---
 
-    const [, year, month, day, hours, minutes, seconds] = match;
-    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
-    
-    const parsedDate = new Date(isoString);
-    return isNaN(parsedDate) ? "Invalid Date" : parsedDate;
+function setupGlobalEventListeners() {
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
+
+    container.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const symbol = target.dataset.symbol;
+        if (!symbol) return;
+
+        if (target.classList.contains('clear-cache-button')) handleClearCache(symbol);
+        if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
+        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
+        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
+    });
 }
-
-// --- EVENT LISTENERS ---
 
 function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
@@ -595,8 +619,13 @@ function setupEventListeners() {
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-    const closeFullDataBtn = document.getElementById('close-full-data-modal');
-    if(closeFullDataBtn) closeFullDataBtn.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
+    // Listeners for closing modals
+    document.getElementById('close-full-data-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
+    document.getElementById('close-full-data-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
+    document.getElementById('close-financial-analysis-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS));
+    document.getElementById('close-financial-analysis-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS));
+    document.getElementById('close-undervalued-analysis-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS));
+    document.getElementById('close-undervalued-analysis-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS));
     
     window.addEventListener('scroll', () => {
         const scrollTopButton = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
@@ -604,7 +633,207 @@ function setupEventListeners() {
             scrollTopButton.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
         }
     });
+    
+    setupGlobalEventListeners();
 }
+
+// --- AI ANALYSIS REPORT GENERATORS ---
+
+/**
+ * Safely get a nested property from an object.
+ * @param {object} obj The object to query.
+ * @param {string} path The path to the property (e.g., 'data.OVERVIEW.Name').
+ * @param {*} defaultValue The default value to return if not found.
+ * @returns The property value or the default value.
+ */
+function get(obj, path, defaultValue = "N/A") {
+    const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
+    return value !== undefined && value !== null && value !== "None" ? value : defaultValue;
+}
+
+
+async function getComprehensiveData(symbol) {
+    const docRef = doc(db, 'comprehensive_stock_data', symbol);
+    const overviewRef = doc(db, 'cached_stock_data', symbol);
+    
+    const [docSnap, overviewSnap] = await Promise.all([getDoc(docRef), getDoc(overviewRef)]);
+
+    if (!docSnap.exists() || !overviewSnap.exists()) {
+        displayMessageInModal(`Comprehensive data for ${symbol} has not been stored yet. It is likely being fetched in the background. Please try again in a few moments.`, 'info');
+        return null;
+    }
+    
+    return {
+        ...docSnap.data().data,
+        OVERVIEW: overviewSnap.data().overview.data
+    };
+}
+
+
+// --- Financial Analysis Report Generator ---
+async function handleFinancialAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${symbol}...`;
+
+    try {
+        const data = await getComprehensiveData(symbol);
+        if (!data) return;
+
+        const report = generateFinancialAnalysisReport(data);
+        const contentEl = document.getElementById(CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT);
+        document.getElementById('financial-analysis-modal-title').textContent = `Financial Analysis for ${symbol}`;
+        
+        contentEl.innerHTML = marked.parse(report);
+
+        openModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS);
+    } catch (error) {
+        console.error("Error generating financial analysis:", error);
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+function generateFinancialAnalysisReport(data) {
+    const companyName = get(data, 'OVERVIEW.Name');
+    const symbol = get(data, 'OVERVIEW.Symbol');
+
+    // Helper to get the latest report from an array
+    const latest = (arr) => (Array.isArray(arr) && arr.length > 0 ? arr[0] : {});
+
+    const latestIncome = latest(get(data, 'INCOME_STATEMENT.annualReports', []));
+    const latestBalanceSheet = latest(get(data, 'BALANCE_SHEET.annualReports', []));
+    const latestCashFlow = latest(get(data, 'CASH_FLOW.annualReports', []));
+    
+    const year = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
+    const totalRevenue = get(latestIncome, 'totalRevenue');
+    const netIncome = get(latestIncome, 'netIncome');
+    const eps = get(data, 'OVERVIEW.EPS');
+    const operatingCashFlow = get(latestCashFlow, 'operatingCashflow');
+    const netProfitMargin = get(data, 'OVERVIEW.ProfitMargin');
+
+    // Liquidity
+    const totalCurrentAssets = parseFloat(get(latestBalanceSheet, 'totalCurrentAssets', 0));
+    const totalCurrentLiabilities = parseFloat(get(latestBalanceSheet, 'totalCurrentLiabilities', 0));
+    const currentRatio = totalCurrentLiabilities > 0 ? (totalCurrentAssets / totalCurrentLiabilities).toFixed(2) : "N/A";
+    
+    // Debt
+    const totalLiabilities = parseFloat(get(latestBalanceSheet, 'totalLiabilities', 0));
+    const totalShareholderEquity = parseFloat(get(latestBalanceSheet, 'totalShareholderEquity', 0));
+    const debtToEquity = totalShareholderEquity > 0 ? (totalLiabilities / totalShareholderEquity).toFixed(2) : "N/A";
+
+    const incomeTrend = get(data, 'INCOME_STATEMENT.annualReports', []).slice(0, 3).reverse().map(r => 
+        `\n  - **${r.fiscalDateEnding.substring(0,4)}:** Revenue: $${formatLargeNumber(r.totalRevenue)}, Net Income: $${formatLargeNumber(r.netIncome)}`
+    ).join('');
+
+    return `
+# Overview 📈
+This report provides a financial analysis for **${companyName} (${symbol})**. 
+The data suggests a company with a market capitalization of **$${formatLargeNumber(get(data, 'OVERVIEW.MarketCapitalization'))}** operating in the **${get(data, 'OVERVIEW.Sector')}** sector.
+
+# Key Financial Highlights (${year}) 📊
+- **Total Revenue**: $${formatLargeNumber(totalRevenue)}
+- **Net Income**: $${formatLargeNumber(netIncome)}
+- **Net Profit Margin**: ${netProfitMargin === "N/A" ? "N/A" : (netProfitMargin * 100).toFixed(2) + '%'}
+- **Earnings Per Share (EPS)**: $${eps}
+- **Operating Cash Flow**: $${formatLargeNumber(operatingCashFlow)}
+
+# Financial Deep Dive 🕵️
+## Profitability Analysis 💰
+The company's ability to generate profit is a key indicator of its success.
+- **Revenue and Net Income Trends**: Here is a look at the past few years:${incomeTrend}
+- **Profit Margins**: The company has a **Gross Profit Margin** of **${(get(data, 'OVERVIEW.GrossProfitTTM') / get(latestIncome, 'totalRevenue', 1) * 100).toFixed(2)}%**. The trailing twelve months **Net Profit Margin** stands at **${(get(data, 'OVERVIEW.ProfitMargin') * 100).toFixed(2)}%**.
+
+## Financial Health & Stability 💪
+- **Liquidity**: The **Current Ratio** is **${currentRatio}**. This suggests that for every $1 of short-term debt, the company has $${currentRatio} in short-term assets to cover it. A ratio above 1 generally indicates good short-term financial health.
+- **Debt Levels**: The **Debt-to-Equity Ratio** is **${debtToEquity}**. This figure shows how much of the company's financing comes from debt versus shareholder equity. A higher number can indicate higher risk.
+
+# Final Verdict 📝
+This analysis provides a snapshot of **${companyName}'s** financial standing.
+**Strengths**: Key strengths may include its market position, profitability margins, and cash flow generation.
+**Weaknesses**: Potential areas for concern could be its debt levels or trends in revenue growth.
+A potential investor should weigh these factors and consider the company's strategic initiatives and the broader economic environment.
+    `;
+}
+
+// --- Undervalued Analysis Report Generator ---
+async function handleUndervaluedAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing valuation analysis for ${symbol}...`;
+
+    try {
+        const data = await getComprehensiveData(symbol);
+        if (!data) return;
+
+        const report = generateUndervaluedAnalysisReport(data);
+        const contentEl = document.getElementById(CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT);
+        document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
+        
+        contentEl.innerHTML = marked.parse(report);
+
+        openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
+    } catch (error) {
+        console.error("Error generating undervalued analysis:", error);
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+function generateUndervaluedAnalysisReport(data) {
+    const companyName = get(data, 'OVERVIEW.Name');
+    const symbol = get(data, 'OVERVIEW.Symbol');
+
+    // Fundamental Ratios
+    const peRatio = get(data, 'OVERVIEW.PERatio');
+    const pbRatio = get(data, 'OVERVIEW.PriceToBookRatio');
+    const pegRatio = get(data, 'OVERVIEW.PEGRatio');
+    const dividendYield = get(data, 'OVERVIEW.DividendYield');
+    const roe = get(data, 'OVERVIEW.ReturnOnEquityTTM');
+    const targetPrice = get(data, 'OVERVIEW.AnalystTargetPrice');
+    
+    // Technical Indicators
+    const weekHigh52 = get(data, 'OVERVIEW.52WeekHigh');
+    const weekLow52 = get(data, 'OVERVIEW.52WeekLow');
+    const ma50 = get(data, 'OVERVIEW.50DayMovingAverage');
+    const ma200 = get(data, 'OVERVIEW.200DayMovingAverage');
+    // Note: Current price isn't in the cached data, so we compare MAs to the 52-week range as a proxy.
+
+    return `
+# Is ${companyName} (${symbol}) Undervalued? 🧐
+An investment broker assesses a stock's value by combining fundamental financial health with market sentiment (technical analysis). Here is a breakdown for **${symbol}**.
+
+## 1. Fundamental Analysis: Company Worth 💰
+This looks at the financial strength to determine an intrinsic value.
+
+### Key Valuation Ratios
+- **P/E Ratio**: **${peRatio}**. A low P/E can indicate undervaluation. This should be compared to industry peers.
+- **P/B Ratio**: **${pbRatio}**. A ratio below 1 is a classic sign of potential undervaluation.
+- **PEG Ratio**: **${pegRatio}**. Enhances P/E with growth. A value below 1 is often considered ideal.
+- **Dividend Yield**: **${dividendYield === "N/A" ? "N/A" : (dividendYield * 100).toFixed(2) + '%'}**. A high, sustainable yield can suggest the stock price is low.
+- **Return on Equity (ROE)**: **${roe === "N/A" ? "N/A" : (roe * 100).toFixed(2) + '%'}**. A high ROE indicates efficient profit generation.
+
+### Analyst Consensus
+- **Analyst Target Price**: **$${targetPrice}**. This represents the median target price from professional analysts. Comparing this to the current market price is a strong indicator of market sentiment.
+
+## 2. Technical Analysis: Market Sentiment 📉📈
+This uses price data to gauge whether the stock is "on sale" or in a downtrend.
+
+- **52-Week Range**: The stock has traded between **$${weekLow52}** and **$${weekHigh52}** over the past year. A price near the low may signal a buying opportunity if fundamentals are strong.
+- **Moving Averages**:
+  - **50-Day MA**: $${ma50}
+  - **200-Day MA**: $${ma200}
+  - **Interpretation**: If the current price is below these averages, the stock is in a short-term or long-term downtrend, respectively. A "golden cross" (50-day moves above 200-day) is a bullish signal, while a "death cross" is bearish.
+
+## Synthesis: The Broker's Conclusion 📝
+- **Fundamental View**: The valuation ratios provide a snapshot of whether the stock is cheap relative to its earnings, book value, and growth. A strong ROE and sustainable dividend are positive signs of a healthy business.
+- **Market View**: The technical indicators show where the stock price is in its recent cycle. Is it beaten down and potentially oversold, or is it trading at a premium?
+- **Final Verdict**: To determine if **${symbol}** is truly undervalued, an investor must synthesize these points. An ideal candidate would have **strong fundamentals (low P/E, high ROE) combined with bearish market sentiment (trading near 52-week lows)**. The gap between the current price and the **Analyst Target Price** is a critical data point for this conclusion.
+
+*Disclaimer: This is an automated analysis for informational purposes and is not investment advice.*
+    `;
+}
+
 
 // --- APP INITIALIZATION TRIGGER ---
 
