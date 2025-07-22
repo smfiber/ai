@@ -633,37 +633,40 @@ async function handleFinancialAnalysis(symbol) {
         const fiscalYear = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
 
         const prompt = `
-Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data. The output should be easy to understand for a general audience using a mobile app. Use emojis to make the information more engaging.
+Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data.
+Output Format: The output must be in professional markdown format. Use '#' for the main title, '##' for section headings, and '*' for bullet points. Do NOT use any emojis.
 
 Analyze the following financial data for ${companyName} (Ticker: ${tickerSymbol}):
 JSON:
 ${JSON.stringify(data, null, 2)}
 
-Based on the data, generate the following analysis in markdown format:
+Based on the data, generate the following analysis:
 
-# Overview 📈
+# Financial Analysis for ${companyName} (${tickerSymbol})
+
+## Overview
 Provide a brief, high-level summary (2-3 sentences) of the company's overall financial performance and health. Mention its general trajectory (e.g., growth, stability, or decline).
 
-# Key Financial Highlights (${fiscalYear}) 📊
-Extract and present the following key metrics for the most recent fiscal year. Use bullet points and relevant emojis:
+## Key Financial Highlights (${fiscalYear})
+Extract and present the following key metrics for the most recent fiscal year using bullet points:
 - Total Revenue: $XXX.XX Billion
 - Net Income: $XX.XX Billion
 - Net Profit Margin: XX.X%
 - Earnings Per Share (EPS): $X.XX
 - Operating Cash Flow: $XXX.XX Billion
 
-# Financial Deep Dive 🕵️
-## Profitability Analysis 💰
+## Financial Deep Dive
+### Profitability Analysis
 Analyze the company's ability to generate profit. Focus on:
 - Revenue and Net Income Trends: Describe the growth or decline over the last 3-5 years.
 - Profit Margins: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
 
-## Financial Health & Stability 💪
+### Financial Health & Stability
 Assess the company's financial stability and risk. Focus on:
 - Liquidity: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
 - Debt Levels: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
 
-# Final Verdict 📝
+## Final Verdict
 Provide a concluding paragraph summarizing the key strengths and potential weaknesses based on this financial data. Is the company in a strong financial position? What are the key takeaways for a potential investor?
 `;
 
@@ -690,7 +693,8 @@ async function handleUndervaluedAnalysis(symbol) {
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
         const prompt = `
-Role: You are an expert investment broker AI. Your task is to determine if a stock is undervalued by synthesizing fundamental and technical data. The output should be a clear, concise, and insightful analysis in markdown format for an investor using a mobile app. Use emojis to make the report engaging.
+Role: You are an expert investment broker AI. Your task is to determine if a stock is undervalued by synthesizing fundamental and technical data.
+Output Format: The output must be in professional markdown format for an investor. Use '#' for the main title, '##' for section headings, and '###' for sub-sections. Use '*' for bullet points. Do NOT use any emojis.
 
 Analyze the following full JSON data for ${companyName} (Ticker: ${tickerSymbol}):
 JSON:
@@ -698,10 +702,10 @@ ${JSON.stringify(data, null, 2)}
 
 Based on the provided data, generate the following analysis:
 
-# Is ${companyName} (${tickerSymbol}) Undervalued? 🧐
+# Undervalued Analysis for ${companyName} (${tickerSymbol})
 An investment broker assesses a stock's value by combining fundamental financial health with market sentiment (technical analysis). Here is a breakdown for **${tickerSymbol}**.
 
-## 1. Fundamental Analysis: Company Worth 💰
+## 1. Fundamental Analysis: Company Worth
 Assess the company's intrinsic value using key valuation ratios from the JSON data.
 
 ### Key Valuation Ratios
@@ -714,7 +718,7 @@ Assess the company's intrinsic value using key valuation ratios from the JSON da
 ### Analyst Consensus
 - **Analyst Target Price**: **$[Value]** (Compare this to the current market price if available in the data).
 
-## 2. Technical Analysis: Market Sentiment 📉📈
+## 2. Technical Analysis: Market Sentiment
 Assess the current market sentiment using technical indicators from the JSON data.
 
 - **52-Week Range**: The stock has traded between **$[52WeekLow]** and **$[52WeekHigh]**.
@@ -723,7 +727,7 @@ Assess the current market sentiment using technical indicators from the JSON dat
   - **200-Day MA**: $[200DayMovingAverage]
 (Comment on the current price relative to these averages to determine the trend).
 
-## Synthesis: The Broker's Conclusion 📝
+## Synthesis: The Broker's Conclusion
 Synthesize all the points above to provide a final verdict.
 - **Fundamental View**: Summarize the findings from the valuation ratios.
 - **Technical View**: Summarize the findings from the market sentiment indicators.
@@ -743,7 +747,6 @@ Synthesize all the points above to provide a final verdict.
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
 // --- APP INITIALIZATION TRIGGER ---
 
 function initializeApplication() {
