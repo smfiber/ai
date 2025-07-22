@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Stock Research Hub</title>
+    <title>Stock Research Hub</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
@@ -21,8 +21,11 @@
         <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20"></div>
         <div class="relative container mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight">AI Stock Research Hub</h1>
-                <p class="text-sm text-gray-300 mt-1">Your AI-Powered Market Co-Pilot</p>
+                <h1 class="text-3xl font-bold tracking-tight">Stock Research Hub</h1>
+                <div class="flex items-center gap-x-3">
+                    <p class="text-sm text-gray-300 mt-1">Your Personal Market Co-Pilot</p>
+                    <span id="app-version-display" class="text-xs text-gray-400 mt-1"></span>
+                </div>
             </div>
             <div id="auth-status" class="flex items-center">
                 </div>
@@ -41,7 +44,7 @@
                     <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Research</button>
                 </form>
                 <div id="disclaimer" class="mt-4 text-xs text-gray-500">
-                    <strong>Disclaimer:</strong> This tool is for informational purposes only and does not constitute financial advice. All data is provided by third-party APIs and may have delays.
+                    <strong>Disclaimer:</strong> This tool is for informational purposes only and does not constitute financial advice. All data is provided by a third-party API and may have delays.
                 </div>
             </div>
 
@@ -60,10 +63,6 @@
             <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
-                    <div>
-                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
-                        <textarea id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Google Gemini API Key"></textarea>
-                    </div>
                     <div>
                         <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Alpha Vantage API Key</label>
                         <textarea id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Alpha Vantage API Key"></textarea>
