@@ -314,7 +314,7 @@ async function callGeminiApi(prompt) {
     if (!geminiApiKey) {
         throw new Error("Gemini API key is not configured.");
     }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
     
     const body = {
         contents: [{
