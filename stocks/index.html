@@ -70,6 +70,10 @@
                         <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Alpha Vantage API Key</label>
                         <textarea id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Alpha Vantage API Key"></textarea>
                     </div>
+                     <div>
+                        <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key <span class="text-xs text-gray-500">(e.g., Google Custom Search)</span></label>
+                        <textarea id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Web Search API Key"></textarea>
+                    </div>
                     <div>
                         <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
                         <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
@@ -132,7 +136,9 @@
                 <h2 id="financial-analysis-modal-title" class="text-2xl font-bold text-gray-800">Financial Analysis</h2>
                 <button id="close-financial-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            <div id="financial-analysis-content" class="prose max-w-none p-6 overflow-y-auto flex-grow"></div>
+            <div class="p-8 bg-gray-50 overflow-y-auto flex-grow">
+                <div id="financial-analysis-content" class="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-a:text-indigo-600"></div>
+            </div>
         </div>
     </div>
 
@@ -143,7 +149,9 @@
                 <h2 id="undervalued-analysis-modal-title" class="text-2xl font-bold text-gray-800">Undervalued Stock Analysis</h2>
                 <button id="close-undervalued-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            <div id="undervalued-analysis-content" class="prose max-w-none p-6 overflow-y-auto flex-grow"></div>
+             <div class="p-8 bg-gray-50 overflow-y-auto flex-grow">
+                <div id="undervalued-analysis-content" class="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-a:text-indigo-600"></div>
+            </div>
         </div>
     </div>
 
