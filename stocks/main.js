@@ -1,15 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.3.0"; 
+const APP_VERSION = "3.4.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
     MODAL_API_KEY: 'apiKeyModal',
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
+    MODAL_CONFIRMATION: 'confirmationModal',
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
@@ -19,7 +20,7 @@ const CONSTANTS = {
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
-    MAX_NEWS_ARTICLES: 10,
+    MAX_NEWS_ARTICLES: 2,
     API_FUNC_OVERVIEW: 'OVERVIEW',
     API_FUNC_NEWS: 'NEWS_SENTIMENT',
 };
@@ -98,6 +99,21 @@ function sanitizeText(text) {
     return tempDiv.innerHTML;
 }
 
+/**
+ * Validates if a string is a valid HTTP/HTTPS URL.
+ * @param {string} urlString The string to validate.
+ * @returns {boolean} True if the URL is valid, false otherwise.
+ */
+function isValidHttpUrl(urlString) {
+    if (typeof urlString !== 'string' || !urlString) return false;
+    try {
+        const url = new URL(urlString);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) {
+        return false;
+    }
+}
+
 
 // --- MODAL HELPERS ---
 
@@ -157,6 +173,31 @@ function displayMessageInModal(message, type = 'info') {
         
         openModal(modalId);
     }
+}
+
+function openConfirmationModal(title, message, onConfirm) {
+    const modalId = CONSTANTS.MODAL_CONFIRMATION;
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    modal.querySelector('#confirmation-title').textContent = title;
+    modal.querySelector('#confirmation-message').textContent = message;
+
+    const confirmBtn = modal.querySelector('#confirm-button');
+    const cancelBtn = modal.querySelector('#cancel-button');
+
+    // Clone and replace the confirm button to remove old event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    newConfirmBtn.addEventListener('click', () => {
+        onConfirm();
+        closeModal(modalId);
+    });
+
+    cancelBtn.addEventListener('click', () => closeModal(modalId), { once: true });
+    
+    openModal(modalId);
 }
 
 
@@ -289,9 +330,13 @@ function setupAuthUI(user) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
         
+        const photoEl = isValidHttpUrl(user.photoURL) 
+            ? `<img src="${sanitizeText(user.photoURL)}" alt="User photo" class="w-8 h-8 rounded-full">`
+            : `<div class="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">${sanitizeText(user.displayName.charAt(0))}</div>`;
+
         authStatusEl.innerHTML = `
             <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
-                <img src="${sanitizeText(user.photoURL)}" alt="User photo" class="w-8 h-8 rounded-full">
+                ${photoEl}
                 <span class="font-medium pr-2">${sanitizeText(user.displayName)}</span>
                 <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>
@@ -381,7 +426,33 @@ async function fetchAlphaVantageData(functionName, symbol) {
 // --- CORE STOCK RESEARCH LOGIC ---
 
 /**
- * [NEW] Generates a dynamic, AI-powered company overview based on recent news.
+ * Handles the user request to clear the cache for a specific stock ticker.
+ * @param {string} symbol The stock symbol to clear from the cache.
+ */
+function handleClearCache(symbol) {
+    openConfirmationModal(
+        'Clear Cache?',
+        `Are you sure you want to delete all cached data for ${symbol}? The next search will fetch fresh data from all APIs.`,
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
+            try {
+                const docRef = doc(db, 'cached_stock_data', symbol);
+                await deleteDoc(docRef);
+                document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
+                displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
+            } catch (error) {
+                console.error("Error clearing cache:", error);
+                displayMessageInModal(`Failed to clear cache: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
+}
+
+/**
+ * Generates a dynamic, AI-powered company overview based on recent news.
  * @param {string} symbol The stock symbol.
  * @param {Array} newsFeed The array of news articles from Alpha Vantage.
  * @returns {Promise<string>} A promise that resolves to the AI-generated overview.
@@ -391,7 +462,7 @@ async function generateAiOverview(symbol, newsFeed) {
         return "No recent news available to generate a dynamic overview.";
     }
     const headlines = newsFeed
-        .slice(0, 10) // Use top 10 articles
+        .slice(0, CONSTANTS.MAX_NEWS_ARTICLES)
         .map(article => `- ${article.title}`)
         .join('\n');
     
@@ -412,7 +483,7 @@ Modern, news-driven company overview:`;
 }
 
 /**
- * [REFACTORED] Main handler for stock research, now with a cache-first architecture.
+ * Main handler for stock research, with a cache-first architecture.
  */
 async function handleResearchSubmit(e) {
     e.preventDefault();
@@ -435,12 +506,12 @@ async function handleResearchSubmit(e) {
         const cachedDoc = await getDoc(docRef);
         const cachedData = cachedDoc.exists() ? cachedDoc.data() : {};
         
-        let overview, aiOverview, summarizedNews;
+        let overview, aiOverview, summarizedNews, rawNewsFeed;
         let overviewTimestamp, newsTimestamp;
         const dataToUpdate = {};
         const now = Date.now();
 
-        // --- 1. Check Cache Freshness for Each Data Type ---
+        // 1. Check Cache Freshness
         const overviewTTL = (cacheSettings.OVERVIEW_TTL || 24) * 3600 * 1000;
         const newsTTL = (cacheSettings.NEWS_SENTIMENT_TTL || 4) * 3600 * 1000;
         const aiOverviewTTL = (cacheSettings.AI_OVERVIEW_TTL || 24) * 3600 * 1000;
@@ -449,7 +520,7 @@ async function handleResearchSubmit(e) {
         const isNewsFresh = cachedData.news && (now - cachedData.news.cachedAt.toMillis() < newsTTL);
         const isAiOverviewFresh = cachedData.aiOverview && (now - cachedData.aiOverview.cachedAt.toMillis() < aiOverviewTTL);
 
-        // --- 2. Fetch Data Selectively ---
+        // 2. Fetch Data Selectively
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching data for ${symbol}...`;
         
         // Get Company Overview
@@ -462,14 +533,23 @@ async function handleResearchSubmit(e) {
             dataToUpdate.overview = { data: overview, cachedAt: overviewTimestamp };
         }
         
+        // Fetch news feed ONCE if either news or AI overview is stale
+        if (!isNewsFresh || !isAiOverviewFresh) {
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching news for ${symbol}...`;
+            const rawNewsData = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
+            
+            // Filter for relevance and limit count
+            rawNewsFeed = (rawNewsData.feed || [])
+                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol))
+                .slice(0, CONSTANTS.MAX_NEWS_ARTICLES);
+        }
+
         // Get News & Summaries
-        let rawNewsFeed;
         if (isNewsFresh) {
             summarizedNews = cachedData.news.data;
             newsTimestamp = cachedData.news.cachedAt;
         } else {
-            const rawNews = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
-            rawNewsFeed = rawNews.feed || [];
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI summaries...`;
             summarizedNews = await processNewsWithAI(rawNewsFeed);
             newsTimestamp = Timestamp.now();
             dataToUpdate.news = { data: summarizedNews, cachedAt: newsTimestamp };
@@ -479,23 +559,20 @@ async function handleResearchSubmit(e) {
         if (isAiOverviewFresh) {
             aiOverview = cachedData.aiOverview.data;
         } else {
-            if (!rawNewsFeed) {
-                 const rawNews = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
-                 rawNewsFeed = rawNews.feed || [];
-            }
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI overview...`;
             aiOverview = await generateAiOverview(symbol, rawNewsFeed);
             dataToUpdate.aiOverview = { data: aiOverview, cachedAt: Timestamp.now() };
         }
 
-        // --- 3. Render UI ---
-        renderOverviewCard(overview, aiOverview, overviewTimestamp);
+        // 3. Render UI
+        renderOverviewCard(overview, aiOverview, overviewTimestamp, symbol);
         if (summarizedNews && summarizedNews.length > 0) {
             renderNewsCard(summarizedNews, symbol, newsTimestamp);
         } else {
-             container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent news found for ${symbol}.</p></div>`);
+             container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent, relevant news found for ${symbol}.</p></div>`);
         }
 
-        // --- 4. Update Cache in Firestore ---
+        // 4. Update Cache in Firestore
         if (Object.keys(dataToUpdate).length > 0) {
             console.log(`Updating cache for ${symbol}...`);
             await setDoc(docRef, dataToUpdate, { merge: true });
@@ -512,6 +589,8 @@ async function handleResearchSubmit(e) {
 }
 
 async function processNewsWithAI(articles) {
+    if (!articles || articles.length === 0) return [];
+    
     const summaryPromises = articles.map(async (article) => {
         const prompt = `Please provide a neutral, one-sentence summary of the following news article title and summary. Focus only on the key information.
         
@@ -536,12 +615,13 @@ async function processNewsWithAI(articles) {
 // --- UI RENDERING ---
 
 /**
- * [REFACTORED] Renders the main company overview card.
+ * Renders the main company overview card with a cache clearing button.
  * @param {object} overviewData The raw data from the OVERVIEW API call.
  * @param {string} aiOverview The AI-generated dynamic overview text.
  * @param {Timestamp} cacheTimestamp The timestamp of when the data was cached.
+ * @param {string} symbol The stock symbol, for the cache clearing functionality.
  */
-function renderOverviewCard(overviewData, aiOverview, cacheTimestamp) {
+function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     
     const marketCap = formatMarketCap(overviewData.MarketCapitalization);
@@ -552,12 +632,14 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp) {
 
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <span class="text-sm font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">${sanitizeText(overviewData.AssetType)}</span>
+                <div class="flex-shrink-0">
+                    <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Clear Cache</button>
+                </div>
             </div>
             <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-1">AI-Powered Overview</h3>
             <p class="mt-1 text-sm prose prose-sm max-w-none">${sanitizeAndParseMarkdown(aiOverview)}</p>
@@ -583,15 +665,18 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp) {
         </div>
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
+    
+    // Add event listener for the newly created button
+    document.getElementById('clear-cache-button')?.addEventListener('click', () => handleClearCache(symbol));
 }
 
 /**
- * [ROBUSTNESS] Parses non-standard YYYYMMDDTHHMMSS date strings safely.
+ * Parses non-standard YYYYMMDDTHHMMSS date strings safely.
  * @param {string} timeString The date string from the API.
- * @returns {Date} A JavaScript Date object.
+ * @returns {string|Date} A JavaScript Date object or "Invalid Date" string on failure.
  */
 function parseAlphaVantageDate(timeString) {
-    if (!timeString || timeString.length < 15) return new Date(); // Return current date as a fallback
+    if (!timeString || timeString.length < 15) return "Invalid Date";
 
     const year = timeString.substring(0, 4);
     const month = timeString.substring(4, 6);
@@ -603,11 +688,11 @@ function parseAlphaVantageDate(timeString) {
     const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
 
     const parsedDate = new Date(isoString);
-    return isNaN(parsedDate) ? new Date() : parsedDate;
+    return isNaN(parsedDate) ? "Invalid Date" : parsedDate;
 }
 
 /**
- * [REFACTORED] Renders the news card with a timestamp.
+ * Renders the news card with a timestamp.
  * @param {Array} newsItems The array of summarized news articles.
  * @param {string} symbol The stock symbol.
  * @param {Timestamp} cacheTimestamp The timestamp of when the news was cached.
@@ -625,11 +710,12 @@ function renderNewsCard(newsItems, symbol, cacheTimestamp) {
         }
 
         const publishedDate = parseAlphaVantageDate(item.time_published);
+        const dateString = (publishedDate instanceof Date) ? publishedDate.toLocaleDateString() : publishedDate;
 
         return `
             <li class="py-4 border-b border-gray-200 last:border-b-0">
                 <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
-                    <p class="text-sm text-gray-500">${sanitizeText(item.source)} &bull; ${sanitizeText(publishedDate.toLocaleDateString())}</p>
+                    <p class="text-sm text-gray-500">${sanitizeText(item.source)} &bull; ${sanitizeText(dateString)}</p>
                     <h4 class="font-semibold text-emerald-500">${sanitizeText(item.title)}</h4>
                     <div class="text-sm mt-1 prose prose-sm max-w-none">${sanitizeAndParseMarkdown(item.ai_summary)}</div>
                     <div class="mt-2">
