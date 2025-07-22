@@ -13,24 +13,13 @@
  * in the HTML for a CDN-first approach.
  */
 :root {
-    --color-bg: #f3f4f6;
-    --color-text: #1f2937;
     --color-primary: #4f46e5;
-    --color-primary-dark: #4338ca;
-    --color-accent: #10b981;
-    --color-card-bg: #ffffff;
-    --color-card-border: #e5e7eb;
-    --color-text-muted: #6b7280;
-    --color-input-bg: #ffffff;
-    --color-input-border: #d1d5db;
-    --color-button-text: #ffffff;
-
     font-family: 'Inter', sans-serif;
 }
 
 body {
-    background-color: var(--color-bg);
-    color: var(--color-text);
+    background-color: #f3f4f6; /* bg-gray-100 */
+    color: #1f2937; /* color-text */
 }
 
 /*
