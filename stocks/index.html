@@ -7,7 +7,6 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@latest/dist/purify.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,26 +57,22 @@
 
     <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4">
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
             <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
                     <div>
-                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Gemini API Key</label>
-                        <textarea id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Google AI Gemini API Key"></textarea>
-                    </div>
-                    <div>
                         <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Alpha Vantage API Key</label>
-                        <textarea id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Alpha Vantage API Key"></textarea>
+                        <input type="text" id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" placeholder="Enter your Alpha Vantage API Key">
                     </div>
                      <div>
-                        <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key <span class="text-xs text-gray-500">(e.g., Google Custom Search)</span></label>
-                        <textarea id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Web Search API Key"></textarea>
+                        <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key (Google)</label>
+                        <input type="text" id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" placeholder="Enter your Google Cloud API Key">
                     </div>
-                    <div>
-                        <label for="searchEngineIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Search Engine ID <span class="text-xs text-gray-500">(e.g., Google's `cx` value)</span></label>
-                        <textarea id="searchEngineIdInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" rows="2" placeholder="Enter your Custom Search Engine ID"></textarea>
+                     <div>
+                        <label for="searchEngineIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Search Engine ID (cx value)</label>
+                        <input type="text" id="searchEngineIdInput" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm w-full p-2" placeholder="Enter your Custom Search Engine ID">
                     </div>
                     <div>
                         <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
@@ -119,14 +114,14 @@
     </div>
 
     <div id="fullDataModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75 modal-close-trigger"></div>
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-full-data-modal-bg"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <div>
                     <h2 id="full-data-modal-title" class="text-2xl font-bold text-gray-800">Full Cached Data</h2>
                     <p id="full-data-modal-timestamp" class="text-sm text-gray-500"></p>
                 </div>
-                <button class="text-gray-400 hover:text-gray-600 text-2xl modal-close-trigger">&times;</button>
+                <button id="close-full-data-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto flex-grow bg-gray-50">
                 <pre id="full-data-content" class="text-xs whitespace-pre-wrap break-all"></pre>
@@ -135,28 +130,24 @@
     </div>
     
     <div id="financialAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75 modal-close-trigger"></div>
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-financial-analysis-modal-bg"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 id="financial-analysis-modal-title" class="text-2xl font-bold text-gray-800">Financial Analysis</h2>
-                <button class="text-gray-400 hover:text-gray-600 text-2xl modal-close-trigger">&times;</button>
+                <button id="close-financial-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            <div class="p-8 bg-gray-50 overflow-y-auto flex-grow">
-                <div id="financial-analysis-content" class="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-a:text-indigo-600"></div>
-            </div>
+            <div id="financial-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
         </div>
     </div>
 
     <div id="undervaluedAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
-        <div class="absolute inset-0 bg-gray-900 bg-opacity-75 modal-close-trigger"></div>
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-undervalued-analysis-modal-bg"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center">
                 <h2 id="undervalued-analysis-modal-title" class="text-2xl font-bold text-gray-800">Undervalued Stock Analysis</h2>
-                <button class="text-gray-400 hover:text-gray-600 text-2xl modal-close-trigger">&times;</button>
+                <button id="close-undervalued-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-             <div class="p-8 bg-gray-50 overflow-y-auto flex-grow">
-                <div id="undervalued-analysis-content" class="prose prose-lg max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-a:text-indigo-600"></div>
-            </div>
+            <div id="undervalued-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
         </div>
     </div>
 
