@@ -1,16 +1,16 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 5.0.0
- * Description: Centralized theme variables and essential boilerplate. All component styling
- * is now handled directly by Tailwind CSS utility classes in the HTML.
+ * Version: 5.1.0
+ * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
+ * This includes the loading spinner animation, modal visibility rules, and root theme variables.
  */
 
 /*
  * =================================================================
  * THEME & COLOR VARIABLES
  * =================================================================
- * These are kept for reference but are now mapped to Tailwind classes
- * in the HTML for a CDN-first approach.
+ * These are mapped to Tailwind classes in the HTML for a CDN-first approach,
+ * with the primary color variable used here for the loader animation.
  */
 :root {
     --color-primary: #4f46e5;
