@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.6.0"; 
+const APP_VERSION = "3.7.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -22,9 +22,7 @@ const CONSTANTS = {
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
-    MAX_NEWS_ARTICLES: 5,
     API_FUNC_OVERVIEW: 'OVERVIEW',
-    API_FUNC_NEWS: 'NEWS_SENTIMENT',
 };
 
 // List of comprehensive data endpoints to fetch
@@ -46,16 +44,7 @@ let auth;
 let userId;
 let firebaseConfig = null;
 let appIsInitialized = false;
-let geminiApiKey = "";
 let alphaVantageApiKey = "";
-// Cache settings are no longer based on TTL, but this object can remain for reference
-let cacheSettings = {
-    // These values are no longer used in the fetching logic
-    OVERVIEW_TTL: -1, // -1 signifies indefinite caching
-    NEWS_SENTIMENT_TTL: -1,
-    AI_OVERVIEW_TTL: -1,
-    COMPREHENSIVE_TTL: -1
-};
 
 // --- UTILITY HELPERS ---
 
@@ -66,7 +55,7 @@ let cacheSettings = {
  * @returns {string} The formatted string (e.g., "$2.95T") or "N/A".
  */
 function formatMarketCap(value) {
-    const num = parseInt(value, 10);
+    const num = parseFloat(value);
     if (isNaN(num) || num <= 0) {
         return "N/A";
     }
@@ -90,20 +79,6 @@ function formatMarketCap(value) {
 
 
 // --- SECURITY HELPERS ---
-
-/**
- * Sanitizes a string of HTML to prevent XSS attacks. It first converts Markdown to HTML,
- * then purifies the result.
- * @param {string} dirtyMarkdown The potentially unsafe string, which may contain Markdown.
- * @returns {string} The sanitized HTML string, safe to insert into the DOM.
- */
-function sanitizeAndParseMarkdown(dirtyMarkdown) {
-    if (typeof dirtyMarkdown !== 'string' || !dirtyMarkdown) {
-        return '';
-    }
-    const rawHtml = marked.parse(dirtyMarkdown);
-    return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
-}
 
 /**
  * Sanitizes a plain text string to prevent it from being interpreted as HTML.
@@ -204,7 +179,6 @@ function openConfirmationModal(title, message, onConfirm) {
     const confirmBtn = modal.querySelector('#confirm-button');
     const cancelBtn = modal.querySelector('#cancel-button');
 
-    // Clone and replace the confirm button to remove old event listeners
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
     
@@ -221,19 +195,10 @@ function openConfirmationModal(title, message, onConfirm) {
 
 // --- CONFIG & INITIALIZATION ---
 
-/**
- * Safely parses a string that might be a JavaScript object literal into a standard JSON object.
- * This is a security enhancement to avoid using eval-like constructs.
- * @param {string} str The string to parse, expected to be a Firebase config object.
- * @returns {object} The parsed object.
- * @throws {Error} If the string cannot be parsed.
- */
 function safeParseConfig(str) {
     try {
         const startIndex = str.indexOf('{');
-        if (startIndex === -1) {
-            throw new Error("Could not find a '{' in the config string.");
-        }
+        if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
         const objectStr = str.substring(startIndex);
         const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
         return JSON.parse(jsonLike);
@@ -286,13 +251,12 @@ function initializeFirebase() {
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
-    const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempAlphaVantageKey = document.getElementById('alphaVantageApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!tempGeminiKey || !tempFirebaseConfigText || !tempAlphaVantageKey) {
-        displayMessageInModal("All API Keys and the Firebase Config are required.", "warning");
+    if (!tempFirebaseConfigText || !tempAlphaVantageKey) {
+        displayMessageInModal("The Alpha Vantage API Key and the Firebase Config are required.", "warning");
         return;
     }
     
@@ -306,7 +270,6 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
-    geminiApiKey = tempGeminiKey;
     alphaVantageApiKey = tempAlphaVantageKey;
     firebaseConfig = tempFirebaseConfig;
     
@@ -392,47 +355,26 @@ async function callApi(url, options = {}) {
     }
 }
 
-async function callGeminiAPI(prompt) {
-    if (!geminiApiKey) throw new Error("Gemini API Key is not set.");
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-    const payload = { contents: [{ parts: [{ text: prompt }] }] };
-    const result = await callApi(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-
-    if (result.error) {
-        throw new Error(`Gemini API Error: ${result.error.message}`);
-    }
-    if (!result.candidates || result.candidates.length === 0) {
-        throw new Error('Invalid response from Gemini API: No candidates returned.');
-    }
-    
-    return result.candidates[0]?.content?.parts?.[0]?.text || null;
-}
-
 async function fetchAlphaVantageData(functionName, symbol) {
     if (!alphaVantageApiKey) throw new Error("Alpha Vantage API Key is not set.");
     const url = `https://www.alphavantage.co/query?function=${functionName}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
     const data = await callApi(url);
-    if (data.Note || (Object.keys(data).length === 0)) {
-        throw new Error(data.Note || `No data returned from Alpha Vantage for ${functionName}. This may be due to API limits or an invalid symbol.`);
+    if (data.Note || (Object.keys(data).length === 0) || data.Information) {
+        throw new Error(data.Note || data.Information || `No data returned from Alpha Vantage for ${functionName}. This may be due to API limits or an invalid symbol.`);
     }
     return data;
 }
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
-/**
- * Handles the user request to clear the cache for a specific stock ticker.
- * @param {string} symbol The stock symbol to clear from the cache.
- */
 function handleClearCache(symbol) {
     openConfirmationModal(
         'Clear All Cache?',
-        `This will permanently delete all stored data for ${symbol}. The next time you search for it, fresh data will be fetched from the APIs. Are you sure?`,
+        `This will permanently delete all stored data for ${symbol}. The next time you search for it, fresh data will be fetched from the API. Are you sure?`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
             try {
-                // Delete both the main and comprehensive cache documents
                 const mainDocRef = doc(db, 'cached_stock_data', symbol);
                 const comprehensiveDocRef = doc(db, 'comprehensive_stock_data', symbol);
                 
@@ -453,11 +395,6 @@ function handleClearCache(symbol) {
     );
 }
 
-/**
- * Fetches and caches the full set of fundamental and time series data.
- * This runs in the background after the initial research request.
- * @param {string} symbol The stock symbol to fetch data for.
- */
 async function fetchAndCacheComprehensiveData(symbol) {
     console.log(`Starting comprehensive data fetch for ${symbol}...`);
     const comprehensiveData = {};
@@ -466,7 +403,6 @@ async function fetchAndCacheComprehensiveData(symbol) {
     for (const func of COMPREHENSIVE_API_FUNCTIONS) {
         try {
             console.log(`Fetching ${func} for ${symbol}...`);
-            // Add a small delay between calls to be kind to the API
             await new Promise(resolve => setTimeout(resolve, 1000));
             const data = await fetchAlphaVantageData(func, symbol);
             comprehensiveData[func] = data;
@@ -484,167 +420,73 @@ async function fetchAndCacheComprehensiveData(symbol) {
     };
     
     try {
-        await setDoc(docRef, dataToCache);
+        await setDoc(docRef, dataToCache, { merge: true });
         console.log(`Successfully cached comprehensive data for ${symbol}.`);
     } catch (dbError) {
         console.error(`Failed to write comprehensive data for ${symbol} to Firestore:`, dbError);
     }
 }
 
-
-/**
- * Generates a dynamic, AI-powered company overview based on recent news.
- * @param {string} symbol The stock symbol.
- * @param {Array} newsFeed The array of news articles from Alpha Vantage.
- * @returns {Promise<string>} A promise that resolves to the AI-generated overview.
- */
-async function generateAiOverview(symbol, newsFeed) {
-    if (!newsFeed || newsFeed.length === 0) {
-        return "No recent news available to generate a dynamic overview.";
-    }
-    const headlines = newsFeed
-        .slice(0, CONSTANTS.MAX_NEWS_ARTICLES)
-        .map(article => `- ${article.title}`)
-        .join('\n');
-    
-    const prompt = `As a financial analyst reviewing recent news for ${symbol}, write a concise, one-paragraph company overview. Focus on the current primary business drivers, strategic initiatives, and market position revealed in these headlines. Do not list the headlines themselves.
-
-Recent Headlines:
-${headlines}
-
-Modern, news-driven company overview for ${symbol}:`;
-
-    try {
-        const overview = await callGeminiAPI(prompt);
-        return overview || "AI overview could not be generated at this time.";
-    } catch (error) {
-        console.error("Failed to generate AI overview:", error);
-        return "AI overview could not be generated due to an error.";
-    }
-}
-
-/**
- * Main handler for stock research, with a "fetch-once" cache architecture.
- */
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
     const symbol = tickerInput.value.trim().toUpperCase();
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
+    const previousContent = container.innerHTML;
 
     const tickerRegex = /^[A-Z.]{1,10}$/;
     if (!tickerRegex.test(symbol)) {
-        displayMessageInModal("Please enter a valid stock ticker symbol (e.g., 'AAPL', 'GOOG').", "warning");
+        displayMessageInModal("Please enter a valid stock ticker symbol (e.g., 'AAPL', 'BRK.A').", "warning");
         return;
     }
     
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.innerHTML = '';
     openModal(CONSTANTS.MODAL_LOADING);
     
     try {
         const mainCacheRef = doc(db, 'cached_stock_data', symbol);
         const cachedDoc = await getDoc(mainCacheRef);
 
-        let overview, aiOverview, summarizedNews, overviewTimestamp, newsTimestamp;
+        let overview, overviewTimestamp;
 
         if (cachedDoc.exists()) {
-            // --- DATA EXISTS IN CACHE: USE IT ---
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Retrieving stored data for ${symbol}...`;
             console.log(`Using cached data for ${symbol}.`);
             
             const cachedData = cachedDoc.data();
             overview = cachedData.overview.data;
             overviewTimestamp = cachedData.overview.cachedAt;
-            aiOverview = cachedData.aiOverview.data;
-            summarizedNews = cachedData.news.data;
-            newsTimestamp = cachedData.news.cachedAt;
-
         } else {
-            // --- NO CACHE: FETCH FROM APIs AND STORE PERMANENTLY ---
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
             console.log(`No cache found for ${symbol}. Fetching new data...`);
 
-            // 1. Fetch Overview
             overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
             overviewTimestamp = Timestamp.now();
             
-            // 2. Fetch News
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching news for ${symbol}...`;
-            const rawNewsData = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
-            const rawNewsFeed = (rawNewsData.feed || [])
-                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol && parseFloat(t.relevance_score) >= 0.5))
-                .slice(0, CONSTANTS.MAX_NEWS_ARTICLES);
-
-            // 3. Process News with AI
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI summaries...`;
-            summarizedNews = await processNewsWithAI(rawNewsFeed, symbol);
-            newsTimestamp = Timestamp.now();
-
-            // 4. Generate AI Overview
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI overview...`;
-            aiOverview = await generateAiOverview(symbol, rawNewsFeed);
-
-            // 5. Save all generated data to the main cache
-            const dataToUpdate = {
+            const dataToCache = {
                 overview: { data: overview, cachedAt: overviewTimestamp },
-                news: { data: summarizedNews, cachedAt: newsTimestamp },
-                aiOverview: { data: aiOverview, cachedAt: Timestamp.now() }
             };
-            await setDoc(mainCacheRef, dataToUpdate);
+            await setDoc(mainCacheRef, dataToCache);
             
-            // 6. Trigger comprehensive data fetch in the background
             fetchAndCacheComprehensiveData(symbol);
         }
 
-        // --- RENDER UI ---
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        renderOverviewCard(overview, aiOverview, overviewTimestamp, symbol);
-        if (summarizedNews && summarizedNews.length > 0) {
-            renderNewsCard(summarizedNews, symbol, newsTimestamp);
-        } else {
-             container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent, relevant news found for ${symbol}.</p></div>`);
-        }
+        container.innerHTML = '';
+        renderOverviewCard(overview, overviewTimestamp, symbol);
 
         tickerInput.value = '';
 
     } catch (error) {
         console.error("Error during stock research:", error);
+        container.innerHTML = previousContent; // Restore previous content on error
         displayMessageInModal(error.message, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-async function processNewsWithAI(articles, symbol) {
-    if (!articles || articles.length === 0) return [];
-    
-    const summaryPromises = articles.map(async (article) => {
-        const prompt = `As a financial analyst, provide a neutral, one-sentence summary of the following news article's key information, specifically as it relates to the company ${symbol}.
-        
-        Title: "${article.title}"
-        Summary: "${article.summary}"
-        
-        One-sentence summary about ${symbol}:`;
-
-        try {
-            const summary = await callGeminiAPI(prompt);
-            return { ...article, ai_summary: summary || article.summary };
-        } catch (error) {
-            console.warn(`Could not summarize article: "${article.title}"`, error);
-            return { ...article, ai_summary: "[AI summary could not be generated.]" };
-        }
-    });
-
-    return Promise.all(summaryPromises);
-}
-
-
 // --- UI RENDERING ---
 
-/**
- * Handles showing the full cached data in a modal.
- * @param {string} symbol The stock symbol to view data for.
- */
 async function handleViewFullData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
@@ -656,11 +498,18 @@ async function handleViewFullData(symbol) {
             const fullData = docSnap.data();
             const contentEl = document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT);
             
-            // Format the JSON with 2-space indentation for readability
-            contentEl.textContent = JSON.stringify(fullData, null, 2);
-
             document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
             document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullData.cachedAt.toDate().toLocaleString()}`;
+
+            if (fullData.errors && Object.keys(fullData.errors).length > 0) {
+                let errorText = 'The following errors occurred during the background data fetch:\n\n';
+                for (const [key, value] of Object.entries(fullData.errors)) {
+                    errorText += `- ${key}: ${value}\n`;
+                }
+                contentEl.textContent = errorText;
+            } else {
+                contentEl.textContent = JSON.stringify(fullData.data, null, 2);
+            }
             
             openModal(CONSTANTS.MODAL_FULL_DATA);
         } else {
@@ -674,20 +523,13 @@ async function handleViewFullData(symbol) {
     }
 }
 
-/**
- * Renders the main company overview card with additional action buttons.
- * @param {object} overviewData The raw data from the OVERVIEW API call.
- * @param {string} aiOverview The AI-generated dynamic overview text.
- * @param {Timestamp} cacheTimestamp The timestamp of when the data was cached.
- * @param {string} symbol The stock symbol.
- */
-function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
+function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     
     const marketCap = formatMarketCap(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
-    const weekHigh = overviewData['52WeekHigh'] !== "None" && overviewData['52WeekHigh'] ? `$${overviewData['52WeekHigh']}` : "N/A";
+    const weekHigh = overviewData['52WeekHigh'] && overviewData['52WeekHigh'] !== "None" ? `$${overviewData['52WeekHigh']}` : "N/A";
     const timestampString = cacheTimestamp ? `Data Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
 
     const cardHtml = `
@@ -702,8 +544,8 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
                     <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 </div>
             </div>
-            <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-1">AI-Powered Overview</h3>
-            <p class="mt-1 text-sm prose prose-sm max-w-none">${sanitizeAndParseMarkdown(aiOverview)}</p>
+            <h3 class="text-lg font-semibold text-gray-700 mt-4 mb-2">Company Overview</h3>
+            <p class="mt-1 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div>
                     <p class="text-sm text-gray-500">Market Cap</p>
@@ -727,77 +569,21 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
     
-    // Add event listeners for the newly created buttons
     document.getElementById('clear-cache-button')?.addEventListener('click', () => handleClearCache(symbol));
     document.getElementById('view-full-data-button')?.addEventListener('click', () => handleViewFullData(symbol));
 }
 
-/**
- * Parses non-standard YYYYMMDDTHHMMSS date strings safely.
- * @param {string} timeString The date string from the API.
- * @returns {string|Date} A JavaScript Date object or "Invalid Date" string on failure.
- */
 function parseAlphaVantageDate(timeString) {
-    if (!timeString || timeString.length < 15) return "Invalid Date";
-
-    const year = timeString.substring(0, 4);
-    const month = timeString.substring(4, 6);
-    const day = timeString.substring(6, 8);
-    const hours = timeString.substring(9, 11);
-    const minutes = timeString.substring(11, 13);
-    const seconds = timeString.substring(13, 15);
+    if (!timeString) return "Invalid Date";
     
-    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+    const match = timeString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+    if (!match) return "Invalid Date";
 
+    const [, year, month, day, hours, minutes, seconds] = match;
+    const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+    
     const parsedDate = new Date(isoString);
     return isNaN(parsedDate) ? "Invalid Date" : parsedDate;
-}
-
-/**
- * Renders the news card with a timestamp.
- * @param {Array} newsItems The array of summarized news articles.
- * @param {string} symbol The stock symbol.
- * @param {Timestamp} cacheTimestamp The timestamp of when the news was cached.
- */
-function renderNewsCard(newsItems, symbol, cacheTimestamp) {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    const articlesHtml = newsItems.map(item => {
-        const sentiment = item.ticker_sentiment.find(t => t.ticker === symbol) || { ticker_sentiment_label: 'Neutral' };
-        const sentimentLabel = sentiment.ticker_sentiment_label;
-        let sentimentColorClass = 'bg-gray-200 text-gray-800';
-        if (sentimentLabel.includes('Bullish') || sentimentLabel.includes('Positive')) {
-            sentimentColorClass = 'bg-green-100 text-green-800';
-        } else if (sentimentLabel.includes('Bearish') || sentimentLabel.includes('Negative')) {
-            sentimentColorClass = 'bg-red-100 text-red-800';
-        }
-
-        const publishedDate = parseAlphaVantageDate(item.time_published);
-        const dateString = (publishedDate instanceof Date) ? publishedDate.toLocaleDateString() : publishedDate;
-
-        return `
-            <li class="py-4 border-b border-gray-200 last:border-b-0">
-                <a href="${sanitizeText(item.url)}" target="_blank" rel="noopener noreferrer" class="hover:bg-gray-50 -m-3 p-3 block rounded-lg">
-                    <p class="text-sm text-gray-500">${sanitizeText(item.source)} &bull; ${sanitizeText(dateString)}</p>
-                    <h4 class="font-semibold text-emerald-500">${sanitizeText(item.title)}</h4>
-                    <div class="text-sm mt-1 prose prose-sm max-w-none">${sanitizeAndParseMarkdown(item.ai_summary)}</div>
-                    <div class="mt-2">
-                        <span class="text-xs font-semibold px-2 py-1 rounded-full ${sentimentColorClass}">${sanitizeText(sentimentLabel)}</span>
-                    </div>
-                </a>
-            </li>
-        `;
-    }).join('');
-
-    const timestampString = cacheTimestamp ? `News Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
-
-    const cardHtml = `
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 class="font-bold text-lg text-emerald-500 mb-2">Recent News & AI Summary</h3>
-            <ul class="divide-y divide-gray-200">${articlesHtml}</ul>
-            <div class="text-right text-xs text-gray-400 mt-2">${timestampString}</div>
-        </div>
-    `;
-    container.insertAdjacentHTML('beforeend', cardHtml);
 }
 
 // --- EVENT LISTENERS ---
@@ -809,7 +595,6 @@ function setupEventListeners() {
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-    // Add listener for closing the full data modal
     const closeFullDataBtn = document.getElementById('close-full-data-modal');
     if(closeFullDataBtn) closeFullDataBtn.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
     
@@ -825,15 +610,10 @@ function setupEventListeners() {
 
 function initializeApplication() {
     setupEventListeners();
-    marked.setOptions({
-        renderer: new marked.Renderer(),
-        gfm: true,
-        breaks: true,
-        pedantic: false,
-        smartLists: true,
-        smartypants: false
-    });
-
+    const versionDisplay = document.getElementById('app-version-display');
+    if(versionDisplay) {
+        versionDisplay.textContent = `v${APP_VERSION}`;
+    }
     openModal(CONSTANTS.MODAL_API_KEY);
 }
 
