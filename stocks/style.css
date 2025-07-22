@@ -61,3 +61,28 @@ body.modal-open {
     transform: rotate(360deg);
   }
 }
+
+/*
+ * =================================================================
+ * AI-GENERATED CONTENT STYLES
+ * =================================================================
+ * Adds vertical spacing to AI-generated reports for better readability.
+ */
+#financial-analysis-content.prose h2,
+#undervalued-analysis-content.prose h2 {
+    margin-top: 1.75em;
+    margin-bottom: 1em;
+}
+
+#financial-analysis-content.prose h3,
+#undervalued-analysis-content.prose h3 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+#financial-analysis-content.prose p,
+#undervalued-analysis-content.prose p,
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    margin-bottom: 1em;
+}
