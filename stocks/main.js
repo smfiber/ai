@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "4.0.0"; 
+const APP_VERSION = "4.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -370,27 +370,34 @@ async function loadAllCachedStocks() {
             container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
             return;
         }
-        querySnapshot.forEach((doc) => {
-            const symbol = doc.id;
-            const data = doc.data();
+        
+        for (const docSnapshot of querySnapshot.docs) {
+            const symbol = docSnapshot.id;
+            const data = docSnapshot.data();
+            
+            const comprehensiveDocRef = doc(db, 'comprehensive_stock_data', symbol);
+            const comprehensiveDocSnap = await getDoc(comprehensiveDocRef);
+            const isComprehensiveDataReady = comprehensiveDocSnap.exists() && Object.keys(comprehensiveDocSnap.data().errors).length === 0;
+
             if (data.overview && data.overview.data) {
-                renderOverviewCard(data.overview.data, data.overview.cachedAt, symbol);
+                renderOverviewCard(data.overview.data, data.overview.cachedAt, symbol, isComprehensiveDataReady);
             }
-        });
+        }
     } catch (error) {
         console.error("Error loading cached stocks: ", error);
         displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
     }
 }
 
-function handleClearCache(symbol) {
+function handleRefreshData(symbol) {
     openConfirmationModal(
-        'Clear All Cache?',
-        `This will permanently delete all stored data for ${symbol}, and it will be removed from your dashboard. Are you sure?`,
+        'Refresh All Data?',
+        `This will permanently delete all stored data for ${symbol} and then refetch it from the API. This may consume your API quota. Are you sure?`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
+            const loadingMessageEl = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
             try {
+                loadingMessageEl.textContent = `Deleting old data for ${symbol}...`;
                 const mainDocRef = doc(db, 'cached_stock_data', symbol);
                 const comprehensiveDocRef = doc(db, 'comprehensive_stock_data', symbol);
                 
@@ -399,17 +406,32 @@ function handleClearCache(symbol) {
                     deleteDoc(comprehensiveDocRef)
                 ]);
 
+                loadingMessageEl.textContent = `Fetching fresh data for ${symbol}...`;
+                const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
+                const overviewTimestamp = Timestamp.now();
+                
+                const dataToCache = {
+                    overview: { data: overview, cachedAt: overviewTimestamp },
+                };
+                await setDoc(mainDocRef, dataToCache);
+
+                // This runs in the background and does not block the UI
+                fetchAndCacheComprehensiveData(symbol);
+                
+                loadingMessageEl.textContent = `Refreshing dashboard...`;
                 await loadAllCachedStocks(); // Refresh the dashboard
-                displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
+                displayMessageInModal(`Data for ${symbol} has been refreshed.`, 'info');
+
             } catch (error) {
-                console.error("Error clearing cache:", error);
-                displayMessageInModal(`Failed to clear cache: ${error.message}`, 'error');
+                console.error("Error refreshing data:", error);
+                displayMessageInModal(`Failed to refresh data: ${error.message}`, 'error');
             } finally {
                 closeModal(CONSTANTS.MODAL_LOADING);
             }
         }
     );
 }
+
 
 async function fetchAndCacheComprehensiveData(symbol) {
     console.log(`Starting comprehensive data fetch for ${symbol}...`);
@@ -430,13 +452,18 @@ async function fetchAndCacheComprehensiveData(symbol) {
     const results = await Promise.allSettled(promises);
 
     results.forEach(result => {
-        if (result.status === 'fulfilled' && result.value) {
-            const { func, data } = result.value;
-            comprehensiveData[func] = data;
-        } else if (result.status === 'rejected' || (result.value && result.value.status === 'rejected')) {
-             const { func, error } = result.reason || result.value;
-             errors[func] = error;
+        // This check is for the Promise.allSettled wrapper itself.
+        if (result.status === 'fulfilled') {
+            const resValue = result.value;
+            // This checks our custom status from the internal try/catch block.
+            if (resValue.status === 'fulfilled') {
+                comprehensiveData[resValue.func] = resValue.data;
+            } else { // Our custom 'rejected' status
+                errors[resValue.func] = resValue.error;
+            }
         }
+        // An `else` for `result.status === 'rejected'` is not needed here
+        // because our internal try/catch ensures the promises always fulfill.
     });
 
     const docRef = doc(db, 'comprehensive_stock_data', symbol);
@@ -546,14 +573,13 @@ async function handleViewFullData(symbol) {
     }
 }
 
-function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
+function renderOverviewCard(overviewData, cacheTimestamp, symbol, isComprehensiveDataReady = false) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     if (!overviewData || !overviewData.Symbol) {
         console.warn(`Skipping render for ${symbol} due to missing overview data.`);
         return;
     }
 
-    // If the container has the placeholder message, clear it
     if (container.innerHTML.includes('No stocks researched yet')) {
         container.innerHTML = '';
     }
@@ -563,6 +589,10 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
     const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
     const weekHigh = overviewData['52WeekHigh'] && overviewData['52WeekHigh'] !== "None" ? `$${overviewData['52WeekHigh']}` : "N/A";
     const timestampString = cacheTimestamp ? `Data Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
+    
+    const analysisButtonsState = isComprehensiveDataReady ? '' : 'disabled';
+    const analysisButtonsClasses = isComprehensiveDataReady ? '' : 'opacity-50 cursor-not-allowed';
+
 
     const cardHtml = `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
@@ -572,7 +602,7 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
                 <div class="flex-shrink-0">
-                    <button data-symbol="${symbol}" class="clear-cache-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
+                    <button data-symbol="${symbol}" class="refresh-data-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 </div>
             </div>
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
@@ -584,8 +614,8 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol) {
             </div>
              <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-end">
                 <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View JSON</button>
-                <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
-                <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
+                <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg ${analysisButtonsClasses}" ${analysisButtonsState}>Undervalued Analysis</button>
+                <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg ${analysisButtonsClasses}" ${analysisButtonsState}>Financial Analysis</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>
@@ -605,7 +635,7 @@ function setupGlobalEventListeners() {
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
-        if (target.classList.contains('clear-cache-button')) handleClearCache(symbol);
+        if (target.classList.contains('refresh-data-button')) handleRefreshData(symbol);
         if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
@@ -695,41 +725,40 @@ async function handleFinancialAnalysis(symbol) {
 }
 
 function generateFinancialAnalysisReport(data) {
-    const companyName = get(data, 'OVERVIEW.Name');
-    const symbol = get(data, 'OVERVIEW.Symbol');
+    const { OVERVIEW, INCOME_STATEMENT, BALANCE_SHEET, CASH_FLOW } = data;
 
-    // Helper to get the latest report from an array
+    const companyName = get(OVERVIEW, 'Name');
+    const symbol = get(OVERVIEW, 'Symbol');
+
     const latest = (arr) => (Array.isArray(arr) && arr.length > 0 ? arr[0] : {});
 
-    const latestIncome = latest(get(data, 'INCOME_STATEMENT.annualReports', []));
-    const latestBalanceSheet = latest(get(data, 'BALANCE_SHEET.annualReports', []));
-    const latestCashFlow = latest(get(data, 'CASH_FLOW.annualReports', []));
+    const latestIncome = latest(get(INCOME_STATEMENT, 'annualReports', []));
+    const latestBalanceSheet = latest(get(BALANCE_SHEET, 'annualReports', []));
+    const latestCashFlow = latest(get(CASH_FLOW, 'annualReports', []));
     
     const year = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
     const totalRevenue = get(latestIncome, 'totalRevenue');
     const netIncome = get(latestIncome, 'netIncome');
-    const eps = get(data, 'OVERVIEW.EPS');
+    const eps = get(OVERVIEW, 'EPS');
     const operatingCashFlow = get(latestCashFlow, 'operatingCashflow');
-    const netProfitMargin = get(data, 'OVERVIEW.ProfitMargin');
-
-    // Liquidity
+    const netProfitMargin = get(OVERVIEW, 'ProfitMargin');
+    
     const totalCurrentAssets = parseFloat(get(latestBalanceSheet, 'totalCurrentAssets', 0));
     const totalCurrentLiabilities = parseFloat(get(latestBalanceSheet, 'totalCurrentLiabilities', 0));
     const currentRatio = totalCurrentLiabilities > 0 ? (totalCurrentAssets / totalCurrentLiabilities).toFixed(2) : "N/A";
     
-    // Debt
     const totalLiabilities = parseFloat(get(latestBalanceSheet, 'totalLiabilities', 0));
     const totalShareholderEquity = parseFloat(get(latestBalanceSheet, 'totalShareholderEquity', 0));
     const debtToEquity = totalShareholderEquity > 0 ? (totalLiabilities / totalShareholderEquity).toFixed(2) : "N/A";
 
-    const incomeTrend = get(data, 'INCOME_STATEMENT.annualReports', []).slice(0, 3).reverse().map(r => 
+    const incomeTrend = get(INCOME_STATEMENT, 'annualReports', []).slice(0, 3).reverse().map(r => 
         `\n  - **${r.fiscalDateEnding.substring(0,4)}:** Revenue: $${formatLargeNumber(r.totalRevenue)}, Net Income: $${formatLargeNumber(r.netIncome)}`
     ).join('');
 
     return `
 # Overview 📈
 This report provides a financial analysis for **${companyName} (${symbol})**. 
-The data suggests a company with a market capitalization of **$${formatLargeNumber(get(data, 'OVERVIEW.MarketCapitalization'))}** operating in the **${get(data, 'OVERVIEW.Sector')}** sector.
+The data suggests a company with a market capitalization of **$${formatLargeNumber(get(OVERVIEW, 'MarketCapitalization'))}** operating in the **${get(OVERVIEW, 'Sector')}** sector.
 
 # Key Financial Highlights (${year}) 📊
 - **Total Revenue**: $${formatLargeNumber(totalRevenue)}
@@ -742,7 +771,7 @@ The data suggests a company with a market capitalization of **$${formatLargeNumb
 ## Profitability Analysis 💰
 The company's ability to generate profit is a key indicator of its success.
 - **Revenue and Net Income Trends**: Here is a look at the past few years:${incomeTrend}
-- **Profit Margins**: The company has a **Gross Profit Margin** of **${(get(data, 'OVERVIEW.GrossProfitTTM') / get(latestIncome, 'totalRevenue', 1) * 100).toFixed(2)}%**. The trailing twelve months **Net Profit Margin** stands at **${(get(data, 'OVERVIEW.ProfitMargin') * 100).toFixed(2)}%**.
+- **Profit Margins**: The company has a **Gross Profit Margin** of **${(get(OVERVIEW, 'GrossProfitTTM') / get(latestIncome, 'totalRevenue', 1) * 100).toFixed(2)}%**. The trailing twelve months **Net Profit Margin** stands at **${(get(OVERVIEW, 'ProfitMargin') * 100).toFixed(2)}%**.
 
 ## Financial Health & Stability 💪
 - **Liquidity**: The **Current Ratio** is **${currentRatio}**. This suggests that for every $1 of short-term debt, the company has $${currentRatio} in short-term assets to cover it. A ratio above 1 generally indicates good short-term financial health.
@@ -781,23 +810,22 @@ async function handleUndervaluedAnalysis(symbol) {
 }
 
 function generateUndervaluedAnalysisReport(data) {
-    const companyName = get(data, 'OVERVIEW.Name');
-    const symbol = get(data, 'OVERVIEW.Symbol');
-
-    // Fundamental Ratios
-    const peRatio = get(data, 'OVERVIEW.PERatio');
-    const pbRatio = get(data, 'OVERVIEW.PriceToBookRatio');
-    const pegRatio = get(data, 'OVERVIEW.PEGRatio');
-    const dividendYield = get(data, 'OVERVIEW.DividendYield');
-    const roe = get(data, 'OVERVIEW.ReturnOnEquityTTM');
-    const targetPrice = get(data, 'OVERVIEW.AnalystTargetPrice');
+    const { OVERVIEW } = data;
     
-    // Technical Indicators
-    const weekHigh52 = get(data, 'OVERVIEW.52WeekHigh');
-    const weekLow52 = get(data, 'OVERVIEW.52WeekLow');
-    const ma50 = get(data, 'OVERVIEW.50DayMovingAverage');
-    const ma200 = get(data, 'OVERVIEW.200DayMovingAverage');
-    // Note: Current price isn't in the cached data, so we compare MAs to the 52-week range as a proxy.
+    const companyName = get(OVERVIEW, 'Name');
+    const symbol = get(OVERVIEW, 'Symbol');
+
+    const peRatio = get(OVERVIEW, 'PERatio');
+    const pbRatio = get(OVERVIEW, 'PriceToBookRatio');
+    const pegRatio = get(OVERVIEW, 'PEGRatio');
+    const dividendYield = get(OVERVIEW, 'DividendYield');
+    const roe = get(OVERVIEW, 'ReturnOnEquityTTM');
+    const targetPrice = get(OVERVIEW, 'AnalystTargetPrice');
+    
+    const weekHigh52 = get(OVERVIEW, '52WeekHigh');
+    const weekLow52 = get(OVERVIEW, '52WeekLow');
+    const ma50 = get(OVERVIEW, '50DayMovingAverage');
+    const ma200 = get(OVERVIEW, '200DayMovingAverage');
 
     return `
 # Is ${companyName} (${symbol}) Undervalued? 🧐
