@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "4.2.0"; 
+const APP_VERSION = "5.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -18,6 +18,7 @@ const CONSTANTS = {
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
     INPUT_ALPHA_VANTAGE_KEY: 'alphaVantageApiKeyInput',
+    INPUT_GEMINI_KEY: 'geminiApiKeyInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
     INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
@@ -49,6 +50,7 @@ let userId;
 let firebaseConfig = null;
 let appIsInitialized = false;
 let alphaVantageApiKey = "";
+let geminiApiKey = "";
 let searchApiKey = "";
 let searchEngineId = "";
 
@@ -210,12 +212,13 @@ function initializeFirebase() {
 async function handleApiKeySubmit(e) {
     e.preventDefault();
     const tempAlphaVantageKey = document.getElementById(CONSTANTS.INPUT_ALPHA_VANTAGE_KEY).value.trim();
+    const tempGeminiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
     const tempSearchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
     const tempSearchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempSearchApiKey || !tempSearchEngineId) {
+    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempSearchApiKey || !tempSearchEngineId || !tempGeminiKey) {
         displayMessageInModal("All API Keys and the Firebase Config are required.", "warning");
         return;
     }
@@ -231,6 +234,7 @@ async function handleApiKeySubmit(e) {
     }
     
     alphaVantageApiKey = tempAlphaVantageKey;
+    geminiApiKey = tempGeminiKey;
     searchApiKey = tempSearchApiKey;
     searchEngineId = tempSearchEngineId;
     firebaseConfig = tempFirebaseConfig;
@@ -305,6 +309,33 @@ async function callApi(url, options = {}) {
         throw error;
     }
 }
+
+async function callGeminiApi(prompt) {
+    if (!geminiApiKey) {
+        throw new Error("Gemini API key is not configured.");
+    }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    
+    const body = {
+        contents: [{
+            parts: [{ "text": prompt }]
+        }]
+    };
+
+    const data = await callApi(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+        return data.candidates[0].content.parts[0].text;
+    } else {
+        console.error("Unexpected Gemini API response structure:", data);
+        throw new Error("Failed to parse the response from the Gemini API. The structure was unexpected.");
+    }
+}
+
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
@@ -420,7 +451,6 @@ function renderNewsArticles(articles, symbol) {
     const card = document.getElementById(`card-${symbol}`);
     if (!card) return;
 
-    // Remove existing news container if present
     const existingNewsContainer = card.querySelector('.news-container');
     if (existingNewsContainer) existingNewsContainer.remove();
 
@@ -592,67 +622,127 @@ async function handleViewFullData(symbol) {
 
 async function handleFinancialAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
         if (!data) return;
-        const report = generateFinancialAnalysisReport(data);
+
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const latestIncome = (Array.isArray(data.INCOME_STATEMENT?.annualReports) && data.INCOME_STATEMENT.annualReports.length > 0) ? data.INCOME_STATEMENT.annualReports[0] : {};
+        const fiscalYear = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
+
+        const prompt = `
+Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data. The output should be easy to understand for a general audience using a mobile app. Use emojis to make the information more engaging.
+
+Analyze the following financial data for ${companyName} (Ticker: ${tickerSymbol}):
+JSON:
+${JSON.stringify(data, null, 2)}
+
+Based on the data, generate the following analysis in markdown format:
+
+# Overview 📈
+Provide a brief, high-level summary (2-3 sentences) of the company's overall financial performance and health. Mention its general trajectory (e.g., growth, stability, or decline).
+
+# Key Financial Highlights (${fiscalYear}) 📊
+Extract and present the following key metrics for the most recent fiscal year. Use bullet points and relevant emojis:
+- Total Revenue: $XXX.XX Billion
+- Net Income: $XX.XX Billion
+- Net Profit Margin: XX.X%
+- Earnings Per Share (EPS): $X.XX
+- Operating Cash Flow: $XXX.XX Billion
+
+# Financial Deep Dive 🕵️
+## Profitability Analysis 💰
+Analyze the company's ability to generate profit. Focus on:
+- Revenue and Net Income Trends: Describe the growth or decline over the last 3-5 years.
+- Profit Margins: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
+
+## Financial Health & Stability 💪
+Assess the company's financial stability and risk. Focus on:
+- Liquidity: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
+- Debt Levels: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
+
+# Final Verdict 📝
+Provide a concluding paragraph summarizing the key strengths and potential weaknesses based on this financial data. Is the company in a strong financial position? What are the key takeaways for a potential investor?
+`;
+
+        const report = await callGeminiApi(prompt);
         document.getElementById(CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
         document.getElementById('financial-analysis-modal-title').textContent = `Financial Analysis for ${symbol}`;
         openModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS);
+
     } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
-}
-
-function generateFinancialAnalysisReport(data) {
-    const companyName = get(data, 'OVERVIEW.Name'), symbol = get(data, 'OVERVIEW.Symbol');
-    const latest = (arr) => (Array.isArray(arr) && arr.length > 0 ? arr[0] : {});
-    const latestIncome = latest(get(data, 'INCOME_STATEMENT.annualReports', []));
-    const latestBalanceSheet = latest(get(data, 'BALANCE_SHEET.annualReports', []));
-    const latestCashFlow = latest(get(data, 'CASH_FLOW.annualReports', []));
-    const year = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
-    const totalRevenue = get(latestIncome, 'totalRevenue'), netIncome = get(latestIncome, 'netIncome'), eps = get(data, 'OVERVIEW.EPS');
-    const operatingCashFlow = get(latestCashFlow, 'operatingCashflow'), netProfitMargin = get(data, 'OVERVIEW.ProfitMargin');
-    const totalCurrentAssets = parseFloat(get(latestBalanceSheet, 'totalCurrentAssets', 0));
-    const totalCurrentLiabilities = parseFloat(get(latestBalanceSheet, 'totalCurrentLiabilities', 0));
-    const currentRatio = totalCurrentLiabilities > 0 ? (totalCurrentAssets / totalCurrentLiabilities).toFixed(2) : "N/A";
-    const totalLiabilities = parseFloat(get(latestBalanceSheet, 'totalLiabilities', 0));
-    const totalShareholderEquity = parseFloat(get(latestBalanceSheet, 'totalShareholderEquity', 0));
-    const debtToEquity = totalShareholderEquity > 0 ? (totalLiabilities / totalShareholderEquity).toFixed(2) : "N/A";
-    const incomeTrend = get(data, 'INCOME_STATEMENT.annualReports', []).slice(0, 3).reverse().map(r => `\n  - **${r.fiscalDateEnding.substring(0,4)}:** Revenue: $${formatLargeNumber(r.totalRevenue)}, Net Income: $${formatLargeNumber(r.netIncome)}`).join('');
-    return `# Overview 📈\nThis report provides a financial analysis for **${companyName} (${symbol})**. The data suggests a company with a market capitalization of **$${formatLargeNumber(get(data, 'OVERVIEW.MarketCapitalization'))}** operating in the **${get(data, 'OVERVIEW.Sector')}** sector.\n\n# Key Financial Highlights (${year}) 📊\n- **Total Revenue**: $${formatLargeNumber(totalRevenue)}\n- **Net Income**: $${formatLargeNumber(netIncome)}\n- **Net Profit Margin**: ${netProfitMargin === "N/A" ? "N/A" : (netProfitMargin * 100).toFixed(2) + '%'}\n- **Earnings Per Share (EPS)**: $${eps}\n- **Operating Cash Flow**: $${formatLargeNumber(operatingCashFlow)}\n\n# Financial Deep Dive 🕵️\n## Profitability Analysis 💰\n- **Revenue and Net Income Trends**: Here is a look at the past few years:${incomeTrend}\n- **Profit Margins**: The company has a **Gross Profit Margin** of **${(get(data, 'OVERVIEW.GrossProfitTTM') / get(latestIncome, 'totalRevenue', 1) * 100).toFixed(2)}%**. The trailing twelve months **Net Profit Margin** stands at **${(get(data, 'OVERVIEW.ProfitMargin') * 100).toFixed(2)}%**.\n\n## Financial Health & Stability 💪\n- **Liquidity**: The **Current Ratio** is **${currentRatio}**. This suggests that for every $1 of short-term debt, the company has $${currentRatio} in short-term assets to cover it. A ratio above 1 generally indicates good short-term financial health.\n- **Debt Levels**: The **Debt-to-Equity Ratio** is **${debtToEquity}**. This figure shows how much of the company's financing comes from debt versus shareholder equity. A higher number can indicate higher risk.\n\n# Final Verdict 📝\nThis analysis provides a snapshot of **${companyName}'s** financial standing.\n**Strengths**: Key strengths may include its market position, profitability margins, and cash flow generation.\n**Weaknesses**: Potential areas for concern could be its debt levels or trends in revenue growth.\nA potential investor should weigh these factors and consider the company's strategic initiatives and the broader economic environment.`;
 }
 
 async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing valuation analysis for ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
         if (!data) return;
-        const report = generateUndervaluedAnalysisReport(data);
+
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+
+        const prompt = `
+Role: You are an expert investment broker AI. Your task is to determine if a stock is undervalued by synthesizing fundamental and technical data. The output should be a clear, concise, and insightful analysis in markdown format for an investor using a mobile app. Use emojis to make the report engaging.
+
+Analyze the following full JSON data for ${companyName} (Ticker: ${tickerSymbol}):
+JSON:
+${JSON.stringify(data, null, 2)}
+
+Based on the provided data, generate the following analysis:
+
+# Is ${companyName} (${tickerSymbol}) Undervalued? 🧐
+An investment broker assesses a stock's value by combining fundamental financial health with market sentiment (technical analysis). Here is a breakdown for **${tickerSymbol}**.
+
+## 1. Fundamental Analysis: Company Worth 💰
+Assess the company's intrinsic value using key valuation ratios from the JSON data.
+
+### Key Valuation Ratios
+- **P/E Ratio**: **[Value]** (Comment on whether this is high or low, if possible).
+- **P/B Ratio**: **[Value]** (Interpret this value, especially if it's below 1).
+- **PEG Ratio**: **[Value]** (Explain the significance, especially if it's below 1).
+- **Dividend Yield**: **[Value]**% (Comment on its attractiveness and sustainability if possible by checking the cash flow statement).
+- **Return on Equity (ROE)**: **[Value]**% (Comment on the company's profitability from shareholder equity).
+
+### Analyst Consensus
+- **Analyst Target Price**: **$[Value]** (Compare this to the current market price if available in the data).
+
+## 2. Technical Analysis: Market Sentiment 📉📈
+Assess the current market sentiment using technical indicators from the JSON data.
+
+- **52-Week Range**: The stock has traded between **$[52WeekLow]** and **$[52WeekHigh]**.
+- **Moving Averages**:
+  - **50-Day MA**: $[50DayMovingAverage]
+  - **200-Day MA**: $[200DayMovingAverage]
+(Comment on the current price relative to these averages to determine the trend).
+
+## Synthesis: The Broker's Conclusion 📝
+Synthesize all the points above to provide a final verdict.
+- **Fundamental View**: Summarize the findings from the valuation ratios.
+- **Technical View**: Summarize the findings from the market sentiment indicators.
+- **Final Verdict**: Conclude whether the stock appears to be truly undervalued, fairly valued, or overvalued. Explain *why* based on the evidence. Is it a good investment opportunity right now?
+
+*Disclaimer: This is an automated analysis for informational purposes and is not investment advice.*
+`;
+        
+        const report = await callGeminiApi(prompt);
         document.getElementById(CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
         document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
         openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
+
     } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
-function generateUndervaluedAnalysisReport(data) {
-    const companyName = get(data, 'OVERVIEW.Name'), symbol = get(data, 'OVERVIEW.Symbol');
-    const peRatio = get(data, 'OVERVIEW.PERatio'), pbRatio = get(data, 'OVERVIEW.PriceToBookRatio');
-    const pegRatio = get(data, 'OVERVIEW.PEGRatio'), dividendYield = get(data, 'OVERVIEW.DividendYield');
-    const roe = get(data, 'OVERVIEW.ReturnOnEquityTTM'), targetPrice = get(data, 'OVERVIEW.AnalystTargetPrice');
-    const weekHigh52 = get(data, 'OVERVIEW.52WeekHigh'), weekLow52 = get(data, 'OVERVIEW.52WeekLow');
-    const ma50 = get(data, 'OVERVIEW.50DayMovingAverage'), ma200 = get(data, 'OVERVIEW.200DayMovingAverage');
-    return `# Is ${companyName} (${symbol}) Undervalued? 🧐\nAn investment broker assesses a stock's value by combining fundamental financial health with market sentiment (technical analysis). Here is a breakdown for **${symbol}**.\n\n## 1. Fundamental Analysis: Company Worth 💰\n### Key Valuation Ratios\n- **P/E Ratio**: **${peRatio}**\n- **P/B Ratio**: **${pbRatio}**\n- **PEG Ratio**: **${pegRatio}**\n- **Dividend Yield**: **${dividendYield === "N/A" ? "N/A" : (dividendYield * 100).toFixed(2) + '%'}**\n- **Return on Equity (ROE)**: **${roe === "N/A" ? "N/A" : (roe * 100).toFixed(2) + '%'}**\n\n### Analyst Consensus\n- **Analyst Target Price**: **$${targetPrice}**\n\n## 2. Technical Analysis: Market Sentiment 📉📈\n- **52-Week Range**: The stock has traded between **$${weekLow52}** and **$${weekHigh52}**.\n- **Moving Averages**:\n  - **50-Day MA**: $${ma50}\n  - **200-Day MA**: $${ma200}\n\n## Synthesis: The Broker's Conclusion 📝\n- **Fundamental View**: The valuation ratios provide a snapshot of whether the stock is cheap relative to its earnings, book value, and growth.\n- **Final Verdict**: To determine if **${symbol}** is truly undervalued, an investor must synthesize these points. An ideal candidate would have **strong fundamentals combined with bearish market sentiment**. The gap between the current price and the **Analyst Target Price** is a critical data point for this conclusion.\n\n*Disclaimer: This is an automated analysis for informational purposes and is not investment advice.*`;
-}
-
 
 // --- APP INITIALIZATION TRIGGER ---
 
