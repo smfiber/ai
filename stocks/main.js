@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.0.1"; 
+const APP_VERSION = "5.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -39,83 +39,89 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let alphaVantageApiKey = "";
 let geminiApiKey = "";
+let webSearchApiKey = ""; // New API key for web search
 
 // --- AI PROMPTS ---
-const financialAnalysisPromptTemplate = `Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data. The output must be strictly in markdown format, without any emojis.
+
+// STEP 1: DRAFTING PROMPTS
+const financialDraftPrompt = `Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based *only* on the provided JSON data. The output must be strictly in markdown format, without any emojis.
 Analyze the following financial data for [Company Name] (Ticker: [Ticker Symbol]):
-JSON
+JSON:
 [Paste the full JSON data here]
-Based on the data, generate the following analysis. Use markdown headings, subheadings, bolding for key terms, and bullet points as specified below.
+Based *only* on the data provided, generate a draft analysis. Use markdown headings, subheadings, and bolding for key terms.
 
 # **Financial Analysis for [Ticker Symbol]**
-
 ## **Overview**
-Provide a brief, high-level summary (2-3 sentences) of the company's overall financial performance and health. Mention its general trajectory (e.g., growth, stability, or decline).
-
+Provide a brief, high-level summary (2-3 sentences) of the company's financial performance and health based on the data.
 ***
-
 ## **Key Financial Highlights ([Year])**
-Extract and present the following key metrics for the most recent fiscal year. Use bullet points.
+Extract and present the following key metrics for the most recent fiscal year.
 * **Total Revenue**: $XXX.XX Billion
 * **Net Income**: $XX.XX Billion
 * **Net Profit Margin**: XX.X%
 * **Earnings Per Share (EPS)**: $X.XX
 * **Operating Cash Flow**: $XXX.XX Billion
-
 ***
-
 ## **Financial Deep Dive**
-
 ### **Profitability Analysis**
-**Revenue and Net Income Trends**: Describe the growth or decline over the last 3-5 years.
-**Profit Margins**: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
-
+Describe revenue trends, net income trends, and profit margins over the last 3-5 years.
 ### **Financial Health & Stability**
-**Liquidity**: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
-**Debt Levels**: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
-
+Analyze liquidity via the Current Ratio and debt levels via the Debt-to-Equity Ratio for the most recent fiscal year.
 ***
+## **Initial Verdict**
+Provide a concluding paragraph summarizing the key strengths and potential weaknesses based *only* on this financial data.`;
 
-## **Final Verdict**
-Provide a concluding paragraph summarizing the key strengths and potential weaknesses based on this financial data. Is the company in a strong financial position? What are the key takeaways for a potential investor?`;
-
-const undervaluedAnalysisPromptTemplate = `Role: You are an expert investment analyst and stockbroker. Your task is to synthesize the provided JSON data to determine if a stock is truly undervalued. Your analysis must be clear, insightful, and accessible to a non-expert investor. The output must be strictly in markdown format, without any emojis.
+const undervaluedDraftPrompt = `Role: You are an expert investment analyst. Your task is to synthesize the provided JSON data to determine if a stock could be undervalued. The output must be a clear, insightful draft in markdown format, without any emojis.
 Analyze the following financial data for [Company Name] (Ticker: [Ticker Symbol]):
-JSON
+JSON:
 [Paste the full JSON data here]
-Based on the data, generate the following valuation analysis using markdown headings, subheadings, and bullet points as specified.
+Based *only* on the data provided, generate the following valuation analysis draft:
 
 # **Undervalued Analysis for [Ticker Symbol]**
-
 ## **Valuation Verdict**
-Start with a direct, 2-3 sentence conclusion. Is this stock a potential bargain, fairly priced, or a value trap? Briefly state the main reasons based on your synthesis of its fundamentals and market sentiment.
-
+Based on the data, is this stock showing signs of being a potential bargain, fairly priced, or a value trap? State the main reasons.
 ***
-
 ## **1. Fundamental Analysis: Is the Company a Good Value?**
-
 ### **Key Valuation Ratios**
-* **P/E Ratios (PERatio, TrailingPE, ForwardPE)**: Interpret these ratios. Is the company trading at a discount compared to what's typical for its industry? Is its future P/E looking better or worse?
-* **Price-to-Book (PriceToBookRatio)**: Analyze the P/B ratio. Note if it is below 1.0 for asset-heavy companies. Explain the context for tech companies with intangible assets.
-* **PEG Ratio (PEGRatio)**: Explain how the PEG ratio provides context to the P/E by factoring in growth. A value below 1 is a strong positive signal.
-
+* **P/E Ratios (PERatio, TrailingPE, ForwardPE)**: Interpret these ratios.
+* **Price-to-Book (PriceToBookRatio)**: Analyze the P/B ratio in context (e.g., for a tech company).
+* **PEG Ratio (PEGRatio)**: Explain what the PEG ratio suggests about its value relative to growth.
 ### **Deeper Financial Health**
-* **Debt-to-Equity**: Calculate this using the most recent \`totalLiabilities\` and \`totalShareholderEquity\` from the \`BALANCE_SHEET\` and state the result. Is the company's debt level a risk?
-* **Return on Equity (ReturnOnEquityTTM)**: Interpret the ROE. Does it indicate a high-quality, efficient business?
-* **Analyst Consensus**: State the consensus target price (AnalystTargetPrice). How significant is the potential upside from the current price or moving averages?
-
+* **Debt-to-Equity**: Calculate and state the Debt-to-Equity ratio.
+* **Return on Equity (ReturnOnEquityTTM)**: Interpret the ROE.
+* **Analyst Consensus**: State the consensus target price (AnalystTargetPrice).
 ***
-
 ## **2. Technical Analysis: What is the Market Sentiment?**
-
 ### **Price Context**
-* **Price Range (52WeekHigh, 52WeekLow)**: Where is the stock trading within its 52-week range? A price near the low can signal a potential entry point if fundamentals are strong.
-* **Trend Identification (50DayMovingAverage, 200DayMovingAverage)**: Is the stock in a downtrend (trading below its moving averages)? A technically weak price for a fundamentally strong company is the classic setup for a value investment.
-
+* **Price Range (52WeekHigh, 52WeekLow)**: Where is the stock trading within its 52-week range?
+* **Trend Identification (50DayMovingAverage, 200DayMovingAverage)**: Is the stock in a downtrend or uptrend based on its moving averages?
 ***
+## **The Broker's Initial Synthesis**
+Combine the fundamental and technical insights into a preliminary conclusion.`;
 
-## **The Broker's Synthesis & Recommendation**
-Combine the fundamental and technical insights into a final, actionable conclusion. Is this a fundamentally strong company that is simply unloved by the market right now? Or do the technical weaknesses reflect deeper, unstated fundamental problems? Based on the complete picture, does this stock represent a compelling investment opportunity for a value-oriented investor?`;
+// STEP 3: REVISION PROMPT
+const revisionPromptTemplate = `Role: You are an expert financial analyst and editor.
+You have created an initial draft analysis based on raw financial data. You have now been provided with a list of recent news articles.
+Your task is to **revise and enhance your original draft** by integrating the insights, context, and sentiment from these articles.
+
+**Instructions:**
+1.  Read your original draft and the provided news articles.
+2.  Refine your analysis. Corroborate, challenge, or add nuance to your initial findings using information from the news.
+3.  Quantify your statements wherever possible using data points from the articles.
+4.  Where you use information from an article, you **must cite the source URL** in parentheses immediately after the statement, like this: (https://www.example.com/article-1).
+5.  Maintain the original markdown structure but elevate the language to be more comprehensive and insightful.
+
+**Here is the information to synthesize:**
+
+---
+**ORIGINAL DRAFT:**
+[Paste the original draft here]
+---
+**RECENT NEWS ARTICLES (Title, URL, Snippet):**
+[Paste the news articles here]
+---
+
+Now, produce the final, revised, and cited report.`;
 
 
 // --- UTILITY HELPERS ---
@@ -199,7 +205,8 @@ function safeParseConfig(str) {
         const startIndex = str.indexOf('{');
         if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
         const objectStr = str.substring(startIndex);
-        const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+        // This regex is a bit more robust to handle various object formats from Firebase.
+        const jsonLike = objectStr.replace(/(\w+)\s*:/g, '"$1":').replace(/'/g, '"');
         return JSON.parse(jsonLike);
     } catch (error) {
         console.error("Failed to parse config string:", error);
@@ -243,11 +250,12 @@ async function handleApiKeySubmit(e) {
     e.preventDefault();
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempAlphaVantageKey = document.getElementById('alphaVantageApiKeyInput').value.trim();
+    const tempWebSearchKey = document.getElementById('webSearchApiKeyInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempGeminiKey) {
-        displayMessageInModal("All API keys (Gemini, Alpha Vantage) and the Firebase Config are required.", "warning");
+    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempGeminiKey || !tempWebSearchKey) {
+        displayMessageInModal("All API keys (Gemini, Alpha Vantage, Web Search) and the Firebase Config are required.", "warning");
         return;
     }
     
@@ -263,6 +271,7 @@ async function handleApiKeySubmit(e) {
     
     geminiApiKey = tempGeminiKey;
     alphaVantageApiKey = tempAlphaVantageKey;
+    webSearchApiKey = tempWebSearchKey;
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
@@ -334,13 +343,59 @@ async function fetchAlphaVantageData(functionName, symbol) {
     }
     return data;
 }
-async function callGeminiApi(promptTemplate, jsonData) {
+
+async function fetchNewsArticles(ticker, analysisType) {
+    if (!webSearchApiKey) {
+        // Silently fail if no web search key, but allow analysis to continue without it.
+        console.warn("Web Search API Key is not set. Skipping news search.");
+        return "No news articles could be retrieved as a web search API key was not provided.";
+    }
+
+    // This is a placeholder for your chosen search API.
+    // You MUST replace the URL and the logic to handle the response structure of your API.
+    // This example is modeled loosely on Google's Custom Search API.
+    const query = encodeURIComponent(`"${ticker}" ${analysisType} analysis`);
+    // NOTE: Replace 'YOUR_SEARCH_ENGINE_ID' if required by your API (like Google's).
+    const url = `https://www.googleapis.com/customsearch/v1?key=${webSearchApiKey}&cx=YOUR_SEARCH_ENGINE_ID&q=${query}&num=5`;
+    
+    try {
+        const results = await callApi(url);
+        // Adapt this part to the actual response structure of your chosen API
+        if (!results.items || results.items.length === 0) {
+            return "No recent news articles were found.";
+        }
+        return results.items.map(item => ({
+            title: item.title,
+            link: item.link,
+            snippet: item.snippet
+        })).map(article => `Title: ${article.title}\nURL: ${article.link}\nSnippet: ${article.snippet}`).join('\n\n---\n\n');
+
+    } catch (error) {
+        console.error("Failed to fetch news articles:", error);
+        // Return a message that can be inserted into the revision prompt
+        return `An error occurred while fetching news articles: ${error.message}`;
+    }
+}
+
+async function callGeminiApi(promptTemplate, templateData) {
     if (!geminiApiKey) throw new Error("Gemini API Key is not configured.");
-    const companyName = jsonData.OVERVIEW?.Name || 'the company';
-    const tickerSymbol = jsonData.OVERVIEW?.Symbol || 'N/A';
-    let fullPrompt = promptTemplate.replace(/\[Company Name\]/g, companyName);
+    
+    let fullPrompt = promptTemplate;
+    
+    // Replace placeholders in the prompt with data from templateData
+    for (const key in templateData) {
+        const placeholder = `[Paste the ${key} here]`;
+        let dataToInsert = templateData[key];
+        if (typeof dataToInsert !== 'string') {
+            dataToInsert = JSON.stringify(dataToInsert, null, 2);
+        }
+        fullPrompt = fullPrompt.replace(placeholder, dataToInsert);
+    }
+    
+    const companyName = templateData?.jsonData?.OVERVIEW?.Name || 'the company';
+    const tickerSymbol = templateData?.jsonData?.OVERVIEW?.Symbol || 'N/A';
+    fullPrompt = fullPrompt.replace(/\[Company Name\]/g, companyName);
     fullPrompt = fullPrompt.replace(/\[Ticker Symbol\]/g, tickerSymbol);
-    fullPrompt = fullPrompt.replace('[Paste the full JSON data here]', JSON.stringify(jsonData, null, 2));
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
@@ -361,6 +416,7 @@ async function callGeminiApi(promptTemplate, jsonData) {
     } catch (error) { console.error("Error calling Gemini API:", error); throw error; }
 }
 
+
 // --- CORE STOCK RESEARCH LOGIC ---
 async function loadAllCachedStocks() {
     if (!db) return;
@@ -372,6 +428,7 @@ async function loadAllCachedStocks() {
             container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
             return;
         }
+        const cardHtmls = [];
         for (const docSnapshot of querySnapshot.docs) {
             const symbol = docSnapshot.id;
             const data = docSnapshot.data();
@@ -379,9 +436,11 @@ async function loadAllCachedStocks() {
             const comprehensiveDocSnap = await getDoc(comprehensiveDocRef);
             const isComprehensiveDataReady = comprehensiveDocSnap.exists() && Object.keys(comprehensiveDocSnap.data().errors).length === 0;
             if (data.overview && data.overview.data) {
-                renderOverviewCard(data.overview.data, data.overview.cachedAt, symbol, isComprehensiveDataReady);
+                cardHtmls.push(getOverviewCardHtml(data.overview.data, data.overview.cachedAt, symbol, isComprehensiveDataReady));
             }
         }
+        container.innerHTML = cardHtmls.join('');
+
     } catch (error) {
         console.error("Error loading cached stocks: ", error);
         displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
@@ -445,6 +504,14 @@ async function fetchAndCacheComprehensiveData(symbol) {
             errors: errors,
             cachedAt: Timestamp.now()
         }, { merge: true });
+        // Attempt to update the card UI if it exists
+        const card = document.getElementById(`card-${symbol}`);
+        if(card){
+            card.querySelectorAll('.undervalued-analysis-button, .financial-analysis-button').forEach(button => {
+                button.disabled = false;
+                button.classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+        }
     } catch (dbError) {
         console.error(`Failed to write comprehensive data for ${symbol} to Firestore:`, dbError);
     }
@@ -465,14 +532,21 @@ async function handleResearchSubmit(e) {
         if ((await getDoc(mainCacheRef)).exists()) {
             displayMessageInModal(`${symbol} is already on your dashboard. Use 'Refresh Data' on its card for new data.`, 'info');
             tickerInput.value = '';
+            closeModal(CONSTANTS.MODAL_LOADING);
             return;
         }
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
         const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
         await setDoc(mainCacheRef, { overview: { data: overview, cachedAt: Timestamp.now() } });
+        
+        // Asynchronously fetch comprehensive data but don't wait for it to render the card
         fetchAndCacheComprehensiveData(symbol);
+
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        await loadAllCachedStocks();
+        
+        const cardHtml = getOverviewCardHtml(overview.data, Timestamp.now(), symbol, false);
+        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', cardHtml);
+        
         tickerInput.value = '';
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -486,14 +560,13 @@ async function handleResearchSubmit(e) {
 async function handleViewFullData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
-    const docRef = doc(db, 'comprehensive_stock_data', symbol);
     try {
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
+        const combinedData = await getComprehensiveData(symbol);
+        if(combinedData){
+            const docRef = doc(db, 'comprehensive_stock_data', symbol);
+            const docSnap = await getDoc(docRef);
             const fullData = docSnap.data();
-            const overviewDoc = await getDoc(doc(db, 'cached_stock_data', symbol));
-            const overviewData = overviewDoc.exists() ? overviewDoc.data().overview.data : {};
-            const combinedData = { OVERVIEW: overviewData, ...fullData.data };
+
             document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
             document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullData.cachedAt.toDate().toLocaleString()}`;
             if (fullData.errors && Object.keys(fullData.errors).length > 0) {
@@ -502,8 +575,6 @@ async function handleViewFullData(symbol) {
                 document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(combinedData, null, 2);
             }
             openModal(CONSTANTS.MODAL_FULL_DATA);
-        } else {
-            displayMessageInModal(`Comprehensive data for ${symbol} has not been stored yet. Please try again in a moment.`, 'info');
         }
     } catch (error) {
         console.error("Failed to load full data:", error);
@@ -512,10 +583,10 @@ async function handleViewFullData(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-function renderOverviewCard(overviewData, cacheTimestamp, symbol, isComprehensiveDataReady = false) {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    if (!overviewData || !overviewData.Symbol) { return; }
-    if (container.innerHTML.includes('No stocks researched yet')) { container.innerHTML = ''; }
+
+function getOverviewCardHtml(overviewData, cacheTimestamp, symbol, isComprehensiveDataReady = false) {
+    if (!overviewData || !overviewData.Symbol) { return ''; }
+    
     const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
@@ -523,7 +594,8 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol, isComprehensiv
     const timestampString = cacheTimestamp ? `Data Stored On: ${cacheTimestamp.toDate().toLocaleString()}` : '';
     const analysisButtonsState = isComprehensiveDataReady ? '' : 'disabled';
     const analysisButtonsClasses = isComprehensiveDataReady ? '' : 'opacity-50 cursor-not-allowed';
-    const cardHtml = `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
+    
+    return `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
@@ -533,7 +605,7 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol, isComprehensiv
                     <button data-symbol="${symbol}" class="refresh-data-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 </div>
             </div>
-            <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
+            <p class="mt-4 text-sm text-gray-600 line-clamp-3">${sanitizeText(overviewData.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
                 <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
@@ -547,7 +619,6 @@ function renderOverviewCard(overviewData, cacheTimestamp, symbol, isComprehensiv
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
-    container.insertAdjacentHTML('beforeend', cardHtml);
 }
 
 // --- EVENT LISTENER SETUP ---
@@ -591,43 +662,74 @@ async function getComprehensiveData(symbol) {
         displayMessageInModal(`Comprehensive data for ${symbol} has not been stored yet. Please try again in a moment.`, 'info');
         return null;
     }
-    return { ...docSnap.data().data, OVERVIEW: overviewSnap.data().overview.data };
+    const comprehensiveData = docSnap.data();
+    if (comprehensiveData.errors && Object.keys(comprehensiveData.errors).length > 0) {
+        displayMessageInModal(`Could not perform analysis due to missing data: ${Object.keys(comprehensiveData.errors).join(', ')}. Please try refreshing the data for this stock.`, 'error');
+        return null;
+    }
+    return { ...comprehensiveData.data, OVERVIEW: overviewSnap.data().overview.data };
 }
+
+async function performIterativeAnalysis(symbol, draftPrompt, analysisType, modalId, contentElId, titleElId) {
+    const loadingMessageEl = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    openModal(CONSTANTS.MODAL_LOADING);
+
+    try {
+        // Step 0: Get Data
+        loadingMessageEl.textContent = `Gathering financial data for ${symbol}...`;
+        const data = await getComprehensiveData(symbol);
+        if (!data) return;
+
+        // Step 1: Draft Analysis
+        loadingMessageEl.textContent = `Step 1/3: Drafting initial analysis for ${symbol}...`;
+        const draftReport = await callGeminiApi(draftPrompt, { 'full JSON data': data });
+        
+        // Step 2: Fetch News
+        loadingMessageEl.textContent = `Step 2/3: Searching for recent news about ${symbol}...`;
+        const articles = await fetchNewsArticles(symbol, analysisType);
+
+        // Step 3: Revise Analysis
+        loadingMessageEl.textContent = `Step 3/3: Revising analysis with new data...`;
+        const finalReport = await callGeminiApi(revisionPromptTemplate, {
+            'original draft': draftReport,
+            'news articles': articles,
+        });
+
+        // Render final report
+        const contentEl = document.getElementById(contentElId);
+        document.getElementById(titleElId).textContent = `Analysis for ${symbol}`;
+        contentEl.innerHTML = marked.parse(finalReport);
+        openModal(modalId);
+
+    } catch (error) {
+        console.error(`Error generating ${analysisType} analysis:`, error);
+        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 async function handleFinancialAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Asking AI to analyze ${symbol}...`;
-    try {
-        const data = await getComprehensiveData(symbol);
-        if (!data) return;
-        const reportMarkdown = await callGeminiApi(financialAnalysisPromptTemplate, data);
-        const contentEl = document.getElementById(CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT);
-        document.getElementById('financial-analysis-modal-title').textContent = `Financial Analysis for ${symbol}`;
-        contentEl.innerHTML = marked.parse(reportMarkdown);
-        openModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS);
-    } catch (error) {
-        console.error("Error generating financial analysis:", error);
-        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
+    await performIterativeAnalysis(
+        symbol,
+        financialDraftPrompt,
+        'financial',
+        CONSTANTS.MODAL_FINANCIAL_ANALYSIS,
+        CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT,
+        'financial-analysis-modal-title'
+    );
 }
+
 async function handleUndervaluedAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Asking AI for valuation of ${symbol}...`;
-    try {
-        const data = await getComprehensiveData(symbol);
-        if (!data) return;
-        const reportMarkdown = await callGeminiApi(undervaluedAnalysisPromptTemplate, data);
-        const contentEl = document.getElementById(CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT);
-        document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
-        contentEl.innerHTML = marked.parse(reportMarkdown);
-        openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
-    } catch (error) {
-        console.error("Error generating undervalued analysis:", error);
-        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
+     await performIterativeAnalysis(
+        symbol,
+        undervaluedDraftPrompt,
+        'value',
+        CONSTANTS.MODAL_UNDERVALUED_ANALYSIS,
+        CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT,
+        'undervalued-analysis-modal-title'
+    );
 }
 
 // --- APP INITIALIZATION TRIGGER ---
