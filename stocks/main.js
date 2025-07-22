@@ -41,63 +41,81 @@ let alphaVantageApiKey = "";
 let geminiApiKey = "";
 
 // --- AI PROMPTS ---
-const financialAnalysisPromptTemplate = `Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data. The output should be easy to understand for a general audience using a mobile app. Use emojis to make the information more engaging.
+const financialAnalysisPromptTemplate = `Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data. The output must be strictly in markdown format, without any emojis.
 Analyze the following financial data for [Company Name] (Ticker: [Ticker Symbol]):
 JSON
 [Paste the full JSON data here]
-Based on the data, generate the following analysis in markdown format:
-Overview 📈
+Based on the data, generate the following analysis. Use markdown headings, subheadings, bolding for key terms, and bullet points as specified below.
+
+# **Financial Analysis for [Ticker Symbol]**
+
+## **Overview**
 Provide a brief, high-level summary (2-3 sentences) of the company's overall financial performance and health. Mention its general trajectory (e.g., growth, stability, or decline).
-Key Financial Highlights 📊
-Extract and present the following key metrics for the most recent fiscal year ([Year]). Use bullet points and relevant emojis:
-	• Total Revenue: $XXX.XX Billion
-	• Net Income: $XX.XX Billion
-	• Net Profit Margin: XX.X%
-	• Earnings Per Share (EPS): $X.XX
-	• Operating Cash Flow: $XXX.XX Billion
-Financial Deep Dive 🕵️
-Profitability Analysis 💰
-Analyze the company's ability to generate profit. Focus on:
-	• Revenue and Net Income Trends: Describe the growth or decline over the last 3-5 years.
-	• Profit Margins: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
 
-Financial Health & Stability 💪
-Assess the company's financial stability and risk. Focus on:
-	• Liquidity: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
-	• Debt Levels: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
+***
 
-Final Verdict 📝
+## **Key Financial Highlights ([Year])**
+Extract and present the following key metrics for the most recent fiscal year. Use bullet points.
+* **Total Revenue**: $XXX.XX Billion
+* **Net Income**: $XX.XX Billion
+* **Net Profit Margin**: XX.X%
+* **Earnings Per Share (EPS)**: $X.XX
+* **Operating Cash Flow**: $XXX.XX Billion
+
+***
+
+## **Financial Deep Dive**
+
+### **Profitability Analysis**
+**Revenue and Net Income Trends**: Describe the growth or decline over the last 3-5 years.
+**Profit Margins**: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
+
+### **Financial Health & Stability**
+**Liquidity**: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
+**Debt Levels**: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
+
+***
+
+## **Final Verdict**
 Provide a concluding paragraph summarizing the key strengths and potential weaknesses based on this financial data. Is the company in a strong financial position? What are the key takeaways for a potential investor?`;
 
-const undervaluedAnalysisPromptTemplate = `Role: You are an expert investment analyst and stockbroker. Your task is to synthesize the provided JSON data to determine if a stock is truly undervalued. Your analysis must be clear, insightful, and accessible to a non-expert investor using a mobile app. The output must be in markdown format, using emojis to enhance readability.
+const undervaluedAnalysisPromptTemplate = `Role: You are an expert investment analyst and stockbroker. Your task is to synthesize the provided JSON data to determine if a stock is truly undervalued. Your analysis must be clear, insightful, and accessible to a non-expert investor. The output must be strictly in markdown format, without any emojis.
 Analyze the following financial data for [Company Name] (Ticker: [Ticker Symbol]):
 JSON
 [Paste the full JSON data here]
-Based on the data, generate the following valuation analysis:
-Valuation Verdict ⚖️
+Based on the data, generate the following valuation analysis using markdown headings, subheadings, and bullet points as specified.
+
+# **Undervalued Analysis for [Ticker Symbol]**
+
+## **Valuation Verdict**
 Start with a direct, 2-3 sentence conclusion. Is this stock a potential bargain, fairly priced, or a value trap? Briefly state the main reasons based on your synthesis of its fundamentals and market sentiment.
----
-1. Fundamental Analysis: Is the Company a Good Value? 💰
-Assess the company's financial health and profitability to determine its intrinsic worth.
-* **Key Valuation Ratios**:
-    * **P/E Ratios (PERatio, TrailingPE, ForwardPE)**: Interpret these ratios. Is the company trading at a discount compared to what's typical for its industry? Is its future P/E looking better or worse?
-    * **Price-to-Book (PriceToBookRatio)**: Analyze the P/B ratio. Note if it is below 1.0, explaining why this is a classic sign of potential undervaluation.
-    * **PEG Ratio (PEGRatio)**: Explain how the PEG ratio provides context to the P/E by factoring in growth. A value below 1 is a strong positive signal.
-* **Deeper Financial Health**:
-    * **Debt-to-Equity**: Calculate this using the most recent \`totalLiabilities\` and \`totalShareholderEquity\` from the \`BALANCE_SHEET\`. Is the company's debt level a risk?
-    * **Return on Equity (ReturnOnEquityTTM)**: Interpret the ROE. Does it indicate a high-quality, efficient business?
-* **Analyst Consensus**:
-    * **Target Price (AnalystTargetPrice)**: State the consensus target. How significant is the potential upside from the price suggested by the 50 and 200-day moving averages?
----
-2. Technical Analysis: What is the Market Sentiment? 📉📈
-Analyze price data to gauge whether the market is overly pessimistic, creating a buying opportunity.
-* **Price Context (52WeekHigh, 52WeekLow)**: Where is the stock trading within its 52-week range? A price near the low can signal a potential entry point if fundamentals are strong.
+
+***
+
+## **1. Fundamental Analysis: Is the Company a Good Value?**
+
+### **Key Valuation Ratios**
+* **P/E Ratios (PERatio, TrailingPE, ForwardPE)**: Interpret these ratios. Is the company trading at a discount compared to what's typical for its industry? Is its future P/E looking better or worse?
+* **Price-to-Book (PriceToBookRatio)**: Analyze the P/B ratio. Note if it is below 1.0 for asset-heavy companies. Explain the context for tech companies with intangible assets.
+* **PEG Ratio (PEGRatio)**: Explain how the PEG ratio provides context to the P/E by factoring in growth. A value below 1 is a strong positive signal.
+
+### **Deeper Financial Health**
+* **Debt-to-Equity**: Calculate this using the most recent \`totalLiabilities\` and \`totalShareholderEquity\` from the \`BALANCE_SHEET\` and state the result. Is the company's debt level a risk?
+* **Return on Equity (ReturnOnEquityTTM)**: Interpret the ROE. Does it indicate a high-quality, efficient business?
+* **Analyst Consensus**: State the consensus target price (AnalystTargetPrice). How significant is the potential upside from the current price or moving averages?
+
+***
+
+## **2. Technical Analysis: What is the Market Sentiment?**
+
+### **Price Context**
+* **Price Range (52WeekHigh, 52WeekLow)**: Where is the stock trading within its 52-week range? A price near the low can signal a potential entry point if fundamentals are strong.
 * **Trend Identification (50DayMovingAverage, 200DayMovingAverage)**: Is the stock in a downtrend (trading below its moving averages)? A technically weak price for a fundamentally strong company is the classic setup for a value investment.
----
-The Broker's Synthesis & Recommendation 📝
-Combine the fundamental and technical insights into a final, actionable conclusion.
-* **The Big Picture**: Is this a fundamentally strong company that is simply unloved by the market right now? Or do the technical weaknesses reflect deeper, unstated fundamental problems?
-* **Final Word**: Based on the complete picture, does this stock represent a compelling investment opportunity for a value-oriented investor?`;
+
+***
+
+## **The Broker's Synthesis & Recommendation**
+Combine the fundamental and technical insights into a final, actionable conclusion. Is this a fundamentally strong company that is simply unloved by the market right now? Or do the technical weaknesses reflect deeper, unstated fundamental problems? Based on the complete picture, does this stock represent a compelling investment opportunity for a value-oriented investor?`;
 
 
 // --- UTILITY HELPERS ---
