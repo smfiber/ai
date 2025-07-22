@@ -314,7 +314,7 @@ async function callGeminiApi(prompt) {
     if (!geminiApiKey) {
         throw new Error("Gemini API key is not configured.");
     }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
     
     const body = {
         contents: [{
@@ -581,12 +581,22 @@ function setupGlobalEventListeners() {
 function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
+    
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    ['fullDataModal', 'financialAnalysisModal', 'undervaluedAnalysisModal'].forEach(id => {
-        document.getElementById(`close-${id}`)?.addEventListener('click', () => closeModal(id));
-        document.getElementById(`close-${id}-bg`)?.addEventListener('click', () => closeModal(id));
+
+    // FIX: Correctly add event listeners to modal close buttons and backgrounds
+    const modalsToClose = [
+        { modal: 'fullDataModal', button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
+        { modal: 'financialAnalysisModal', button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
+        { modal: 'undervaluedAnalysisModal', button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
+    ];
+
+    modalsToClose.forEach(item => {
+        document.getElementById(item.button)?.addEventListener('click', () => closeModal(item.modal));
+        document.getElementById(item.bg)?.addEventListener('click', () => closeModal(item.modal));
     });
+
     window.addEventListener('scroll', () => {
         const btn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
         if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
@@ -646,45 +656,82 @@ async function handleFinancialAnalysis(symbol) {
 
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
-        const latestIncome = (Array.isArray(data.INCOME_STATEMENT?.annualReports) && data.INCOME_STATEMENT.annualReports.length > 0) ? data.INCOME_STATEMENT.annualReports[0] : {};
-        const fiscalYear = get(latestIncome, 'fiscalDateEnding', 'N/A').substring(0, 4);
 
+        // --- NEW PROMPT ---
         const prompt = `
-Role: You are an expert financial analyst AI. Your goal is to provide a clear, concise, and insightful analysis of a company's financial health based on the provided JSON data.
-Output Format: The output must be in professional markdown format. Use '#' for the main title, '##' for section headings, and '*' for bullet points. Do NOT use any emojis.
+Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Do NOT use any emojis. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
 
-Analyze the following financial data for ${companyName} (Ticker: ${tickerSymbol}):
-JSON:
+Analyze the comprehensive financial data for ${companyName} (Ticker: ${tickerSymbol}) provided below:
+
+JSON Data:
 ${JSON.stringify(data, null, 2)}
 
-Based on the data, generate the following analysis:
+Based on the provided data, generate the following multi-faceted financial report:
 
-# Financial Analysis for ${companyName} (${tickerSymbol})
+# Comprehensive Financial Analysis: ${companyName} (${tickerSymbol})
 
-## Overview
-Provide a brief, high-level summary (2-3 sentences) of the company's overall financial performance and health. Mention its general trajectory (e.g., growth, stability, or decline).
+## 1. Executive Summary
+Begin with a concise, top-level summary (3-4 sentences) that encapsulates the company's financial condition, recent performance trajectory, and core investment profile. Synthesize the most critical findings from the profitability, solvency, and valuation analyses into a coherent opening statement.
 
-## Key Financial Highlights (${fiscalYear})
-Extract and present the following key metrics for the most recent fiscal year using bullet points:
-- Total Revenue: $XXX.XX Billion
-- Net Income: $XX.XX Billion
-- Net Profit Margin: XX.X%
-- Earnings Per Share (EPS): $X.XX
-- Operating Cash Flow: $XXX.XX Billion
+## 2. Company Profile & Market Overview
+### Business Description
+Briefly describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data.
+### Market Snapshot
+Present key market-related metrics for context.
+- Market Capitalization: $XXX.XX Billion
+- 52-Week Price Range: $XX.XX - $XX.XX
+- 50-Day Moving Average: $XX.XX
+- 200-Day Moving Average: $XX.XX
+- Analyst Target Price: $XX.XX
 
-## Financial Deep Dive
-### Profitability Analysis
-Analyze the company's ability to generate profit. Focus on:
-- Revenue and Net Income Trends: Describe the growth or decline over the last 3-5 years.
-- Profit Margins: Comment on the Gross, Operating, and Net Profit Margins. Are they stable, improving, or declining?
+## 3. Performance & Profitability Analysis
+Assess the company's ability to generate earnings and create value for shareholders.
+### 3.1. Revenue & Earnings Trend
+Analyze the historical trend of totalRevenue and netIncome over the last 3-5 fiscal years using the INCOME_STATEMENT annual data.
+Calculate and discuss the Year-over-Year (YoY) growth rates for both revenue and net income for the most recent two years.
+Incorporate the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY from the OVERVIEW data to comment on recent momentum.
+### 3.2. Profitability Margins & Returns
+Extract the ProfitMargin and OperatingMarginTTM from the OVERVIEW section.
+Calculate the Gross Profit Margin for the last three fiscal years (grossProfit / totalRevenue).
+Analyze the trend in these margins. Are they expanding, contracting, or stable? Provide potential reasons based on the data (e.g., changes in costOfRevenue vs. totalRevenue).
+Analyze the ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA). Interpret these figures as indicators of management's efficiency in using its equity and asset bases to generate profit.
 
-### Financial Health & Stability
-Assess the company's financial stability and risk. Focus on:
-- Liquidity: Calculate and interpret the Current Ratio for the most recent fiscal year. Explain what this means for the company's ability to cover its short-term debts.
-- Debt Levels: Analyze the Debt-to-Equity Ratio. Is the company heavily reliant on debt? How has this changed over the last few years?
+## 4. Financial Health & Risk Assessment
+Evaluate the company's balance sheet strength, liquidity position, and reliance on debt.
+### 4.1. Liquidity Analysis
+Using the most recent BALANCE_SHEET annual report, calculate and interpret the following ratios:
+- Current Ratio: (totalCurrentAssets / totalCurrentLiabilities). Explain its implication for the company's ability to meet short-term obligations.
+- Quick Ratio (Acid-Test): (cashAndShortTermInvestments + currentNetReceivables) / totalCurrentLiabilities. Explain what this reveals about its reliance on selling inventory.
+### 4.2. Solvency and Debt Structure
+Calculate the Debt-to-Equity Ratio (totalLiabilities / totalShareholderEquity) for the last three fiscal years. Analyze the trend and comment on the company's leverage.
+Analyze the composition of debt by comparing longTermDebt to shortTermDebt. Is the debt structure sustainable?
+Calculate the Interest Coverage Ratio (EBIT / interestExpense) from the most recent INCOME_STATEMENT. Assess the company's ability to service its debt payments from its operating earnings.
 
-## Final Verdict
-Provide a concluding paragraph summarizing the key strengths and potential weaknesses based on this financial data. Is the company in a strong financial position? What are the key takeaways for a potential investor?
+## 5. Cash Flow Analysis
+Analyze the generation and utilization of cash as detailed in the CASH_FLOW statement for the most recent 3 fiscal years.
+### Operating Cash Flow (OCF)
+Analyze the trend in operatingCashflow. Is it growing? Is it consistently positive?
+### Quality of Earnings
+Compare operatingCashflow to netIncome. A significant divergence can be a red flag. Is the company's profit backed by actual cash?
+### Investing and Financing Activities
+Analyze the major uses and sources of cash from cashflowFromInvestment (e.g., capitalExpenditures) and cashflowFromFinancing (e.g., dividendPayout, paymentsForRepurchaseOfCommonStock, debt issuance/repayment). What do these activities suggest about the company's strategy?
+
+## 6. Valuation Analysis
+Assess the company's current market valuation relative to its earnings and fundamentals.
+Present and interpret the following valuation multiples from the OVERVIEW data:
+- P/E Ratio (PERatio)
+- Forward P/E (ForwardPE)
+- Price-to-Sales Ratio (PriceToSalesRatioTTM)
+- Price-to-Book Ratio (PriceToBookRatio)
+- EV-to-EBITDA (EVToEBITDA)
+Discuss what these multiples imply. Is the stock valued for growth, value, or something else? Compare the TrailingPE to the ForwardPE to understand earnings expectations.
+
+## 7. Investment Thesis: Synthesis & Conclusion
+Conclude with a final synthesis that integrates all the preceding analyses.
+- **Key Strengths**: Identify 2-3 of the most significant financial strengths based on the data (e.g., strong OCF, low leverage, margin expansion).
+- **Potential Weaknesses & Red Flags**: Identify 2-3 key weaknesses or areas for concern (e.g., high debt, declining revenue growth, poor quality of earnings, negative cash flow).
+- **Overall Verdict**: Provide a concluding statement on the company's overall financial standing and investment profile. Based purely on this quantitative analysis, what is the primary narrative for a potential investor? (e.g., "A financially robust company with a premium valuation," or "A highly leveraged company facing profitability headwinds").
 `;
 
         const report = await callGeminiApi(prompt);
