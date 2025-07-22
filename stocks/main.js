@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "3.4.0"; 
+const APP_VERSION = "3.5.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -11,19 +11,34 @@ const CONSTANTS = {
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
     MODAL_CONFIRMATION: 'confirmationModal',
+    MODAL_FULL_DATA: 'fullDataModal',
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
     BUTTON_SCROLL_TOP: 'scroll-to-top-button',
     ELEMENT_LOADING_MESSAGE: 'loading-message',
+    ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
-    MAX_NEWS_ARTICLES: 2,
+    MAX_NEWS_ARTICLES: 5, // Increased for better AI context
     API_FUNC_OVERVIEW: 'OVERVIEW',
     API_FUNC_NEWS: 'NEWS_SENTIMENT',
 };
+
+// List of comprehensive data endpoints to fetch
+const COMPREHENSIVE_API_FUNCTIONS = [
+    'INCOME_STATEMENT',
+    'BALANCE_SHEET',
+    'CASH_FLOW',
+    'EARNINGS',
+    'LISTING_DELISTING_STATUS',
+    'TIME_SERIES_DAILY_ADJUSTED',
+    'TIME_SERIES_WEEKLY_ADJUSTED',
+    'TIME_SERIES_MONTHLY_ADJUSTED'
+];
+
 
 // --- Global State ---
 let db;
@@ -33,11 +48,12 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let geminiApiKey = "";
 let alphaVantageApiKey = "";
-// Default cache settings; will be overwritten by Firestore config if it exists.
+// Cache settings updated to 24 hours for all data points
 let cacheSettings = {
     OVERVIEW_TTL: 24,
-    NEWS_SENTIMENT_TTL: 4,
-    AI_OVERVIEW_TTL: 24
+    NEWS_SENTIMENT_TTL: 24,
+    AI_OVERVIEW_TTL: 24,
+    COMPREHENSIVE_TTL: 24
 };
 
 // --- UTILITY HELPERS ---
@@ -94,6 +110,7 @@ function sanitizeAndParseMarkdown(dirtyMarkdown) {
  * @returns {string} The sanitized text.
  */
 function sanitizeText(text) {
+    if (typeof text !== 'string') return '';
     const tempDiv = document.createElement('div');
     tempDiv.textContent = text;
     return tempDiv.innerHTML;
@@ -431,14 +448,21 @@ async function fetchAlphaVantageData(functionName, symbol) {
  */
 function handleClearCache(symbol) {
     openConfirmationModal(
-        'Clear Cache?',
-        `Are you sure you want to delete all cached data for ${symbol}? The next search will fetch fresh data from all APIs.`,
+        'Clear All Cache?',
+        `Are you sure you want to delete ALL cached data for ${symbol}, including the comprehensive dataset? The next search will fetch fresh data from all APIs.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Clearing cache for ${symbol}...`;
             try {
-                const docRef = doc(db, 'cached_stock_data', symbol);
-                await deleteDoc(docRef);
+                // Delete both the main and comprehensive cache documents
+                const mainDocRef = doc(db, 'cached_stock_data', symbol);
+                const comprehensiveDocRef = doc(db, 'comprehensive_stock_data', symbol);
+                
+                await Promise.all([
+                    deleteDoc(mainDocRef),
+                    deleteDoc(comprehensiveDocRef)
+                ]);
+
                 document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
                 displayMessageInModal(`Cache for ${symbol} has been cleared.`, 'info');
             } catch (error) {
@@ -450,6 +474,43 @@ function handleClearCache(symbol) {
         }
     );
 }
+
+/**
+ * Fetches and caches the full set of fundamental and time series data.
+ * This runs in the background after the initial research request.
+ * @param {string} symbol The stock symbol to fetch data for.
+ */
+async function fetchAndCacheComprehensiveData(symbol) {
+    console.log(`Starting comprehensive data fetch for ${symbol}...`);
+    const comprehensiveData = {};
+    const errors = {};
+
+    for (const func of COMPREHENSIVE_API_FUNCTIONS) {
+        try {
+            console.log(`Fetching ${func} for ${symbol}...`);
+            const data = await fetchAlphaVantageData(func, symbol);
+            comprehensiveData[func] = data;
+        } catch (error) {
+            console.error(`Failed to fetch ${func} for ${symbol}:`, error);
+            errors[func] = error.message;
+        }
+    }
+
+    const docRef = doc(db, 'comprehensive_stock_data', symbol);
+    const dataToCache = {
+        data: comprehensiveData,
+        errors: errors,
+        cachedAt: Timestamp.now()
+    };
+    
+    try {
+        await setDoc(docRef, dataToCache);
+        console.log(`Successfully cached comprehensive data for ${symbol}.`);
+    } catch (dbError) {
+        console.error(`Failed to write comprehensive data for ${symbol} to Firestore:`, dbError);
+    }
+}
+
 
 /**
  * Generates a dynamic, AI-powered company overview based on recent news.
@@ -471,7 +532,7 @@ async function generateAiOverview(symbol, newsFeed) {
 Recent Headlines:
 ${headlines}
 
-Modern, news-driven company overview:`;
+Modern, news-driven company overview for ${symbol}:`;
 
     try {
         const overview = await callGeminiAPI(prompt);
@@ -502,8 +563,8 @@ async function handleResearchSubmit(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking cache for ${symbol}...`;
     
     try {
-        const docRef = doc(db, 'cached_stock_data', symbol);
-        const cachedDoc = await getDoc(docRef);
+        const mainCacheRef = doc(db, 'cached_stock_data', symbol);
+        const cachedDoc = await getDoc(mainCacheRef);
         const cachedData = cachedDoc.exists() ? cachedDoc.data() : {};
         
         let overview, aiOverview, summarizedNews, rawNewsFeed;
@@ -513,7 +574,7 @@ async function handleResearchSubmit(e) {
 
         // 1. Check Cache Freshness
         const overviewTTL = (cacheSettings.OVERVIEW_TTL || 24) * 3600 * 1000;
-        const newsTTL = (cacheSettings.NEWS_SENTIMENT_TTL || 4) * 3600 * 1000;
+        const newsTTL = (cacheSettings.NEWS_SENTIMENT_TTL || 24) * 3600 * 1000;
         const aiOverviewTTL = (cacheSettings.AI_OVERVIEW_TTL || 24) * 3600 * 1000;
 
         const isOverviewFresh = cachedData.overview && (now - cachedData.overview.cachedAt.toMillis() < overviewTTL);
@@ -538,9 +599,8 @@ async function handleResearchSubmit(e) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching news for ${symbol}...`;
             const rawNewsData = await fetchAlphaVantageData(CONSTANTS.API_FUNC_NEWS, symbol);
             
-            // Filter for relevance and limit count
             rawNewsFeed = (rawNewsData.feed || [])
-                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol))
+                .filter(article => article.ticker_sentiment.some(t => t.ticker === symbol && parseFloat(t.relevance_score) >= 0.5))
                 .slice(0, CONSTANTS.MAX_NEWS_ARTICLES);
         }
 
@@ -550,7 +610,7 @@ async function handleResearchSubmit(e) {
             newsTimestamp = cachedData.news.cachedAt;
         } else {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI summaries...`;
-            summarizedNews = await processNewsWithAI(rawNewsFeed);
+            summarizedNews = await processNewsWithAI(rawNewsFeed, symbol);
             newsTimestamp = Timestamp.now();
             dataToUpdate.news = { data: summarizedNews, cachedAt: newsTimestamp };
         }
@@ -560,7 +620,7 @@ async function handleResearchSubmit(e) {
             aiOverview = cachedData.aiOverview.data;
         } else {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI overview...`;
-            aiOverview = await generateAiOverview(symbol, rawNewsFeed);
+            aiOverview = await generateAiOverview(symbol, rawNewsFeed || summarizedNews);
             dataToUpdate.aiOverview = { data: aiOverview, cachedAt: Timestamp.now() };
         }
 
@@ -572,12 +632,21 @@ async function handleResearchSubmit(e) {
              container.insertAdjacentHTML('beforeend', `<div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6"><h3 class="font-bold text-lg text-emerald-500">Recent News</h3><p class="text-gray-500">No recent, relevant news found for ${symbol}.</p></div>`);
         }
 
-        // 4. Update Cache in Firestore
+        // 4. Update Main Cache in Firestore
         if (Object.keys(dataToUpdate).length > 0) {
-            console.log(`Updating cache for ${symbol}...`);
-            await setDoc(docRef, dataToUpdate, { merge: true });
+            console.log(`Updating main cache for ${symbol}...`);
+            await setDoc(mainCacheRef, dataToUpdate, { merge: true });
         }
         
+        // 5. Check and trigger comprehensive data fetch
+        const comprehensiveCacheRef = doc(db, 'comprehensive_stock_data', symbol);
+        const comprehensiveCacheDoc = await getDoc(comprehensiveCacheRef);
+        const comprehensiveTTL = (cacheSettings.COMPREHENSIVE_TTL || 24) * 3600 * 1000;
+        if (!comprehensiveCacheDoc.exists() || (now - comprehensiveCacheDoc.data().cachedAt.toMillis() > comprehensiveTTL)) {
+            // Run in the background, don't wait for it to complete
+            fetchAndCacheComprehensiveData(symbol);
+        }
+
         tickerInput.value = '';
 
     } catch (error) {
@@ -588,16 +657,16 @@ async function handleResearchSubmit(e) {
     }
 }
 
-async function processNewsWithAI(articles) {
+async function processNewsWithAI(articles, symbol) {
     if (!articles || articles.length === 0) return [];
     
     const summaryPromises = articles.map(async (article) => {
-        const prompt = `Please provide a neutral, one-sentence summary of the following news article title and summary. Focus only on the key information.
+        const prompt = `As a financial analyst, provide a neutral, one-sentence summary of the following news article's key information, specifically as it relates to the company ${symbol}.
         
         Title: "${article.title}"
         Summary: "${article.summary}"
         
-        One-sentence summary:`;
+        One-sentence summary about ${symbol}:`;
 
         try {
             const summary = await callGeminiAPI(prompt);
@@ -615,11 +684,44 @@ async function processNewsWithAI(articles) {
 // --- UI RENDERING ---
 
 /**
- * Renders the main company overview card with a cache clearing button.
+ * Handles showing the full cached data in a modal.
+ * @param {string} symbol The stock symbol to view data for.
+ */
+async function handleViewFullData(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
+
+    const docRef = doc(db, 'comprehensive_stock_data', symbol);
+    try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const fullData = docSnap.data();
+            const contentEl = document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT);
+            
+            // Format the JSON with 2-space indentation for readability
+            contentEl.textContent = JSON.stringify(fullData, null, 2);
+
+            document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
+            document.getElementById('full-data-modal-timestamp').textContent = `Data as of: ${fullData.cachedAt.toDate().toLocaleString()}`;
+            
+            openModal(CONSTANTS.MODAL_FULL_DATA);
+        } else {
+            displayMessageInModal(`Comprehensive data for ${symbol} has not been cached yet. It is being fetched in the background. Please try again in a few moments.`, 'info');
+        }
+    } catch (error) {
+        console.error("Failed to load full data:", error);
+        displayMessageInModal(`Error loading data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+/**
+ * Renders the main company overview card with additional action buttons.
  * @param {object} overviewData The raw data from the OVERVIEW API call.
  * @param {string} aiOverview The AI-generated dynamic overview text.
  * @param {Timestamp} cacheTimestamp The timestamp of when the data was cached.
- * @param {string} symbol The stock symbol, for the cache clearing functionality.
+ * @param {string} symbol The stock symbol.
  */
 function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
@@ -637,7 +739,8 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 flex gap-2">
+                    <button id="view-full-data-button" class="text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">View Full Data</button>
                     <button id="clear-cache-button" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Clear Cache</button>
                 </div>
             </div>
@@ -666,8 +769,9 @@ function renderOverviewCard(overviewData, aiOverview, cacheTimestamp, symbol) {
     `;
     container.insertAdjacentHTML('beforeend', cardHtml);
     
-    // Add event listener for the newly created button
+    // Add event listeners for the newly created buttons
     document.getElementById('clear-cache-button')?.addEventListener('click', () => handleClearCache(symbol));
+    document.getElementById('view-full-data-button')?.addEventListener('click', () => handleViewFullData(symbol));
 }
 
 /**
@@ -746,6 +850,10 @@ function setupEventListeners() {
     
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    // Add listener for closing the full data modal
+    const closeFullDataBtn = document.getElementById('close-full-data-modal');
+    if(closeFullDataBtn) closeFullDataBtn.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
     
     window.addEventListener('scroll', () => {
         const scrollTopButton = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
