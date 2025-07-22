@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.1.0"; 
+const APP_VERSION = "5.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -27,6 +27,8 @@ const CONSTANTS = {
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
     API_FUNC_OVERVIEW: 'OVERVIEW',
+    DB_COLLECTION_CACHE: 'cached_stock_data',
+    DB_COLLECTION_COMPREHENSIVE: 'comprehensive_stock_data',
 };
 
 const COMPREHENSIVE_API_FUNCTIONS = ['INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
@@ -39,7 +41,8 @@ let firebaseConfig = null;
 let appIsInitialized = false;
 let alphaVantageApiKey = "";
 let geminiApiKey = "";
-let webSearchApiKey = ""; // New API key for web search
+let webSearchApiKey = "";
+let searchEngineId = "";
 
 // --- AI PROMPTS ---
 
@@ -171,8 +174,7 @@ function displayMessageInModal(message, type = 'info') {
         contentEl.textContent = message;
         const okButton = document.createElement('button');
         okButton.textContent = 'OK';
-        okButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 w-full';
-        okButton.addEventListener('click', () => closeModal(modalId));
+        okButton.className = 'bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 w-full modal-close-trigger';
         switch (type) {
             case 'error': titleEl.textContent = 'Error!'; titleEl.classList.add('text-red-600'); break;
             case 'warning': titleEl.textContent = 'Warning!'; titleEl.classList.add('text-yellow-600'); break;
@@ -202,15 +204,11 @@ function openConfirmationModal(title, message, onConfirm) {
 // --- CONFIG & INITIALIZATION ---
 function safeParseConfig(str) {
     try {
-        const startIndex = str.indexOf('{');
-        if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
-        const objectStr = str.substring(startIndex);
-        // This regex is a bit more robust to handle various object formats from Firebase.
-        const jsonLike = objectStr.replace(/(\w+)\s*:/g, '"$1":').replace(/'/g, '"');
-        return JSON.parse(jsonLike);
+        const objectStr = str.substring(str.indexOf('{'));
+        return (new Function('return ' + objectStr))();
     } catch (error) {
         console.error("Failed to parse config string:", error);
-        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console.");
+        throw new Error("The provided Firebase config is not a valid JavaScript object. Please paste the complete object from the Firebase console.");
     }
 }
 async function initializeAppContent() {
@@ -251,11 +249,12 @@ async function handleApiKeySubmit(e) {
     const tempGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
     const tempAlphaVantageKey = document.getElementById('alphaVantageApiKeyInput').value.trim();
     const tempWebSearchKey = document.getElementById('webSearchApiKeyInput').value.trim();
+    const tempSearchEngineId = document.getElementById('searchEngineIdInput').value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempGeminiKey || !tempWebSearchKey) {
-        displayMessageInModal("All API keys (Gemini, Alpha Vantage, Web Search) and the Firebase Config are required.", "warning");
+    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempGeminiKey || !tempWebSearchKey || !tempSearchEngineId) {
+        displayMessageInModal("All API keys (Gemini, Alpha Vantage, Web Search), the Search Engine ID, and the Firebase Config are required.", "warning");
         return;
     }
     
@@ -272,6 +271,7 @@ async function handleApiKeySubmit(e) {
     geminiApiKey = tempGeminiKey;
     alphaVantageApiKey = tempAlphaVantageKey;
     webSearchApiKey = tempWebSearchKey;
+    searchEngineId = tempSearchEngineId;
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
@@ -345,22 +345,15 @@ async function fetchAlphaVantageData(functionName, symbol) {
 }
 
 async function fetchNewsArticles(ticker, analysisType) {
-    if (!webSearchApiKey) {
-        // Silently fail if no web search key, but allow analysis to continue without it.
-        console.warn("Web Search API Key is not set. Skipping news search.");
-        return "No news articles could be retrieved as a web search API key was not provided.";
+    if (!webSearchApiKey || !searchEngineId) {
+        console.warn("Web Search API Key or Search Engine ID is not set. Skipping news search.");
+        return "No news articles could be retrieved as web search credentials were not fully provided.";
     }
-
-    // This is a placeholder for your chosen search API.
-    // You MUST replace the URL and the logic to handle the response structure of your API.
-    // This example is modeled loosely on Google's Custom Search API.
     const query = encodeURIComponent(`"${ticker}" ${analysisType} analysis`);
-    // NOTE: Replace 'YOUR_SEARCH_ENGINE_ID' if required by your API (like Google's).
-    const url = `https://www.googleapis.com/customsearch/v1?key=${webSearchApiKey}&cx=YOUR_SEARCH_ENGINE_ID&q=${query}&num=5`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${webSearchApiKey}&cx=${searchEngineId}&q=${query}&num=5`;
     
     try {
         const results = await callApi(url);
-        // Adapt this part to the actual response structure of your chosen API
         if (!results.items || results.items.length === 0) {
             return "No recent news articles were found.";
         }
@@ -372,7 +365,6 @@ async function fetchNewsArticles(ticker, analysisType) {
 
     } catch (error) {
         console.error("Failed to fetch news articles:", error);
-        // Return a message that can be inserted into the revision prompt
         return `An error occurred while fetching news articles: ${error.message}`;
     }
 }
@@ -382,7 +374,6 @@ async function callGeminiApi(promptTemplate, templateData) {
     
     let fullPrompt = promptTemplate;
     
-    // Replace placeholders in the prompt with data from templateData
     for (const key in templateData) {
         const placeholder = `[Paste the ${key} here]`;
         let dataToInsert = templateData[key];
@@ -423,22 +414,19 @@ async function loadAllCachedStocks() {
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     container.innerHTML = '';
     try {
-        const querySnapshot = await getDocs(collection(db, "cached_stock_data"));
+        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_CACHE));
         if (querySnapshot.empty) {
             container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
             return;
         }
-        const cardHtmls = [];
-        for (const docSnapshot of querySnapshot.docs) {
+        const cardHtmls = querySnapshot.docs.map(docSnapshot => {
             const symbol = docSnapshot.id;
             const data = docSnapshot.data();
-            const comprehensiveDocRef = doc(db, 'comprehensive_stock_data', symbol);
-            const comprehensiveDocSnap = await getDoc(comprehensiveDocRef);
-            const isComprehensiveDataReady = comprehensiveDocSnap.exists() && Object.keys(comprehensiveDocSnap.data().errors).length === 0;
             if (data.overview && data.overview.data) {
-                cardHtmls.push(getOverviewCardHtml(data.overview.data, data.overview.cachedAt, symbol, isComprehensiveDataReady));
+                return getOverviewCardHtml(data.overview.data, data.overview.cachedAt, symbol, data.isComprehensiveDataReady);
             }
-        }
+            return '';
+        });
         container.innerHTML = cardHtmls.join('');
 
     } catch (error) {
@@ -456,20 +444,18 @@ function handleRefreshData(symbol) {
             try {
                 loadingMessageEl.textContent = `Deleting old data for ${symbol}...`;
                 await Promise.all([
-                    deleteDoc(doc(db, 'cached_stock_data', symbol)),
-                    deleteDoc(doc(db, 'comprehensive_stock_data', symbol))
+                    deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol)),
+                    deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_COMPREHENSIVE, symbol))
                 ]);
-                loadingMessageEl.textContent = `Fetching fresh data for ${symbol}...`;
-                const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
-                await setDoc(doc(db, 'cached_stock_data', symbol), { overview: { data: overview, cachedAt: Timestamp.now() } });
-                fetchAndCacheComprehensiveData(symbol);
-                loadingMessageEl.textContent = `Refreshing dashboard...`;
-                await loadAllCachedStocks();
+                loadingMessageEl.textContent = `Relaunching research for ${symbol}...`;
+                // Re-run the initial research logic
+                await researchAndDisplayStock(symbol, true);
                 displayMessageInModal(`Data for ${symbol} has been refreshed.`, 'info');
             } catch (error) {
                 console.error("Error refreshing data:", error);
                 displayMessageInModal(`Failed to refresh data: ${error.message}`, 'error');
             } finally {
+                await loadAllCachedStocks();
                 closeModal(CONSTANTS.MODAL_LOADING);
             }
         }
@@ -478,44 +464,86 @@ function handleRefreshData(symbol) {
 async function fetchAndCacheComprehensiveData(symbol) {
     const comprehensiveData = {};
     const errors = {};
-    const promises = COMPREHENSIVE_API_FUNCTIONS.map(async (func) => {
-        try {
-            const data = await fetchAlphaVantageData(func, symbol);
-            return { func, data, status: 'fulfilled' };
-        } catch (error) {
-            console.error(`Failed to fetch ${func} for ${symbol}:`, error);
-            return { func, error: error.message, status: 'rejected' };
-        }
-    });
-    const results = await Promise.allSettled(promises);
+    const promises = COMPREHENSIVE_API_FUNCTIONS.map(func =>
+        fetchAlphaVantageData(func, symbol)
+            .then(data => ({ func, data, status: 'fulfilled' }))
+            .catch(error => {
+                console.error(`Failed to fetch ${func} for ${symbol}:`, error);
+                return { func, error: error.message, status: 'rejected' };
+            })
+    );
+
+    const results = await Promise.all(promises);
+    let allSucceeded = true;
     results.forEach(result => {
         if (result.status === 'fulfilled') {
-            const resValue = result.value;
-            if (resValue.status === 'fulfilled') {
-                comprehensiveData[resValue.func] = resValue.data;
-            } else {
-                errors[resValue.func] = resValue.error;
-            }
+            comprehensiveData[result.func] = result.data;
+        } else {
+            errors[result.func] = result.error;
+            allSucceeded = false;
         }
     });
-    try {
-        await setDoc(doc(db, 'comprehensive_stock_data', symbol), {
-            data: comprehensiveData,
-            errors: errors,
-            cachedAt: Timestamp.now()
-        }, { merge: true });
-        // Attempt to update the card UI if it exists
-        const card = document.getElementById(`card-${symbol}`);
-        if(card){
-            card.querySelectorAll('.undervalued-analysis-button, .financial-analysis-button').forEach(button => {
-                button.disabled = false;
-                button.classList.remove('opacity-50', 'cursor-not-allowed');
-            });
-        }
-    } catch (dbError) {
-        console.error(`Failed to write comprehensive data for ${symbol} to Firestore:`, dbError);
+
+    await setDoc(doc(db, CONSTANTS.DB_COLLECTION_COMPREHENSIVE, symbol), {
+        data: comprehensiveData,
+        errors: errors,
+        cachedAt: Timestamp.now()
+    }, { merge: true });
+
+    if (allSucceeded) {
+        await updateDoc(doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol), {
+            isComprehensiveDataReady: true
+        });
     }
 }
+async function researchAndDisplayStock(symbol, isRefresh = false) {
+    const mainCacheRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol);
+
+    if (!isRefresh) {
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking for existing data for ${symbol}...`;
+        const docSnap = await getDoc(mainCacheRef);
+        if (docSnap.exists()) {
+            displayMessageInModal(`${symbol} is already on your dashboard. Use 'Refresh Data' on its card for new data.`, 'info');
+            return;
+        }
+    }
+
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new overview data for ${symbol}...`;
+    const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
+    await setDoc(mainCacheRef, { 
+        overview: { data: overview, cachedAt: Timestamp.now() },
+        isComprehensiveDataReady: false
+    });
+    
+    // Add card to UI immediately
+    const cardHtml = getOverviewCardHtml(overview, Timestamp.now(), symbol, false);
+    if (isRefresh) {
+        const existingCard = document.getElementById(`card-${symbol}`);
+        if(existingCard) existingCard.outerHTML = cardHtml;
+        else document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', cardHtml);
+    } else {
+         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', cardHtml);
+    }
+
+    // Set up a listener to update the card when comprehensive data is ready
+    const unsubscribe = onSnapshot(mainCacheRef, (docSnap) => {
+        const data = docSnap.data();
+        if (data && data.isComprehensiveDataReady) {
+            const card = document.getElementById(`card-${symbol}`);
+            if (card) {
+                card.querySelectorAll('.undervalued-analysis-button, .financial-analysis-button').forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+            }
+            unsubscribe(); // Stop listening after the update
+        }
+    });
+
+    // Asynchronously fetch comprehensive data
+    fetchAndCacheComprehensiveData(symbol);
+}
+
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
@@ -527,26 +555,7 @@ async function handleResearchSubmit(e) {
     }
     openModal(CONSTANTS.MODAL_LOADING);
     try {
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking for existing data for ${symbol}...`;
-        const mainCacheRef = doc(db, 'cached_stock_data', symbol);
-        if ((await getDoc(mainCacheRef)).exists()) {
-            displayMessageInModal(`${symbol} is already on your dashboard. Use 'Refresh Data' on its card for new data.`, 'info');
-            tickerInput.value = '';
-            closeModal(CONSTANTS.MODAL_LOADING);
-            return;
-        }
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching new data for ${symbol}...`;
-        const overview = await fetchAlphaVantageData(CONSTANTS.API_FUNC_OVERVIEW, symbol);
-        await setDoc(mainCacheRef, { overview: { data: overview, cachedAt: Timestamp.now() } });
-        
-        // Asynchronously fetch comprehensive data but don't wait for it to render the card
-        fetchAndCacheComprehensiveData(symbol);
-
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        
-        const cardHtml = getOverviewCardHtml(overview.data, Timestamp.now(), symbol, false);
-        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', cardHtml);
-        
+        await researchAndDisplayStock(symbol);
         tickerInput.value = '';
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -556,26 +565,36 @@ async function handleResearchSubmit(e) {
     }
 }
 
+
 // --- UI RENDERING ---
 async function handleViewFullData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
     try {
-        const combinedData = await getComprehensiveData(symbol);
-        if(combinedData){
-            const docRef = doc(db, 'comprehensive_stock_data', symbol);
-            const docSnap = await getDoc(docRef);
-            const fullData = docSnap.data();
-
-            document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
-            document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullData.cachedAt.toDate().toLocaleString()}`;
-            if (fullData.errors && Object.keys(fullData.errors).length > 0) {
-                document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = `Errors occurred:\n\n${JSON.stringify(fullData.errors, null, 2)}\n\nAvailable data:\n\n${JSON.stringify(combinedData, null, 2)}`;
-            } else {
-                document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(combinedData, null, 2);
-            }
-            openModal(CONSTANTS.MODAL_FULL_DATA);
+        const overviewRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol);
+        const comprehensiveRef = doc(db, CONSTANTS.DB_COLLECTION_COMPREHENSIVE, symbol);
+        const [overviewSnap, comprehensiveSnap] = await Promise.all([getDoc(overviewRef), getDoc(comprehensiveRef)]);
+        
+        if(!comprehensiveSnap.exists()){
+            throw new Error("Comprehensive data has not been cached yet.");
         }
+
+        const combinedData = {
+            OVERVIEW: overviewSnap.data().overview.data,
+            ...comprehensiveSnap.data().data
+        };
+        const fullDataRecord = comprehensiveSnap.data();
+
+        document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
+        document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${fullDataRecord.cachedAt.toDate().toLocaleString()}`;
+        
+        let content = JSON.stringify(combinedData, null, 2);
+        if (fullDataRecord.errors && Object.keys(fullDataRecord.errors).length > 0) {
+            content = `ERRORS:\n${JSON.stringify(fullDataRecord.errors, null, 2)}\n\nAVAILABLE DATA:\n${content}`;
+        }
+        document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = content;
+        openModal(CONSTANTS.MODAL_FULL_DATA);
+        
     } catch (error) {
         console.error("Failed to load full data:", error);
         displayMessageInModal(`Error loading data: ${error.message}`, 'error');
@@ -622,47 +641,49 @@ function getOverviewCardHtml(overviewData, cacheTimestamp, symbol, isComprehensi
 }
 
 // --- EVENT LISTENER SETUP ---
-function setupGlobalEventListeners() {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        const symbol = target.dataset.symbol;
-        if (!symbol) return;
-        if (target.classList.contains('refresh-data-button')) handleRefreshData(symbol);
-        if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
-        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
-        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
-    });
-}
 function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
+    
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    document.getElementById('close-full-data-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
-    document.getElementById('close-full-data-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FULL_DATA));
-    document.getElementById('close-financial-analysis-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS));
-    document.getElementById('close-financial-analysis-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS));
-    document.getElementById('close-undervalued-analysis-modal')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS));
-    document.getElementById('close-undervalued-analysis-modal-bg')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS));
+    
     window.addEventListener('scroll', () => {
         const scrollTopButton = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
         if (scrollTopButton) { scrollTopButton.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300); }
     });
-    setupGlobalEventListeners();
+
+    // Delegated event listener for dynamic content
+    document.body.addEventListener('click', (e) => {
+        const button = e.target.closest('button');
+        const symbol = button?.dataset.symbol;
+        if (symbol) {
+            if (button.classList.contains('refresh-data-button')) handleRefreshData(symbol);
+            if (button.classList.contains('view-json-button')) handleViewFullData(symbol);
+            if (button.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
+            if (button.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
+        }
+
+        // Generic modal close handler
+        if(e.target.closest('.modal-close-trigger')) {
+            const modal = e.target.closest('.modal');
+            if(modal) closeModal(modal.id);
+        }
+    });
 }
 
 // --- AI ANALYSIS HANDLERS ---
 async function getComprehensiveData(symbol) {
-    const docRef = doc(db, 'comprehensive_stock_data', symbol);
-    const overviewRef = doc(db, 'cached_stock_data', symbol);
-    const [docSnap, overviewSnap] = await Promise.all([getDoc(docRef), getDoc(overviewRef)]);
-    if (!docSnap.exists() || !overviewSnap.exists()) {
+    const comprehensiveRef = doc(db, CONSTANTS.DB_COLLECTION_COMPREHENSIVE, symbol);
+    const overviewRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol);
+    const [comprehensiveSnap, overviewSnap] = await Promise.all([getDoc(comprehensiveRef), getDoc(overviewRef)]);
+    
+    if (!comprehensiveSnap.exists() || !overviewSnap.exists()) {
         displayMessageInModal(`Comprehensive data for ${symbol} has not been stored yet. Please try again in a moment.`, 'info');
         return null;
     }
-    const comprehensiveData = docSnap.data();
+
+    const comprehensiveData = comprehensiveSnap.data();
     if (comprehensiveData.errors && Object.keys(comprehensiveData.errors).length > 0) {
         displayMessageInModal(`Could not perform analysis due to missing data: ${Object.keys(comprehensiveData.errors).join(', ')}. Please try refreshing the data for this stock.`, 'error');
         return null;
@@ -695,10 +716,10 @@ async function performIterativeAnalysis(symbol, draftPrompt, analysisType, modal
             'news articles': articles,
         });
 
-        // Render final report
+        // Render final report securely
         const contentEl = document.getElementById(contentElId);
         document.getElementById(titleElId).textContent = `Analysis for ${symbol}`;
-        contentEl.innerHTML = marked.parse(finalReport);
+        contentEl.innerHTML = DOMPurify.sanitize(marked.parse(finalReport));
         openModal(modalId);
 
     } catch (error) {
