@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.0.0"; 
+const APP_VERSION = "5.0.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -323,7 +323,9 @@ async function callGeminiApi(promptTemplate, jsonData) {
     let fullPrompt = promptTemplate.replace(/\[Company Name\]/g, companyName);
     fullPrompt = fullPrompt.replace(/\[Ticker Symbol\]/g, tickerSymbol);
     fullPrompt = fullPrompt.replace('[Paste the full JSON data here]', JSON.stringify(jsonData, null, 2));
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+
     try {
         const response = await fetch(url, {
             method: 'POST',
