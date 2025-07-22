@@ -6,7 +6,6 @@
     <title>Stock Research Hub</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +36,7 @@
             
             <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
                 <h2 class="text-xl font-bold mb-1 text-emerald-500">Stock Screener</h2>
-                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker symbol to begin your research.</p>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker symbol to add it to your dashboard.</p>
                 <form id="stock-research-form" class="flex items-center gap-4">
                     <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
                     <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
@@ -119,6 +118,28 @@
             <div class="p-6 overflow-y-auto flex-grow bg-gray-50">
                 <pre id="full-data-content" class="text-xs whitespace-pre-wrap break-all"></pre>
             </div>
+        </div>
+    </div>
+    
+    <div id="financialAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-financial-analysis-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="financial-analysis-modal-title" class="text-2xl font-bold text-gray-800">Financial Analysis</h2>
+                <button id="close-financial-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="financial-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
+        </div>
+    </div>
+
+    <div id="undervaluedAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-undervalued-analysis-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="undervalued-analysis-modal-title" class="text-2xl font-bold text-gray-800">Undervalued Stock Analysis</h2>
+                <button id="close-undervalued-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="undervalued-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
         </div>
     </div>
 
