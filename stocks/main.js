@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.0.0"; 
+const APP_VERSION = "6.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -23,6 +23,7 @@ const CONSTANTS = {
     INPUT_TICKER: 'ticker-input',
     INPUT_ALPHA_VANTAGE_KEY: 'alphaVantageApiKeyInput',
     INPUT_GEMINI_KEY: 'geminiApiKeyInput',
+    INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
     INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
     // Containers & Elements
@@ -127,10 +128,10 @@ Conclude with a final synthesis that integrates all the preceding analyses.
 
 const UNDERVALUED_ANALYSIS_PROMPT = `
 Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.
-Output Format: The analysis must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.
+Output Format: The final report must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.
 IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
 
-Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. The data blob contains cached fundamental data and a real-time price quote. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
 
 JSON Data:
 {jsonData}
@@ -155,18 +156,16 @@ Evaluate the company’s intrinsic value through a rigorous examination of its f
 - **Dividend Yield:** [Value from OVERVIEW.DividendYield]%.
 - **Sustainability Check:** Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.
 ### 2.4. Wall Street Consensus
-- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice].
-- **Implied Upside/Downside:** Calculate and state the percentage difference between the live price and the analyst target.
+- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. Compare this target to the stock's recent price movement as indicated by its moving averages and 52-week range.
 
 ## 3. Technical Analysis & Market Dynamics
 Assess the stock's current price action and market sentiment to determine if the timing is opportune.
 ### 3.1. Trend Analysis
-- **Live Price:** $[Value from live_quote.price].
 - **50-Day MA:** $[Value from OVERVIEW.50DayMovingAverage]
 - **200-Day MA:** $[Value from OVERVIEW.200DayMovingAverage]
-- **Interpretation:** Analyze the live price's position relative to these key averages. Is the stock in a bullish trend (above both MAs), a bearish trend (below both), or at an inflection point?
+- **Interpretation:** Analyze the stock's current trend. Is it in a bullish trend (trading above both MAs), a bearish trend (below both), or at an inflection point? How do these averages contain the price?
 ### 3.2. Momentum and Volatility
-- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the live price situated within this range?
+- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the price currently situated within this range based on its moving averages? A price near the low may suggest value, while a price near the high suggests strong momentum.
 - **Market Volatility (Beta):** [Value from OVERVIEW.Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?
 
 ## 4. Synthesized Conclusion: Framing the Opportunity
@@ -175,7 +174,7 @@ Combine the fundamental and technical findings into a final, actionable synthesi
 - **Technical Case:** Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?
 - **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."
 
-**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice, and all investment decisions should be made with the consultation of a qualified financial professional. Data may not be real-time.
+**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.
 `;
 
 // --- Global State ---
@@ -188,7 +187,11 @@ let alphaVantageApiKey = "";
 let geminiApiKey = "";
 let searchApiKey = "";
 let searchEngineId = "";
-let portfolioCache = []; // Cache for portfolio stocks to reduce reads
+let googleClientId = ""; // New for Drive API
+let googleAccessToken = null; // New for Drive API
+let gapiInitialized = false; // New for Drive API
+let driveFolderId = null; // Cache for Drive folder
+let portfolioCache = [];
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -307,7 +310,6 @@ function safeParseConfig(str) {
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
-    // The old loading logic is removed. App content is now driven by user action.
     document.getElementById('main-view').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
 }
@@ -337,15 +339,16 @@ function initializeFirebase() {
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
-    const tempAlphaVantageKey = document.getElementById(CONSTANTS.INPUT_ALPHA_VANTAGE_KEY).value.trim();
-    const tempGeminiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
-    const tempSearchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
-    const tempSearchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
+    alphaVantageApiKey = document.getElementById(CONSTANTS.INPUT_ALPHA_VANTAGE_KEY).value.trim();
+    geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
+    googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
+    searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
+    searchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!tempFirebaseConfigText || !tempAlphaVantageKey || !tempSearchApiKey || !tempSearchEngineId || !tempGeminiKey) {
-        displayMessageInModal("All API Keys and the Firebase Config are required.", "warning");
+    if (!alphaVantageApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
+        displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
     
@@ -359,17 +362,61 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
-    alphaVantageApiKey = tempAlphaVantageKey;
-    geminiApiKey = tempGeminiKey;
-    searchApiKey = tempSearchApiKey;
-    searchEngineId = tempSearchEngineId;
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
     closeModal(CONSTANTS.MODAL_API_KEY);
 }
 
-// --- AUTHENTICATION ---
+// --- AUTHENTICATION & GAPI INITIALIZATION ---
+
+async function handleLogin() {
+    if (!auth) {
+        displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
+        return;
+    }
+    const provider = new GoogleAuthProvider();
+    // Request scope for Google Drive file creation
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        googleAccessToken = credential.accessToken;
+        
+        // Initialize the Google API client after getting the token
+        await initializeGapiClient();
+
+    } catch (error) {
+        console.error("Google Sign-In or GAPI initialization failed:", error);
+        googleAccessToken = null;
+        displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers or console errors.`, 'error');
+    }
+}
+
+async function initializeGapiClient() {
+    return new Promise((resolve, reject) => {
+        gapi.load('client', async () => {
+            try {
+                await gapi.client.init({
+                    apiKey: geminiApiKey, // Re-using Gemini key for GAPI, as it's a Google Cloud key
+                    clientId: googleClientId,
+                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+                });
+                gapi.client.setToken({ access_token: googleAccessToken });
+                gapiInitialized = true;
+                resolve();
+            } catch (error) {
+                console.error("Error initializing GAPI client:", error);
+                reject(error);
+            }
+        });
+    });
+}
+
+function handleLogout() {
+    if (auth) signOut(auth).catch(error => console.error("Sign out failed:", error));
+}
 
 function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
@@ -398,24 +445,6 @@ function setupAuthUI(user) {
     }
 }
 
-async function handleLogin() {
-    if (!auth) {
-        displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
-        return;
-    }
-    try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (error) {
-        console.error("Google Sign-In Popup failed:", error);
-        displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers.`, 'error');
-    }
-}
-
-function handleLogout() {
-    if (auth) signOut(auth).catch(error => console.error("Sign out failed:", error));
-}
-
-
 // --- API CALLS ---
 
 async function callApi(url, options = {}) {
@@ -441,7 +470,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -470,6 +499,7 @@ async function renderPortfolioView() {
         const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
         if (portfolioCache.length === 0) {
             container.innerHTML = `<p class="p-8 text-center text-gray-500">Your portfolio is empty. Add a stock to get started.</p>`;
+            closeModal(CONSTANTS.MODAL_LOADING);
             return;
         }
 
@@ -617,13 +647,12 @@ async function handleSaveStock(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to portfolio...";
     
     try {
-        // If ticker changed, delete the old document
         if (originalTicker && originalTicker !== newTicker) {
             await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
         }
         await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
-        await renderPortfolioView(); // Refresh view
+        await renderPortfolioView(); 
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -641,7 +670,7 @@ async function handleDeleteStock(ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
-                await renderPortfolioView(); // Refresh view
+                await renderPortfolioView();
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -651,7 +680,6 @@ async function handleDeleteStock(ticker) {
         }
     );
 }
-
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
@@ -734,6 +762,7 @@ async function handleResearchSubmit(e) {
         if ((await getDoc(docRef)).exists()) {
              displayMessageInModal(`${symbol} is already in your portfolio.`, 'info');
              tickerInput.value = '';
+             closeModal(CONSTANTS.MODAL_LOADING);
              return;
         }
         
@@ -768,7 +797,6 @@ async function handleResearchSubmit(e) {
 
 async function displayStockCard(ticker) {
     if (document.getElementById(`card-${ticker}`)) {
-        // Card already exists, maybe scroll to it
         document.getElementById(`card-${ticker}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
@@ -798,7 +826,6 @@ async function displayStockCard(ticker) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
 
 // --- NEWS FEATURE ---
 
@@ -864,7 +891,6 @@ async function handleFetchNews(symbol) {
     }
 }
 
-
 // --- UI RENDERING ---
 
 function renderOverviewCard(data, symbol) {
@@ -906,7 +932,6 @@ function renderOverviewCard(data, symbol) {
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
-    // Main dashboard card actions
     document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -919,7 +944,6 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
     });
 
-    // Portfolio modal actions
     document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -943,14 +967,19 @@ function setupEventListeners() {
         openModal(CONSTANTS.MODAL_PORTFOLIO);
     });
 
-    // Portfolio modal search and add
     document.getElementById('portfolio-search-input')?.addEventListener('input', (e) => displayFilteredPortfolio(e.target.value));
     document.getElementById(CONSTANTS.BUTTON_ADD_NEW_STOCK)?.addEventListener('click', () => openManageStockModal());
 
-    // Manage stock modal
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
     document.getElementById('add-topic-button')?.addEventListener('click', () => addTopicToForm());
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
+
+    document.querySelectorAll('.save-to-drive-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modalId;
+            handleSaveToDrive(modalId);
+        });
+    });
 
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -1043,26 +1072,18 @@ async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
     try {
-        const quotePromise = callApi(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
-        const cachedDataPromise = getStockDataFromCache(symbol);
-        const [quoteData, cachedData] = await Promise.all([quotePromise, cachedDataPromise]);
+        const cachedData = await getStockDataFromCache(symbol);
         
-        const livePrice = get(quoteData, 'Global Quote.05. price', 'N/A');
-        if (livePrice === 'N/A') {
-            throw new Error('Could not fetch the live price for the valuation analysis.');
-        }
-
-        const combinedData = { live_quote: { price: livePrice }, ...cachedData };
         const companyName = get(cachedData, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(cachedData, 'OVERVIEW.Symbol', symbol);
 
         const prompt = UNDERVALUED_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(combinedData, null, 2));
+            .replace('{jsonData}', JSON.stringify(cachedData, null, 2));
         
         const report = await callGeminiApi(prompt);
-        document.getElementById(CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
+        document.getElementById('undervalued-analysis-content').innerHTML = marked.parse(report);
         document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
         openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
 
@@ -1071,6 +1092,111 @@ async function handleUndervaluedAnalysis(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+// --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
+
+async function handleSaveToDrive(modalId) {
+    if (!gapiInitialized || !googleAccessToken) {
+        displayMessageInModal("Google Drive is not ready. Please ensure you are logged in.", "warning");
+        return;
+    }
+
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    let contentToSave = '';
+    let stockSymbol = '';
+    let analysisType = '';
+
+    if (modalId === CONSTANTS.MODAL_FULL_DATA) {
+        contentToSave = modal.querySelector('#full-data-content').textContent;
+        stockSymbol = modal.querySelector('#full-data-modal-title').textContent.replace('Full Cached Data for ', '').trim();
+        analysisType = 'FullData';
+    } else {
+        const proseContent = modal.querySelector('.prose').innerHTML;
+        contentToSave = proseContent.replace(/<br\s*\/?>/gi, '\n')
+                                     .replace(/<p>/gi, '\n').replace(/<\/p>/gi, '')
+                                     .replace(/<h2>/gi, '## ').replace(/<\/h2>/gi, '\n')
+                                     .replace(/<h3>/gi, '### ').replace(/<\/h3>/gi, '\n')
+                                     .replace(/<ul>/gi, '').replace(/<\/ul>/gi, '')
+                                     .replace(/<li>/gi, '* ').replace(/<\/li>/gi, '\n');
+
+        stockSymbol = modal.querySelector('h2').textContent.split(' for ')[1].trim();
+        analysisType = modal.querySelector('h2').textContent.split(' for ')[0].replace(/\s/g, '');
+    }
+
+    const fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
+
+    try {
+        const folderId = await getOrCreateDriveFolder();
+        await createDriveFile(folderId, fileName, contentToSave);
+        displayMessageInModal(`${fileName} was saved successfully to your "Stock Evaluations" folder in Google Drive.`, 'info');
+    } catch (error) {
+        console.error("Error saving to drive:", error);
+        displayMessageInModal(`Failed to save to Drive: ${error.message || 'Check console for details.'}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function getOrCreateDriveFolder() {
+    if (driveFolderId) return driveFolderId;
+
+    const folderName = "Stock Evaluations";
+    
+    const response = await gapi.client.drive.files.list({
+        q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`,
+        fields: 'files(id, name)',
+    });
+
+    if (response.result.files.length > 0) {
+        driveFolderId = response.result.files[0].id;
+        return driveFolderId;
+    } else {
+        const fileMetadata = {
+            'name': folderName,
+            'mimeType': 'application/vnd.google-apps.folder'
+        };
+        const createResponse = await gapi.client.drive.files.create({
+            resource: fileMetadata,
+            fields: 'id'
+        });
+        driveFolderId = createResponse.result.id;
+        return driveFolderId;
+    }
+}
+
+async function createDriveFile(folderId, fileName, content) {
+    const boundary = '-------314159265358979323846';
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const close_delim = `\r\n--${boundary}--`;
+
+    const metadata = {
+        name: fileName,
+        mimeType: 'text/markdown',
+        parents: [folderId]
+    };
+
+    const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: text/markdown\r\n\r\n' +
+        content +
+        close_delim;
+
+    await gapi.client.request({
+        path: '/upload/drive/v3/files',
+        method: 'POST',
+        params: { uploadType: 'multipart' },
+        headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
+        body: multipartRequestBody,
+    });
 }
 
 // --- APP INITIALIZATION TRIGGER ---
