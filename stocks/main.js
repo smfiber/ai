@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.1.0"; 
+const APP_VERSION = "5.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -33,7 +33,7 @@ const CONSTANTS = {
     DB_COLLECTION_STOCKS: 'cached_stock_data',
 };
 
-// List of comprehensive data endpoints to fetch
+// List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = [
     'OVERVIEW',
     'INCOME_STATEMENT',
@@ -42,6 +42,135 @@ const API_FUNCTIONS = [
     'EARNINGS',
 ];
 
+const FINANCIAL_ANALYSIS_PROMPT = `
+Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
+IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
+
+Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+
+JSON Data:
+{jsonData}
+
+Based on the provided data, generate the following multi-faceted financial report:
+
+# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary
+Begin with a concise, top-level summary (3-4 sentences) that encapsulates the company's financial condition, recent performance trajectory, and core investment profile. Synthesize the most critical findings from the profitability, solvency, and valuation analyses into a coherent opening statement.
+
+## 2. Company Profile & Market Overview
+### Business Description
+Briefly describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data.
+### Market Snapshot
+Present key market-related metrics for context.
+- Market Capitalization: $XXX.XX Billion
+- 52-Week Price Range: $XX.XX - $XX.XX
+- 50-Day Moving Average: $XX.XX
+- 200-Day Moving Average: $XX.XX
+- Analyst Target Price: $XX.XX
+
+## 3. Performance & Profitability Analysis
+Assess the company's ability to generate earnings and create value for shareholders.
+### 3.1. Revenue & Earnings Trend
+Analyze the historical trend of totalRevenue and netIncome over the last 3-5 fiscal years using the INCOME_STATEMENT annual data.
+Calculate and discuss the Year-over-Year (YoY) growth rates for both revenue and net income for the most recent two years.
+Incorporate the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY from the OVERVIEW data to comment on recent momentum.
+### 3.2. Profitability Margins & Returns
+Extract the ProfitMargin and OperatingMarginTTM from the OVERVIEW section.
+Calculate the Gross Profit Margin for the last three fiscal years (grossProfit / totalRevenue).
+Analyze the trend in these margins. Are they expanding, contracting, or stable? Provide potential reasons based on the data (e.g., changes in costOfRevenue vs. totalRevenue).
+Analyze the ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA). Interpret these figures as indicators of management's efficiency in using its equity and asset bases to generate profit.
+
+## 4. Financial Health & Risk Assessment
+Evaluate the company's balance sheet strength, liquidity position, and reliance on debt.
+### 4.1. Liquidity Analysis
+Using the most recent BALANCE_SHEET annual report, calculate and interpret the following ratios:
+- Current Ratio: (totalCurrentAssets / totalCurrentLiabilities). Explain its implication for the company's ability to meet short-term obligations.
+- Quick Ratio (Acid-Test): (cashAndShortTermInvestments + currentNetReceivables) / totalCurrentLiabilities. Explain what this reveals about its reliance on selling inventory.
+### 4.2. Solvency and Debt Structure
+Calculate the Debt-to-Equity Ratio (totalLiabilities / totalShareholderEquity) for the last three fiscal years. Analyze the trend and comment on the company's leverage.
+Analyze the composition of debt by comparing longTermDebt to shortTermDebt. Is the debt structure sustainable?
+Calculate the Interest Coverage Ratio (EBIT / interestExpense) from the most recent INCOME_STATEMENT. Assess the company's ability to service its debt payments from its operating earnings.
+
+## 5. Cash Flow Analysis
+Analyze the generation and utilization of cash as detailed in the CASH_FLOW statement for the most recent 3 fiscal years.
+### Operating Cash Flow (OCF)
+Analyze the trend in operatingCashflow. Is it growing? Is it consistently positive?
+### Quality of Earnings
+Compare operatingCashflow to netIncome. A significant divergence can be a red flag. Is the company's profit backed by actual cash?
+### Investing and Financing Activities
+Analyze the major uses and sources of cash from cashflowFromInvestment (e.g., capitalExpenditures) and cashflowFromFinancing (e.g., dividendPayout, paymentsForRepurchaseOfCommonStock, debt issuance/repayment). What do these activities suggest about the company's strategy?
+
+## 6. Valuation Analysis
+Assess the company's current market valuation relative to its earnings and fundamentals.
+Present and interpret the following valuation multiples from the OVERVIEW data:
+- P/E Ratio (PERatio)
+- Forward P/E (ForwardPE)
+- Price-to-Sales Ratio (PriceToSalesRatioTTM)
+- Price-to-Book Ratio (PriceToBookRatio)
+- EV-to-EBITDA (EVToEBITDA)
+Discuss what these multiples imply. Is the stock valued for growth, value, or something else? Compare the TrailingPE to the ForwardPE to understand earnings expectations.
+
+## 7. Investment Thesis: Synthesis & Conclusion
+Conclude with a final synthesis that integrates all the preceding analyses.
+- **Key Strengths**: Identify 2-3 of the most significant financial strengths based on the data (e.g., strong OCF, low leverage, margin expansion).
+- **Potential Weaknesses & Red Flags**: Identify 2-3 key weaknesses or areas for concern (e.g., high debt, declining revenue growth, poor quality of earnings, negative cash flow).
+- **Overall Verdict**: Provide a concluding statement on the company's overall financial standing and investment profile. Based purely on this quantitative analysis, what is the primary narrative for a potential investor? (e.g., "A financially robust company with a premium valuation," or "A highly leveraged company facing profitability headwinds").
+`;
+
+const UNDERVALUED_ANALYSIS_PROMPT = `
+Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.
+Output Format: The analysis must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.
+IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
+
+Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. The data blob contains cached fundamental data and a real-time price quote. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+
+JSON Data:
+{jsonData}
+
+Based on the data, generate the following in-depth report:
+# Investment Valuation Report: {companyName} ({tickerSymbol})
+
+## 1. Executive Verdict
+Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.
+
+## 2. Fundamental Valuation Deep Dive
+Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.
+### 2.1. Relative Valuation Multiples
+- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?
+- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.
+- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?
+- **Enterprise Value-to-EBITDA (EV/EBITDA):** [Value from OVERVIEW.EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.
+### 2.2. Growth and Profitability-Adjusted Value
+- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.
+- **Return on Equity (ROE):** [Value from OVERVIEW.ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.
+### 2.3. Dividend Analysis
+- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%.
+- **Sustainability Check:** Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.
+### 2.4. Wall Street Consensus
+- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice].
+- **Implied Upside/Downside:** Calculate and state the percentage difference between the live price and the analyst target.
+
+## 3. Technical Analysis & Market Dynamics
+Assess the stock's current price action and market sentiment to determine if the timing is opportune.
+### 3.1. Trend Analysis
+- **Live Price:** $[Value from live_quote.price].
+- **50-Day MA:** $[Value from OVERVIEW.50DayMovingAverage]
+- **200-Day MA:** $[Value from OVERVIEW.200DayMovingAverage]
+- **Interpretation:** Analyze the live price's position relative to these key averages. Is the stock in a bullish trend (above both MAs), a bearish trend (below both), or at an inflection point?
+### 3.2. Momentum and Volatility
+- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the live price situated within this range?
+- **Market Volatility (Beta):** [Value from OVERVIEW.Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?
+
+## 4. Synthesized Conclusion: Framing the Opportunity
+Combine the fundamental and technical findings into a final, actionable synthesis.
+- **Fundamental Case:** Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?
+- **Technical Case:** Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?
+- **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."
+
+**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice, and all investment decisions should be made with the consultation of a qualified financial professional. Data may not be real-time.
+`;
 
 // --- Global State ---
 let db;
@@ -381,9 +510,17 @@ async function handleRefreshData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing all data for ${symbol}...`;
     try {
-        await fetchAndCacheStockData(symbol);
+        const refreshedData = await fetchAndCacheStockData(symbol);
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        await loadAllCachedStocks();
+        
+        const newCardHtml = renderOverviewCard(refreshedData, symbol);
+        const oldCard = document.getElementById(`card-${symbol}`);
+        if(oldCard) {
+            oldCard.outerHTML = newCardHtml;
+        } else { // Fallback in case card wasn't on screen
+            await loadAllCachedStocks();
+        }
+
     } catch (error) {
         console.error("Error refreshing stock data:", error);
         displayMessageInModal(error.message, 'error');
@@ -395,15 +532,16 @@ async function handleRefreshData(symbol) {
 async function loadAllCachedStocks() {
     if (!db) return;
     const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.innerHTML = '';
+    container.innerHTML = ''; // Clear existing content
     try {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_STOCKS));
         if (querySnapshot.empty) {
-            container.innerHTML = `<p class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
+            container.innerHTML = `<p id="no-stocks-placeholder" class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
             return;
         }
         const sortedDocs = querySnapshot.docs.sort((a, b) => a.data().OVERVIEW.Symbol.localeCompare(b.data().OVERVIEW.Symbol));
-        sortedDocs.forEach(doc => renderOverviewCard(doc.data(), doc.id));
+        const cardsHtml = sortedDocs.map(doc => renderOverviewCard(doc.data(), doc.id)).join('');
+        container.innerHTML = cardsHtml;
     } catch (error) {
         console.error("Error loading cached stocks: ", error);
         displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
@@ -427,14 +565,21 @@ async function handleResearchSubmit(e) {
         if ((await getDoc(docRef)).exists()) {
              displayMessageInModal(`${symbol} is already on your dashboard. Use 'Refresh Data' to get new data.`, 'info');
              tickerInput.value = '';
+             closeModal(CONSTANTS.MODAL_LOADING);
              return;
         }
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all data for ${symbol}... This may take a moment.`;
-        await fetchAndCacheStockData(symbol);
+        const newStockData = await fetchAndCacheStockData(symbol);
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        await loadAllCachedStocks();
+        
+        // Efficiently add the new card without reloading everything
+        const placeholder = document.getElementById('no-stocks-placeholder');
+        if (placeholder) placeholder.remove();
+        const newCardHtml = renderOverviewCard(newStockData, symbol);
+        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
+        
         tickerInput.value = '';
 
     } catch (error) {
@@ -523,10 +668,8 @@ async function handleFetchNews(symbol) {
 // --- UI RENDERING ---
 
 function renderOverviewCard(data, symbol) {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     const overviewData = data.OVERVIEW;
-    if (!overviewData || !overviewData.Symbol) return;
-    if (container.innerHTML.includes('No stocks researched yet')) container.innerHTML = '';
+    if (!overviewData || !overviewData.Symbol) return '';
 
     const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
@@ -558,7 +701,7 @@ function renderOverviewCard(data, symbol) {
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
-    container.insertAdjacentHTML('beforeend', cardHtml);
+    return cardHtml;
 }
 
 // --- EVENT LISTENER SETUP ---
@@ -585,7 +728,6 @@ function setupEventListeners() {
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-    // FIX: Correctly add event listeners to modal close buttons and backgrounds
     const modalsToClose = [
         { modal: 'fullDataModal', button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: 'financialAnalysisModal', button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
@@ -615,13 +757,11 @@ async function getStockDataFromCache(symbol) {
     const docRef = doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
-        displayMessageInModal(`Could not find cached data for ${symbol}.`, 'error');
-        return null;
+        throw new Error(`Could not find cached data for ${symbol}. Please research it first.`);
     }
     const data = docSnap.data();
-    if (!data.INCOME_STATEMENT || !data.BALANCE_SHEET || !data.CASH_FLOW) {
-         displayMessageInModal(`Analysis data for ${symbol} is incomplete. Please refresh it.`, 'warning');
-        return null;
+    if (!data.INCOME_STATEMENT || !data.BALANCE_SHEET || !data.CASH_FLOW || !data.OVERVIEW) {
+         throw new Error(`Cached analysis data for ${symbol} is incomplete. Please refresh it.`);
     }
     return data;
 }
@@ -649,7 +789,7 @@ async function handleViewFullData(symbol) {
 
 async function handleFinancialAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI analysis for ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
         if (!data) return;
@@ -657,82 +797,10 @@ async function handleFinancialAnalysis(symbol) {
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
-        // --- NEW PROMPT ---
-        const prompt = `
-Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Do NOT use any emojis. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
-
-Analyze the comprehensive financial data for ${companyName} (Ticker: ${tickerSymbol}) provided below:
-
-JSON Data:
-${JSON.stringify(data, null, 2)}
-
-Based on the provided data, generate the following multi-faceted financial report:
-
-# Comprehensive Financial Analysis: ${companyName} (${tickerSymbol})
-
-## 1. Executive Summary
-Begin with a concise, top-level summary (3-4 sentences) that encapsulates the company's financial condition, recent performance trajectory, and core investment profile. Synthesize the most critical findings from the profitability, solvency, and valuation analyses into a coherent opening statement.
-
-## 2. Company Profile & Market Overview
-### Business Description
-Briefly describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data.
-### Market Snapshot
-Present key market-related metrics for context.
-- Market Capitalization: $XXX.XX Billion
-- 52-Week Price Range: $XX.XX - $XX.XX
-- 50-Day Moving Average: $XX.XX
-- 200-Day Moving Average: $XX.XX
-- Analyst Target Price: $XX.XX
-
-## 3. Performance & Profitability Analysis
-Assess the company's ability to generate earnings and create value for shareholders.
-### 3.1. Revenue & Earnings Trend
-Analyze the historical trend of totalRevenue and netIncome over the last 3-5 fiscal years using the INCOME_STATEMENT annual data.
-Calculate and discuss the Year-over-Year (YoY) growth rates for both revenue and net income for the most recent two years.
-Incorporate the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY from the OVERVIEW data to comment on recent momentum.
-### 3.2. Profitability Margins & Returns
-Extract the ProfitMargin and OperatingMarginTTM from the OVERVIEW section.
-Calculate the Gross Profit Margin for the last three fiscal years (grossProfit / totalRevenue).
-Analyze the trend in these margins. Are they expanding, contracting, or stable? Provide potential reasons based on the data (e.g., changes in costOfRevenue vs. totalRevenue).
-Analyze the ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA). Interpret these figures as indicators of management's efficiency in using its equity and asset bases to generate profit.
-
-## 4. Financial Health & Risk Assessment
-Evaluate the company's balance sheet strength, liquidity position, and reliance on debt.
-### 4.1. Liquidity Analysis
-Using the most recent BALANCE_SHEET annual report, calculate and interpret the following ratios:
-- Current Ratio: (totalCurrentAssets / totalCurrentLiabilities). Explain its implication for the company's ability to meet short-term obligations.
-- Quick Ratio (Acid-Test): (cashAndShortTermInvestments + currentNetReceivables) / totalCurrentLiabilities. Explain what this reveals about its reliance on selling inventory.
-### 4.2. Solvency and Debt Structure
-Calculate the Debt-to-Equity Ratio (totalLiabilities / totalShareholderEquity) for the last three fiscal years. Analyze the trend and comment on the company's leverage.
-Analyze the composition of debt by comparing longTermDebt to shortTermDebt. Is the debt structure sustainable?
-Calculate the Interest Coverage Ratio (EBIT / interestExpense) from the most recent INCOME_STATEMENT. Assess the company's ability to service its debt payments from its operating earnings.
-
-## 5. Cash Flow Analysis
-Analyze the generation and utilization of cash as detailed in the CASH_FLOW statement for the most recent 3 fiscal years.
-### Operating Cash Flow (OCF)
-Analyze the trend in operatingCashflow. Is it growing? Is it consistently positive?
-### Quality of Earnings
-Compare operatingCashflow to netIncome. A significant divergence can be a red flag. Is the company's profit backed by actual cash?
-### Investing and Financing Activities
-Analyze the major uses and sources of cash from cashflowFromInvestment (e.g., capitalExpenditures) and cashflowFromFinancing (e.g., dividendPayout, paymentsForRepurchaseOfCommonStock, debt issuance/repayment). What do these activities suggest about the company's strategy?
-
-## 6. Valuation Analysis
-Assess the company's current market valuation relative to its earnings and fundamentals.
-Present and interpret the following valuation multiples from the OVERVIEW data:
-- P/E Ratio (PERatio)
-- Forward P/E (ForwardPE)
-- Price-to-Sales Ratio (PriceToSalesRatioTTM)
-- Price-to-Book Ratio (PriceToBookRatio)
-- EV-to-EBITDA (EVToEBITDA)
-Discuss what these multiples imply. Is the stock valued for growth, value, or something else? Compare the TrailingPE to the ForwardPE to understand earnings expectations.
-
-## 7. Investment Thesis: Synthesis & Conclusion
-Conclude with a final synthesis that integrates all the preceding analyses.
-- **Key Strengths**: Identify 2-3 of the most significant financial strengths based on the data (e.g., strong OCF, low leverage, margin expansion).
-- **Potential Weaknesses & Red Flags**: Identify 2-3 key weaknesses or areas for concern (e.g., high debt, declining revenue growth, poor quality of earnings, negative cash flow).
-- **Overall Verdict**: Provide a concluding statement on the company's overall financial standing and investment profile. Based purely on this quantitative analysis, what is the primary narrative for a potential investor? (e.g., "A financially robust company with a premium valuation," or "A highly leveraged company facing profitability headwinds").
-`;
+        const prompt = FINANCIAL_ANALYSIS_PROMPT
+            .replace('{companyName}', companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
 
         const report = await callGeminiApi(prompt);
         document.getElementById(CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
@@ -750,60 +818,31 @@ async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) return;
+        // Fetch live quote and cached data concurrently
+        const quotePromise = callApi(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
+        const cachedDataPromise = getStockDataFromCache(symbol);
 
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const [quoteData, cachedData] = await Promise.all([quotePromise, cachedDataPromise]);
+        
+        if (!cachedData) return; // Error is handled in getStockDataFromCache
 
-        const prompt = `
-Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.
-Output Format: The analysis must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required. Do NOT use any emojis.
-Conduct a comprehensive valuation analysis for ${companyName} (Ticker: ${tickerSymbol}) using the complete JSON data provided below:
-JSON Data:
-JSON
+        const livePrice = get(quoteData, 'Global Quote.05. price', 'N/A');
+        if (livePrice === 'N/A') {
+            throw new Error('Could not fetch the live price for the valuation analysis.');
+        }
 
-${JSON.stringify(data, null, 2)}
-Based on the data, generate the following in-depth report:
-Investment Valuation Report: companyName({tickerSymbol})
-1. Executive Verdict
-Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.
-2. Fundamental Valuation Deep Dive
-Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.
-2.1. Relative Valuation Multiples
-Price-to-Earnings (P/E) Ratio: [Value from PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?
-Price-to-Book (P/B) Ratio: [Value from PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.
-Price-to-Sales (P/S) Ratio: [Value from PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?
-Enterprise Value-to-EBITDA (EV/EBITDA): [Value from EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.
-2.2. Growth and Profitability-Adjusted Value
-PEG Ratio: [Value from PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.
-Return on Equity (ROE): [Value from ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.
-Dividend Analysis:
-Dividend Yield: [Value from DividendYield]%.
-Sustainability Check: Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.
-2.3. Wall Street Consensus
-Current Price: $[Value from GLOBAL_QUOTE.price].
-Analyst Target Price: $[Value from AnalystTargetPrice].
-Implied Upside/Downside: Calculate and state the percentage difference between the current price and the analyst target.
-3. Technical Analysis & Market Dynamics
-Assess the stock's current price action and market sentiment to determine if the timing is opportune.
-3.1. Trend Analysis
-Current Price vs. Moving Averages:
-50-Day MA: $[50DayMovingAverage]
-200-Day MA: $[200DayMovingAverage]
-Interpretation: Analyze the current price's position relative to these key averages. Is the stock in a bullish trend (above both MAs), a bearish trend (below both), or at an inflection point (e.g., testing an MA as support/resistance)? Note if a "Golden Cross" (50-day crosses above 200-day) or "Death Cross" (50-day crosses below 200-day) is present or imminent.
-3.2. Momentum and Volatility
-52-Week Range: The stock has traded between $[52WeekLow] and $[52WeekHigh]. Where is the current price situated within this range?
-Market Volatility (Beta): [Value from Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?
-Relative Strength Index (RSI): If available in the technical_indicators data, state the [RSI Value]. Interpret it: a reading below 30 typically signals an "oversold" (and potentially undervalued) condition, while a reading above 70 signals an "overbought" condition.
-4. Synthesized Conclusion: Framing the Opportunity
-Combine the fundamental and technical findings into a final, actionable synthesis.
+        const combinedData = {
+            live_quote: { price: livePrice },
+            ...cachedData
+        };
 
-Fundamental Case: Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?
-Technical Case: Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?
-Final Verdict & Investment Profile: State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted. This opportunity may best suit a long-term value investor who is willing to tolerate near-term price weakness."
-Disclaimer: This AI-generated analysis is for informational and educational purposes only. It is not financial advice, and all investment decisions should be made with the consultation of a qualified financial professional. Data may not be real-time.
-`;
+        const companyName = get(cachedData, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(cachedData, 'OVERVIEW.Symbol', symbol);
+
+        const prompt = UNDERVALUED_ANALYSIS_PROMPT
+            .replace('{companyName}', companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(combinedData, null, 2));
         
         const report = await callGeminiApi(prompt);
         document.getElementById(CONSTANTS.ELEMENT_UNDERVALUED_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
