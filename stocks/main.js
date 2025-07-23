@@ -3,10 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "5.2.0"; 
+const APP_VERSION = "6.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
+    // Modals
     MODAL_API_KEY: 'apiKeyModal',
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
@@ -14,6 +15,9 @@ const CONSTANTS = {
     MODAL_FULL_DATA: 'fullDataModal',
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
+    MODAL_PORTFOLIO: 'portfolioModal',
+    MODAL_MANAGE_STOCK: 'manageStockModal',
+    // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
@@ -21,26 +25,28 @@ const CONSTANTS = {
     INPUT_GEMINI_KEY: 'geminiApiKeyInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
     INPUT_SEARCH_ENGINE_ID: 'searchEngineIdInput',
+    // Containers & Elements
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
-    BUTTON_SCROLL_TOP: 'scroll-to-top-button',
+    CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
     ELEMENT_LOADING_MESSAGE: 'loading-message',
     ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
     ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
     ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
+    // Buttons
+    BUTTON_SCROLL_TOP: 'scroll-to-top-button',
+    BUTTON_VIEW_STOCKS: 'view-stocks-button',
+    BUTTON_ADD_NEW_STOCK: 'add-new-stock-button',
+    // Classes
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
-    DB_COLLECTION_STOCKS: 'cached_stock_data',
+    // Database Collections
+    DB_COLLECTION_CACHE: 'cached_stock_data',
+    DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
 };
 
 // List of comprehensive data endpoints to fetch for caching
-const API_FUNCTIONS = [
-    'OVERVIEW',
-    'INCOME_STATEMENT',
-    'BALANCE_SHEET',
-    'CASH_FLOW',
-    'EARNINGS',
-];
+const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
 
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
@@ -182,8 +188,9 @@ let alphaVantageApiKey = "";
 let geminiApiKey = "";
 let searchApiKey = "";
 let searchEngineId = "";
+let portfolioCache = []; // Cache for portfolio stocks to reduce reads
 
-// --- UTILITY HELPERS ---
+// --- UTILITY & SECURITY HELPERS ---
 
 function formatLargeNumber(value, precision = 2) {
     const num = parseFloat(value);
@@ -199,8 +206,6 @@ function formatLargeNumber(value, precision = 2) {
     }
     return num.toFixed(precision);
 }
-
-// --- SECURITY HELPERS ---
 
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
@@ -218,7 +223,6 @@ function isValidHttpUrl(urlString) {
         return false;
     }
 }
-
 
 // --- MODAL HELPERS ---
 
@@ -283,10 +287,8 @@ function openConfirmationModal(title, message, onConfirm) {
         onConfirm();
         closeModal(modalId);
     });
-    modal.querySelector('#cancel-button').addEventListener('click', () => closeModal(modalId), { once: true });
     openModal(modalId);
 }
-
 
 // --- CONFIG & INITIALIZATION ---
 
@@ -295,24 +297,19 @@ function safeParseConfig(str) {
         const startIndex = str.indexOf('{');
         if (startIndex === -1) throw new Error("Could not find a '{' in the config string.");
         const objectStr = str.substring(startIndex);
-        const jsonLike = objectStr.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
-        return JSON.parse(jsonLike);
+        return JSON.parse(objectStr);
     } catch (error) {
         console.error("Failed to parse config string:", error);
-        throw new Error("The provided Firebase config is not valid. Please paste the complete object from the Firebase console.");
+        throw new Error("The provided Firebase config is not valid. Please paste the complete, valid JSON object from the Firebase console.");
     }
 }
 
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Initializing & loading dashboard...";
-    await loadAllCachedStocks();
-    setTimeout(() => {
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Application ready.";
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }, 500);
+    // The old loading logic is removed. App content is now driven by user action.
+    document.getElementById('main-view').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
 }
 
 function initializeFirebase() {
@@ -378,12 +375,14 @@ function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
+
     if (user) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
         const photoEl = isValidHttpUrl(user.photoURL) 
             ? `<img src="${sanitizeText(user.photoURL)}" alt="User photo" class="w-8 h-8 rounded-full">`
             : `<div class="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">${sanitizeText(user.displayName.charAt(0))}</div>`;
+        
         authStatusEl.innerHTML = `
             <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
                 ${photoEl}
@@ -392,7 +391,7 @@ function setupAuthUI(user) {
             </div>`;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
     } else {
-         authStatusEl.innerHTML = `<button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>`;
+        authStatusEl.innerHTML = `<button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>`;
         const loginButton = document.getElementById('login-button');
         if (loginButton) loginButton.addEventListener('click', handleLogin);
         appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
@@ -440,29 +439,217 @@ async function callApi(url, options = {}) {
 }
 
 async function callGeminiApi(prompt) {
-    if (!geminiApiKey) {
-        throw new Error("Gemini API key is not configured.");
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const body = {
-        contents: [{
-            parts: [{ "text": prompt }]
-        }]
-    };
-
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     });
 
-    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
         return data.candidates[0].content.parts[0].text;
-    } else {
-        console.error("Unexpected Gemini API response structure:", data);
-        throw new Error("Failed to parse the response from the Gemini API. The structure was unexpected.");
     }
+    console.error("Unexpected Gemini API response structure:", data);
+    throw new Error("Failed to parse the response from the Gemini API.");
+}
+
+// --- PORTFOLIO MANAGEMENT (v6.0.0) ---
+
+async function renderPortfolioView() {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading portfolio...";
+    
+    try {
+        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        portfolioCache = querySnapshot.docs.map(doc => doc.data());
+        portfolioCache.sort((a, b) => a.companyName.localeCompare(b.companyName));
+
+        const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
+        if (portfolioCache.length === 0) {
+            container.innerHTML = `<p class="p-8 text-center text-gray-500">Your portfolio is empty. Add a stock to get started.</p>`;
+            return;
+        }
+
+        displayFilteredPortfolio(); // Initial display
+        
+    } catch (error) {
+        console.error("Error loading portfolio:", error);
+        displayMessageInModal(`Failed to load portfolio: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+function displayFilteredPortfolio(filter = '') {
+    const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
+    const lowercasedFilter = filter.toLowerCase();
+
+    const filteredPortfolio = portfolioCache.filter(stock => 
+        stock.companyName.toLowerCase().includes(lowercasedFilter) || 
+        stock.ticker.toLowerCase().includes(lowercasedFilter)
+    );
+
+    if (filteredPortfolio.length === 0) {
+        container.innerHTML = `<p class="p-8 text-center text-gray-500">No stocks match your search.</p>`;
+        return;
+    }
+
+    const groupedByExchange = filteredPortfolio.reduce((acc, stock) => {
+        const exchange = stock.exchange || 'Uncategorized';
+        if (!acc[exchange]) acc[exchange] = [];
+        acc[exchange].push(stock);
+        return acc;
+    }, {});
+
+    const sortedExchanges = Object.keys(groupedByExchange).sort();
+    
+    let html = '';
+    for (const exchange of sortedExchanges) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
+        html += `<ul class="divide-y divide-gray-200">`;
+        for (const stock of groupedByExchange[exchange]) {
+            html += `
+                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
+                    <div>
+                        <button class="text-left portfolio-item-view" data-ticker="${sanitizeText(stock.ticker)}">
+                            <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
+                            <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="portfolio-item-edit text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200 font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                        <button class="portfolio-item-delete text-sm bg-red-100 text-red-800 hover:bg-red-200 font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                    </div>
+                </li>`;
+        }
+        html += `</ul>`;
+    }
+    container.innerHTML = html;
+}
+
+async function openManageStockModal(ticker = null) {
+    const form = document.getElementById('manage-stock-form');
+    form.reset();
+    document.getElementById('topics-container').innerHTML = '';
+    
+    if (ticker) {
+        // Edit mode
+        document.getElementById('manage-stock-modal-title').textContent = `Edit ${ticker}`;
+        const stockData = portfolioCache.find(s => s.ticker === ticker);
+        if (stockData) {
+            document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
+            document.getElementById('manage-stock-ticker').value = stockData.ticker;
+            document.getElementById('manage-stock-name').value = stockData.companyName;
+            document.getElementById('manage-stock-exchange').value = stockData.exchange;
+            (stockData.topics || []).forEach(addTopicToForm);
+        }
+    } else {
+        // Add mode
+        document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
+        document.getElementById('manage-stock-original-ticker').value = '';
+    }
+    openModal(CONSTANTS.MODAL_MANAGE_STOCK);
+}
+
+function addTopicToForm(topic = {}) {
+    const container = document.getElementById('topics-container');
+    const topicIndex = container.children.length;
+    const topicId = `topic-${topicIndex}-${Date.now()}`;
+    
+    const topicDiv = document.createElement('div');
+    topicDiv.className = 'topic-item-container relative';
+    topicDiv.innerHTML = `
+        <button type="button" class="absolute top-2 right-2 text-red-400 hover:text-red-600 remove-topic-button" title="Remove Topic">&times;</button>
+        <div class="space-y-2">
+            <div>
+                <label for="${topicId}-name" class="block text-xs font-medium text-gray-600">Topic</label>
+                <input type="text" id="${topicId}-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" value="${sanitizeText(topic.topicName || '')}">
+            </div>
+            <div>
+                <label for="${topicId}-desc" class="block text-xs font-medium text-gray-600">Description</label>
+                <textarea id="${topicId}-desc" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.description || '')}</textarea>
+            </div>
+            <div>
+                <label for="${topicId}-prompt1" class="block text-xs font-medium text-gray-600">Initial Prompt</label>
+                <textarea id="${topicId}-prompt1" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.initialPrompt || '')}</textarea>
+            </div>
+            <div>
+                <label for="${topicId}-prompt2" class="block text-xs font-medium text-gray-600">Additional Prompt</label>
+                <textarea id="${topicId}-prompt2" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.additionalPrompt || '')}</textarea>
+            </div>
+        </div>
+    `;
+    topicDiv.querySelector('.remove-topic-button').addEventListener('click', () => topicDiv.remove());
+    container.appendChild(topicDiv);
+}
+
+async function handleSaveStock(e) {
+    e.preventDefault();
+    const originalTicker = document.getElementById('manage-stock-original-ticker').value.trim().toUpperCase();
+    const newTicker = document.getElementById('manage-stock-ticker').value.trim().toUpperCase();
+    
+    if (!/^[A-Z.]{1,10}$/.test(newTicker)) {
+        displayMessageInModal("Please enter a valid stock ticker symbol.", "warning");
+        return;
+    }
+
+    const stockData = {
+        ticker: newTicker,
+        companyName: document.getElementById('manage-stock-name').value.trim(),
+        exchange: document.getElementById('manage-stock-exchange').value.trim(),
+        topics: []
+    };
+
+    const topicContainers = document.querySelectorAll('.topic-item-container');
+    topicContainers.forEach(container => {
+        stockData.topics.push({
+            topicName: container.querySelector('input[type="text"]').value,
+            description: container.querySelectorAll('textarea')[0].value,
+            initialPrompt: container.querySelectorAll('textarea')[1].value,
+            additionalPrompt: container.querySelectorAll('textarea')[2].value
+        });
+    });
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to portfolio...";
+    
+    try {
+        // If ticker changed, delete the old document
+        if (originalTicker && originalTicker !== newTicker) {
+            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
+        }
+        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
+        closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
+        await renderPortfolioView(); // Refresh view
+    } catch(error) {
+        console.error("Error saving stock:", error);
+        displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleDeleteStock(ticker) {
+    openConfirmationModal(
+        `Delete ${ticker}?`, 
+        `Are you sure you want to remove ${ticker} from your portfolio? This will not delete the cached API data.`,
+        async () => {
+            openModal(CONSTANTS.MODAL_LOADING);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
+            try {
+                await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
+                await renderPortfolioView(); // Refresh view
+            } catch (error) {
+                console.error("Error deleting stock:", error);
+                displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
+            } finally {
+                closeModal(CONSTANTS.MODAL_LOADING);
+            }
+        }
+    );
 }
 
 
@@ -482,7 +669,7 @@ async function fetchAndCacheStockData(symbol) {
         } catch (error) {
             console.error(`Failed to fetch ${func} for ${symbol}:`, error);
             failedFetches.push(func);
-            return null; // Return null for failed fetches
+            return null;
         }
     });
 
@@ -496,13 +683,12 @@ async function fetchAndCacheStockData(symbol) {
         if (result) dataToCache[result.func] = result.data;
     });
 
-    if (!dataToCache.OVERVIEW) {
+    if (!dataToCache.OVERVIEW || !dataToCache.OVERVIEW.Symbol) {
         throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched. The symbol may be invalid.`);
     }
 
     dataToCache.cachedAt = Timestamp.now();
-    await setDoc(doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol), dataToCache);
-
+    await setDoc(doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol), dataToCache);
     return dataToCache;
 }
 
@@ -516,9 +702,11 @@ async function handleRefreshData(symbol) {
         const newCardHtml = renderOverviewCard(refreshedData, symbol);
         const oldCard = document.getElementById(`card-${symbol}`);
         if(oldCard) {
-            oldCard.outerHTML = newCardHtml;
-        } else { // Fallback in case card wasn't on screen
-            await loadAllCachedStocks();
+             const tempDiv = document.createElement('div');
+             tempDiv.innerHTML = newCardHtml;
+             oldCard.replaceWith(tempDiv.firstChild);
+        } else { 
+            await displayStockCard(symbol);
         }
 
     } catch (error) {
@@ -526,25 +714,6 @@ async function handleRefreshData(symbol) {
         displayMessageInModal(error.message, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function loadAllCachedStocks() {
-    if (!db) return;
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.innerHTML = ''; // Clear existing content
-    try {
-        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_STOCKS));
-        if (querySnapshot.empty) {
-            container.innerHTML = `<p id="no-stocks-placeholder" class="text-center text-gray-500">No stocks researched yet. Use the form above to get started!</p>`;
-            return;
-        }
-        const sortedDocs = querySnapshot.docs.sort((a, b) => a.data().OVERVIEW.Symbol.localeCompare(b.data().OVERVIEW.Symbol));
-        const cardsHtml = sortedDocs.map(doc => renderOverviewCard(doc.data(), doc.id)).join('');
-        container.innerHTML = cardsHtml;
-    } catch (error) {
-        console.error("Error loading cached stocks: ", error);
-        displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
     }
 }
 
@@ -558,29 +727,36 @@ async function handleResearchSubmit(e) {
     }
     
     openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking portfolio for ${symbol}...`;
     
     try {
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking for existing data for ${symbol}...`;
-        const docRef = doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol);
+        const docRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
         if ((await getDoc(docRef)).exists()) {
-             displayMessageInModal(`${symbol} is already on your dashboard. Use 'Refresh Data' to get new data.`, 'info');
+             displayMessageInModal(`${symbol} is already in your portfolio.`, 'info');
              tickerInput.value = '';
-             closeModal(CONSTANTS.MODAL_LOADING);
              return;
         }
         
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all data for ${symbol}... This may take a moment.`;
-        const newStockData = await fetchAndCacheStockData(symbol);
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
+        const overviewData = await callApi(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
         
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
+        if (!overviewData.Symbol) {
+            throw new Error(`Could not fetch data for ${symbol}. It may be an invalid ticker.`);
+        }
+
+        const newStock = {
+            ticker: overviewData.Symbol,
+            companyName: overviewData.Name,
+            exchange: overviewData.Exchange,
+            topics: []
+        };
         
-        // Efficiently add the new card without reloading everything
-        const placeholder = document.getElementById('no-stocks-placeholder');
-        if (placeholder) placeholder.remove();
-        const newCardHtml = renderOverviewCard(newStockData, symbol);
-        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
-        
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Adding ${symbol} to portfolio...`;
+        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newStock.ticker), newStock);
+
         tickerInput.value = '';
+        displayMessageInModal(`${symbol} has been added to your portfolio.`, 'info');
+        await displayStockCard(newStock.ticker);
 
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -590,30 +766,54 @@ async function handleResearchSubmit(e) {
     }
 }
 
+async function displayStockCard(ticker) {
+    if (document.getElementById(`card-${ticker}`)) {
+        // Card already exists, maybe scroll to it
+        document.getElementById(`card-${ticker}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading card for ${ticker}...`;
+    
+    try {
+        let stockData;
+        const cachedDocRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, ticker);
+        const cachedDocSnap = await getDoc(cachedDocRef);
+
+        if (cachedDocSnap.exists()) {
+            stockData = cachedDocSnap.data();
+        } else {
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time load: Fetching all data for ${ticker}...`;
+            stockData = await fetchAndCacheStockData(ticker);
+        }
+
+        const newCardHtml = renderOverviewCard(stockData, ticker);
+        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
+
+    } catch(error) {
+        console.error(`Error displaying card for ${ticker}:`, error);
+        displayMessageInModal(error.message, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 // --- NEWS FEATURE ---
 
 function filterValidNews(articles) {
-    const validArticles = [];
-    if (!Array.isArray(articles)) return validArticles;
-
-    // Iterative process to validate news
-    for (const article of articles) {
-        const hasTitle = article.title && typeof article.title === 'string' && article.title.trim() !== '';
-        const hasSnippet = article.snippet && typeof article.snippet === 'string' && article.snippet.trim() !== '';
-        const hasValidLink = isValidHttpUrl(article.link);
-
-        if (hasTitle && hasSnippet && hasValidLink) {
-            validArticles.push(article);
-        }
-    }
-    return validArticles;
+    if (!Array.isArray(articles)) return [];
+    return articles.filter(article => 
+        article.title && article.snippet && isValidHttpUrl(article.link)
+    );
 }
 
 function renderNewsArticles(articles, symbol) {
     const card = document.getElementById(`card-${symbol}`);
     if (!card) return;
 
-    const existingNewsContainer = card.querySelector('.news-container');
+    let existingNewsContainer = card.querySelector('.news-container');
     if (existingNewsContainer) existingNewsContainer.remove();
 
     const newsContainer = document.createElement('div');
@@ -622,7 +822,7 @@ function renderNewsArticles(articles, symbol) {
     if (articles.length === 0) {
         newsContainer.innerHTML = `<p class="text-sm text-gray-500">No recent news articles found.</p>`;
     } else {
-        const articlesHtml = articles.map(article => `
+        const articlesHtml = articles.slice(0, 5).map(article => `
             <div class="mb-4">
                 <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">${sanitizeText(article.title)}</a>
                 <p class="text-sm text-gray-600 mt-1">${sanitizeText(article.snippet)}</p>
@@ -638,7 +838,7 @@ async function handleFetchNews(symbol) {
     if (!button) return;
 
     if (!searchApiKey || !searchEngineId) {
-        displayMessageInModal("News feature requires the Web Search API Key and Search Engine ID. Please provide them in the settings.", "warning");
+        displayMessageInModal("News feature requires the Web Search API Key and Search Engine ID.", "warning");
         return;
     }
     
@@ -677,14 +877,14 @@ function renderOverviewCard(data, symbol) {
     const weekHigh = overviewData['52WeekHigh'] && overviewData['52WeekHigh'] !== "None" ? `$${overviewData['52WeekHigh']}` : "N/A";
     const timestampString = data.cachedAt ? `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}` : '';
 
-    const cardHtml = `
+    return `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <div class="flex-shrink-0"><button data-symbol="${symbol}" class="refresh-data-button text-xs bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button></div>
+                <div class="flex-shrink-0"><button data-symbol="${symbol}" class="refresh-data-button text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button></div>
             </div>
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
@@ -701,14 +901,13 @@ function renderOverviewCard(data, symbol) {
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
-    return cardHtml;
 }
 
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    container.addEventListener('click', (e) => {
+    // Main dashboard card actions
+    document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
         const symbol = target.dataset.symbol;
@@ -719,30 +918,63 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
     });
+
+    // Portfolio modal actions
+    document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const ticker = target.dataset.ticker;
+        if (!ticker) return;
+
+        if (target.classList.contains('portfolio-item-view')) {
+            displayStockCard(ticker);
+            closeModal(CONSTANTS.MODAL_PORTFOLIO);
+        }
+        if (target.classList.contains('portfolio-item-edit')) openManageStockModal(ticker);
+        if (target.classList.contains('portfolio-item-delete')) handleDeleteStock(ticker);
+    });
 }
 
 function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
-    
+    document.getElementById(CONSTANTS.BUTTON_VIEW_STOCKS)?.addEventListener('click', () => {
+        renderPortfolioView();
+        openModal(CONSTANTS.MODAL_PORTFOLIO);
+    });
+
+    // Portfolio modal search and add
+    document.getElementById('portfolio-search-input')?.addEventListener('input', (e) => displayFilteredPortfolio(e.target.value));
+    document.getElementById(CONSTANTS.BUTTON_ADD_NEW_STOCK)?.addEventListener('click', () => openManageStockModal());
+
+    // Manage stock modal
+    document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
+    document.getElementById('add-topic-button')?.addEventListener('click', () => addTopicToForm());
+    document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
+
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
     const modalsToClose = [
-        { modal: 'fullDataModal', button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
-        { modal: 'financialAnalysisModal', button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
-        { modal: 'undervaluedAnalysisModal', button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
+        { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_PORTFOLIO, button: 'close-portfolio-modal', bg: 'close-portfolio-modal-bg' },
+        { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
+        { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
     ];
 
     modalsToClose.forEach(item => {
-        document.getElementById(item.button)?.addEventListener('click', () => closeModal(item.modal));
-        document.getElementById(item.bg)?.addEventListener('click', () => closeModal(item.modal));
+        const close = () => closeModal(item.modal);
+        if (item.button) document.getElementById(item.button)?.addEventListener('click', close);
+        if (item.bg) document.getElementById(item.bg)?.addEventListener('click', close);
     });
 
     window.addEventListener('scroll', () => {
         const btn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
         if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
     });
+    
     setupGlobalEventListeners();
 }
 
@@ -753,14 +985,14 @@ function get(obj, path, defaultValue = "N/A") {
     return value !== undefined && value !== null && value !== "None" ? value : defaultValue;
 }
 
-async function getStockDataFromCache(symbol) {
-    const docRef = doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol);
+async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTION_CACHE) {
+    const docRef = doc(db, collection, symbol);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
         throw new Error(`Could not find cached data for ${symbol}. Please research it first.`);
     }
     const data = docSnap.data();
-    if (!data.INCOME_STATEMENT || !data.BALANCE_SHEET || !data.CASH_FLOW || !data.OVERVIEW) {
+    if (collection === CONSTANTS.DB_COLLECTION_CACHE && (!data.INCOME_STATEMENT || !data.BALANCE_SHEET || !data.CASH_FLOW || !data.OVERVIEW)) {
          throw new Error(`Cached analysis data for ${symbol} is incomplete. Please refresh it.`);
     }
     return data;
@@ -770,16 +1002,11 @@ async function handleViewFullData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
     try {
-        const docSnap = await getDoc(doc(db, CONSTANTS.DB_COLLECTION_STOCKS, symbol));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
-            document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
-            document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}`;
-            openModal(CONSTANTS.MODAL_FULL_DATA);
-        } else {
-            displayMessageInModal(`Could not find cached data for ${symbol}.`, 'error');
-        }
+        const data = await getStockDataFromCache(symbol);
+        document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
+        document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
+        document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}`;
+        openModal(CONSTANTS.MODAL_FULL_DATA);
     } catch (error) {
         displayMessageInModal(`Error loading data: ${error.message}`, 'error');
     } finally {
@@ -792,13 +1019,11 @@ async function handleFinancialAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
-        if (!data) return;
-
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
         const prompt = FINANCIAL_ANALYSIS_PROMPT
-            .replace('{companyName}', companyName)
+            .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
 
@@ -818,29 +1043,21 @@ async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
     try {
-        // Fetch live quote and cached data concurrently
         const quotePromise = callApi(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
         const cachedDataPromise = getStockDataFromCache(symbol);
-
         const [quoteData, cachedData] = await Promise.all([quotePromise, cachedDataPromise]);
         
-        if (!cachedData) return; // Error is handled in getStockDataFromCache
-
         const livePrice = get(quoteData, 'Global Quote.05. price', 'N/A');
         if (livePrice === 'N/A') {
             throw new Error('Could not fetch the live price for the valuation analysis.');
         }
 
-        const combinedData = {
-            live_quote: { price: livePrice },
-            ...cachedData
-        };
-
+        const combinedData = { live_quote: { price: livePrice }, ...cachedData };
         const companyName = get(cachedData, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(cachedData, 'OVERVIEW.Symbol', symbol);
 
         const prompt = UNDERVALUED_ANALYSIS_PROMPT
-            .replace('{companyName}', companyName)
+            .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(combinedData, null, 2));
         
@@ -855,6 +1072,7 @@ async function handleUndervaluedAnalysis(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
 // --- APP INITIALIZATION TRIGGER ---
 
 function initializeApplication() {
