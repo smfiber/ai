@@ -1,6 +1,6 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 5.1.0
+ * Version: 5.2.0
  * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
  * This includes the loading spinner animation, modal visibility rules, and root theme variables.
  */
@@ -85,4 +85,16 @@ body.modal-open {
 #financial-analysis-content.prose ul,
 #undervalued-analysis-content.prose ul {
     margin-bottom: 1em;
+}
+
+/* Enhanced list styling for better modal display */
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    padding-left: 1.5em; /* Add indentation */
+    list-style-type: disc; /* Ensure bullets are visible */
+}
+
+#financial-analysis-content.prose ul li,
+#undervalued-analysis-content.prose ul li {
+    margin-bottom: 0.5em; /* Space out list items */
 }
