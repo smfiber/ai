@@ -1,21 +1,23 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 7.0.0
+ * Version: 6.0.0
  * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
+ * This includes the loading spinner animation, modal visibility rules, and root theme variables.
  */
 
 /*
  * =================================================================
- * THEME & FONT
+ * THEME & COLOR VARIABLES
  * =================================================================
  */
 :root {
+    --color-primary: #4f46e5;
     font-family: 'Inter', sans-serif;
 }
 
 body {
     background-color: #f3f4f6; /* bg-gray-100 */
-    color: #1f2937; /* text-gray-800 */
+    color: #1f2937; /* color-text */
 }
 
 /*
@@ -24,13 +26,13 @@ body {
  * =================================================================
  */
 .modal {
-    display: none; /* Hidden by default */
+    display: none;
 }
 .modal.is-open {
-    display: flex; /* Shown when active */
+    display: flex;
 }
 body.modal-open {
-    overflow: hidden; /* Prevent background scrolling when a modal is open */
+    overflow: hidden;
 }
 
 /*
@@ -39,71 +41,97 @@ body.modal-open {
  * =================================================================
  */
 .loader {
+    width: 4rem; /* 16px * 4 = 64px */
+    height: 4rem;
+    border-width: 4px;
+    border-style: solid;
+    border-radius: 9999px; /* rounded-full */
+    border-color: #e5e7eb; /* border-gray-200 */
     animation: spin 1s linear infinite;
-    border-top-color: #4f46e5; /* indigo-600 */
+    border-top-color: var(--color-primary);
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /*
  * =================================================================
- * ERROR MESSAGE STYLES
+ * AI-GENERATED CONTENT STYLES
  * =================================================================
  */
-.error-message {
-    background-color: #fef2f2; /* red-50 */
-    color: #991b1b; /* red-800 */
-    border: 1px solid #fecaca; /* red-300 */
-    padding: 1rem;
-    border-radius: 0.5rem; /* rounded-lg */
-    margin-top: 1rem;
-}
-
-.error-message h4 {
-    color: #991b1b; /* red-800 */
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-}
-
-.error-message p {
-    margin: 0;
-}
-
-/*
- * =================================================================
- * PROSE STYLES FOR RENDERED MARKDOWN
- * =================================================================
- */
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-    color: #111827;
-    font-weight: 600;
-    margin-bottom: 0.5em;
-    margin-top: 1em;
-}
-
-.prose p {
+#financial-analysis-content.prose h2,
+#undervalued-analysis-content.prose h2 {
+    margin-top: 1.75em;
     margin-bottom: 1em;
-    line-height: 1.6;
 }
 
-.prose strong {
+#financial-analysis-content.prose h3,
+#undervalued-analysis-content.prose h3 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+#financial-analysis-content.prose p,
+#undervalued-analysis-content.prose p,
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    margin-bottom: 1em;
+}
+
+/* Enhanced list styling for better modal display */
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    padding-left: 1.5em; /* Add indentation */
+    list-style-type: disc; /* Ensure bullets are visible */
+}
+
+#financial-analysis-content.prose ul li,
+#undervalued-analysis-content.prose ul li {
+    margin-bottom: 0.5em; /* Space out list items */
+}
+
+/*
+ * =================================================================
+ * NEW COMPONENT STYLES (v6.0.0)
+ * =================================================================
+ */
+
+/* Main action button on the home screen */
+.btn-main-action {
+    padding: 1.5rem 2.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
+    transition: all 0.3s ease;
+}
+.btn-main-action:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-.prose ul {
-    list-style-type: disc;
-    padding-left: 1.5em;
-    margin-bottom: 1em;
+/* Portfolio Hierarchy View */
+.portfolio-exchange-header {
+    background-color: #eef2ff; /* indigo-50 */
+    color: #4338ca; /* indigo-800 */
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-top: 1px solid #e0e7ff; /* indigo-200 */
+    border-bottom: 1px solid #e0e7ff; /* indigo-200 */
+    position: sticky;
+    top: 0;
 }
 
-.prose li {
-    margin-bottom: 0.5em;
-}
-
-/* Header background image */
-#header-bg-image {
-    background-image: url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2070&auto=format&fit=crop');
+/* Topic Management Form */
+.topic-item-container {
+    border: 1px solid #d1d5db; /* gray-300 */
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 1rem;
+    margin-top: 1rem;
+    background-color: #f9fafb; /* gray-50 */
 }
