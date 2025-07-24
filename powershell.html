@@ -62,6 +62,10 @@
         window.getFirestore = getFirestore; window.collection = collection; window.addDoc = addDoc; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc;
         window.serverTimestamp = serverTimestamp; window.query = query; window.where = where; window.orderBy = orderBy; window.writeBatch = writeBatch; window.getDoc = getDoc;
     </script>
+    <script type="module">
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+        window.getFunctions = getFunctions; window.httpsCallable = httpsCallable;
+    </script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #111827; }
@@ -273,7 +277,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Application State ---
             const appState = {
-                version: '10.1.0', // PATCH version incremented for bug fix
+                version: '10.2.0', // MINOR version incremented for new feature
                 geminiApiKey: null,
                 firebaseConfig: null,
                 currentScript: '',
@@ -282,6 +286,7 @@
                 lastGenerationPrompt: '',
                 db: null,
                 auth: null,
+                functions: null, // Added for Firebase Functions
                 user: null,
             };
 
@@ -469,22 +474,6 @@ Do not wrap it in a function or add comment help. Do not include any other text.
 {{code_to_validate}}
 \`\`\`
 ---`;
-            const bestPracticesPrompt = `You are an AI assistant that acts as a PowerShell PSScriptAnalyzer.
-Your task is to analyze the provided PowerShell script for any violations of best practices.
-Focus on common PSScriptAnalyzer rules like PSAvoidUsingAliases, PSAvoidUsingWriteHost, PSUseCmdletBinding, etc.
-**CRITICAL INSTRUCTIONS:**
-1.  **Analyze the Script:** Meticulously review the script line by line.
-2.  **Format Output:** Present your findings in a Markdown table with the following columns: "Line", "Rule Name", and "Suggestion".
-3.  **Be Concise:** Keep suggestions clear and to the point.
-4.  **No Findings:** If the script is clean and has no violations, return a single sentence: "No best practice violations were found."
-5.  **Output Only the Table:** Do not include any other text, introduction, or conclusion outside of the Markdown table or the "no violations" message.
----
-**SCRIPT TO ANALYZE:**
-\`\`\`powershell
-{{script_content}}
-\`\`\`
----`;
-
             const pesterMetaPrompt = `You are an AI assistant that acts as a PowerShell Test expert, specializing in the Pester framework.
 Your task is to analyze the provided PowerShell script and generate a basic, effective Pester test script.
 **CRITICAL INSTRUCTIONS:**
@@ -639,6 +628,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     const app = window.initializeApp(config);
                     appState.auth = window.getAuth(app);
                     appState.db = window.getFirestore(app);
+                    appState.functions = window.getFunctions(app); // Initialize Functions
                     setupAuthObserver();
                 } catch (error) { 
                     console.error("Firebase Init Error:", error); 
@@ -1002,21 +992,79 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
             };
 
             async function getBestPracticesAnalysis(scriptContent) {
+                if (!appState.functions) {
+                    throw new Error("Firebase Functions is not initialized.");
+                }
                 try {
-                    const analysisPrompt = bestPracticesPrompt.replace('{{script_content}}', scriptContent);
-                    return await callGeminiAPI([{ role: 'user', parts: [{ text: analysisPrompt }] }]);
+                    const analyzeScript = window.httpsCallable(appState.functions, 'analyzeScript');
+                    const response = await analyzeScript({ scriptContent: scriptContent });
+                    
+                    if (response.data.error) {
+                        throw new Error(response.data.error);
+                    }
+                    
+                    return response.data.results;
                 } catch (error) {
-                    console.error("Error during script analysis:", error);
-                    showToast(`Analysis failed: ${error.message}`, "error");
-                    return `### Analysis Failed\n\nAn error occurred: ${error.message}`;
+                    console.error("Error calling analyzeScript function:", error);
+                    showToast(`PSScriptAnalyzer analysis failed: ${error.message}`, "error");
+                    // Return an array with a single error object to be displayed in the table
+                    return [{
+                        RuleName: "FunctionError",
+                        Severity: "Error",
+                        Line: "N/A",
+                        Message: `Failed to execute PSScriptAnalyzer: ${error.message}`
+                    }];
                 }
             }
             
-            function renderAnalysisTab(analysisResult, setActive = false) {
+            function renderAnalysisTab(analysisResults, setActive = false) {
                 const tabId = 'analysis-content';
-                 if (!analysisResult) return;
-                appState.currentTabs[tabId] = analysisResult;
-                renderContent(tabId, 'Analysis', analysisResult, true, setActive);
+                appState.currentTabs[tabId] = analysisResults; // Store the raw results
+
+                let contentWrapper = document.getElementById(tabId);
+                if (contentWrapper) {
+                    contentWrapper.innerHTML = '';
+                } else {
+                    contentWrapper = document.createElement('div');
+                    contentWrapper.id = tabId;
+                    contentWrapper.className = 'output-content';
+                    outputContainer.appendChild(contentWrapper);
+                    createTab(tabId, 'Analysis');
+                }
+
+                if (!analysisResults || analysisResults.length === 0) {
+                    contentWrapper.innerHTML = `<div class="p-4 text-gray-400">No best practice violations were found.</div>`;
+                } else {
+                    const table = document.createElement('table');
+                    table.className = 'w-full text-sm text-left text-gray-400';
+                    table.innerHTML = `
+                        <thead class="text-xs text-gray-300 uppercase bg-gray-700/50">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 w-16">Line</th>
+                                <th scope="col" class="px-4 py-3 w-48">Rule Name</th>
+                                <th scope="col" class="px-4 py-3 w-24">Severity</th>
+                                <th scope="col" class="px-4 py-3">Suggestion</th>
+                            </tr>
+                        </thead>
+                    `;
+                    const tbody = document.createElement('tbody');
+                    analysisResults.forEach(item => {
+                        const row = tbody.insertRow();
+                        row.className = 'border-b border-gray-700';
+                        row.innerHTML = `
+                            <td class="px-4 py-2 font-mono">${item.Line || 'N/A'}</td>
+                            <td class="px-4 py-2 font-mono">${item.RuleName}</td>
+                            <td class="px-4 py-2">${item.Severity}</td>
+                            <td class="px-4 py-2">${item.Message}</td>
+                        `;
+                    });
+                    table.appendChild(tbody);
+                    contentWrapper.appendChild(table);
+                }
+
+                if (setActive) {
+                    setActiveTab(tabId);
+                }
             }
 
             const handleGenerationSubmit = async (e) => {
@@ -1129,28 +1177,6 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         throw new Error("Could not generate a valid script with correct cmdlets after multiple attempts.");
                     }
                     
-                    // --- Best Practices (PSScriptAnalyzer) Check ---
-                    addMessageToHistory('model', 'Verifying script against PSScriptAnalyzer standards...', true);
-                    const analysisResult = await getBestPracticesAnalysis(finalCode);
-
-                    if (analysisResult && !analysisResult.includes("No best practice violations were found.")) {
-                        addMessageToHistory('model', 'Violations found. Performing automatic correction...', true);
-                        const fixRequest = `The following PSScriptAnalyzer violations were found in this script. Please fix them all and return the complete corrected code.\n\n${analysisResult}`;
-                        
-                        let correctionPrompt;
-                         if (outputType === 'Cmdlet') {
-                            correctionPrompt = `${refinementSnippetMetaPrompt}\n\n**EXISTING COMMAND:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**REFINEMENT REQUEST:**\n${fixRequest}`;
-                        } else {
-                            correctionPrompt = `${refinementMetaPrompt}\n\n**EXISTING SCRIPT:**\n\`\`\`powershell\n${finalCode}\n\`\`\`\n\n**USER'S REFINEMENT REQUEST:**\n${fixRequest}`;
-                        }
-                        
-                        const correctedResponse = await callGeminiAPI([{ role: 'user', parts: [{ text: correctionPrompt }] }]);
-                        const trulyFinalCode = correctedResponse.match(/```powershell\s*([\s\S]*?)\s*```/)?.[1] || correctedResponse;
-                        if (trulyFinalCode) {
-                            finalCode = trulyFinalCode.trim(); 
-                        }
-                    }
-
                     appState.currentScript = finalCode;
                     appState.currentTabs = { 'script-content': finalCode };
                     appState.conversationHistory.push({ role: 'model', parts: [{ text: finalCode }] });
@@ -1158,7 +1184,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                     const transientMsg = document.getElementById('transient-message');
                     if(transientMsg) transientMsg.remove();
                     
-                    addMessageToHistory('model', 'Script generated successfully.');
+                    addMessageToHistory('model', 'Script generated successfully. Now running PSScriptAnalyzer...');
                     renderContent('script-content', 'Script', finalCode, false, true);
 
                     outputPanel.classList.add('animate-flash-panel');
@@ -1171,8 +1197,11 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                         renderDiff('changes-content', 'Changes', diff, false);
                     }
                     
-                    const finalAnalysis = await getBestPracticesAnalysis(finalCode);
-                    renderAnalysisTab(finalAnalysis);
+                    // --- Best Practices (PSScriptAnalyzer) Check ---
+                    const analysisResult = await getBestPracticesAnalysis(finalCode);
+                    renderAnalysisTab(analysisResult);
+                    addMessageToHistory('model', 'PSScriptAnalyzer analysis complete.');
+
                 } catch (error) {
                     console.error("Error during script generation:", error);
                     const transientMsg = document.getElementById('transient-message');
@@ -1272,7 +1301,15 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
                 if (targetId === 'copy-script-button') {
                     const activeTabId = document.querySelector('.output-content.active')?.id;
                     const activeContent = appState.currentTabs[activeTabId];
-                    if(activeContent) navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
+                    if(activeContent) {
+                        // For analysis tab, copy a text representation of the table
+                        if (activeTabId === 'analysis-content' && Array.isArray(activeContent)) {
+                            const textToCopy = activeContent.map(item => `Line ${item.Line}: [${item.RuleName}] ${item.Message}`).join('\n');
+                             navigator.clipboard.writeText(textToCopy).then(() => showToast("Copied to clipboard!", "success"));
+                        } else {
+                            navigator.clipboard.writeText(activeContent).then(() => showToast("Copied to clipboard!", "success"));
+                        }
+                    }
                 }
                 if (targetId === 'download-script-button') {
                      const activeTabId = document.querySelector('.output-content.active')?.id;
