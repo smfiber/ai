@@ -1,6 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
 
 // --- App Version ---
 const APP_VERSION = "6.1.0"; 
@@ -377,7 +377,7 @@ async function handleLogin() {
     }
     const provider = new GoogleAuthProvider();
     // Request scope for Google Drive file creation
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    provider.addScope('[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)');
     
     try {
         const result = await signInWithPopup(auth, provider);
@@ -394,14 +394,15 @@ async function handleLogin() {
     }
 }
 
+// GEMINI: START EDIT
 async function initializeGapiClient() {
     return new Promise((resolve, reject) => {
         gapi.load('client', async () => {
             try {
                 await gapi.client.init({
-                    apiKey: geminiApiKey, // Re-using Gemini key for GAPI, as it's a Google Cloud key
+                    apiKey: searchApiKey, // Using Web Search key for GAPI, as it's a general Google Cloud key.
                     clientId: googleClientId,
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+                    discoveryDocs: ["[https://www.googleapis.com/discovery/v1/apis/drive/v3/rest](https://www.googleapis.com/discovery/v1/apis/drive/v3/rest)"],
                 });
                 gapi.client.setToken({ access_token: googleAccessToken });
                 gapiInitialized = true;
@@ -413,6 +414,7 @@ async function initializeGapiClient() {
         });
     });
 }
+// GEMINI: END EDIT
 
 function handleLogout() {
     if (auth) signOut(auth).catch(error => console.error("Sign out failed:", error));
@@ -513,6 +515,7 @@ async function renderPortfolioView() {
     }
 }
 
+// GEMINI: START EDIT
 function displayFilteredPortfolio(filter = '') {
     const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
     const lowercasedFilter = filter.toLowerCase();
@@ -527,20 +530,20 @@ function displayFilteredPortfolio(filter = '') {
         return;
     }
 
-    const groupedByExchange = filteredPortfolio.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Uncategorized';
-        if (!acc[exchange]) acc[exchange] = [];
-        acc[exchange].push(stock);
+    const groupedBySector = filteredPortfolio.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) acc[sector] = [];
+        acc[sector].push(stock);
         return acc;
     }, {});
 
-    const sortedExchanges = Object.keys(groupedByExchange).sort();
+    const sortedSectors = Object.keys(groupedBySector).sort();
     
     let html = '';
-    for (const exchange of sortedExchanges) {
-        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
+    for (const sector of sortedSectors) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
         html += `<ul class="divide-y divide-gray-200">`;
-        for (const stock of groupedByExchange[exchange]) {
+        for (const stock of groupedBySector[sector]) {
             html += `
                 <li class="p-4 flex justify-between items-center hover:bg-gray-50">
                     <div>
@@ -559,7 +562,9 @@ function displayFilteredPortfolio(filter = '') {
     }
     container.innerHTML = html;
 }
+// GEMINI: END EDIT
 
+// GEMINI: START EDIT
 async function openManageStockModal(ticker = null) {
     const form = document.getElementById('manage-stock-form');
     form.reset();
@@ -573,7 +578,7 @@ async function openManageStockModal(ticker = null) {
             document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
             document.getElementById('manage-stock-ticker').value = stockData.ticker;
             document.getElementById('manage-stock-name').value = stockData.companyName;
-            document.getElementById('manage-stock-exchange').value = stockData.exchange;
+            document.getElementById('manage-stock-sector').value = stockData.sector || '';
             (stockData.topics || []).forEach(addTopicToForm);
         }
     } else {
@@ -583,6 +588,7 @@ async function openManageStockModal(ticker = null) {
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
+// GEMINI: END EDIT
 
 function addTopicToForm(topic = {}) {
     const container = document.getElementById('topics-container');
@@ -616,6 +622,7 @@ function addTopicToForm(topic = {}) {
     container.appendChild(topicDiv);
 }
 
+// GEMINI: START EDIT
 async function handleSaveStock(e) {
     e.preventDefault();
     const originalTicker = document.getElementById('manage-stock-original-ticker').value.trim().toUpperCase();
@@ -629,7 +636,7 @@ async function handleSaveStock(e) {
     const stockData = {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
-        exchange: document.getElementById('manage-stock-exchange').value.trim(),
+        sector: document.getElementById('manage-stock-sector').value.trim(),
         topics: []
     };
 
@@ -660,6 +667,7 @@ async function handleSaveStock(e) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// GEMINI: END EDIT
 
 async function handleDeleteStock(ticker) {
     openConfirmationModal(
@@ -683,11 +691,20 @@ async function handleDeleteStock(ticker) {
 
 // --- CORE STOCK RESEARCH LOGIC ---
 
-async function fetchAndCacheStockData(symbol) {
+// GEMINI: START EDIT
+async function fetchAndCacheStockData(symbol, preloadedOverview = null) {
     const dataToCache = {};
     const failedFetches = [];
 
     const promises = API_FUNCTIONS.map(async (func) => {
+        // If overview data is preloaded and we're at the OVERVIEW function, use it instead of fetching.
+        if (func === 'OVERVIEW' && preloadedOverview) {
+            if (preloadedOverview.Note || Object.keys(preloadedOverview).length === 0 || preloadedOverview.Information) {
+                throw new Error(preloadedOverview.Note || preloadedOverview.Information || 'Preloaded OVERVIEW data was invalid.');
+            }
+            return { func: 'OVERVIEW', data: preloadedOverview };
+        }
+        
         try {
             const data = await callApi(`https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
             if (data.Note || Object.keys(data).length === 0 || data.Information) {
@@ -719,6 +736,7 @@ async function fetchAndCacheStockData(symbol) {
     await setDoc(doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol), dataToCache);
     return dataToCache;
 }
+// GEMINI: END EDIT
 
 async function handleRefreshData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
@@ -745,6 +763,7 @@ async function handleRefreshData(symbol) {
     }
 }
 
+// GEMINI: START EDIT
 async function handleResearchSubmit(e) {
     e.preventDefault();
     const tickerInput = document.getElementById(CONSTANTS.INPUT_TICKER);
@@ -776,7 +795,7 @@ async function handleResearchSubmit(e) {
         const newStock = {
             ticker: overviewData.Symbol,
             companyName: overviewData.Name,
-            exchange: overviewData.Exchange,
+            sector: overviewData.Sector,
             topics: []
         };
         
@@ -785,7 +804,8 @@ async function handleResearchSubmit(e) {
 
         tickerInput.value = '';
         displayMessageInModal(`${symbol} has been added to your portfolio.`, 'info');
-        await displayStockCard(newStock.ticker);
+        // Pass the already-fetched overview data to prevent a redundant API call
+        await displayStockCard(newStock.ticker, overviewData);
 
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -794,8 +814,10 @@ async function handleResearchSubmit(e) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// GEMINI: END EDIT
 
-async function displayStockCard(ticker) {
+// GEMINI: START EDIT
+async function displayStockCard(ticker, preloadedOverview = null) {
     if (document.getElementById(`card-${ticker}`)) {
         document.getElementById(`card-${ticker}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
@@ -813,7 +835,8 @@ async function displayStockCard(ticker) {
             stockData = cachedDocSnap.data();
         } else {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time load: Fetching all data for ${ticker}...`;
-            stockData = await fetchAndCacheStockData(ticker);
+            // Pass the preloaded overview data if it exists to the caching function
+            stockData = await fetchAndCacheStockData(ticker, preloadedOverview);
         }
 
         const newCardHtml = renderOverviewCard(stockData, ticker);
@@ -826,6 +849,7 @@ async function displayStockCard(ticker) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+// GEMINI: END EDIT
 
 // --- NEWS FEATURE ---
 
