@@ -694,7 +694,7 @@
 
         // --- CORE API CALLER ---
         async function callGeminiAPI(type, prompt, schema = null, expectJson = true) {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`;
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }]
             };
