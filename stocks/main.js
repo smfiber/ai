@@ -81,9 +81,8 @@ const CUSTOM_ANALYSIS_PROMPT = [
     '**Your Playbook:**',
     '1.  **Weave a Narrative:** Don\'t just list facts from the articles. Connect the dots and tell the underlying story. Is {companyName} a comeback kid, a sleeping giant, or facing a major headwind? Your analysis should have a clear, narrative arc.',
     '2.  **Back It Up With Evidence:** A good journalist always cites their sources. When you use a specific fact, figure, or quote from an article, reference it in-line like this: [Source #].',
-    '3.  **Provide a "Sources" List:** At the very end of your piece, include a markdown section titled \'## References\'. This is where you\'ll list every source you cited, making it easy for readers to dig deeper. Format it as a bulleted list with the title and a clickable link.',
-    '4.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt." Make sure your story builds towards answering that question thoroughly.',
-    '5.  **Format for Readability:** Use professional markdown to structure your article (# for the main title, ## for major sections). This keeps it clean and easy to follow.',
+    '3.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt." Make sure your story builds towards answering that question thoroughly.',
+    '4.  **Format for Readability:** Use professional markdown to structure your article (# for the main title, ## for major sections). This keeps it clean and easy to follow.',
     '',
     '---',
     '**CONTEXTUAL DATA**',
@@ -1222,11 +1221,11 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
         const searchQuery = encodeURIComponent(`${companyName} stock ${topicName}`);
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${searchQuery}`;
         const searchData = await callApi(searchUrl);
-        const validArticles = filterValidNews(searchData.items);
+        const validArticles = filterValidNews(searchData.items).slice(0, 8);
         
         let searchResultsText = "No relevant articles found.";
         if (validArticles.length > 0) {
-            searchResultsText = validArticles.slice(0, 8).map((article, index) => 
+            searchResultsText = validArticles.map((article, index) => 
                 `[Source ${index + 1}]\nTitle: ${article.title}\nSnippet: ${article.snippet}\nLink: ${article.link}`
             ).join('\n\n---\n');
         }
@@ -1239,13 +1238,23 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
             .replace('{web_search_results}', searchResultsText)
             .replace('{user_prompt}', userPrompt);
 
-        // 4. Call Gemini API
-        let report = await callGeminiApi(finalPrompt);
+        // 4. Call Gemini API to get the main article body
+        let articleBody = await callGeminiApi(finalPrompt);
+        articleBody = articleBody.replace(/```markdown/g, '').replace(/```/g, '').trim();
 
-        // 5. Display results
-        // Clean the response to remove markdown code fences before parsing
-        report = report.replace(/```markdown/g, '').replace(/```/g, '').trim();
-        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
+        // 5. Manually construct the references section
+        let referencesMarkdown = '';
+        if (validArticles.length > 0) {
+            const referencesList = validArticles.map((article, index) => 
+                `${index + 1}. [${article.title}](${article.link})`
+            ).join('\n');
+            referencesMarkdown = `\n\n## References\n${referencesList}`;
+        }
+
+        // 6. Combine and display results
+        const finalReport = articleBody + referencesMarkdown;
+
+        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(finalReport);
         document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 
