@@ -76,14 +76,14 @@ const TOPIC_GENERATION_PROMPT = [
 ].join('\n');
 
 const CUSTOM_ANALYSIS_PROMPT = [
-    "Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from a set of recent, relevant web search results to address the user's specific prompt.",
+    'Role: You are a savvy financial journalist and storyteller. Your mission is to dig into the latest news and data to uncover the real story behind a company\'s performance and prospects, presenting it in a clear and compelling way.',
     '',
-    '**CRITICAL INSTRUCTIONS:**',
-    "1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.",
-    '2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #].',
-    "3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and a clickable markdown link. For example: '* [Source Title](https://www.example.com/article-url)'.",
-    '4.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User\'s Analysis Prompt" provided below.',
-    '5.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.',
+    '**Your Playbook:**',
+    '1.  **Weave a Narrative:** Don\'t just list facts from the articles. Connect the dots and tell the underlying story. Is {companyName} a comeback kid, a sleeping giant, or facing a major headwind? Your analysis should have a clear, narrative arc.',
+    '2.  **Back It Up With Evidence:** A good journalist always cites their sources. When you use a specific fact, figure, or quote from an article, reference it in-line like this: [Source #].',
+    '3.  **Provide a "Sources" List:** At the very end of your piece, include a markdown section titled \'## References\'. This is where you\'ll list every source you cited, making it easy for readers to dig deeper. Format it as a bulleted list with the title and a clickable link.',
+    '4.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt." Make sure your story builds towards answering that question thoroughly.',
+    '5.  **Format for Readability:** Use professional markdown to structure your article (# for the main title, ## for major sections). This keeps it clean and easy to follow.',
     '',
     '---',
     '**CONTEXTUAL DATA**',
@@ -93,13 +93,13 @@ const CUSTOM_ANALYSIS_PROMPT = [
     '- Ticker Symbol: {tickerSymbol}',
     '',
     '**2. Recent Web Search Results:**',
-    'These articles provide context on recent events, market sentiment, and competitive dynamics.',
+    'These articles provide the basis for your reporting.',
     '{web_search_results}',
     '',
     '---',
-    "**USER'S ANALYSIS PROMPT**",
+    '**USER\'S ANALYSIS PROMPT**',
     '',
-    "Based on the provided web search results and your general knowledge, provide a detailed analysis based on the following request:",
+    'Based on your reporting from the provided web search results and your market knowledge, craft a story that provides a detailed analysis of the following:',
     '{user_prompt}'
 ].join('\n');
 
@@ -1240,9 +1240,11 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
             .replace('{user_prompt}', userPrompt);
 
         // 4. Call Gemini API
-        const report = await callGeminiApi(finalPrompt);
+        let report = await callGeminiApi(finalPrompt);
 
         // 5. Display results
+        // Clean the response to remove markdown code fences before parsing
+        report = report.replace(/```markdown/g, '').replace(/```/g, '').trim();
         document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
         document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
