@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
@@ -378,9 +378,14 @@ async function initializeFirebase() {
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
-                if (!appIsInitialized) initializeAppContent();
+                if (!appIsInitialized) {
+                    initializeAppContent();
+                }
             } else {
                 userId = null;
+                if (appIsInitialized) {
+                    displayMessageInModal("Your session has expired. Please log in again to continue.", "warning");
+                }
                 appIsInitialized = false;
                 document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
             }
@@ -389,8 +394,6 @@ async function initializeFirebase() {
         
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
         }
 
     } catch (error) {
