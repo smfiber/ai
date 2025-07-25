@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.0"; 
+const APP_VERSION = "6.2.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -52,20 +52,20 @@ const CONSTANTS = {
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
 
 const CUSTOM_ANALYSIS_PROMPT = `
-Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from two distinct sources: (1) a comprehensive JSON object of the company's fundamental financial data, and (2) a set of recent, relevant web search results. Your analysis must be objective, data-driven, and directly address the user's specific prompt.
+Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from a set of recent, relevant web search results to address the user's specific prompt.
 
 **CRITICAL INSTRUCTIONS:**
-1.  **Synthesize, Don't Just List:** Do not merely summarize the financial data or the articles. Integrate them into a coherent narrative that directly answers the user's query.
+1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.
 2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #]. For example: "Recent reports indicate a shift in consumer sentiment [Source 1]."
 3.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User's Analysis Prompt" provided below.
-4.  **Output Format:** The final report must be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections.
+4.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.
 
 ---
 **CONTEXTUAL DATA**
 
-**1. Fundamental Financial Data (JSON):**
-This data provides the historical financial health and valuation of {companyName} ({tickerSymbol}).
-{jsonData}
+**1. Company Information:**
+- Company Name: {companyName}
+- Ticker Symbol: {tickerSymbol}
 
 **2. Recent Web Search Results:**
 These articles provide context on recent events, market sentiment, and competitive dynamics.
@@ -74,7 +74,7 @@ These articles provide context on recent events, market sentiment, and competiti
 ---
 **USER'S ANALYSIS PROMPT**
 
-Please provide a detailed analysis based on the following request:
+Based on the provided web search results and your general knowledge, provide a detailed analysis based on the following request:
 "{user_prompt}"
 `;
 
@@ -1192,10 +1192,9 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${ticker} for "${topicName}"...`;
 
     try {
-        // 1. Fetch cached financial data
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching financial data...`;
-        const financialData = await getStockDataFromCache(ticker);
-        const companyName = get(financialData, 'OVERVIEW.Name', ticker);
+        // 1. Get Company Name from portfolio cache
+        const portfolioItem = portfolioCache.find(stock => stock.ticker === ticker);
+        const companyName = portfolioItem ? portfolioItem.companyName : ticker;
 
         // 2. Perform web search
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching web for recent context...`;
@@ -1216,7 +1215,6 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
         const finalPrompt = CUSTOM_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, ticker)
-            .replace('{jsonData}', JSON.stringify(financialData, null, 2))
             .replace('{web_search_results}', searchResultsText)
             .replace('{user_prompt}', userPrompt);
 
