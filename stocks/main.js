@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.2"; 
+const APP_VERSION = "6.2.3"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -75,31 +75,37 @@ const TOPIC_GENERATION_PROMPT = [
     ']'
 ].join('\n');
 
-const CUSTOM_ANALYSIS_PROMPT = [
-    'Role: You are a savvy financial journalist and storyteller. Your mission is to dig into the latest news and data to uncover the real story behind a company\'s performance and prospects, presenting it in a clear and compelling way.',
-    '',
+const DRAFTING_PROMPT = [
+    'Role: You are a savvy financial journalist. Your mission is to synthesize the provided news articles into a compelling narrative that answers the user\'s core question.',
     '**Your Playbook:**',
-    '1.  **Weave a Narrative:** Don\'t just list facts from the articles. Connect the dots and tell the underlying story. Is {companyName} a comeback kid, a sleeping giant, or facing a major headwind? Your analysis should have a clear, narrative arc.',
-    '2.  **Back It Up With Evidence:** A good journalist always cites their sources. When you use a specific fact, figure, or quote from an article, reference it in-line like this: [Source #].',
-    '3.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt." Make sure your story builds towards answering that question thoroughly.',
-    '4.  **Format for Readability:** Use professional markdown to structure your article (# for the main title, ## for major sections). This keeps it clean and easy to follow.',
-    '',
+    '1.  **Weave a Narrative:** Don\'t just list facts. Connect the dots and tell the underlying story based on the provided articles.',
+    '2.  **Cite Evidence:** As you write, you MUST cite information from the articles using inline citations like [Source 1], [Source 2], etc.',
+    '3.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt."',
+    '4.  **Format for Readability:** Use professional markdown (# for main title, ## for sections).',
+    '5.  **CRITICAL:** Do NOT add a "References" section. Only produce the main article body with citations.',
     '---',
     '**CONTEXTUAL DATA**',
-    '',
-    '**1. Company Information:**',
     '- Company Name: {companyName}',
     '- Ticker Symbol: {tickerSymbol}',
-    '',
-    '**2. Recent Web Search Results:**',
-    'These articles provide the basis for your reporting.',
+    '- Recent Web Search Results:',
     '{web_search_results}',
-    '',
     '---',
     '**USER\'S ANALYSIS PROMPT**',
-    '',
-    'Based on your reporting from the provided web search results and your market knowledge, craft a story that provides a detailed analysis of the following:',
+    'Based on the provided web search results, craft a story that provides a detailed analysis of the following:',
     '{user_prompt}'
+].join('\n');
+
+const REVISION_PROMPT = [
+    'Role: You are a meticulous editor for a financial news publication.',
+    'Your task is to review the following DRAFT ARTICLE. Your goal is to improve its clarity, flow, and readability while preserving the core information and all inline citations (e.g., [Source 1]).',
+    '**Instructions:**',
+    '1.  **Enhance Readability:** Rephrase awkward sentences and improve the overall narrative structure.',
+    '2.  **Check for Clarity:** Ensure the main points are clear and easy to understand.',
+    '3.  **Preserve Citations:** Do NOT remove or alter any of the `[Source #]` citations.',
+    '4.  **Return Only the Article:** Your output must be ONLY the final, revised markdown text of the article. Do not add any commentary or a "References" section.',
+    '---',
+    '**DRAFT ARTICLE TO REVISE:**',
+    '{draft_article}'
 ].join('\n');
 
 const FINANCIAL_ANALYSIS_PROMPT = [
@@ -1208,16 +1214,14 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${ticker} for "${topicName}"...`;
 
     try {
-        // 1. Get Company Name from Firestore for reliability
+        // Step 1: Get Company Name & Search for news
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/4: Searching for recent news...`;
         let companyName = ticker;
         const portfolioDocRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
         const portfolioDocSnap = await getDoc(portfolioDocRef);
         if (portfolioDocSnap.exists() && portfolioDocSnap.data().companyName) {
             companyName = portfolioDocSnap.data().companyName;
         }
-
-        // 2. Perform web search
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching web for recent context...`;
         const searchQuery = encodeURIComponent(`${companyName} stock ${topicName}`);
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${searchQuery}`;
         const searchData = await callApi(searchUrl);
@@ -1230,19 +1234,24 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
             ).join('\n\n---\n');
         }
 
-        // 3. Construct final prompt
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Synthesizing data and generating AI analysis...`;
-        const finalPrompt = CUSTOM_ANALYSIS_PROMPT
+        // Step 2: Draft the article
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 2/4: Drafting initial analysis...`;
+        const draftingPrompt = DRAFTING_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, ticker)
             .replace('{web_search_results}', searchResultsText)
             .replace('{user_prompt}', userPrompt);
+        let draftArticle = await callGeminiApi(draftingPrompt);
+        draftArticle = draftArticle.replace(/```markdown/g, '').replace(/```/g, '').trim();
 
-        // 4. Call Gemini API to get the main article body
-        let articleBody = await callGeminiApi(finalPrompt);
-        articleBody = articleBody.replace(/```markdown/g, '').replace(/```/g, '').trim();
+        // Step 3: Revise the draft
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/4: Revising draft for clarity...`;
+        const revisionPrompt = REVISION_PROMPT.replace('{draft_article}', draftArticle);
+        let revisedArticle = await callGeminiApi(revisionPrompt);
+        revisedArticle = revisedArticle.replace(/```markdown/g, '').replace(/```/g, '').trim();
 
-        // 5. Manually construct the references section
+        // Step 4: Assemble final report in code
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 4/4: Assembling final report...`;
         let referencesMarkdown = '';
         if (validArticles.length > 0) {
             const referencesList = validArticles.map((article, index) => 
@@ -1250,10 +1259,9 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
             ).join('\n');
             referencesMarkdown = `\n\n## References\n${referencesList}`;
         }
+        const finalReport = revisedArticle + referencesMarkdown;
 
-        // 6. Combine and display results
-        const finalReport = articleBody + referencesMarkdown;
-
+        // Step 5: Render to HTML
         document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(finalReport);
         document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
