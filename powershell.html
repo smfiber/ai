@@ -585,7 +585,7 @@ Your task is to analyze the provided PowerShell script and generate a basic, eff
 
             async function callGeminiAPI(history) {
                 if (!appState.geminiApiKey) throw new Error("Gemini API key is not configured.");
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${appState.geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${appState.geminiApiKey}`;
                 const payload = { contents: history };
 
                 let lastError = null;
