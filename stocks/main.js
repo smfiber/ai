@@ -466,6 +466,7 @@ async function initializeGapiClient() {
                 await gapi.client.init({
                     apiKey: geminiApiKey, // Re-using Gemini key for GAPI, as it's a Google Cloud key
                     clientId: googleClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
                     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
                 });
                 gapi.client.setToken({ access_token: googleAccessToken });
