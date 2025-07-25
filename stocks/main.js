@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.1.0"; 
+const APP_VERSION = "6.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -15,6 +15,7 @@ const CONSTANTS = {
     MODAL_FULL_DATA: 'fullDataModal',
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
+    MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
     // Forms & Inputs
@@ -33,6 +34,7 @@ const CONSTANTS = {
     ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
     ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
     ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
+    ELEMENT_CUSTOM_ANALYSIS_CONTENT: 'custom-analysis-content',
     // Buttons
     BUTTON_SCROLL_TOP: 'scroll-to-top-button',
     BUTTON_VIEW_STOCKS: 'view-stocks-button',
@@ -48,6 +50,33 @@ const CONSTANTS = {
 
 // List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
+
+const CUSTOM_ANALYSIS_PROMPT = `
+Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from two distinct sources: (1) a comprehensive JSON object of the company's fundamental financial data, and (2) a set of recent, relevant web search results. Your analysis must be objective, data-driven, and directly address the user's specific prompt.
+
+**CRITICAL INSTRUCTIONS:**
+1.  **Synthesize, Don't Just List:** Do not merely summarize the financial data or the articles. Integrate them into a coherent narrative that directly answers the user's query.
+2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #]. For example: "Recent reports indicate a shift in consumer sentiment [Source 1]."
+3.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User's Analysis Prompt" provided below.
+4.  **Output Format:** The final report must be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections.
+
+---
+**CONTEXTUAL DATA**
+
+**1. Fundamental Financial Data (JSON):**
+This data provides the historical financial health and valuation of {companyName} ({tickerSymbol}).
+{jsonData}
+
+**2. Recent Web Search Results:**
+These articles provide context on recent events, market sentiment, and competitive dynamics.
+{web_search_results}
+
+---
+**USER'S ANALYSIS PROMPT**
+
+Please provide a detailed analysis based on the following request:
+"{user_prompt}"
+`;
 
 const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
@@ -733,6 +762,8 @@ async function handleRefreshData(symbol) {
              const tempDiv = document.createElement('div');
              tempDiv.innerHTML = newCardHtml;
              oldCard.replaceWith(tempDiv.firstChild);
+             // Re-render topics after refresh
+             await displayStockCard(symbol);
         } else { 
             await displayStockCard(symbol);
         }
@@ -818,6 +849,16 @@ async function displayStockCard(ticker) {
 
         const newCardHtml = renderOverviewCard(stockData, ticker);
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
+        
+        // Fetch portfolio data to render custom topics
+        const portfolioDocRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        const portfolioDocSnap = await getDoc(portfolioDocRef);
+        if (portfolioDocSnap.exists()) {
+            const portfolioData = portfolioDocSnap.data();
+            if (portfolioData.topics && portfolioData.topics.length > 0) {
+                renderCustomTopics(ticker, portfolioData.topics, `card-${ticker}`);
+            }
+        }
 
     } catch(error) {
         console.error(`Error displaying card for ${ticker}:`, error);
@@ -929,19 +970,65 @@ function renderOverviewCard(data, symbol) {
         </div>`;
 }
 
+function renderCustomTopics(ticker, topics, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let existingTopicsContainer = container.querySelector('.custom-topics-container');
+    if (existingTopicsContainer) existingTopicsContainer.remove();
+
+    if (!topics || topics.length === 0) return;
+
+    const topicsContainer = document.createElement('div');
+    topicsContainer.className = 'custom-topics-container mt-4 border-t pt-4';
+    topicsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-3">Custom AI Analysis Topics</h3>`;
+
+    topics.forEach(topic => {
+        const topicEl = document.createElement('div');
+        topicEl.className = 'p-4 rounded-lg bg-gray-50 border mb-4';
+        
+        let buttonsHtml = '';
+        if (topic.initialPrompt) {
+            buttonsHtml += `<button class="custom-analysis-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg" data-ticker="${sanitizeText(ticker)}" data-topic-name="${sanitizeText(topic.topicName)}" data-prompt="${sanitizeText(topic.initialPrompt)}">Initial Analysis</button>`;
+        }
+        if (topic.additionalPrompt) {
+            buttonsHtml += `<button class="custom-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg ml-2" data-ticker="${sanitizeText(ticker)}" data-topic-name="${sanitizeText(topic.topicName)}" data-prompt="${sanitizeText(topic.additionalPrompt)}">Additional Analysis</button>`;
+        }
+
+        topicEl.innerHTML = `
+            <h4 class="font-bold text-gray-800">${sanitizeText(topic.topicName)}</h4>
+            <p class="text-sm text-gray-600 mt-1 mb-3">${sanitizeText(topic.description)}</p>
+            <div class="flex flex-wrap gap-2 justify-start">
+                ${buttonsHtml}
+            </div>
+        `;
+        topicsContainer.appendChild(topicEl);
+    });
+
+    container.appendChild(topicsContainer);
+}
+
+
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
     document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
-        const symbol = target.dataset.symbol;
+        
+        const symbol = target.dataset.symbol || target.dataset.ticker;
         if (!symbol) return;
+
         if (target.classList.contains('refresh-data-button')) handleRefreshData(symbol);
         if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
+        if (target.classList.contains('custom-analysis-button')) {
+            const topicName = target.dataset.topicName;
+            const prompt = target.dataset.prompt;
+            handleCustomAnalysis(symbol, topicName, prompt);
+        }
     });
 
     document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
@@ -988,6 +1075,7 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_PORTFOLIO, button: 'close-portfolio-modal', bg: 'close-portfolio-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
@@ -1094,6 +1182,60 @@ async function handleUndervaluedAnalysis(symbol) {
     }
 }
 
+async function handleCustomAnalysis(ticker, topicName, userPrompt) {
+    if (!searchApiKey || !searchEngineId) {
+        displayMessageInModal("This feature requires the Web Search API Key and Search Engine ID.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${ticker} for "${topicName}"...`;
+
+    try {
+        // 1. Fetch cached financial data
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching financial data...`;
+        const financialData = await getStockDataFromCache(ticker);
+        const companyName = get(financialData, 'OVERVIEW.Name', ticker);
+
+        // 2. Perform web search
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching web for recent context...`;
+        const searchQuery = encodeURIComponent(`${companyName} stock ${topicName}`);
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${searchQuery}`;
+        const searchData = await callApi(searchUrl);
+        const validArticles = filterValidNews(searchData.items);
+        
+        let searchResultsText = "No relevant articles found.";
+        if (validArticles.length > 0) {
+            searchResultsText = validArticles.slice(0, 5).map((article, index) => 
+                `[Source ${index + 1}]: ${article.snippet} (URL: ${article.link})`
+            ).join('\n');
+        }
+
+        // 3. Construct final prompt
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Synthesizing data and generating AI analysis...`;
+        const finalPrompt = CUSTOM_ANALYSIS_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, ticker)
+            .replace('{jsonData}', JSON.stringify(financialData, null, 2))
+            .replace('{web_search_results}', searchResultsText)
+            .replace('{user_prompt}', userPrompt);
+
+        // 4. Call Gemini API
+        const report = await callGeminiApi(finalPrompt);
+
+        // 5. Display results
+        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+
+    } catch (error) {
+        displayMessageInModal(`Could not generate custom analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 // --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
 
 async function handleSaveToDrive(modalId) {
@@ -1121,9 +1263,16 @@ async function handleSaveToDrive(modalId) {
                                      .replace(/<h3>/gi, '### ').replace(/<\/h3>/gi, '\n')
                                      .replace(/<ul>/gi, '').replace(/<\/ul>/gi, '')
                                      .replace(/<li>/gi, '* ').replace(/<\/li>/gi, '\n');
-
-        stockSymbol = modal.querySelector('h2').textContent.split(' for ')[1].trim();
-        analysisType = modal.querySelector('h2').textContent.split(' for ')[0].replace(/\s/g, '');
+        
+        const titleText = modal.querySelector('h2').textContent;
+        if (modalId === CONSTANTS.MODAL_CUSTOM_ANALYSIS) {
+            const parts = titleText.split(' | ');
+            analysisType = parts[0].trim().replace(/\s/g, '');
+            stockSymbol = parts[1].trim();
+        } else {
+            stockSymbol = titleText.split(' for ')[1].trim();
+            analysisType = titleText.split(' for ')[0].replace(/\s/g, '');
+        }
     }
 
     const fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
