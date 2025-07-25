@@ -51,6 +51,30 @@ const CONSTANTS = {
 // List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
 
+const TOPIC_GENERATION_PROMPT = `
+Role: You are a team of senior financial analysts at a top-tier investment bank. Your task is to identify the most critical, timely, and actionable investment research topics for a given company.
+
+**CRITICAL INSTRUCTIONS:**
+1.  **Identify 8 Key Topics:** For the company {companyName} ({tickerSymbol}), identify the 8 most important strategic topics an investor needs to understand right now. These should cover areas like competitive landscape, product innovation, monetization strategies, regulatory risks, growth drivers, and operational challenges.
+2.  **Create Detailed Prompts:** For each of the 8 topics, create a detailed, specific prompt that would guide another AI analyst to write a comprehensive research article. This prompt should be insightful and ask probing questions.
+3.  **JSON Output:** Your final output **MUST** be a valid JSON object. It should be an array of 8 objects. Each object must have two keys:
+    * `"topicName"`: A short, descriptive title for the topic (e.g., "AI Monetization Strategy").
+    * `"detailedPrompt"`: The full, detailed prompt you created for that topic.
+4.  **Do NOT include any text, markdown, or formatting outside of the JSON object.** Your entire response must be the JSON itself.
+
+Example JSON Structure:
+[
+  {
+    "topicName": "Example Topic 1",
+    "detailedPrompt": "A very detailed prompt for an AI to analyze Example Topic 1 for the company..."
+  },
+  {
+    "topicName": "Example Topic 2",
+    "detailedPrompt": "Another very detailed prompt for an AI to analyze Example Topic 2..."
+  }
+]
+`;
+
 const CUSTOM_ANALYSIS_PROMPT = `
 Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from a set of recent, relevant web search results to address the user's specific prompt.
 
@@ -593,7 +617,6 @@ function displayFilteredPortfolio(filter = '') {
 async function openManageStockModal(ticker = null) {
     const form = document.getElementById('manage-stock-form');
     form.reset();
-    document.getElementById('topics-container').innerHTML = '';
     
     if (ticker) {
         // Edit mode
@@ -604,7 +627,6 @@ async function openManageStockModal(ticker = null) {
             document.getElementById('manage-stock-ticker').value = stockData.ticker;
             document.getElementById('manage-stock-name').value = stockData.companyName;
             document.getElementById('manage-stock-exchange').value = stockData.exchange;
-            (stockData.topics || []).forEach(addTopicToForm);
         }
     } else {
         // Add mode
@@ -612,38 +634,6 @@ async function openManageStockModal(ticker = null) {
         document.getElementById('manage-stock-original-ticker').value = '';
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
-}
-
-function addTopicToForm(topic = {}) {
-    const container = document.getElementById('topics-container');
-    const topicIndex = container.children.length;
-    const topicId = `topic-${topicIndex}-${Date.now()}`;
-    
-    const topicDiv = document.createElement('div');
-    topicDiv.className = 'topic-item-container relative';
-    topicDiv.innerHTML = `
-        <button type="button" class="absolute top-2 right-2 text-red-400 hover:text-red-600 remove-topic-button" title="Remove Topic">&times;</button>
-        <div class="space-y-2">
-            <div>
-                <label for="${topicId}-name" class="block text-xs font-medium text-gray-600">Topic</label>
-                <input type="text" id="${topicId}-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" value="${sanitizeText(topic.topicName || '')}">
-            </div>
-            <div>
-                <label for="${topicId}-desc" class="block text-xs font-medium text-gray-600">Description</label>
-                <textarea id="${topicId}-desc" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.description || '')}</textarea>
-            </div>
-            <div>
-                <label for="${topicId}-prompt1" class="block text-xs font-medium text-gray-600">Initial Prompt</label>
-                <textarea id="${topicId}-prompt1" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.initialPrompt || '')}</textarea>
-            </div>
-            <div>
-                <label for="${topicId}-prompt2" class="block text-xs font-medium text-gray-600">Additional Prompt</label>
-                <textarea id="${topicId}-prompt2" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">${sanitizeText(topic.additionalPrompt || '')}</textarea>
-            </div>
-        </div>
-    `;
-    topicDiv.querySelector('.remove-topic-button').addEventListener('click', () => topicDiv.remove());
-    container.appendChild(topicDiv);
 }
 
 async function handleSaveStock(e) {
@@ -660,18 +650,7 @@ async function handleSaveStock(e) {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
-        topics: []
     };
-
-    const topicContainers = document.querySelectorAll('.topic-item-container');
-    topicContainers.forEach(container => {
-        stockData.topics.push({
-            topicName: container.querySelector('input[type="text"]').value,
-            description: container.querySelectorAll('textarea')[0].value,
-            initialPrompt: container.querySelectorAll('textarea')[1].value,
-            additionalPrompt: container.querySelectorAll('textarea')[2].value
-        });
-    });
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to portfolio...";
@@ -809,7 +788,6 @@ async function handleResearchSubmit(e) {
             ticker: overviewData.Symbol,
             companyName: overviewData.Name,
             exchange: overviewData.Exchange,
-            topics: []
         };
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Adding ${symbol} to portfolio...`;
@@ -850,16 +828,6 @@ async function displayStockCard(ticker) {
 
         const newCardHtml = renderOverviewCard(stockData, ticker);
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
-        
-        // Fetch portfolio data to render custom topics
-        const portfolioDocRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        const portfolioDocSnap = await getDoc(portfolioDocRef);
-        if (portfolioDocSnap.exists()) {
-            const portfolioData = portfolioDocSnap.data();
-            if (portfolioData.topics && portfolioData.topics.length > 0) {
-                renderCustomTopics(ticker, portfolioData.topics, `card-${ticker}`);
-            }
-        }
 
     } catch(error) {
         console.error(`Error displaying card for ${ticker}:`, error);
@@ -966,49 +934,48 @@ function renderOverviewCard(data, symbol) {
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
+                <button data-symbol="${symbol}" class="generate-topics-button text-sm bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg">Generate AI Analysis Topics</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
 }
 
-function renderCustomTopics(ticker, topics, containerId) {
-    const container = document.getElementById(containerId);
+function renderGeneratedTopicsCard(symbol, topics) {
+    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
     if (!container) return;
 
-    let existingTopicsContainer = container.querySelector('.custom-topics-container');
-    if (existingTopicsContainer) existingTopicsContainer.remove();
+    // Remove existing topics card for this symbol if it exists
+    const existingCard = document.getElementById(`topics-card-${symbol}`);
+    if (existingCard) existingCard.remove();
 
     if (!topics || topics.length === 0) return;
 
-    const topicsContainer = document.createElement('div');
-    topicsContainer.className = 'custom-topics-container mt-4 border-t pt-4';
-    topicsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-3">Custom AI Analysis Topics</h3>`;
+    const topicsCard = document.createElement('div');
+    topicsCard.id = `topics-card-${symbol}`;
+    topicsCard.className = 'bg-white rounded-2xl shadow-lg border border-gray-200 p-6';
+    
+    let topicsHtml = `
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Generated AI Analysis Topics for ${sanitizeText(symbol)}</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    `;
 
     topics.forEach(topic => {
-        const topicEl = document.createElement('div');
-        topicEl.className = 'p-4 rounded-lg bg-gray-50 border mb-4';
-        
-        let buttonsHtml = '';
-        if (topic.initialPrompt) {
-            buttonsHtml += `<button class="custom-analysis-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg" data-ticker="${sanitizeText(ticker)}" data-topic-name="${sanitizeText(topic.topicName)}" data-prompt="${sanitizeText(topic.initialPrompt)}">Initial Analysis</button>`;
-        }
-        if (topic.additionalPrompt) {
-            buttonsHtml += `<button class="custom-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg ml-2" data-ticker="${sanitizeText(ticker)}" data-topic-name="${sanitizeText(topic.topicName)}" data-prompt="${sanitizeText(topic.additionalPrompt)}">Additional Analysis</button>`;
-        }
-
-        topicEl.innerHTML = `
-            <h4 class="font-bold text-gray-800">${sanitizeText(topic.topicName)}</h4>
-            <p class="text-sm text-gray-600 mt-1 mb-3">${sanitizeText(topic.description)}</p>
-            <div class="flex flex-wrap gap-2 justify-start">
-                ${buttonsHtml}
-            </div>
+        topicsHtml += `
+            <button 
+                class="custom-analysis-button text-left w-full p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-200 rounded-lg transition-all duration-200 ease-in-out"
+                data-ticker="${sanitizeText(symbol)}" 
+                data-topic-name="${sanitizeText(topic.topicName)}" 
+                data-prompt="${sanitizeText(topic.detailedPrompt)}">
+                <span class="font-semibold text-indigo-700">${sanitizeText(topic.topicName)}</span>
+            </button>
         `;
-        topicsContainer.appendChild(topicEl);
     });
 
-    container.appendChild(topicsContainer);
+    topicsHtml += `</div>`;
+    topicsCard.innerHTML = topicsHtml;
+    container.appendChild(topicsCard);
+    topicsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-
 
 // --- EVENT LISTENER SETUP ---
 
@@ -1025,6 +992,7 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
+        if (target.classList.contains('generate-topics-button')) handleGenerateTopics(symbol);
         if (target.classList.contains('custom-analysis-button')) {
             const topicName = target.dataset.topicName;
             const prompt = target.dataset.prompt;
@@ -1059,7 +1027,6 @@ function setupEventListeners() {
     document.getElementById(CONSTANTS.BUTTON_ADD_NEW_STOCK)?.addEventListener('click', () => openManageStockModal());
 
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
-    document.getElementById('add-topic-button')?.addEventListener('click', () => addTopicToForm());
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
@@ -1178,6 +1145,41 @@ async function handleUndervaluedAnalysis(symbol) {
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleGenerateTopics(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI topics for ${symbol}...`;
+
+    try {
+        const stockData = await getStockDataFromCache(symbol);
+        const companyName = get(stockData, 'OVERVIEW.Name', symbol);
+
+        const prompt = TOPIC_GENERATION_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol);
+
+        const responseText = await callGeminiApi(prompt);
+        
+        // Clean the response to ensure it's valid JSON
+        const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        let topics;
+        try {
+            topics = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error("Failed to parse JSON from AI response:", parseError, jsonString);
+            throw new Error("The AI returned an invalid format for the topics. Please try again.");
+        }
+
+        renderGeneratedTopicsCard(symbol, topics);
+
+    } catch (error) {
+        console.error("Error generating topics:", error);
+        displayMessageInModal(`Could not generate AI topics: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
