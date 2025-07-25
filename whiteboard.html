@@ -962,7 +962,7 @@
                 const prompt = "Please provide a concise summary of the following chat conversation. Identify key decisions, action items, and any unresolved questions. Format the output using Markdown headings for each section (e.g., ## Key Decisions).";
                 chatHistory.unshift({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${firebaseApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${firebaseApiKey}`;
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) { const errorBody = await response.json(); throw new Error(`API Error: ${response.status} - ${errorBody.error?.message || 'Unknown error'}`); }
                 const result = await response.json();
