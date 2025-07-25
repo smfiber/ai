@@ -98,11 +98,11 @@ const DRAFTING_PROMPT = [
 const REVISION_PROMPT = [
     'Role: You are a meticulous editor for a financial news publication.',
     'Your task is to review the following DRAFT ARTICLE. Your goal is to improve its clarity, flow, and readability while preserving the core information and all inline citations (e.g., [Source 1]).',
-    '**Instructions:**',
-    '1.  **Enhance Readability:** Rephrase awkward sentences and improve the overall narrative structure.',
-    '2.  **Check for Clarity:** Ensure the main points are clear and easy to understand.',
+    '**CRITICAL INSTRUCTIONS:**',
+    '1.  **Use Markdown:** Format the article using professional markdown. Use a single `#` for the main title and `##` for all section headings.',
+    '2.  **Enhance Readability:** Rephrase awkward sentences and improve the overall narrative structure.',
     '3.  **Preserve Citations:** Do NOT remove or alter any of the `[Source #]` citations.',
-    '4.  **Return Only the Article:** Your output must be ONLY the final, revised markdown text of the article. Do not add any commentary or a "References" section.',
+    '4.  **Return Only the Article:** Your output must be ONLY the final, revised markdown text of the article. Do not add any commentary, preamble (like "Here is the revised article:"), or a "References" section.',
     '---',
     '**DRAFT ARTICLE TO REVISE:**',
     '{draft_article}'
@@ -1248,14 +1248,22 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/4: Revising draft for clarity...`;
         const revisionPrompt = REVISION_PROMPT.replace('{draft_article}', draftArticle);
         let revisedArticle = await callGeminiApi(revisionPrompt);
-        revisedArticle = revisedArticle.replace(/```markdown/g, '').replace(/```/g, '').trim();
-
-        // Step 4: Assemble final report in code
+        
+        // Step 4: Clean and assemble final report in code
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 4/4: Assembling final report...`;
+        
+        // Clean the AI's output robustly
+        revisedArticle = revisedArticle
+            .replace(/```markdown/g, '')
+            .replace(/```/g, '')
+            .replace(/^.*Here is the revised article:/i, '') // Remove preamble
+            .replace(/## References\s*[\s\S]*/i, '') // Remove any reference section the AI added
+            .trim();
+
         let referencesMarkdown = '';
         if (validArticles.length > 0) {
             const referencesList = validArticles.map((article, index) => 
-                `${index + 1}. [${article.title}](${article.link})`
+                `${index + 1}. [${sanitizeText(article.title)}](${sanitizeText(article.link)})`
             ).join('\n');
             referencesMarkdown = `\n\n## References\n${referencesList}`;
         }
