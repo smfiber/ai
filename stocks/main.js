@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
@@ -81,7 +81,7 @@ const CUSTOM_ANALYSIS_PROMPT = [
     '**CRITICAL INSTRUCTIONS:**',
     "1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.",
     '2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #].',
-    "3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and the full link from the contextual data.",
+    "3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and a clickable markdown link. For example: '* [Source Title](https://www.example.com/article-url)'.",
     '4.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User\'s Analysis Prompt" provided below.',
     '5.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.',
     '',
@@ -368,12 +368,13 @@ async function initializeAppContent() {
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
 }
 
-function initializeFirebase() {
+async function initializeFirebase() {
     if (!firebaseConfig) return;
     try {
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
@@ -385,6 +386,13 @@ function initializeFirebase() {
             }
             setupAuthUI(user);
         });
+        
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+
     } catch (error) {
         console.error("Firebase initialization error:", error);
         displayMessageInModal(`Firebase Error: ${error.message}. Please check your config object.`, 'error');
@@ -477,7 +485,7 @@ function setupAuthUI(user) {
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
 
-    if (user) {
+    if (user && !user.isAnonymous) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
         const photoEl = isValidHttpUrl(user.photoURL) 
@@ -495,7 +503,9 @@ function setupAuthUI(user) {
         authStatusEl.innerHTML = `<button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>`;
         const loginButton = document.getElementById('login-button');
         if (loginButton) loginButton.addEventListener('click', handleLogin);
-        appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
+        if(!user) {
+             appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
+        }
     }
 }
 
