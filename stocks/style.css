@@ -126,12 +126,3 @@ body.modal-open {
     position: sticky;
     top: 0;
 }
-
-/* Topic Management Form */
-.topic-item-container {
-    border: 1px solid #d1d5db; /* gray-300 */
-    border-radius: 0.75rem; /* rounded-xl */
-    padding: 1rem;
-    margin-top: 1rem;
-    background-color: #f9fafb; /* gray-50 */
-}
