@@ -96,15 +96,38 @@ const DRAFTING_PROMPT = [
 ].join('\n');
 
 const REVISION_PROMPT = [
-    'Role: You are a meticulous editor for a financial news publication.',
-    'Your task is to review the following DRAFT ARTICLE. Your goal is to improve its clarity, flow, and readability while preserving the core information and all inline citations (e.g., [Source 1]).',
+    'Role: You are a structural editor AI. Your task is to take a draft article and restructure it into a clean JSON format. You must preserve all content and inline citations.',
+    '',
     '**CRITICAL INSTRUCTIONS:**',
-    '1.  **Use Markdown:** Format the article using professional markdown. Use a single `#` for the main title and `##` for all section headings.',
-    '2.  **Enhance Readability:** Rephrase awkward sentences and improve the overall narrative structure.',
-    '3.  **Preserve Citations:** Do NOT remove or alter any of the `[Source #]` citations.',
-    '4.  **Return Only the Article:** Your output must be ONLY the final, revised markdown text of the article. Do not add any commentary, preamble (like "Here is the revised article:"), or a "References" section.',
+    '1.  **Analyze the Draft:** Read the DRAFT ARTICLE below and identify its main title and logical sections.',
+    '2.  **Structure as JSON:** Convert the article into a single, valid JSON object with the following structure:',
+    '    * A root object with a single key: `"article"`.',
+    '    * The `"article"` object must have two keys:',
+    '        * `"title"`: A string containing the main title of the article.',
+    '        * `"sections"`: An array of objects, where each object represents a section of the article.',
+    '3.  **Section Objects:** Each object inside the `"sections"` array must have two keys:',
+    '    * `"heading"`: A string for the section\'s heading.',
+    '    * `"content"`: A string containing all the paragraph text for that section. Preserve all inline citations like `[Source 1]`. Separate distinct paragraphs with a newline character (`\\n`).',
+    '4.  **Strict JSON Output:** Your entire response MUST be ONLY the JSON object. Do not include any text, markdown, or formatting outside of the JSON object itself.',
+    '',
+    'Example JSON Output:',
+    '{',
+    '  "article": {',
+    '    "title": "Example Article Title",',
+    '    "sections": [',
+    '      {',
+    '        "heading": "Introduction to the Topic",',
+    '        "content": "This is the first paragraph of the introduction. It contains important information [Source 1].\\nThis is the second paragraph of the same section [Source 2]."',
+    '      },',
+    '      {',
+    '        "heading": "A Deeper Dive",',
+    '        "content": "This section goes into more detail about the subject matter [Source 3, Source 4]."',
+    '      }',
+    '    ]',
+    '  }',
+    '}',
     '---',
-    '**DRAFT ARTICLE TO REVISE:**',
+    '**DRAFT ARTICLE TO RESTRUCTURE:**',
     '{draft_article}'
 ].join('\n');
 
@@ -1244,33 +1267,51 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
         let draftArticle = await callGeminiApi(draftingPrompt);
         draftArticle = draftArticle.replace(/```markdown/g, '').replace(/```/g, '').trim();
 
-        // Step 3: Revise the draft
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/4: Revising draft for clarity...`;
+        // Step 3: Revise the draft and get structured JSON
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/4: Structuring revised article...`;
         const revisionPrompt = REVISION_PROMPT.replace('{draft_article}', draftArticle);
-        let revisedArticle = await callGeminiApi(revisionPrompt);
-        
-        // Step 4: Clean and assemble final report in code
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 4/4: Assembling final report...`;
-        
-        // Clean the AI's output robustly
-        revisedArticle = revisedArticle
-            .replace(/```markdown/g, '')
-            .replace(/```/g, '')
-            .replace(/^.*Here is the revised article:/i, '') // Remove preamble
-            .replace(/## References\s*[\s\S]*/i, '') // Remove any reference section the AI added
-            .trim();
+        const jsonResponseText = await callGeminiApi(revisionPrompt);
 
-        let referencesMarkdown = '';
-        if (validArticles.length > 0) {
-            const referencesList = validArticles.map((article, index) => 
-                `${index + 1}. [${sanitizeText(article.title)}](${sanitizeText(article.link)})`
-            ).join('\n');
-            referencesMarkdown = `\n\n## References\n${referencesList}`;
+        // Step 4: Clean, Parse JSON, and build HTML report
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 4/4: Assembling final report...`;
+
+        // Clean the response to ensure it's valid JSON
+        const jsonString = jsonResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let articleData;
+        try {
+            articleData = JSON.parse(jsonString).article;
+            if (!articleData.title || !Array.isArray(articleData.sections)) {
+                throw new Error("Parsed JSON has incorrect structure.");
+            }
+        } catch (parseError) {
+            console.error("Failed to parse JSON from AI response:", parseError, jsonString);
+            throw new Error("The AI returned an invalid format for the article structure. Please try again.");
         }
-        const finalReport = revisedArticle + referencesMarkdown;
+
+        // Build the article HTML from the structured JSON
+        let articleHtml = `<div class="prose max-w-none"><h1>${sanitizeText(articleData.title)}</h1>`;
+        articleData.sections.forEach(section => {
+            articleHtml += `<h2>${sanitizeText(section.heading)}</h2>`;
+            const paragraphs = section.content.split('\n').filter(p => p.trim() !== '');
+            paragraphs.forEach(p => {
+                articleHtml += `<p>${sanitizeText(p)}</p>`;
+            });
+        });
+        articleHtml += '</div>';
+
+        // Build the references section
+        let referencesHtml = '';
+        if (validArticles.length > 0) {
+            const referencesList = validArticles.map((article, index) =>
+                `<li><a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer">${sanitizeText(article.title)}</a></li>`
+            ).join('');
+            referencesHtml = `<div class="prose max-w-none"><h2>References</h2><ul>${referencesList}</ul></div>`;
+        }
+
+        const finalReportHtml = articleHtml + referencesHtml;
 
         // Step 5: Render to HTML
-        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = marked.parse(finalReport);
+        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = finalReportHtml;
         document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 
