@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.1"; 
+const APP_VERSION = "6.2.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -75,7 +75,7 @@ These articles provide context on recent events, market sentiment, and competiti
 **USER'S ANALYSIS PROMPT**
 
 Based on the provided web search results and your general knowledge, provide a detailed analysis based on the following request:
-"{user_prompt}"
+{user_prompt}
 `;
 
 const FINANCIAL_ANALYSIS_PROMPT = `
