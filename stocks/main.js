@@ -51,185 +51,185 @@ const CONSTANTS = {
 // List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
 
-const TOPIC_GENERATION_PROMPT = `
-Role: You are a team of senior financial analysts at a top-tier investment bank. Your task is to identify the most critical, timely, and actionable investment research topics for a given company.
+const TOPIC_GENERATION_PROMPT = [
+    'Role: You are a team of senior financial analysts at a top-tier investment bank. Your task is to identify the most critical, timely, and actionable investment research topics for a given company.',
+    '',
+    '**CRITICAL INSTRUCTIONS:**',
+    '1.  **Identify 8 Key Topics:** For the company {companyName} ({tickerSymbol}), identify the 8 most important strategic topics an investor needs to understand right now. These should cover areas like competitive landscape, product innovation, monetization strategies, regulatory risks, growth drivers, and operational challenges.',
+    '2.  **Create Detailed Prompts:** For each of the 8 topics, create a detailed, specific prompt that would guide another AI analyst to write a comprehensive research article. This prompt should be insightful and ask probing questions.',
+    '3.  **JSON Output:** Your final output **MUST** be a valid JSON object. It should be an array of 8 objects. Each object must have two keys:',
+    '    * `"topicName"`: A short, descriptive title for the topic (e.g., "AI Monetization Strategy").',
+    '    * `"detailedPrompt"`: The full, detailed prompt you created for that topic.',
+    '4.  **Do NOT include any text, markdown, or formatting outside of the JSON object.** Your entire response must be the JSON itself.',
+    '',
+    'Example JSON Structure:',
+    '[',
+    '  {',
+    '    "topicName": "Example Topic 1",',
+    '    "detailedPrompt": "A very detailed prompt for an AI to analyze Example Topic 1 for the company..."',
+    '  },',
+    '  {',
+    '    "topicName": "Example Topic 2",',
+    '    "detailedPrompt": "Another very detailed prompt for an AI to analyze Example Topic 2..."',
+    '  }',
+    ']'
+].join('\n');
 
-**CRITICAL INSTRUCTIONS:**
-1.  **Identify 8 Key Topics:** For the company {companyName} ({tickerSymbol}), identify the 8 most important strategic topics an investor needs to understand right now. These should cover areas like competitive landscape, product innovation, monetization strategies, regulatory risks, growth drivers, and operational challenges.
-2.  **Create Detailed Prompts:** For each of the 8 topics, create a detailed, specific prompt that would guide another AI analyst to write a comprehensive research article. This prompt should be insightful and ask probing questions.
-3.  **JSON Output:** Your final output **MUST** be a valid JSON object. It should be an array of 8 objects. Each object must have two keys:
-    * `"topicName"`: A short, descriptive title for the topic (e.g., "AI Monetization Strategy").
-    * `"detailedPrompt"`: The full, detailed prompt you created for that topic.
-4.  **Do NOT include any text, markdown, or formatting outside of the JSON object.** Your entire response must be the JSON itself.
+const CUSTOM_ANALYSIS_PROMPT = [
+    "Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from a set of recent, relevant web search results to address the user's specific prompt.",
+    '',
+    '**CRITICAL INSTRUCTIONS:**',
+    "1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.",
+    '2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #].',
+    "3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and the full link from the contextual data.",
+    '4.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User\'s Analysis Prompt" provided below.',
+    '5.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.',
+    '',
+    '---',
+    '**CONTEXTUAL DATA**',
+    '',
+    '**1. Company Information:**',
+    '- Company Name: {companyName}',
+    '- Ticker Symbol: {tickerSymbol}',
+    '',
+    '**2. Recent Web Search Results:**',
+    'These articles provide context on recent events, market sentiment, and competitive dynamics.',
+    '{web_search_results}',
+    '',
+    '---',
+    "**USER'S ANALYSIS PROMPT**",
+    '',
+    "Based on the provided web search results and your general knowledge, provide a detailed analysis based on the following request:",
+    '{user_prompt}'
+].join('\n');
 
-Example JSON Structure:
-[
-  {
-    "topicName": "Example Topic 1",
-    "detailedPrompt": "A very detailed prompt for an AI to analyze Example Topic 1 for the company..."
-  },
-  {
-    "topicName": "Example Topic 2",
-    "detailedPrompt": "Another very detailed prompt for an AI to analyze Example Topic 2..."
-  }
-]
-`;
+const FINANCIAL_ANALYSIS_PROMPT = [
+    "Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.",
+    "Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.",
+    "IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.",
+    '',
+    'Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    'Based on the provided data, generate the following multi-faceted financial report:',
+    '',
+    '# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})',
+    '',
+    '## 1. Executive Summary',
+    "Begin with a concise, top-level summary (3-4 sentences) that encapsulates the company's financial condition, recent performance trajectory, and core investment profile. Synthesize the most critical findings from the profitability, solvency, and valuation analyses into a coherent opening statement.",
+    '',
+    '## 2. Company Profile & Market Overview',
+    '### Business Description',
+    "Briefly describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data.",
+    '### Market Snapshot',
+    'Present key market-related metrics for context.',
+    '- Market Capitalization: $XXX.XX Billion',
+    '- 52-Week Price Range: $XX.XX - $XX.XX',
+    '- 50-Day Moving Average: $XX.XX',
+    '- 200-Day Moving Average: $XX.XX',
+    '- Analyst Target Price: $XX.XX',
+    '',
+    '## 3. Performance & Profitability Analysis',
+    "Assess the company's ability to generate earnings and create value for shareholders.",
+    '### 3.1. Revenue & Earnings Trend',
+    'Analyze the historical trend of totalRevenue and netIncome over the last 3-5 fiscal years using the INCOME_STATEMENT annual data.',
+    'Calculate and discuss the Year-over-Year (YoY) growth rates for both revenue and net income for the most recent two years.',
+    'Incorporate the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY from the OVERVIEW data to comment on recent momentum.',
+    '### 3.2. Profitability Margins & Returns',
+    'Extract the ProfitMargin and OperatingMarginTTM from the OVERVIEW section.',
+    'Calculate the Gross Profit Margin for the last three fiscal years (grossProfit / totalRevenue).',
+    'Analyze the trend in these margins. Are they expanding, contracting, or stable? Provide potential reasons based on the data (e.g., changes in costOfRevenue vs. totalRevenue).',
+    "Analyze the ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA). Interpret these figures as indicators of management's efficiency in using its equity and asset bases to generate profit.",
+    '',
+    '## 4. Financial Health & Risk Assessment',
+    "Evaluate the company's balance sheet strength, liquidity position, and reliance on debt.",
+    '### 4.1. Liquidity Analysis',
+    'Using the most recent BALANCE_SHEET annual report, calculate and interpret the following ratios:',
+    "- Current Ratio: (totalCurrentAssets / totalCurrentLiabilities). Explain its implication for the company's ability to meet short-term obligations.",
+    "- Quick Ratio (Acid-Test): (cashAndShortTermInvestments + currentNetReceivables) / totalCurrentLiabilities. Explain what this reveals about its reliance on selling inventory.",
+    '### 4.2. Solvency and Debt Structure',
+    "Calculate the Debt-to-Equity Ratio (totalLiabilities / totalShareholderEquity) for the last three fiscal years. Analyze the trend and comment on the company's leverage.",
+    'Analyze the composition of debt by comparing longTermDebt to shortTermDebt. Is the debt structure sustainable?',
+    "Calculate the Interest Coverage Ratio (EBIT / interestExpense) from the most recent INCOME_STATEMENT. Assess the company's ability to service its debt payments from its operating earnings.",
+    '',
+    '## 5. Cash Flow Analysis',
+    'Analyze the generation and utilization of cash as detailed in the CASH_FLOW statement for the most recent 3 fiscal years.',
+    '### Operating Cash Flow (OCF)',
+    'Analyze the trend in operatingCashflow. Is it growing? Is it consistently positive?',
+    '### Quality of Earnings',
+    "Compare operatingCashflow to netIncome. A significant divergence can be a red flag. Is the company's profit backed by actual cash?",
+    '### Investing and Financing Activities',
+    "Analyze the major uses and sources of cash from cashflowFromInvestment (e.g., capitalExpenditures) and cashflowFromFinancing (e.g., dividendPayout, paymentsForRepurchaseOfCommonStock, debt issuance/repayment). What do these activities suggest about the company's strategy?",
+    '',
+    '## 6. Valuation Analysis',
+    "Assess the company's current market valuation relative to its earnings and fundamentals.",
+    'Present and interpret the following valuation multiples from the OVERVIEW data:',
+    '- P/E Ratio (PERatio)',
+    '- Forward P/E (ForwardPE)',
+    '- Price-to-Sales Ratio (PriceToSalesRatioTTM)',
+    '- Price-to-Book Ratio (PriceToBookRatio)',
+    '- EV-to-EBITDA (EVToEBITDA)',
+    'Discuss what these multiples imply. Is the stock valued for growth, value, or something else? Compare the TrailingPE to the ForwardPE to understand earnings expectations.',
+    '',
+    '## 7. Investment Thesis: Synthesis & Conclusion',
+    'Conclude with a final synthesis that integrates all the preceding analyses.',
+    '- **Key Strengths**: Identify 2-3 of the most significant financial strengths based on the data (e.g., strong OCF, low leverage, margin expansion).',
+    '- **Potential Weaknesses & Red Flags**: Identify 2-3 key weaknesses or areas for concern (e.g., high debt, declining revenue growth, poor quality of earnings, negative cash flow).',
+    '- **Overall Verdict**: Provide a concluding statement on the company\'s overall financial standing and investment profile. Based purely on this quantitative analysis, what is the primary narrative for a potential investor? (e.g., "A financially robust company with a premium valuation," or "A highly leveraged company facing profitability headwinds").'
+].join('\n');
 
-const CUSTOM_ANALYSIS_PROMPT = `
-Role: You are a world-class financial and strategic analyst AI. Your task is to synthesize information from a set of recent, relevant web search results to address the user's specific prompt.
-
-**CRITICAL INSTRUCTIONS:**
-1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.
-2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #].
-3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and the full link from the contextual data.
-4.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User's Analysis Prompt" provided below.
-5.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.
-
----
-**CONTEXTUAL DATA**
-
-**1. Company Information:**
-- Company Name: {companyName}
-- Ticker Symbol: {tickerSymbol}
-
-**2. Recent Web Search Results:**
-These articles provide context on recent events, market sentiment, and competitive dynamics.
-{web_search_results}
-
----
-**USER'S ANALYSIS PROMPT**
-
-Based on the provided web search results and your general knowledge, provide a detailed analysis based on the following request:
-{user_prompt}
-`;
-
-const FINANCIAL_ANALYSIS_PROMPT = `
-Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.
-Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
-Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-
-JSON Data:
-{jsonData}
-
-Based on the provided data, generate the following multi-faceted financial report:
-
-# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
-
-## 1. Executive Summary
-Begin with a concise, top-level summary (3-4 sentences) that encapsulates the company's financial condition, recent performance trajectory, and core investment profile. Synthesize the most critical findings from the profitability, solvency, and valuation analyses into a coherent opening statement.
-
-## 2. Company Profile & Market Overview
-### Business Description
-Briefly describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data.
-### Market Snapshot
-Present key market-related metrics for context.
-- Market Capitalization: $XXX.XX Billion
-- 52-Week Price Range: $XX.XX - $XX.XX
-- 50-Day Moving Average: $XX.XX
-- 200-Day Moving Average: $XX.XX
-- Analyst Target Price: $XX.XX
-
-## 3. Performance & Profitability Analysis
-Assess the company's ability to generate earnings and create value for shareholders.
-### 3.1. Revenue & Earnings Trend
-Analyze the historical trend of totalRevenue and netIncome over the last 3-5 fiscal years using the INCOME_STATEMENT annual data.
-Calculate and discuss the Year-over-Year (YoY) growth rates for both revenue and net income for the most recent two years.
-Incorporate the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY from the OVERVIEW data to comment on recent momentum.
-### 3.2. Profitability Margins & Returns
-Extract the ProfitMargin and OperatingMarginTTM from the OVERVIEW section.
-Calculate the Gross Profit Margin for the last three fiscal years (grossProfit / totalRevenue).
-Analyze the trend in these margins. Are they expanding, contracting, or stable? Provide potential reasons based on the data (e.g., changes in costOfRevenue vs. totalRevenue).
-Analyze the ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA). Interpret these figures as indicators of management's efficiency in using its equity and asset bases to generate profit.
-
-## 4. Financial Health & Risk Assessment
-Evaluate the company's balance sheet strength, liquidity position, and reliance on debt.
-### 4.1. Liquidity Analysis
-Using the most recent BALANCE_SHEET annual report, calculate and interpret the following ratios:
-- Current Ratio: (totalCurrentAssets / totalCurrentLiabilities). Explain its implication for the company's ability to meet short-term obligations.
-- Quick Ratio (Acid-Test): (cashAndShortTermInvestments + currentNetReceivables) / totalCurrentLiabilities. Explain what this reveals about its reliance on selling inventory.
-### 4.2. Solvency and Debt Structure
-Calculate the Debt-to-Equity Ratio (totalLiabilities / totalShareholderEquity) for the last three fiscal years. Analyze the trend and comment on the company's leverage.
-Analyze the composition of debt by comparing longTermDebt to shortTermDebt. Is the debt structure sustainable?
-Calculate the Interest Coverage Ratio (EBIT / interestExpense) from the most recent INCOME_STATEMENT. Assess the company's ability to service its debt payments from its operating earnings.
-
-## 5. Cash Flow Analysis
-Analyze the generation and utilization of cash as detailed in the CASH_FLOW statement for the most recent 3 fiscal years.
-### Operating Cash Flow (OCF)
-Analyze the trend in operatingCashflow. Is it growing? Is it consistently positive?
-### Quality of Earnings
-Compare operatingCashflow to netIncome. A significant divergence can be a red flag. Is the company's profit backed by actual cash?
-### Investing and Financing Activities
-Analyze the major uses and sources of cash from cashflowFromInvestment (e.g., capitalExpenditures) and cashflowFromFinancing (e.g., dividendPayout, paymentsForRepurchaseOfCommonStock, debt issuance/repayment). What do these activities suggest about the company's strategy?
-
-## 6. Valuation Analysis
-Assess the company's current market valuation relative to its earnings and fundamentals.
-Present and interpret the following valuation multiples from the OVERVIEW data:
-- P/E Ratio (PERatio)
-- Forward P/E (ForwardPE)
-- Price-to-Sales Ratio (PriceToSalesRatioTTM)
-- Price-to-Book Ratio (PriceToBookRatio)
-- EV-to-EBITDA (EVToEBITDA)
-Discuss what these multiples imply. Is the stock valued for growth, value, or something else? Compare the TrailingPE to the ForwardPE to understand earnings expectations.
-
-## 7. Investment Thesis: Synthesis & Conclusion
-Conclude with a final synthesis that integrates all the preceding analyses.
-- **Key Strengths**: Identify 2-3 of the most significant financial strengths based on the data (e.g., strong OCF, low leverage, margin expansion).
-- **Potential Weaknesses & Red Flags**: Identify 2-3 key weaknesses or areas for concern (e.g., high debt, declining revenue growth, poor quality of earnings, negative cash flow).
-- **Overall Verdict**: Provide a concluding statement on the company's overall financial standing and investment profile. Based purely on this quantitative analysis, what is the primary narrative for a potential investor? (e.g., "A financially robust company with a premium valuation," or "A highly leveraged company facing profitability headwinds").
-`;
-
-const UNDERVALUED_ANALYSIS_PROMPT = `
-Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.
-Output Format: The final report must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.
-IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
-
-Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
-
-JSON Data:
-{jsonData}
-
-Based on the data, generate the following in-depth report:
-# Investment Valuation Report: {companyName} ({tickerSymbol})
-
-## 1. Executive Verdict
-Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.
-
-## 2. Fundamental Valuation Deep Dive
-Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.
-### 2.1. Relative Valuation Multiples
-- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?
-- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.
-- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?
-- **Enterprise Value-to-EBITDA (EV/EBITDA):** [Value from OVERVIEW.EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.
-### 2.2. Growth and Profitability-Adjusted Value
-- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.
-- **Return on Equity (ROE):** [Value from OVERVIEW.ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.
-### 2.3. Dividend Analysis
-- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%.
-- **Sustainability Check:** Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.
-### 2.4. Wall Street Consensus
-- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. Compare this target to the stock's recent price movement as indicated by its moving averages and 52-week range.
-
-## 3. Technical Analysis & Market Dynamics
-Assess the stock's current price action and market sentiment to determine if the timing is opportune.
-### 3.1. Trend Analysis
-- **50-Day MA:** $[Value from OVERVIEW.50DayMovingAverage]
-- **200-Day MA:** $[Value from OVERVIEW.200DayMovingAverage]
-- **Interpretation:** Analyze the stock's current trend. Is it in a bullish trend (trading above both MAs), a bearish trend (below both), or at an inflection point? How do these averages contain the price?
-### 3.2. Momentum and Volatility
-- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the price currently situated within this range based on its moving averages? A price near the low may suggest value, while a price near the high suggests strong momentum.
-- **Market Volatility (Beta):** [Value from OVERVIEW.Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?
-
-## 4. Synthesized Conclusion: Framing the Opportunity
-Combine the fundamental and technical findings into a final, actionable synthesis.
-- **Fundamental Case:** Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?
-- **Technical Case:** Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?
-- **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."
-
-**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.
-`;
+const UNDERVALUED_ANALYSIS_PROMPT = [
+    'Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.',
+    'Output Format: The final report must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.',
+    'IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.',
+    '',
+    'Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    'Based on the data, generate the following in-depth report:',
+    '# Investment Valuation Report: {companyName} ({tickerSymbol})',
+    '',
+    '## 1. Executive Verdict',
+    'Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.',
+    '',
+    '## 2. Fundamental Valuation Deep Dive',
+    "Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.",
+    '### 2.1. Relative Valuation Multiples',
+    '- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?',
+    "- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.",
+    '- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?',
+    "- **Enterprise Value-to-EBITDA (EV/EBITDA):** [Value from OVERVIEW.EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.",
+    '### 2.2. Growth and Profitability-Adjusted Value',
+    '- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.',
+    "- **Return on Equity (ROE):** [Value from OVERVIEW.ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.",
+    '### 2.3. Dividend Analysis',
+    '- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%.',
+    '- **Sustainability Check:** Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.',
+    '### 2.4. Wall Street Consensus',
+    "- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. Compare this target to the stock's recent price movement as indicated by its moving averages and 52-week range.",
+    '',
+    '## 3. Technical Analysis & Market Dynamics',
+    "Assess the stock's current price action and market sentiment to determine if the timing is opportune.",
+    '### 3.1. Trend Analysis',
+    '- **50-Day MA:** $[Value from OVERVIEW.50DayMovingAverage]',
+    '- **200-Day MA:** $[Value from OVERVIEW.200DayMovingAverage]',
+    "- **Interpretation:** Analyze the stock's current trend. Is it in a bullish trend (trading above both MAs), a bearish trend (below both), or at an inflection point? How do these averages contain the price?",
+    '### 3.2. Momentum and Volatility',
+    '- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the price currently situated within this range based on its moving averages? A price near the low may suggest value, while a price near the high suggests strong momentum.',
+    '- **Market Volatility (Beta):** [Value from OVERVIEW.Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?',
+    '',
+    '## 4. Synthesized Conclusion: Framing the Opportunity',
+    'Combine the fundamental and technical findings into a final, actionable synthesis.',
+    '- **Fundamental Case:** Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?',
+    '- **Technical Case:** Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?',
+    '- **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."',
+    '',
+    '**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.'
+].join('\n');
 
 // --- Global State ---
 let db;
@@ -524,7 +524,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
