@@ -56,9 +56,10 @@ Role: You are a world-class financial and strategic analyst AI. Your task is to 
 
 **CRITICAL INSTRUCTIONS:**
 1.  **Synthesize, Don't Just List:** Do not merely summarize the articles. Integrate them into a coherent narrative that directly answers the user's query.
-2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #]. For example: "Recent reports indicate a shift in consumer sentiment [Source 1]."
-3.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User's Analysis Prompt" provided below.
-4.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.
+2.  **Cite Your Sources:** When you incorporate information from a web article, you MUST cite it in-line using the format [Source #].
+3.  **Create a Reference List:** At the very end of your analysis, you MUST include a markdown section titled '## References'. In this section, list every source you cited, formatted as a bulleted list with the title and the full link from the contextual data.
+4.  **Address the Prompt Directly:** The core of your output must be a direct and thorough response to the "User's Analysis Prompt" provided below.
+5.  **Output Format:** The final report **MUST** be in professional markdown format. Use # for the main title, ## for major sections, and ### for sub-sections. This is essential for correct rendering.
 
 ---
 **CONTEXTUAL DATA**
@@ -1192,9 +1193,13 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${ticker} for "${topicName}"...`;
 
     try {
-        // 1. Get Company Name from portfolio cache
-        const portfolioItem = portfolioCache.find(stock => stock.ticker === ticker);
-        const companyName = portfolioItem ? portfolioItem.companyName : ticker;
+        // 1. Get Company Name from Firestore for reliability
+        let companyName = ticker;
+        const portfolioDocRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
+        const portfolioDocSnap = await getDoc(portfolioDocRef);
+        if (portfolioDocSnap.exists() && portfolioDocSnap.data().companyName) {
+            companyName = portfolioDocSnap.data().companyName;
+        }
 
         // 2. Perform web search
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching web for recent context...`;
@@ -1205,9 +1210,9 @@ async function handleCustomAnalysis(ticker, topicName, userPrompt) {
         
         let searchResultsText = "No relevant articles found.";
         if (validArticles.length > 0) {
-            searchResultsText = validArticles.slice(0, 5).map((article, index) => 
-                `[Source ${index + 1}]: ${article.snippet} (URL: ${article.link})`
-            ).join('\n');
+            searchResultsText = validArticles.slice(0, 8).map((article, index) => 
+                `[Source ${index + 1}]\nTitle: ${article.title}\nSnippet: ${article.snippet}\nLink: ${article.link}`
+            ).join('\n\n---\n');
         }
 
         // 3. Construct final prompt
