@@ -258,7 +258,7 @@ function displayMessageInModal(message, type = 'info') {
     const titleEl = document.createElement('h2');
     titleEl.className = 'text-2xl font-bold mb-4';
     const contentEl = document.createElement('p');
-    contentEl.className = 'mb-6 text-gray-500';
+    contentEl.className = 'mb-6 text-gray-500 whitespace-pre-wrap';
     contentEl.textContent = message;
     const okButton = document.createElement('button');
     okButton.textContent = 'OK';
@@ -401,7 +401,7 @@ async function handleLogin() {
     } catch (error) {
         console.error("Google Sign-In or GAPI initialization failed:", error);
         googleAccessToken = null;
-        // The detailed error is now shown from within initializeGapiClient
+        // The detailed error is now shown from within initializeGapiClient, so only show a generic message if that didn't trigger.
         if (!gapiInitialized) {
              displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers or console errors. If the problem persists, verify your Google Client ID and API settings.`, 'error');
         }
@@ -413,7 +413,6 @@ async function initializeGapiClient() {
         gapi.load('client', async () => {
             try {
                 // Initialize the GAPI client with the app's client ID and required scopes.
-                // The access token from Firebase will authorize the requests.
                 await gapi.client.init({
                     clientId: googleClientId,
                     scope: 'https://www.googleapis.com/auth/drive.file',
@@ -428,12 +427,15 @@ async function initializeGapiClient() {
                 gapiInitialized = true;
                 resolve();
             } catch (error) {
-                console.error("Error initializing GAPI client:", error);
+                // GAPI errors are often objects, not standard Error instances. Stringify to see details.
+                const errorDetails = JSON.stringify(error, null, 2);
+                console.error("Error initializing GAPI client:", errorDetails);
+                
+                // Extract a more useful message for the user if available.
+                const errorMessage = error?.result?.error?.message || error?.details || 'Unknown GAPI client error. Check console for details.';
+
                 displayMessageInModal(
-                    `Failed to initialize Google Drive. Please ensure: 
-                    1. The Google Drive API is enabled in your Google Cloud project. 
-                    2. The Client ID is correct and configured for a Web Application. 
-                    Error: ${error.details || error.message || 'Unknown GAPI Error'}`, 
+                    `Failed to initialize Google Drive integration. Please verify your Google Cloud OAuth Client ID configuration.\n\n1. Ensure your app's URL is in the 'Authorized JavaScript origins'.\n2. Ensure the correct Client ID is entered in the app.\n\nError: ${errorMessage}`,
                     'error'
                 );
                 reject(error);
@@ -500,7 +502,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -1074,7 +1076,7 @@ async function handleUndervaluedAnalysis(symbol) {
         document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
         openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
 
-    } catch (error) {
+    } catch (error).js:1894
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
