@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.3"; 
+const APP_VERSION = "6.2.4"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1076,7 +1076,7 @@ async function handleUndervaluedAnalysis(symbol) {
         document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
         openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
 
-    } catch (error).js:1894
+    } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
