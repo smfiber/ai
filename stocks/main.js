@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.5"; 
+const APP_VERSION = "6.2.6"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -203,9 +203,8 @@ let alphaVantageApiKey = "";
 let geminiApiKey = "";
 let searchApiKey = "";
 let searchEngineId = "";
-let googleClientId = ""; // New for Drive API
-let googleAccessToken = null; // New for Drive API
-let gapiInitialized = false; // New for Drive API
+let googleClientId = "";
+let driveTokenClient = null;
 let driveFolderId = null; // Cache for Drive folder
 let portfolioCache = [];
 
@@ -392,82 +391,67 @@ async function handleApiKeySubmit(e) {
     firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
+    initializeGoogleSignIn();
     closeModal(CONSTANTS.MODAL_API_KEY);
 }
 
 // --- AUTHENTICATION & GAPI INITIALIZATION ---
 
-async function handleLogin() {
-    if (!auth) {
-        displayMessageInModal("Authentication service is not ready. Please submit your API keys first.", "warning");
-        return;
-    }
-    const provider = new GoogleAuthProvider();
-    // Request scope for Google Drive file creation
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    
+function initializeGoogleSignIn() {
+    if (!googleClientId) return;
     try {
-        const result = await signInWithPopup(auth, provider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        googleAccessToken = credential.accessToken;
-        
-        // Initialize the Google API client after getting the token
-        await initializeGapiClient();
-
+        google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleCredentialResponse,
+        });
     } catch (error) {
-        console.error("Google Sign-In or GAPI initialization failed:", error);
-        googleAccessToken = null;
-        // The detailed error is now shown from within initializeGapiClient, so only show a generic message if that didn't trigger.
-        if (!gapiInitialized) {
-             displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers or console errors. If the problem persists, verify your Google Client ID and API settings.`, 'error');
-        }
+        console.error("Google Sign-In initialization error:", error);
+        displayMessageInModal("Could not initialize Google Sign-In. Check your Client ID and ensure you are loading the page from a valid origin.", "error");
     }
 }
 
-async function initializeGapiClient() {
-    return new Promise((resolve, reject) => {
-        gapi.load('client', async () => {
-            try {
-                // Initialize the GAPI client with the app's client ID and required scopes.
-                await gapi.client.init({
-                    clientId: googleClientId,
-                    scope: 'https://www.googleapis.com/auth/drive.file',
-                });
+async function handleCredentialResponse(response) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Verifying login...";
+    try {
+        const credential = GoogleAuthProvider.credential(response.credential);
+        await signInWithCredential(auth, credential);
+    } catch (error) {
+        console.error("Firebase sign-in with Google credential failed:", error);
+        displayMessageInModal(`Login failed: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
 
-                // Set the token obtained from Firebase Auth.
-                gapi.client.setToken({ access_token: googleAccessToken });
-
-                // Load the specific API required (Google Drive).
-                await gapi.client.load('drive', 'v3');
-                
-                gapiInitialized = true;
-                resolve();
-            } catch (error) {
-                // GAPI errors are often objects, not standard Error instances. Stringify to see details.
-                const errorDetails = JSON.stringify(error, null, 2);
-                console.error("Error initializing GAPI client:", errorDetails);
-                
-                // Extract a more useful message for the user if available.
-                const errorMessage = error?.result?.error?.message || error?.details || 'Unknown GAPI client error. Check console for details.';
-
-                displayMessageInModal(
-                    `Failed to initialize Google Drive integration. Please verify your Google Cloud OAuth Client ID configuration.\n\n1. Ensure your app's URL is in the 'Authorized JavaScript origins'.\n2. Ensure the correct Client ID is entered in the app.\n\nError: ${errorMessage}`,
-                    'error'
-                );
-                reject(error);
-            }
+function initializeDriveTokenClient() {
+    if (!googleClientId) return;
+    try {
+        driveTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: googleClientId,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: '', // Callback is handled by the promise in getDriveToken
         });
-    });
+    } catch (error) {
+        console.error("Drive token client initialization failed:", error);
+    }
 }
 
 function handleLogout() {
-    if (auth) signOut(auth).catch(error => console.error("Sign out failed:", error));
+    if (auth) {
+        signOut(auth).catch(error => console.error("Sign out failed:", error));
+    }
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.disableAutoSelect();
+    }
 }
 
 function setupAuthUI(user) {
     const authStatusEl = document.getElementById('auth-status');
     const appContainer = document.getElementById('app-container');
     if (!authStatusEl || !appContainer) return;
+
+    authStatusEl.innerHTML = ''; // Clear previous state
 
     if (user && !user.isAnonymous) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
@@ -483,12 +467,14 @@ function setupAuthUI(user) {
                 <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>`;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
+        initializeDriveTokenClient();
     } else {
-        authStatusEl.innerHTML = `<button id="login-button" class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-full">Login with Google</button>`;
-        const loginButton = document.getElementById('login-button');
-        if (loginButton) loginButton.addEventListener('click', handleLogin);
-        if(!user) {
-             appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
+        appContainer.classList.add(CONSTANTS.CLASS_HIDDEN);
+        if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.renderButton(
+                authStatusEl,
+                { theme: "outline", size: "large", type: "standard", text: "signin_with" }
+            );
         }
     }
 }
@@ -1155,9 +1141,30 @@ async function handleUndervaluedAnalysis(symbol) {
 
 // --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
 
+function getDriveToken() {
+    return new Promise((resolve, reject) => {
+        if (!driveTokenClient) {
+            return reject(new Error("Drive token client not initialized."));
+        }
+        
+        try {
+            driveTokenClient.callback = (tokenResponse) => {
+                if (tokenResponse.error) {
+                    return reject(new Error(`Error getting drive token: ${tokenResponse.error}`));
+                }
+                resolve(tokenResponse.access_token);
+            };
+        
+            driveTokenClient.requestAccessToken({ prompt: '' });
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
 async function handleSaveToDrive(modalId) {
-    if (!gapiInitialized || !googleAccessToken) {
-        displayMessageInModal("Google Drive is not ready. Please ensure you are logged in.", "warning");
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+        displayMessageInModal("Please log in with Google to save files to Drive.", "warning");
         return;
     }
 
@@ -1198,6 +1205,15 @@ async function handleSaveToDrive(modalId) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
 
     try {
+        const accessToken = await getDriveToken();
+        
+        await new Promise((resolve, reject) => {
+            gapi.load('client', () => {
+                gapi.client.setToken({ access_token: accessToken });
+                gapi.client.load('drive', 'v3').then(resolve).catch(reject);
+            });
+        });
+
         const folderId = await getOrCreateDriveFolder();
         await createDriveFile(folderId, fileName, contentToSave);
         displayMessageInModal(`${fileName} was saved successfully to your "Stock Evaluations" folder in Google Drive.`, 'info');
@@ -1210,7 +1226,8 @@ async function handleSaveToDrive(modalId) {
 }
 
 async function getOrCreateDriveFolder() {
-    if (driveFolderId) return driveFolderId;
+    let folderId = driveFolderId;
+    if (folderId) return folderId;
 
     const folderName = "Stock Evaluations";
     
@@ -1219,9 +1236,8 @@ async function getOrCreateDriveFolder() {
         fields: 'files(id, name)',
     });
 
-    if (response.result.files.length > 0) {
-        driveFolderId = response.result.files[0].id;
-        return driveFolderId;
+    if (response.result.files && response.result.files.length > 0) {
+        folderId = response.result.files[0].id;
     } else {
         const fileMetadata = {
             'name': folderName,
@@ -1231,9 +1247,10 @@ async function getOrCreateDriveFolder() {
             resource: fileMetadata,
             fields: 'id'
         });
-        driveFolderId = createResponse.result.id;
-        return driveFolderId;
+        folderId = createResponse.result.id;
     }
+    driveFolderId = folderId;
+    return folderId;
 }
 
 async function createDriveFile(folderId, fileName, content) {
@@ -1256,13 +1273,15 @@ async function createDriveFile(folderId, fileName, content) {
         content +
         close_delim;
 
-    await gapi.client.request({
+    const response = await gapi.client.request({
         path: '/upload/drive/v3/files',
         method: 'POST',
         params: { uploadType: 'multipart' },
         headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
         body: multipartRequestBody,
     });
+    
+    return response;
 }
 
 // --- APP INITIALIZATION TRIGGER ---
