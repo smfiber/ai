@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.3"; // [MODIFIED] Improved contextual link generation.
+const APP_VERSION = "1.5.4"; // [MODIFIED] Added auto-login trigger for Save to Drive.
 
 // --- Global State ---
 let db;
@@ -24,6 +24,7 @@ let originalGeneratedText = new Map();
 let aiLog = [];
 let currentHierarchyPath = [];
 let selectedHierarchyItems = { main: null, sub: null, final: null };
+let pendingDriveSave = null;
 
 // --- Algolia State ---
 let algoliaAppId = '';
@@ -304,10 +305,15 @@ function initGisClient() {
                 if (gapiInited && oauthToken && oauthToken.access_token) {
                     gapi.client.setToken(oauthToken);
                     updateSigninStatus(true);
+                    if (pendingDriveSave) {
+                        saveContentToDrive(pendingDriveSave.content, pendingDriveSave.fileName, pendingDriveSave.statusElement);
+                        pendingDriveSave = null;
+                    }
                 } else if (!oauthToken || !oauthToken.access_token) {
                     console.error("Authentication failed or was cancelled. Token not received.");
                     displayMessageInModal("Google Drive connection failed. Please try again.", 'error');
                     updateSigninStatus(false);
+                    pendingDriveSave = null;
                 }
             },
         });
@@ -775,7 +781,9 @@ async function handleSaveToDriveClick(button) {
 
 async function saveContentToDrive(content, fileName, statusElement) {
     if (!gapiInited || !gisInited || !oauthToken || !oauthToken.access_token) {
-        statusElement.textContent = 'Please connect to Google Drive first.';
+        pendingDriveSave = { content, fileName, statusElement };
+        if (statusElement) statusElement.textContent = 'Connecting to Google Drive...';
+        handleAuthClick();
         return;
     }
 
