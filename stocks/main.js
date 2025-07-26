@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.4"; 
+const APP_VERSION = "6.2.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -175,6 +175,22 @@ const UNDERVALUED_ANALYSIS_PROMPT = [
     '- **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."',
     '',
     '**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.'
+].join('\n');
+
+const NEWS_SENTIMENT_PROMPT = [
+    'Role: You are an expert financial news sentiment analyst.',
+    'Task: Analyze the sentiment of the following news articles for {companyName} ({tickerSymbol}). Classify each article as \'Positive\', \'Negative\', or \'Neutral\'. Provide a brief, one-sentence justification for your classification.',
+    'Format: Return a JSON array of objects, where each object has "sentiment" and "justification" keys. The array order must match the article order.',
+    '',
+    'Articles (JSON format):',
+    '{news_articles_json}',
+    '',
+    'Example Output:',
+    '[',
+    '  { "sentiment": "Positive", "justification": "The article reports higher-than-expected quarterly earnings and a positive outlook." },',
+    '  { "sentiment": "Negative", "justification": "The article discusses a new regulatory investigation into the company\'s sales practices." },',
+    '  { "sentiment": "Neutral", "justification": "The article provides a factual overview of the company\'s upcoming shareholder meeting." }',
+    ']'
 ].join('\n');
 
 // --- Global State ---
@@ -824,6 +840,19 @@ function filterValidNews(articles) {
     );
 }
 
+function getSentimentDisplay(sentiment) {
+    switch (sentiment) {
+        case 'Positive':
+            return { icon: '👍', colorClass: 'text-green-600', bgClass: 'bg-green-100' };
+        case 'Negative':
+            return { icon: '👎', colorClass: 'text-red-600', bgClass: 'bg-red-100' };
+        case 'Neutral':
+            return { icon: '😐', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
+        default:
+            return { icon: '', colorClass: '', bgClass: '' };
+    }
+}
+
 function renderNewsArticles(articles, symbol) {
     const card = document.getElementById(`card-${symbol}`);
     if (!card) return;
@@ -837,12 +866,29 @@ function renderNewsArticles(articles, symbol) {
     if (articles.length === 0) {
         newsContainer.innerHTML = `<p class="text-sm text-gray-500">No recent news articles found.</p>`;
     } else {
-        const articlesHtml = articles.slice(0, 5).map(article => `
-            <div class="mb-4">
-                <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">${sanitizeText(article.title)}</a>
-                <p class="text-sm text-gray-600 mt-1">${sanitizeText(article.snippet)}</p>
-            </div>
-        `).join('');
+        const articlesHtml = articles.slice(0, 5).map(article => {
+            let sentimentHtml = '';
+            if (article.sentiment && article.sentiment.sentiment) {
+                const { icon, colorClass, bgClass } = getSentimentDisplay(article.sentiment.sentiment);
+                sentimentHtml = `
+                    <div class="mt-2 p-2 rounded-lg ${bgClass} flex items-start gap-2">
+                        <span class="text-lg ${colorClass}">${icon}</span>
+                        <p class="text-sm ${colorClass}">
+                            <span class="font-semibold">${article.sentiment.sentiment}:</span>
+                            ${sanitizeText(article.sentiment.justification)}
+                        </p>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="mb-4">
+                    <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">${sanitizeText(article.title)}</a>
+                    <p class="text-sm text-gray-600 mt-1">${sanitizeText(article.snippet)}</p>
+                    ${sentimentHtml}
+                </div>
+            `;
+        }).join('');
         newsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-2">Recent News</h3>${articlesHtml}`;
     }
     card.appendChild(newsContainer);
@@ -858,16 +904,40 @@ async function handleFetchNews(symbol) {
     }
     
     button.disabled = true;
-    button.textContent = 'Fetching...';
+    button.textContent = 'Analyzing...';
 
     try {
         const stockData = await getStockDataFromCache(symbol);
         const companyName = get(stockData, 'OVERVIEW.Name', symbol);
         const query = encodeURIComponent(`${companyName} (${symbol}) stock market news`);
-        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}`;
+        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date`;
         
         const newsData = await callApi(url);
-        const validArticles = filterValidNews(newsData.items);
+        let validArticles = filterValidNews(newsData.items);
+
+        if (validArticles.length > 0) {
+            try {
+                const articlesForPrompt = validArticles.slice(0, 5).map(a => ({ title: a.title, snippet: a.snippet }));
+                const prompt = NEWS_SENTIMENT_PROMPT
+                    .replace('{companyName}', companyName)
+                    .replace('{tickerSymbol}', symbol)
+                    .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+                const sentimentResult = await callGeminiApi(prompt);
+                const cleanedJsonString = sentimentResult.replace(/```json\n|```/g, '').trim();
+                const sentiments = JSON.parse(cleanedJsonString);
+                
+                if (Array.isArray(sentiments) && sentiments.length === articlesForPrompt.length) {
+                    validArticles = validArticles.map((article, index) => ({
+                        ...article,
+                        sentiment: sentiments[index]
+                    }));
+                }
+            } catch (sentimentError) {
+                console.error("Could not perform sentiment analysis:", sentimentError);
+            }
+        }
+
         renderNewsArticles(validArticles, symbol);
 
     } catch (error) {
