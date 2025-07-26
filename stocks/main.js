@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.2.6"; 
+const APP_VERSION = "6.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -15,6 +15,7 @@ const CONSTANTS = {
     MODAL_FULL_DATA: 'fullDataModal',
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
+    MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
     // Forms & Inputs
@@ -143,7 +144,7 @@ const UNDERVALUED_ANALYSIS_PROMPT = [
     'Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.',
     '',
     '## 2. Fundamental Valuation Deep Dive',
-    "Evaluate the company’s intrinsic value through a rigorous examination of its financial health and market multiples.",
+    "Evaluate the company窶冱 intrinsic value through a rigorous examination of its financial health and market multiples.",
     '### 2.1. Relative Valuation Multiples',
     '- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?',
     "- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.",
@@ -191,6 +192,129 @@ const NEWS_SENTIMENT_PROMPT = [
     '  { "sentiment": "Negative", "justification": "The article discusses a new regulatory investigation into the company\'s sales practices." },',
     '  { "sentiment": "Neutral", "justification": "The article provides a factual overview of the company\'s upcoming shareholder meeting." }',
     ']'
+].join('\n');
+
+const BULL_VS_BEAR_PROMPT = [
+    'Role: You are a skilled financial debater AI. Your task is to generate a concise and data-driven Bull and Bear case for {companyName} using ONLY the provided JSON data.',
+    'Output Format: Use markdown format. Create a clear "Bull Case" section and a "Bear Case" section, each with 3-4 bullet points supported by specific data from the JSON.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    '# Bull vs. Bear Analysis: {companyName} ({tickerSymbol})',
+    '',
+    '## The Bull Case (Reasons to be Optimistic)',
+    'Construct an argument based on the company\'s strengths. Focus on metrics like:',
+    '- Consistent revenue or earnings growth (from INCOME_STATEMENT).',
+    '- Strong profitability margins (ProfitMargin, ROE from OVERVIEW).',
+    '- Robust operating cash flow (from CASH_FLOW).',
+    '- A potentially undervalued state based on key multiples (PERatio, PEGRatio from OVERVIEW).',
+    '',
+    '## The Bear Case (Reasons for Caution)',
+    'Construct an argument based on the company\'s weaknesses. Focus on metrics like:',
+    '- High debt levels or leverage (Debt-to-Equity from BALANCE_SHEET).',
+    '- Declining revenue or shrinking margins.',
+    '- Weak cash flow or a high reliance on financing activities.',
+    '- A potentially overvalued state, indicated by high valuation multiples compared to growth.',
+].join('\n');
+
+const MOAT_ANALYSIS_PROMPT = [
+    'Role: You are a business strategy analyst AI. Your goal is to assess the likely strength of {companyName}\'s economic moat using the provided financial data.',
+    'Output Format: Provide a brief report in markdown, concluding with a qualitative verdict on the moat\'s strength (e.g., "Wide," "Narrow," or "None").',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    '# Economic Moat Assessment: {companyName} ({tickerSymbol})',
+    '',
+    '## 1. Evidence of Competitive Advantage',
+    'Analyze the data for signs of a durable competitive advantage. Discuss:',
+    '- **Profitability as a Signal:** Are the ProfitMargin, OperatingMarginTTM, and ReturnOnEquityTTM (from OVERVIEW) consistently high, suggesting pricing power?',
+    '- **Brand/Intangible Assets:** While not directly stated, does the company\'s Description hint at a strong brand that supports its margins?',
+    '- **Scale or Cost Advantages:** Does the trend in gross margins (calculable from INCOME_STATEMENT) show stability even as revenue grows?',
+    '',
+    '## 2. Moat Sustainability',
+    'Assess how sustainable this advantage might be by looking at:',
+    '- **Capital Allocation:** How is cash from operations being used? Are capitalExpenditures (from CASH_FLOW) significant, suggesting reinvestment to maintain the moat?',
+    '- **Financial Health:** Is the balance sheet strong enough (low Debt-to-Equity) to fend off competitors?',
+    '',
+    '## 3. Verdict on Moat Strength',
+    'Based on the evidence, provide a concluding assessment of the company\'s economic moat.',
+].join('\n');
+
+const DIVIDEND_SAFETY_PROMPT = [
+    'Role: You are a conservative income investment analyst AI. Your sole focus is to determine the safety and sustainability of {companyName}\'s dividend based on the provided data.',
+    'Output Format: Create a markdown report with specific ratio calculations and a final safety rating.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    '# Dividend Safety Analysis: {companyName} ({tickerSymbol})',
+    '',
+    '## 1. Core Dividend Metrics',
+    '- **Current Dividend Yield:** [Value from OVERVIEW.DividendYield]',
+    '',
+    '## 2. Payout Ratio Analysis',
+    'Calculate and interpret the following payout ratios using the most recent annual data from the financial statements:',
+    '- **Earnings Payout Ratio:** (dividendPayout / netIncome). Is the company paying out more than it earns?',
+    '- **Cash Flow Payout Ratio:** (dividendPayout / operatingCashflow). This is critical. Is the dividend covered by actual cash generated from operations?',
+    '',
+    '## 3. Balance Sheet Impact',
+    'Analyze the company\'s ability to sustain the dividend under pressure:',
+    '- **Debt Load:** How has the Debt-to-Equity ratio (from BALANCE_SHEET) trended? High or rising debt can threaten dividend payments.',
+    '- **Cash Position:** Examine the trend in cashAndShortTermInvestments (from BALANCE_SHEET). Is there a sufficient cash buffer?',
+    '',
+    '## 4. Final Dividend Safety Verdict',
+    'Conclude with a rating: **"Safe," "Adequate,"** or **"At Risk,"** with a one-sentence justification based on the analysis above.',
+].join('\n');
+
+const GROWTH_OUTLOOK_PROMPT = [
+    'Role: You are a forward-looking equity analyst AI. Identify the primary potential growth drivers for {companyName} based on the provided data.',
+    'Output Format: A concise markdown summary of key growth indicators and a concluding outlook.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    '# Growth Outlook: {companyName} ({tickerSymbol})',
+    '',
+    '## 1. Recent Performance Momentum',
+    'Analyze the most recent growth signals from the OVERVIEW data:',
+    '- **Quarterly Growth:** What do the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY figures indicate about recent business momentum?',
+    '',
+    '## 2. Reinvestment for Future Growth',
+    'Examine the CASH_FLOW statement for signs of investment:',
+    '- **Capital Expenditures:** What is the trend in capitalExpenditures? Is the company actively investing in its future operations?',
+    '',
+    '## 3. Market Expectations',
+    'Interpret the market\'s view on the company\'s growth prospects from the OVERVIEW data:',
+    '- **Forward P/E vs. Trailing P/E:** Does the ForwardPE suggest earnings are expected to grow, shrink, or stay flat?',
+    '- **Analyst Consensus:** How does the AnalystTargetPrice compare to the stock\'s 50-Day and 200-Day Moving Averages?',
+    '',
+    '## 4. Synthesized Growth Outlook',
+    'Based on the factors above, provide a brief, synthesized outlook on the company\'s growth prospects.',
+].join('\n');
+
+const RISK_ASSESSMENT_PROMPT = [
+    'Role: You are a risk analyst AI. Your job is to identify and summarize the most significant risks for {companyName} using only the provided data.',
+    'Output Format: A prioritized, bulleted list in markdown, categorized by risk type.',
+    '',
+    'JSON Data:',
+    '{jsonData}',
+    '',
+    '# Key Risk Summary: {companyName} ({tickerSymbol})',
+    '',
+    '## Financial Risks',
+    '- **Leverage:** Is the Debt-to-Equity ratio (from BALANCE_SHEET) high? Calculate and state the current ratio.',
+    '- **Liquidity:** Is the Current Ratio (totalCurrentAssets / totalCurrentLiabilities) low, suggesting short-term risk?',
+    '- **Cash Flow:** Is operatingCashflow negative or significantly lower than netIncome, suggesting poor earnings quality?',
+    '',
+    '## Market & Valuation Risks',
+    '- **Volatility:** Is the Beta (from OVERVIEW) greater than 1, indicating higher-than-market volatility?',
+    '- **Valuation:** Is the PERatio or PriceToSalesRatioTTM exceptionally high, suggesting the stock price is built on high expectations and vulnerable to setbacks?',
+    '',
+    '## Operational Risks',
+    '- **Growth Deceleration:** Is the QuarterlyRevenueGrowthYOY negative or showing a sharp slowdown?',
+    '- **Margin Compression:** Are profitability margins (ProfitMargin, OperatingMarginTTM) trending downwards?',
 ].join('\n');
 
 // --- Global State ---
@@ -829,11 +953,11 @@ function filterValidNews(articles) {
 function getSentimentDisplay(sentiment) {
     switch (sentiment) {
         case 'Positive':
-            return { icon: '👍', colorClass: 'text-green-600', bgClass: 'bg-green-100' };
+            return { icon: '総', colorClass: 'text-green-600', bgClass: 'bg-green-100' };
         case 'Negative':
-            return { icon: '👎', colorClass: 'text-red-600', bgClass: 'bg-red-100' };
+            return { icon: '綜', colorClass: 'text-red-600', bgClass: 'bg-red-100' };
         case 'Neutral':
-            return { icon: '😐', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
+            return { icon: '�', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
         default:
             return { icon: '', colorClass: '', bgClass: '' };
     }
@@ -963,11 +1087,18 @@ function renderOverviewCard(data, symbol) {
                 <div><p class="text-sm text-gray-500">EPS</p><p class="text-lg font-semibold">${sanitizeText(eps)}</p></div>
                 <div><p class="text-sm text-gray-500">52 Week High</p><p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p></div>
             </div>
-            <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-end">
+            <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View JSON</button>
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
+            </div>
+            <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
+                <button data-symbol="${symbol}" class="bull-bear-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg">Bull vs. Bear</button>
+                <button data-symbol="${symbol}" class="moat-analysis-button text-sm bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg">Moat Analysis</button>
+                <button data-symbol="${symbol}" class="dividend-safety-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg">Dividend Safety</button>
+                <button data-symbol="${symbol}" class="growth-outlook-button text-sm bg-lime-500 hover:bg-lime-600 text-white font-semibold py-2 px-4 rounded-lg">Growth Outlook</button>
+                <button data-symbol="${symbol}" class="risk-assessment-button text-sm bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg">Risk Assessment</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
@@ -988,6 +1119,11 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
+        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
+        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
+        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
+        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
+        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
     });
 
     document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
@@ -1033,6 +1169,7 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_PORTFOLIO, button: 'close-portfolio-modal', bg: 'close-portfolio-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
@@ -1138,6 +1275,117 @@ async function handleUndervaluedAnalysis(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
+async function handleBullBearAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Bull vs. Bear case for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = BULL_VS_BEAR_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Bull vs. Bear | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleMoatAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Moat analysis for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = MOAT_ANALYSIS_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Moat Analysis | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleDividendSafetyAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Dividend Safety analysis for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = DIVIDEND_SAFETY_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Dividend Safety | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleGrowthOutlookAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Growth Outlook analysis for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = GROWTH_OUTLOOK_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Growth Outlook | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleRiskAssessmentAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Risk Assessment for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = RISK_ASSESSMENT_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Risk Assessment | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 // --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
 
@@ -1294,3 +1542,299 @@ function initializeApplication() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApplication);
+```html:index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Research Hub</title>
+    
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/marked/marked.min.js](https://cdn.jsdelivr.net/npm/marked/marked.min.js)"></script>
+    <script src="[https://accounts.google.com/gsi/client](https://accounts.google.com/gsi/client)" async defer></script>
+    <script src="[https://apis.google.com/js/api.js](https://apis.google.com/js/api.js)" async defer></script>
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body class="bg-gray-100">
+
+    <header class="relative bg-gray-800 text-white p-6 shadow-lg">
+        <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20"></div>
+        <div class="relative container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">Stock Research Hub</h1>
+                <div class="flex items-center gap-x-3">
+                    <p class="text-sm text-gray-300 mt-1">Your Personal Market Co-Pilot</p>
+                    <span id="app-version-display" class="text-xs text-gray-400 mt-1"></span>
+                </div>
+            </div>
+            <div id="auth-status" class="flex items-center"></div>
+        </div>
+    </header>
+
+    <div id="app-container" class="hidden">
+        <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+            <div id="main-view" class="text-center py-16">
+                <button id="view-stocks-button" class="btn-main-action bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg">
+                    View My Stock Portfolio
+                </button>
+            </div>
+            <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
+                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add New Stock to Portfolio</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker symbol to add it to your portfolio.</p>
+                <form id="stock-research-form" class="flex items-center gap-4">
+                    <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
+                    <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
+                    <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Add Stock</button>
+                </form>
+            </div>
+            <div id="dynamic-content-container" class="space-y-8"></div>
+        </main>
+        <button id="scroll-to-top-button" class="fixed w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30 hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
+    </div>
+
+    <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
+            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+            <form id="apiKeyForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="alphaVantageApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Alpha Vantage API Key</label>
+                        <input type="text" id="alphaVantageApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Alpha Vantage API Key">
+                    </div>
+                    <div>
+                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
+                        <input type="text" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
+                    </div>
+                    <div>
+                        <label for="googleClientIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Cloud Client ID</label>
+                        <input type="text" id="googleClientIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud Web Client ID">
+                    </div>
+                    <div>
+                        <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key (Google)</label>
+                        <input type="text" id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud API Key">
+                    </div>
+                    <div>
+                        <label for="searchEngineIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Search Engine ID (cx value)</label>
+                        <input type="text" id="searchEngineIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Custom Search Engine ID">
+                    </div>
+                    <div>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    </div>
+                </div>
+                <p id="api-key-error" class="text-red-500 text-sm mt-2"></p>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md">Save and Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="loadingStateModal" class="fixed inset-0 z-[110] flex-col items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative flex flex-col items-center"><div class="loader"></div><p id="loading-message" class="text-white mt-4"></p></div></div>
+    <div id="messageModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative modal-content"></div></div>
+    <div id="confirmationModal" class="fixed inset-0 z-[110] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-sm m-4 text-center"><h2 id="confirmation-title" class="text-2xl font-bold mb-4 text-yellow-600">Are you sure?</h2><p id="confirmation-message" class="mb-6 text-gray-500">This action cannot be undone.</p><div class="flex justify-center gap-4"><button id="cancel-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg w-full">Cancel</button><button id="confirm-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-5 rounded-lg w-full">Confirm</button></div></div></div>
+    
+    <div id="fullDataModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-full-data-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <div>
+                    <h2 id="full-data-modal-title" class="text-2xl font-bold text-gray-800">Full Cached Data</h2>
+                    <p id="full-data-modal-timestamp" class="text-sm text-gray-500"></p>
+                </div>
+                <button id="close-full-data-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50">
+                <pre id="full-data-content" class="text-xs whitespace-pre-wrap break-all"></pre>
+            </div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <button data-modal-id="fullDataModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="financialAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-financial-analysis-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="financial-analysis-modal-title" class="text-2xl font-bold text-gray-800">Financial Analysis</h2>
+                <button id="close-financial-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="financial-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <button data-modal-id="financialAnalysisModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="undervaluedAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-undervalued-analysis-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="undervalued-analysis-modal-title" class="text-2xl font-bold text-gray-800">Undervalued Stock Analysis</h2>
+                <button id="close-undervalued-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="undervalued-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <button data-modal-id="undervaluedAnalysisModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customAnalysisModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-custom-analysis-modal-bg"></div>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="custom-analysis-modal-title" class="text-2xl font-bold text-gray-800">Custom Analysis</h2>
+                <button id="close-custom-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="custom-analysis-content" class="prose p-6 overflow-y-auto flex-grow"></div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <button data-modal-id="customAnalysisModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="portfolioModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-portfolio-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4"><div class="p-6 border-b border-gray-200 flex justify-between items-center"><h2 class="text-2xl font-bold text-gray-800">My Stock Portfolio</h2><button id="close-portfolio-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div><div class="p-4 border-b border-gray-200"><input type="text" id="portfolio-search-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Search by Company or Ticker..."></div><div id="portfolio-list-container" class="overflow-y-auto flex-grow"></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end"><button id="add-new-stock-button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Add New Stock</button></div></div></div>
+    <div id="manageStockModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-stock-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4"><form id="manage-stock-form" class="flex flex-col h-full"><div class="p-6 border-b border-gray-200"><h2 id="manage-stock-modal-title" class="text-2xl font-bold text-gray-800">Manage Stock</h2></div><div class="p-6 overflow-y-auto flex-grow space-y-4"><input type="hidden" id="manage-stock-original-ticker"><div><label for="manage-stock-ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label><input type="text" id="manage-stock-ticker" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" required></div><div><label for="manage-stock-name" class="block text-sm font-medium text-gray-700">Company Name</label><input type="text" id="manage-stock-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-exchange" class="block text-sm font-medium text-gray-700">Exchange</label><input type="text" id="manage-stock-exchange" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-4"><button type="button" id="cancel-manage-stock-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button></div></form></div></div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
+```css:style.css
+/*
+ * AI Stock Research Hub Stylesheet
+ * Version: 6.0.0
+ * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
+ * This includes the loading spinner animation, modal visibility rules, and root theme variables.
+ */
+
+/*
+ * =================================================================
+ * THEME & COLOR VARIABLES
+ * =================================================================
+ */
+:root {
+    --color-primary: #4f46e5;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: #f3f4f6; /* bg-gray-100 */
+    color: #1f2937; /* color-text */
+}
+
+/*
+ * =================================================================
+ * MODAL STYLES
+ * =================================================================
+ */
+.modal {
+    display: none;
+}
+.modal.is-open {
+    display: flex;
+}
+body.modal-open {
+    overflow: hidden;
+}
+
+/*
+ * =================================================================
+ * LOADER & SPINNER STYLES
+ * =================================================================
+ */
+.loader {
+    width: 4rem; /* 16px * 4 = 64px */
+    height: 4rem;
+    border-width: 4px;
+    border-style: solid;
+    border-radius: 9999px; /* rounded-full */
+    border-color: #e5e7eb; /* border-gray-200 */
+    animation: spin 1s linear infinite;
+    border-top-color: var(--color-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * =================================================================
+ * AI-GENERATED CONTENT STYLES
+ * =================================================================
+ */
+#financial-analysis-content.prose h2,
+#undervalued-analysis-content.prose h2 {
+    margin-top: 1.75em;
+    margin-bottom: 1em;
+}
+
+#financial-analysis-content.prose h3,
+#undervalued-analysis-content.prose h3 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+#financial-analysis-content.prose p,
+#undervalued-analysis-content.prose p,
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    margin-bottom: 1em;
+}
+
+/* Enhanced list styling for better modal display */
+#financial-analysis-content.prose ul,
+#undervalued-analysis-content.prose ul {
+    padding-left: 1.5em; /* Add indentation */
+    list-style-type: disc; /* Ensure bullets are visible */
+}
+
+#financial-analysis-content.prose ul li,
+#undervalued-analysis-content.prose ul li {
+    margin-bottom: 0.5em; /* Space out list items */
+}
+
+/*
+ * =================================================================
+ * NEW COMPONENT STYLES (v6.0.0)
+ * =================================================================
+ */
+
+/* Main action button on the home screen */
+.btn-main-action {
+    padding: 1.5rem 2.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+.btn-main-action:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Portfolio Hierarchy View */
+.portfolio-exchange-header {
+    background-color: #eef2ff; /* indigo-50 */
+    color: #4338ca; /* indigo-800 */
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-top: 1px solid #e0e7ff; /* indigo-200 */
+    border-bottom: 1px solid #e0e7ff; /* indigo-200 */
+    position: sticky;
+    top: 0;
+}
