@@ -15,7 +15,6 @@ const CONSTANTS = {
     MODAL_FULL_DATA: 'fullDataModal',
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
-    MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
     // Forms & Inputs
@@ -34,7 +33,6 @@ const CONSTANTS = {
     ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
     ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
     ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
-    ELEMENT_CUSTOM_ANALYSIS_CONTENT: 'custom-analysis-content',
     // Buttons
     BUTTON_SCROLL_TOP: 'scroll-to-top-button',
     BUTTON_VIEW_STOCKS: 'view-stocks-button',
@@ -50,86 +48,6 @@ const CONSTANTS = {
 
 // List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
-
-const TOPIC_GENERATION_PROMPT = [
-    'Role: You are a team of senior financial analysts at a top-tier investment bank. Your task is to identify the most critical, timely, and actionable investment research topics for a given company.',
-    '',
-    '**CRITICAL INSTRUCTIONS:**',
-    '1.  **Identify 8 Key Topics:** For the company {companyName} ({tickerSymbol}), identify the 8 most important strategic topics an investor needs to understand right now. These should cover areas like competitive landscape, product innovation, monetization strategies, regulatory risks, growth drivers, and operational challenges.',
-    '2.  **Create Detailed Prompts:** For each of the 8 topics, create a detailed, specific prompt that would guide another AI analyst to write a comprehensive research article. This prompt should be insightful and ask probing questions.',
-    '3.  **JSON Output:** Your final output **MUST** be a valid JSON object. It should be an array of 8 objects. Each object must have two keys:',
-    '    * `"topicName"`: A short, descriptive title for the topic (e.g., "AI Monetization Strategy").',
-    '    * `"detailedPrompt"`: The full, detailed prompt you created for that topic.',
-    '4.  **Do NOT include any text, markdown, or formatting outside of the JSON object.** Your entire response must be the JSON itself.',
-    '',
-    'Example JSON Structure:',
-    '[',
-    '  {',
-    '    "topicName": "Example Topic 1",',
-    '    "detailedPrompt": "A very detailed prompt for an AI to analyze Example Topic 1 for the company..."',
-    '  },',
-    '  {',
-    '    "topicName": "Example Topic 2",',
-    '    "detailedPrompt": "Another very detailed prompt for an AI to analyze Example Topic 2..."',
-    '  }',
-    ']'
-].join('\n');
-
-const DRAFTING_PROMPT = [
-    'Role: You are a savvy financial journalist. Your mission is to synthesize the provided news articles into a compelling narrative that answers the user\'s core question.',
-    '**Your Playbook:**',
-    '1.  **Weave a Narrative:** Don\'t just list facts. Connect the dots and tell the underlying story based on the provided articles.',
-    '2.  **Cite Evidence:** As you write, you MUST cite information from the articles using inline citations like [Source 1], [Source 2], etc.',
-    '3.  **Answer the Core Question:** The heart of your article must directly address the "User\'s Analysis Prompt."',
-    '4.  **Format for Readability:** Use professional markdown (# for main title, ## for sections).',
-    '5.  **CRITICAL:** Do NOT add a "References" section. Only produce the main article body with citations.',
-    '---',
-    '**CONTEXTUAL DATA**',
-    '- Company Name: {companyName}',
-    '- Ticker Symbol: {tickerSymbol}',
-    '- Recent Web Search Results:',
-    '{web_search_results}',
-    '---',
-    '**USER\'S ANALYSIS PROMPT**',
-    'Based on the provided web search results, craft a story that provides a detailed analysis of the following:',
-    '{user_prompt}'
-].join('\n');
-
-const REVISION_PROMPT = [
-    'Role: You are a structural editor AI. Your task is to take a draft article and restructure it into a clean JSON format. You must preserve all content and inline citations.',
-    '',
-    '**CRITICAL INSTRUCTIONS:**',
-    '1.  **Analyze the Draft:** Read the DRAFT ARTICLE below and identify its main title and logical sections.',
-    '2.  **Structure as JSON:** Convert the article into a single, valid JSON object with the following structure:',
-    '    * A root object with a single key: `"article"`.',
-    '    * The `"article"` object must have two keys:',
-    '        * `"title"`: A string containing the main title of the article.',
-    '        * `"sections"`: An array of objects, where each object represents a section of the article.',
-    '3.  **Section Objects:** Each object inside the `"sections"` array must have two keys:',
-    '    * `"heading"`: A string for the section\'s heading.',
-    '    * `"content"`: A string containing all the paragraph text for that section. Preserve all inline citations like `[Source 1]`. Separate distinct paragraphs with a newline character (`\\n`).',
-    '4.  **Strict JSON Output:** Your entire response MUST be ONLY the JSON object. Do not include any text, markdown, or formatting outside of the JSON object itself.',
-    '',
-    'Example JSON Output:',
-    '{',
-    '  "article": {',
-    '    "title": "Example Article Title",',
-    '    "sections": [',
-    '      {',
-    '        "heading": "Introduction to the Topic",',
-    '        "content": "This is the first paragraph of the introduction. It contains important information [Source 1].\\nThis is the second paragraph of the same section [Source 2]."',
-    '      },',
-    '      {',
-    '        "heading": "A Deeper Dive",',
-    '        "content": "This section goes into more detail about the subject matter [Source 3, Source 4]."',
-    '      }',
-    '    ]',
-    '  }',
-    '}',
-    '---',
-    '**DRAFT ARTICLE TO RESTRUCTURE:**',
-    '{draft_article}'
-].join('\n');
 
 const FINANCIAL_ANALYSIS_PROMPT = [
     "Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.",
@@ -483,7 +401,10 @@ async function handleLogin() {
     } catch (error) {
         console.error("Google Sign-In or GAPI initialization failed:", error);
         googleAccessToken = null;
-        displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers or console errors.`, 'error');
+        // The detailed error is now shown from within initializeGapiClient
+        if (!gapiInitialized) {
+             displayMessageInModal(`Login failed: ${error.code}. Check for popup blockers or console errors. If the problem persists, verify your Google Client ID and API settings.`, 'error');
+        }
     }
 }
 
@@ -491,17 +412,30 @@ async function initializeGapiClient() {
     return new Promise((resolve, reject) => {
         gapi.load('client', async () => {
             try {
+                // Initialize the GAPI client with the app's client ID and required scopes.
+                // The access token from Firebase will authorize the requests.
                 await gapi.client.init({
-                    apiKey: geminiApiKey, // Re-using Gemini key for GAPI, as it's a Google Cloud key
                     clientId: googleClientId,
                     scope: 'https://www.googleapis.com/auth/drive.file',
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
                 });
+
+                // Set the token obtained from Firebase Auth.
                 gapi.client.setToken({ access_token: googleAccessToken });
+
+                // Load the specific API required (Google Drive).
+                await gapi.client.load('drive', 'v3');
+                
                 gapiInitialized = true;
                 resolve();
             } catch (error) {
                 console.error("Error initializing GAPI client:", error);
+                displayMessageInModal(
+                    `Failed to initialize Google Drive. Please ensure: 
+                    1. The Google Drive API is enabled in your Google Cloud project. 
+                    2. The Client ID is correct and configured for a Web Application. 
+                    Error: ${error.details || error.message || 'Unknown GAPI Error'}`, 
+                    'error'
+                );
                 reject(error);
             }
         });
@@ -566,7 +500,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -976,47 +910,9 @@ function renderOverviewCard(data, symbol) {
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
-                <button data-symbol="${symbol}" class="generate-topics-button text-sm bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg">Generate AI Analysis Topics</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
-}
-
-function renderGeneratedTopicsCard(symbol, topics) {
-    const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
-    if (!container) return;
-
-    // Remove existing topics card for this symbol if it exists
-    const existingCard = document.getElementById(`topics-card-${symbol}`);
-    if (existingCard) existingCard.remove();
-
-    if (!topics || topics.length === 0) return;
-
-    const topicsCard = document.createElement('div');
-    topicsCard.id = `topics-card-${symbol}`;
-    topicsCard.className = 'bg-white rounded-2xl shadow-lg border border-gray-200 p-6';
-    
-    let topicsHtml = `
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Generated AI Analysis Topics for ${sanitizeText(symbol)}</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    `;
-
-    topics.forEach(topic => {
-        topicsHtml += `
-            <button 
-                class="custom-analysis-button text-left w-full p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-200 rounded-lg transition-all duration-200 ease-in-out"
-                data-ticker="${sanitizeText(symbol)}" 
-                data-topic-name="${sanitizeText(topic.topicName)}" 
-                data-prompt="${sanitizeText(topic.detailedPrompt)}">
-                <span class="font-semibold text-indigo-700">${sanitizeText(topic.topicName)}</span>
-            </button>
-        `;
-    });
-
-    topicsHtml += `</div>`;
-    topicsCard.innerHTML = topicsHtml;
-    container.appendChild(topicsCard);
-    topicsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // --- EVENT LISTENER SETUP ---
@@ -1034,12 +930,6 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
-        if (target.classList.contains('generate-topics-button')) handleGenerateTopics(symbol);
-        if (target.classList.contains('custom-analysis-button')) {
-            const topicName = target.dataset.topicName;
-            const prompt = target.dataset.prompt;
-            handleCustomAnalysis(symbol, topicName, prompt);
-        }
     });
 
     document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
@@ -1085,7 +975,6 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
-        { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_PORTFOLIO, button: 'close-portfolio-modal', bg: 'close-portfolio-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
@@ -1191,137 +1080,6 @@ async function handleUndervaluedAnalysis(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
-async function handleGenerateTopics(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI topics for ${symbol}...`;
-
-    try {
-        const stockData = await getStockDataFromCache(symbol);
-        const companyName = get(stockData, 'OVERVIEW.Name', symbol);
-
-        const prompt = TOPIC_GENERATION_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, symbol);
-
-        const responseText = await callGeminiApi(prompt);
-        
-        // Clean the response to ensure it's valid JSON
-        const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        let topics;
-        try {
-            topics = JSON.parse(jsonString);
-        } catch (parseError) {
-            console.error("Failed to parse JSON from AI response:", parseError, jsonString);
-            throw new Error("The AI returned an invalid format for the topics. Please try again.");
-        }
-
-        renderGeneratedTopicsCard(symbol, topics);
-
-    } catch (error) {
-        console.error("Error generating topics:", error);
-        displayMessageInModal(`Could not generate AI topics: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleCustomAnalysis(ticker, topicName, userPrompt) {
-    if (!searchApiKey || !searchEngineId) {
-        displayMessageInModal("This feature requires the Web Search API Key and Search Engine ID.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing ${ticker} for "${topicName}"...`;
-
-    try {
-        // Step 1: Get Company Name & Search for news
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/4: Searching for recent news...`;
-        let companyName = ticker;
-        const portfolioDocRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        const portfolioDocSnap = await getDoc(portfolioDocRef);
-        if (portfolioDocSnap.exists() && portfolioDocSnap.data().companyName) {
-            companyName = portfolioDocSnap.data().companyName;
-        }
-        const searchQuery = encodeURIComponent(`${companyName} stock ${topicName}`);
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${searchQuery}`;
-        const searchData = await callApi(searchUrl);
-        const validArticles = filterValidNews(searchData.items).slice(0, 8);
-        
-        let searchResultsText = "No relevant articles found.";
-        if (validArticles.length > 0) {
-            searchResultsText = validArticles.map((article, index) => 
-                `[Source ${index + 1}]\nTitle: ${article.title}\nSnippet: ${article.snippet}\nLink: ${article.link}`
-            ).join('\n\n---\n');
-        }
-
-        // Step 2: Draft the article
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 2/4: Drafting initial analysis...`;
-        const draftingPrompt = DRAFTING_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, ticker)
-            .replace('{web_search_results}', searchResultsText)
-            .replace('{user_prompt}', userPrompt);
-        let draftArticle = await callGeminiApi(draftingPrompt);
-        draftArticle = draftArticle.replace(/```markdown/g, '').replace(/```/g, '').trim();
-
-        // Step 3: Revise the draft and get structured JSON
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/4: Structuring revised article...`;
-        const revisionPrompt = REVISION_PROMPT.replace('{draft_article}', draftArticle);
-        const jsonResponseText = await callGeminiApi(revisionPrompt);
-
-        // Step 4: Clean, Parse JSON, and build HTML report
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 4/4: Assembling final report...`;
-
-        // Clean the response to ensure it's valid JSON
-        const jsonString = jsonResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        let articleData;
-        try {
-            articleData = JSON.parse(jsonString).article;
-            if (!articleData.title || !Array.isArray(articleData.sections)) {
-                throw new Error("Parsed JSON has incorrect structure.");
-            }
-        } catch (parseError) {
-            console.error("Failed to parse JSON from AI response:", parseError, jsonString);
-            throw new Error("The AI returned an invalid format for the article structure. Please try again.");
-        }
-
-        // Build the article HTML from the structured JSON
-        let articleHtml = `<div class="prose max-w-none"><h1>${sanitizeText(articleData.title)}</h1>`;
-        articleData.sections.forEach(section => {
-            articleHtml += `<h2>${sanitizeText(section.heading)}</h2>`;
-            const paragraphs = section.content.split('\n').filter(p => p.trim() !== '');
-            paragraphs.forEach(p => {
-                articleHtml += `<p>${sanitizeText(p)}</p>`;
-            });
-        });
-        articleHtml += '</div>';
-
-        // Build the references section
-        let referencesHtml = '';
-        if (validArticles.length > 0) {
-            const referencesList = validArticles.map((article, index) =>
-                `<li><a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer">${sanitizeText(article.title)}</a></li>`
-            ).join('');
-            referencesHtml = `<div class="prose max-w-none"><h2>References</h2><ul>${referencesList}</ul></div>`;
-        }
-
-        const finalReportHtml = articleHtml + referencesHtml;
-
-        // Step 5: Render to HTML
-        document.getElementById(CONSTANTS.ELEMENT_CUSTOM_ANALYSIS_CONTENT).innerHTML = finalReportHtml;
-        document.getElementById('custom-analysis-modal-title').textContent = `${topicName} | ${ticker}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
-
-    } catch (error) {
-        displayMessageInModal(`Could not generate custom analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
 
 // --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
 
