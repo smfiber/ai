@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.7.0"; 
+const APP_VERSION = "6.8.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -68,9 +68,9 @@ const SECTOR_SYNTHESIS_PROMPT = [
     'Role: You are a data extraction AI. Your task is to process a list of financial news articles and structure the key information into a clean JSON object. Do not add any interpretation or analysis.',
     'Task: Read the provided JSON data of news articles for the "{sectorName}" sector. Extract the following information:',
     '1. A list of all unique companies mentioned, along with their stock ticker if available in the text.',
-    '2. For each company, list the specific reasons it was mentioned (e.g., "reported quarterly earnings", "announced a new product", "stock hit a 52-week high", "faced regulatory scrutiny").',
+    '2. For each company, list the specific reasons it was mentioned, including the source link and publication date for each mention.',
     '3. Classify the sentiment of each mention as "Positive", "Negative", or "Neutral".',
-    'Output Format: Return ONLY a valid JSON object. Do not include any other text, markdown, or explanations. The JSON should have a single key "companies" which is an array of objects. Each object should have "companyName", "ticker", and "mentions" keys. "mentions" should be an array of objects, each with "context" and "sentiment".',
+    'Output Format: Return ONLY a valid JSON object. The JSON should have a single key "companies" which is an array of objects. Each object should have "companyName", "ticker", and "mentions" keys. "mentions" should be an array of objects, each with "context", "sentiment", "sourceLink", and "publicationDate".',
     '',
     'News Articles JSON Data:',
     '{news_articles_json}',
@@ -82,15 +82,7 @@ const SECTOR_SYNTHESIS_PROMPT = [
     '      "companyName": "NVIDIA Corp",',
     '      "ticker": "NVDA",',
     '      "mentions": [',
-    '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive" },',
-    '        { "context": "Announced the new Blackwell series of AI accelerators.", "sentiment": "Positive" }',
-    '      ]',
-    '    },',
-    '    {',
-    '      "companyName": "Intel",',
-    '      "ticker": "INTC",',
-    '      "mentions": [',
-    '        { "context": "Discussed its roadmap for competing in the AI chip market.", "sentiment": "Neutral" }',
+    '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive", "sourceLink": "https://www.reuters.com/some-article", "publicationDate": "2024-05-23T14:00:00Z" }',
     '      ]',
     '    }',
     '  ]',
@@ -116,8 +108,8 @@ const SECTOR_RANKING_PROMPT = [
 
 const SECTOR_DEEP_DIVE_PROMPT = [
     'Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.',
-    'Task: You will be given two JSON inputs: a "synthesis" of all companies mentioned in the news, and a "ranking" of the top companies. Use this data to generate a comprehensive report that is insightful and detailed.',
-    'Output Format: Use professional markdown. Use ## for main sections and ### for sub-sections. The final output must be pure markdown.',
+    'Task: You will be given two JSON inputs: a "synthesis" of all companies mentioned in the news, and a "ranking" of the top companies. Use this data to generate a comprehensive report that is insightful, detailed, and verifiable.',
+    'Output Format: Use professional markdown. Use ## for main sections and ### for sub-sections. For each catalyst, you MUST include a clickable markdown link to the source article with its publication date.',
     '',
     'Full News Synthesis JSON:',
     '{synthesis_json}',
@@ -136,8 +128,8 @@ const SECTOR_DEEP_DIVE_PROMPT = [
     'For each of the companies in the "Top Ranked Companies JSON", create a detailed section. For each company:',
     '1. Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)").',
     '2. **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably, based on the provided news context.',
-    '3. **Positive Catalysts:** Create a bulleted list of the specific positive events or data points mentioned in the news. Use the "context" from the synthesis JSON as direct evidence. Examples: "Exceeded Q2 earnings estimates," "Announced a strategic partnership with Microsoft," "Received an analyst upgrade to \'Buy\'."',
-    '4. **Analyst Commentary:** If any news snippets mention specific analyst firms or commentary (e.g., "analysts at Goldman Sachs noted..."), summarize that here. If none, state "No specific analyst commentary was found in the provided news snippets."',
+    '3. **Positive Catalysts:** Create a bulleted list of the specific positive events or data points mentioned in the news. For each bullet point, use the "context" from the synthesis JSON and append a verifiable source link in markdown format, like this: `* Reported record-breaking quarterly revenue. [(Source: Reuters, 2024-05-23)](https://www.reuters.com/some-article)`',
+    '4. **Analyst Commentary:** If any news snippets mention specific analyst firms or commentary, summarize that here. If none, state "No specific analyst commentary was found in the provided news snippets."',
     '',
     '---',
     '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time and is based on data from the last 30 days. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
@@ -1324,7 +1316,16 @@ async function handleSectorAnalysis(sectorName) {
 
         // Step 2: First AI Pass - Synthesize news into structured JSON
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/3: Synthesizing news data...`;
-        const articlesForPrompt = validArticles.map(a => ({ title: a.title, snippet: a.snippet, link: a.link, source: a.displayLink }));
+        const articlesForPrompt = validArticles.map(a => {
+            const pubDate = a.pagemap?.newsarticle?.[0]?.datepublished;
+            return {
+                title: a.title,
+                snippet: a.snippet,
+                link: a.link,
+                source: a.displayLink,
+                publicationDate: pubDate ? new Date(pubDate).toISOString().split('T')[0] : 'N/A'
+            };
+        });
         const synthesisPrompt = SECTOR_SYNTHESIS_PROMPT
             .replace(/{sectorName}/g, sectorName)
             .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
