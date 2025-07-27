@@ -78,7 +78,7 @@ const SECTOR_SYNTHESIS_PROMPT = [
     '  "companies": [',
     '    {',
     '      "companyName": "NVIDIA Corp",',
-    '      "ticker": "NVDA",
+    '      "ticker": "NVDA",',
     '      "mentions": [',
     '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive", "articleIndex": 0 }',
     '      ]',
