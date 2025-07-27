@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.6.0"; 
+const APP_VERSION = "6.7.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -116,13 +116,13 @@ const SECTOR_RANKING_PROMPT = [
 
 const SECTOR_DEEP_DIVE_PROMPT = [
     'Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.',
-    'Task: You will be given two JSON inputs: a "synthesis" of all companies mentioned in the news, and a "ranking" of the top 5 companies. Use this data to generate a comprehensive report.',
+    'Task: You will be given two JSON inputs: a "synthesis" of all companies mentioned in the news, and a "ranking" of the top companies. Use this data to generate a comprehensive report that is insightful and detailed.',
     'Output Format: Use professional markdown. Use ## for main sections and ### for sub-sections. The final output must be pure markdown.',
     '',
     'Full News Synthesis JSON:',
     '{synthesis_json}',
     '',
-    'Top 5 Ranked Companies JSON:',
+    'Top Ranked Companies JSON:',
     '{ranking_json}',
     '',
     '---',
@@ -132,12 +132,12 @@ const SECTOR_DEEP_DIVE_PROMPT = [
     '### Overall Sector Outlook & Key Themes',
     'First, provide a 2-3 sentence summary of the overall outlook for the sector based on the collective news. Identify the most significant themes present in the full synthesis data (e.g., "AI adoption is accelerating demand," "Supply chain pressures are easing," "Consumer spending shows signs of slowing").',
     '',
-    '### Deeper Dive: Top 5 Companies in the News',
-    'For each of the companies in the "Top 5 Ranked Companies JSON", create a detailed section. For each company:',
+    '### Deeper Dive: Top Companies in the News',
+    'For each of the companies in the "Top Ranked Companies JSON", create a detailed section. For each company:',
     '1. Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)").',
-    '2. Start with the "rankingJustification" provided in the ranking JSON.',
-    '3. Elaborate on this justification by pulling all relevant "context" points for that company from the "Full News Synthesis JSON". Present these as a bulleted list under a title like "Key News Highlights:". This provides the specific evidence for its ranking.',
-    '4. Conclude with a one-sentence summary of why this company is currently noteworthy according to the news.',
+    '2. **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably, based on the provided news context.',
+    '3. **Positive Catalysts:** Create a bulleted list of the specific positive events or data points mentioned in the news. Use the "context" from the synthesis JSON as direct evidence. Examples: "Exceeded Q2 earnings estimates," "Announced a strategic partnership with Microsoft," "Received an analyst upgrade to \'Buy\'."',
+    '4. **Analyst Commentary:** If any news snippets mention specific analyst firms or commentary (e.g., "analysts at Goldman Sachs noted..."), summarize that here. If none, state "No specific analyst commentary was found in the provided news snippets."',
     '',
     '---',
     '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time and is based on data from the last 30 days. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
@@ -1313,7 +1313,7 @@ async function handleSectorAnalysis(sectorName) {
     try {
         // Step 1: Search for relevant news from the last 30 days across specific sources
         const siteQuery = FINANCIAL_NEWS_SOURCES.map(site => `site:${site}`).join(' OR ');
-        const query = encodeURIComponent(`"${sectorName} sector" stock market news trends analysis (${siteQuery})`);
+        const query = encodeURIComponent(`"${sectorName} sector" ("earnings report" OR "analyst rating" OR "growth driver" OR "stock upgrade") (${siteQuery})`);
         const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=d[30]&num=10`;
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData.items || []);
