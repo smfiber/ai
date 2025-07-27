@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.9.6"; 
+const APP_VERSION = "6.9.7"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1386,7 +1386,8 @@ async function handleSectorAnalysis(sectorName) {
             const index = parseInt(indexStr, 10);
             const article = articlesForPrompt[index];
             if (article) {
-                const sourceName = article.source.split('.')[0] || 'Source';
+                const sourceParts = article.source.split('.');
+                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
                 return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
             }
             return match; // Return original placeholder if article not found
