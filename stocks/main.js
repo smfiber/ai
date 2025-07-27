@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.4.0"; 
+const APP_VERSION = "6.5.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -56,33 +56,62 @@ const SECTORS = [
     'Energy', 'Utilities', 'Real Estate', 'Materials'
 ];
 
-const SECTOR_ANALYSIS_PROMPT = [
-    'Role: You are an expert financial market analyst AI. Your task is to analyze a collection of recent news article snippets for a specific economic sector and identify emerging trends, market sentiment, and noteworthy companies.',
-    'Task: Based ONLY on the provided JSON data of news articles for the "{sectorName}" sector, generate a concise market intelligence report.',
-    'Output Format: Use professional markdown. Use ## for the main sections. Use bullet points for lists. Be objective and data-driven.',
-    'IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.',
+const SECTOR_SYNTHESIS_PROMPT = [
+    'Role: You are a data extraction AI. Your task is to process a list of financial news articles and structure the key information into a clean JSON object. Do not add any interpretation or analysis.',
+    'Task: Read the provided JSON data of news articles for the "{sectorName}" sector. Extract the following information:',
+    '1. A list of all unique companies mentioned, along with their stock ticker if available in the text.',
+    '2. For each company, list the specific reasons it was mentioned (e.g., "reported quarterly earnings", "announced a new product", "stock hit a 52-week high", "faced regulatory scrutiny").',
+    '3. Classify the sentiment of each mention as "Positive", "Negative", or "Neutral".',
+    'Output Format: Return ONLY a valid JSON object. Do not include any other text, markdown, or explanations. The JSON should have a single key "companies" which is an array of objects. Each object should have "companyName", "ticker", and "mentions" keys. "mentions" should be an array of objects, each with "context" and "sentiment".',
     '',
     'News Articles JSON Data:',
     '{news_articles_json}',
+    '',
+    'Example Output:',
+    '{',
+    '  "companies": [',
+    '    {',
+    '      "companyName": "NVIDIA Corp",',
+    '      "ticker": "NVDA",',
+    '      "mentions": [',
+    '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive" },',
+    '        { "context": "Announced the new Blackwell series of AI accelerators.", "sentiment": "Positive" }',
+    '      ]',
+    '    },',
+    '    {',
+    '      "companyName": "Intel",',
+    '      "ticker": "INTC",',
+    '      "mentions": [',
+    '        { "context": "Discussed its roadmap for competing in the AI chip market.", "sentiment": "Neutral" }',
+    '      ]',
+    '    }',
+    '  ]',
+    '}'
+].join('\n');
+
+const SECTOR_RANKING_PROMPT = [
+    'Role: You are an expert financial market analyst AI. Your task is to synthesize a pre-processed JSON of news mentions and generate a high-level market intelligence report.',
+    'Task: Based ONLY on the provided JSON data summarizing recent news for the "{sectorName}" sector, perform the following:',
+    '1. Identify the Top 5 most favorably mentioned companies. The ranking should be based on the significance and positive sentiment of the news (e.g., strong earnings reports and major product launches are more significant than minor analyst price target changes).',
+    '2. Generate a final report in professional markdown format.',
+    'Output Format: Use ## for main sections and ### for sub-sections. The final output must be pure markdown.',
+    '',
+    'Pre-processed News Analysis JSON:',
+    '{synthesis_json}',
     '',
     '---',
     '',
     '## AI Market Analysis for the {sectorName} Sector',
     '',
-    '### 1. Key Sector-Wide Themes & Trends',
-    'Synthesize the provided articles to identify 2-4 dominant themes or trends. For each theme, provide a brief one-sentence summary. Examples might include "stronger than expected consumer spending," "advancements in AI hardware," or "regulatory headwinds."',
+    '### 1. Top 5 Companies in the News',
+    'Based on the significance and positive sentiment of recent news, these are the top 5 companies currently showing strong momentum:',
+    '*(List the top 5 companies here as an ordered list. For each company, include its name, ticker, and a 1-2 sentence justification for its ranking based on the provided context.)*',
     '',
-    '### 2. Market Sentiment Analysis',
-    'Based on the tone and content of the headlines and snippets, provide a qualitative assessment of the overall sentiment for the sector (e.g., "Generally Positive," "Mixed with Caution," "Bearish"). Provide a brief justification for this assessment, citing specific examples from the news.',
-    '',
-    '### 3. Noteworthy Companies Mentioned',
-    'List up to 5 companies that are mentioned in a positive or significant context within the articles. For each company, provide its ticker (if available in the text) and a brief, one-sentence summary of why it was mentioned (e.g., "positive earnings report," "new product launch," "strategic partnership"). Do not include companies mentioned in a negative light.',
-    '',
-    '### 4. Potential Headwinds or Risks',
-    'Identify any potential risks, challenges, or "bear case" points mentioned in the articles that could impact the sector.',
+    '### 2. Overall Sector Outlook',
+    'Based on the provided data, provide a brief summary of the overall outlook for the sector. Mention key themes and any potential headwinds identified in the data.',
     '',
     '---',
-    '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
+    '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time and is based on data from the last 30 days. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
 ].join('\n');
 
 const FINANCIAL_ANALYSIS_PROMPT = [
@@ -1250,29 +1279,40 @@ async function handleSectorAnalysis(sectorName) {
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing news for the ${sectorName} sector...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching news for the ${sectorName} sector...`;
 
     try {
-        // Step 1: Search for relevant news
+        // Step 1: Search for relevant news from the last 30 days
         const query = encodeURIComponent(`"${sectorName} sector" stock market news trends analysis`);
-        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&num=10`;
+        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=d[30]&num=10`;
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData.items || []);
 
         if (validArticles.length === 0) {
-            throw new Error(`Could not find any recent news articles for the ${sectorName} sector.`);
+            throw new Error(`Could not find any recent news articles for the ${sectorName} sector in the last 30 days.`);
         }
 
-        // Step 2: Prepare data and prompt for Gemini
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI analysis...`;
+        // Step 2: First AI Pass - Synthesize news into structured JSON
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Synthesizing news data...`;
         const articlesForPrompt = validArticles.map(a => ({ title: a.title, snippet: a.snippet, link: a.link, source: a.displayLink }));
-        const prompt = SECTOR_ANALYSIS_PROMPT
+        const synthesisPrompt = SECTOR_SYNTHESIS_PROMPT
             .replace(/{sectorName}/g, sectorName)
             .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
 
-        // Step 3: Call Gemini and display results
-        const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        const synthesisResult = await callGeminiApi(synthesisPrompt);
+        const cleanedJsonString = synthesisResult.replace(/```json\n|```/g, '').trim();
+        const synthesisJson = JSON.parse(cleanedJsonString);
+
+        // Step 3: Second AI Pass - Rank companies and generate the final report
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Ranking companies and generating report...`;
+        const rankingPrompt = SECTOR_RANKING_PROMPT
+            .replace(/{sectorName}/g, sectorName)
+            .replace('{synthesis_json}', JSON.stringify(synthesisJson, null, 2));
+            
+        const finalReport = await callGeminiApi(rankingPrompt);
+
+        // Step 4: Display final report
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReport);
         document.getElementById('custom-analysis-modal-title').textContent = `Sector Analysis | ${sectorName}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 
