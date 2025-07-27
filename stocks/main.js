@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.3.0"; 
+const APP_VERSION = "6.4.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -49,6 +49,41 @@ const CONSTANTS = {
 
 // List of comprehensive data endpoints to fetch for caching
 const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
+
+const SECTORS = [
+    'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
+    'Communication Services', 'Industrials', 'Consumer Staples',
+    'Energy', 'Utilities', 'Real Estate', 'Materials'
+];
+
+const SECTOR_ANALYSIS_PROMPT = [
+    'Role: You are an expert financial market analyst AI. Your task is to analyze a collection of recent news article snippets for a specific economic sector and identify emerging trends, market sentiment, and noteworthy companies.',
+    'Task: Based ONLY on the provided JSON data of news articles for the "{sectorName}" sector, generate a concise market intelligence report.',
+    'Output Format: Use professional markdown. Use ## for the main sections. Use bullet points for lists. Be objective and data-driven.',
+    'IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.',
+    '',
+    'News Articles JSON Data:',
+    '{news_articles_json}',
+    '',
+    '---',
+    '',
+    '## AI Market Analysis for the {sectorName} Sector',
+    '',
+    '### 1. Key Sector-Wide Themes & Trends',
+    'Synthesize the provided articles to identify 2-4 dominant themes or trends. For each theme, provide a brief one-sentence summary. Examples might include "stronger than expected consumer spending," "advancements in AI hardware," or "regulatory headwinds."',
+    '',
+    '### 2. Market Sentiment Analysis',
+    'Based on the tone and content of the headlines and snippets, provide a qualitative assessment of the overall sentiment for the sector (e.g., "Generally Positive," "Mixed with Caution," "Bearish"). Provide a brief justification for this assessment, citing specific examples from the news.',
+    '',
+    '### 3. Noteworthy Companies Mentioned',
+    'List up to 5 companies that are mentioned in a positive or significant context within the articles. For each company, provide its ticker (if available in the text) and a brief, one-sentence summary of why it was mentioned (e.g., "positive earnings report," "new product launch," "strategic partnership"). Do not include companies mentioned in a negative light.',
+    '',
+    '### 4. Potential Headwinds or Risks',
+    'Identify any potential risks, challenges, or "bear case" points mentioned in the articles that could impact the sector.',
+    '',
+    '---',
+    '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
+].join('\n');
 
 const FINANCIAL_ANALYSIS_PROMPT = [
     "Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.",
@@ -451,6 +486,8 @@ async function initializeAppContent() {
     appIsInitialized = true;
     document.getElementById('main-view').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    renderSectorButtons();
 }
 
 async function initializeFirebase() {
@@ -1061,6 +1098,14 @@ async function handleFetchNews(symbol) {
 
 // --- UI RENDERING ---
 
+function renderSectorButtons() {
+    const container = document.getElementById('sector-buttons-container');
+    if (!container) return;
+    container.innerHTML = SECTORS.map(sector => 
+        `<button class="btn-sector bg-sky-100 text-sky-800 hover:bg-sky-200 font-semibold py-2 px-4 rounded-lg transition-all duration-200" data-sector="${sanitizeText(sector)}">${sanitizeText(sector)}</button>`
+    ).join('');
+}
+
 function renderOverviewCard(data, symbol) {
     const overviewData = data.OVERVIEW;
     if (!overviewData || !overviewData.Symbol) return '';
@@ -1186,10 +1231,58 @@ function setupEventListeners() {
         if (btn) btn.classList.toggle(CONSTANTS.CLASS_HIDDEN, window.scrollY <= 300);
     });
     
+    document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button.btn-sector');
+        if (target && target.dataset.sector) {
+            handleSectorAnalysis(target.dataset.sector);
+        }
+    });
+
     setupGlobalEventListeners();
 }
 
 // --- AI ANALYSIS REPORT GENERATORS ---
+
+async function handleSectorAnalysis(sectorName) {
+    if (!searchApiKey || !searchEngineId) {
+        displayMessageInModal("This feature requires the Web Search API Key and Search Engine ID.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Analyzing news for the ${sectorName} sector...`;
+
+    try {
+        // Step 1: Search for relevant news
+        const query = encodeURIComponent(`"${sectorName} sector" stock market news trends analysis`);
+        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&num=10`;
+        const newsData = await callApi(url);
+        const validArticles = filterValidNews(newsData.items || []);
+
+        if (validArticles.length === 0) {
+            throw new Error(`Could not find any recent news articles for the ${sectorName} sector.`);
+        }
+
+        // Step 2: Prepare data and prompt for Gemini
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI analysis...`;
+        const articlesForPrompt = validArticles.map(a => ({ title: a.title, snippet: a.snippet, link: a.link, source: a.displayLink }));
+        const prompt = SECTOR_ANALYSIS_PROMPT
+            .replace(/{sectorName}/g, sectorName)
+            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+        // Step 3: Call Gemini and display results
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Sector Analysis | ${sectorName}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+
+    } catch (error) {
+        console.error("Error during sector analysis:", error);
+        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
 
 function get(obj, path, defaultValue = "N/A") {
     const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
