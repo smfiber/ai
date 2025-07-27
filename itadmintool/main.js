@@ -37,7 +37,7 @@ let gapiInited = false;
 let gisInited = false;
 let tokenClient;
 let GOOGLE_CLIENT_ID = '';
-let Google Search_ENGINE_ID = '';
+let GOOGLE_SEARCH_ENGINE_ID = '';
 const G_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 let driveFolderId = null;
 let oauthToken = null;
@@ -189,7 +189,7 @@ function loadConfigFromStorage() {
     geminiApiKey = localStorage.getItem('geminiApiKey');
     const firebaseConfigString = localStorage.getItem('firebaseConfig');
     GOOGLE_CLIENT_ID = localStorage.getItem('googleClientId');
-    Google Search_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
+    GOOGLE_SEARCH_ENGINE_ID = localStorage.getItem('googleSearchEngineId');
     algoliaAppId = localStorage.getItem('algoliaAppId');
     algoliaSearchKey = localStorage.getItem('algoliaSearchKey');
 
@@ -207,7 +207,7 @@ function loadConfigFromStorage() {
         document.getElementById('geminiApiKeyInput').value = geminiApiKey;
         document.getElementById('firebaseConfigInput').value = JSON.stringify(firebaseConfig, null, 2);
         if (GOOGLE_CLIENT_ID) document.getElementById('googleClientIdInput').value = GOOGLE_CLIENT_ID;
-        if (Google Search_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = Google Search_ENGINE_ID;
+        if (GOOGLE_SEARCH_ENGINE_ID) document.getElementById('googleSearchEngineIdInput').value = GOOGLE_SEARCH_ENGINE_ID;
         if (algoliaAppId) document.getElementById('algoliaAppIdInput').value = algoliaAppId;
         if (algoliaSearchKey) document.getElementById('algoliaSearchKeyInput').value = algoliaSearchKey;
         return true;
@@ -1991,7 +1991,7 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
  * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
  */
 async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!Google Search_ENGINE_ID) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
         return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
@@ -2001,7 +2001,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
 
     try {
         // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
@@ -2057,7 +2057,7 @@ async function generateVerifiedResources(topic, fullHierarchyPath) {
  * @returns {Promise<string>} A markdown string for the "Automation Techniques" section.
  */
 async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
-    if (!Google Search_ENGINE_ID) {
+    if (!GOOGLE_SEARCH_ENGINE_ID) {
         console.warn("Google Search Engine ID not configured. Skipping automation resource search.");
         return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
     }
@@ -2067,7 +2067,7 @@ async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
 
     try {
         // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${Google Search_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
