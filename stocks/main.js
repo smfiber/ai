@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.9.5"; 
+const APP_VERSION = "6.9.6"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -69,6 +69,7 @@ const SECTOR_SYNTHESIS_PROMPT = [
     'Role: You are a data extraction AI. Your task is to process a list of financial news articles and structure the key information into a clean JSON object.',
     'Task: Read the provided JSON data of news articles. For each article, extract the companies mentioned and the context of the mention.',
     'Output Format: Return ONLY a valid JSON object. The JSON should have a single key "companies" which is an array of objects. Each object should have "companyName", "ticker", and "mentions" keys. "mentions" should be an array of objects, each with "context", "sentiment", and "articleIndex" (the original index of the source article).',
+    'CRITICAL: Your entire response must be ONLY the raw JSON object. Do not include any surrounding text, explanations, or markdown formatting like ```json.',
     '',
     'News Articles JSON Data:',
     '{news_articles_json}',
@@ -638,7 +639,7 @@ function initializeDriveTokenClient() {
     try {
         driveTokenClient = google.accounts.oauth2.initTokenClient({
             client_id: googleClientId,
-            scope: 'https://www.googleapis.com/auth/drive.file',
+            scope: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
             callback: '', // Callback is handled by the promise in getDriveToken
         });
     } catch (error) {
