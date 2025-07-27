@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.9.0"; 
+const APP_VERSION = "6.9.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -45,6 +45,7 @@ const CONSTANTS = {
     // Database Collections
     DB_COLLECTION_CACHE: 'cached_stock_data',
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
+    DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
 };
 
 // List of comprehensive data endpoints to fetch for caching
@@ -77,7 +78,7 @@ const SECTOR_SYNTHESIS_PROMPT = [
     '  "companies": [',
     '    {',
     '      "companyName": "NVIDIA Corp",',
-    '      "ticker": "NVDA",',
+    '      "ticker": "NVDA",
     '      "mentions": [',
     '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive", "articleIndex": 0 }',
     '      ]',
@@ -1041,7 +1042,7 @@ function getSentimentDisplay(sentiment) {
         case 'Negative':
             return { icon: '綜', colorClass: 'text-red-600', bgClass: 'bg-red-100' };
         case 'Neutral':
-            return { icon: '�', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
+            return { icon: '', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
         default:
             return { icon: '', colorClass: '', bgClass: '' };
     }
@@ -1311,8 +1312,6 @@ async function handleSectorAnalysis(sectorName) {
             throw new Error(`Could not find any recent news articles for the ${sectorName} sector in the last 30 days from specified sources.`);
         }
 
-        // Step 2: First AI Pass - Synthesize news into structured JSON
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/3: Synthesizing news data...`;
         const articlesForPrompt = validArticles.map((a, index) => {
             const pubDate = a.pagemap?.newsarticle?.[0]?.datepublished;
             return {
@@ -1324,6 +1323,22 @@ async function handleSectorAnalysis(sectorName) {
                 articleIndex: index
             };
         });
+
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving initial news data to database...`;
+        const runDocRef = doc(collection(db, CONSTANTS.DB_COLLECTION_SECTOR_ANALYSIS));
+        const runId = runDocRef.id;
+        const initialRunData = {
+            id: runId,
+            sectorName: sectorName,
+            createdAt: Timestamp.now(),
+            status: 'articles_fetched',
+            articles: articlesForPrompt,
+        };
+        await setDoc(runDocRef, initialRunData);
+
+        // Step 2: First AI Pass - Synthesize news into structured JSON
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/3: Synthesizing news data...`;
+        
         const synthesisPrompt = SECTOR_SYNTHESIS_PROMPT
             .replace(/{sectorName}/g, sectorName)
             .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
@@ -1331,6 +1346,13 @@ async function handleSectorAnalysis(sectorName) {
         const synthesisResult = await callGeminiApi(synthesisPrompt);
         const cleanedSynthesisJson = synthesisResult.replace(/```json\n|```/g, '').trim();
         const synthesisJson = JSON.parse(cleanedSynthesisJson);
+
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving synthesis results to database...`;
+        await setDoc(runDocRef, {
+            status: 'synthesis_complete',
+            synthesis: synthesisJson,
+            updatedAt: Timestamp.now()
+        }, { merge: true });
 
         // Step 3: Second AI Pass - Rank companies
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 2/3: Ranking noteworthy companies...`;
@@ -1341,6 +1363,13 @@ async function handleSectorAnalysis(sectorName) {
         const rankingResult = await callGeminiApi(rankingPrompt);
         const cleanedRankingJson = rankingResult.replace(/```json\n|```/g, '').trim();
         const rankingJson = JSON.parse(cleanedRankingJson);
+        
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ranking results to database...`;
+        await setDoc(runDocRef, {
+            status: 'ranking_complete',
+            ranking: rankingJson,
+            updatedAt: Timestamp.now()
+        }, { merge: true });
 
         // Step 4: Third AI Pass - Generate the final deep-dive report
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/3: Generating final deep-dive report...`;
@@ -1361,6 +1390,13 @@ async function handleSectorAnalysis(sectorName) {
             }
             return match; // Return original placeholder if article not found
         });
+        
+        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving final report to database...`;
+        await setDoc(runDocRef, {
+            status: 'complete',
+            report: finalReport,
+            updatedAt: Timestamp.now()
+        }, { merge: true });
 
         // Step 6: Display final report
         document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReport);
