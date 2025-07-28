@@ -51,6 +51,24 @@ body.modal-open {
     border-top-color: var(--color-primary);
 }
 
+/*
+ * =================================================================
+ * NEW COMPONENT STYLES (v7.0.0)
+ * =================================================================
+ */
+.price-gain {
+    color: #16a34a; /* text-green-600 */
+}
+.price-loss {
+    color: #dc2626; /* text-red-600 */
+}
+.calendar-item {
+    padding: 0.5rem;
+    border-radius: 0.5rem; /* rounded-lg */
+    border: 1px solid #e5e7eb; /* border-gray-200 */
+    background-color: #f9fafb; /* bg-gray-50 */
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
