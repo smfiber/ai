@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.0"; 
+const APP_VERSION = "7.0.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -49,7 +49,7 @@ const CONSTANTS = {
 };
 
 // List of comprehensive data endpoints to fetch for caching
-const API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE', 'TIME_SERIES_DAILY_ADJUSTED', 'EARNINGS', 'SMA'];
+const API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE', 'TIME_SERIES_DAILY', 'EARNINGS', 'SMA'];
 
 const SECTORS = [
     'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
@@ -896,7 +896,7 @@ async function fetchAndCacheStockData(symbol) {
             } else {
                 url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
             }
-            if (func === 'TIME_SERIES_DAILY_ADJUSTED') {
+            if (func === 'TIME_SERIES_DAILY') {
                 url += '&outputsize=compact';
             }
             
@@ -946,7 +946,7 @@ async function handleRefreshData(symbol) {
              oldCard.replaceWith(tempDiv.firstChild);
              
              // Re-render sparkline
-             const timeSeries = refreshedData.TIME_SERIES_DAILY_ADJUSTED ? refreshedData.TIME_SERIES_DAILY_ADJUSTED['Time Series (Daily)'] : null;
+             const timeSeries = refreshedData.TIME_SERIES_DAILY ? refreshedData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
              const quoteData = refreshedData.GLOBAL_QUOTE ? refreshedData.GLOBAL_QUOTE['Global Quote'] : {};
              const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
              renderSparkline(`sparkline-${symbol}`, timeSeries, change);
@@ -1035,7 +1035,7 @@ async function displayStockCard(ticker) {
         const newCardHtml = renderOverviewCard(stockData, ticker);
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
         
-        const timeSeries = stockData.TIME_SERIES_DAILY_ADJUSTED ? stockData.TIME_SERIES_DAILY_ADJUSTED['Time Series (Daily)'] : null;
+        const timeSeries = stockData.TIME_SERIES_DAILY ? stockData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
         const quoteData = stockData.GLOBAL_QUOTE ? stockData.GLOBAL_QUOTE['Global Quote'] : {};
         const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
         renderSparkline(`sparkline-${ticker}`, timeSeries, change);
@@ -1210,6 +1210,9 @@ async function displayMarketCalendar() {
 
     earningsContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
     ipoContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     // Fetch Earnings Calendar
     try {
@@ -1218,13 +1221,23 @@ async function displayMarketCalendar() {
         const earningsData = Papa.parse(earningsCsv, { header: true }).data;
         
         if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
-            const filteredEarnings = earningsData.filter(e => e.symbol).slice(0, 5); // Show top 5
-            earningsContainer.innerHTML = filteredEarnings.map(item => `
-                <div class="calendar-item">
-                    <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
-                    <p class="text-xs text-gray-500">Report Date: ${sanitizeText(item.reportDate)}</p>
-                </div>
-            `).join('');
+            const upcomingEarnings = earningsData
+                .filter(e => e.symbol && e.reportDate)
+                .map(e => ({...e, reportDateObj: new Date(e.reportDate)}))
+                .filter(e => e.reportDateObj >= today)
+                .sort((a, b) => a.reportDateObj - b.reportDateObj)
+                .slice(0, 5);
+
+            if (upcomingEarnings.length > 0) {
+                earningsContainer.innerHTML = upcomingEarnings.map(item => `
+                    <div class="calendar-item">
+                        <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
+                        <p class="text-xs text-gray-500">Report Date: ${sanitizeText(item.reportDate)}</p>
+                    </div>
+                `).join('');
+            } else {
+                 earningsContainer.innerHTML = `<p class="text-gray-500">No upcoming earnings reports in the next 3 months.</p>`;
+            }
         } else {
             earningsContainer.innerHTML = `<p class="text-gray-500">No upcoming earnings data available.</p>`;
         }
@@ -1240,13 +1253,23 @@ async function displayMarketCalendar() {
         const ipoData = Papa.parse(ipoCsv, { header: true }).data;
 
         if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
-             const filteredIpos = ipoData.filter(i => i.symbol).slice(0, 5); // Show top 5
-             ipoContainer.innerHTML = filteredIpos.map(item => `
-                <div class="calendar-item">
-                    <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
-                    <p class="text-xs text-gray-500">IPO Date: ${sanitizeText(item.ipoDate)}</p>
-                </div>
-            `).join('');
+             const upcomingIpos = ipoData
+                .filter(i => i.symbol && i.ipoDate)
+                .map(i => ({...i, ipoDateObj: new Date(i.ipoDate)}))
+                .filter(i => i.ipoDateObj >= today)
+                .sort((a, b) => a.ipoDateObj - b.ipoDateObj)
+                .slice(0, 5);
+            
+            if(upcomingIpos.length > 0) {
+                ipoContainer.innerHTML = upcomingIpos.map(item => `
+                    <div class="calendar-item">
+                        <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
+                        <p class="text-xs text-gray-500">IPO Date: ${sanitizeText(item.ipoDate)}</p>
+                    </div>
+                `).join('');
+            } else {
+                ipoContainer.innerHTML = `<p class="text-gray-500">No upcoming IPOs found.</p>`;
+            }
         } else {
             ipoContainer.innerHTML = `<p class="text-gray-500">No upcoming IPO data available.</p>`;
         }
