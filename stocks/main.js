@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "6.9.7"; 
+const APP_VERSION = "7.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -49,7 +49,7 @@ const CONSTANTS = {
 };
 
 // List of comprehensive data endpoints to fetch for caching
-const API_FUNCTIONS = ['OVERVIEW', 'INCOME_STATEMENT', 'BALANCE_SHEET', 'CASH_FLOW', 'EARNINGS'];
+const API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE', 'TIME_SERIES_DAILY_ADJUSTED', 'EARNINGS', 'SMA'];
 
 const SECTORS = [
     'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
@@ -536,6 +536,8 @@ async function initializeAppContent() {
     document.getElementById('main-view').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('market-calendar-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    displayMarketCalendar();
     renderSectorButtons();
 }
 
@@ -888,9 +890,19 @@ async function fetchAndCacheStockData(symbol) {
 
     const promises = API_FUNCTIONS.map(async (func) => {
         try {
-            const data = await callApi(`https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
-            if (data.Note || Object.keys(data).length === 0 || data.Information) {
-                throw new Error(data.Note || data.Information || 'No data returned.');
+            let url;
+            if (func === 'SMA') {
+                url = `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${alphaVantageApiKey}`;
+            } else {
+                url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
+            }
+            if (func === 'TIME_SERIES_DAILY_ADJUSTED') {
+                url += '&outputsize=compact';
+            }
+            
+            const data = await callApi(url);
+            if (data.Note || Object.keys(data).length === 0 || data.Information || data["Error Message"]) {
+                throw new Error(data.Note || data.Information || data["Error Message"] || 'No data returned.');
             }
             return { func, data };
         } catch (error) {
@@ -932,8 +944,12 @@ async function handleRefreshData(symbol) {
              const tempDiv = document.createElement('div');
              tempDiv.innerHTML = newCardHtml;
              oldCard.replaceWith(tempDiv.firstChild);
-             // Re-render topics after refresh
-             await displayStockCard(symbol);
+             
+             // Re-render sparkline
+             const timeSeries = refreshedData.TIME_SERIES_DAILY_ADJUSTED ? refreshedData.TIME_SERIES_DAILY_ADJUSTED['Time Series (Daily)'] : null;
+             const quoteData = refreshedData.GLOBAL_QUOTE ? refreshedData.GLOBAL_QUOTE['Global Quote'] : {};
+             const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
+             renderSparkline(`sparkline-${symbol}`, timeSeries, change);
         } else { 
             await displayStockCard(symbol);
         }
@@ -1018,6 +1034,11 @@ async function displayStockCard(ticker) {
 
         const newCardHtml = renderOverviewCard(stockData, ticker);
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
+        
+        const timeSeries = stockData.TIME_SERIES_DAILY_ADJUSTED ? stockData.TIME_SERIES_DAILY_ADJUSTED['Time Series (Daily)'] : null;
+        const quoteData = stockData.GLOBAL_QUOTE ? stockData.GLOBAL_QUOTE['Global Quote'] : {};
+        const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
+        renderSparkline(`sparkline-${ticker}`, timeSeries, change);
 
     } catch(error) {
         console.error(`Error displaying card for ${ticker}:`, error);
@@ -1147,6 +1168,94 @@ async function handleFetchNews(symbol) {
 
 // --- UI RENDERING ---
 
+function renderSparkline(canvasId, timeSeriesData, change) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !timeSeriesData) return;
+    const ctx = canvas.getContext('2d');
+
+    const dataPoints = Object.values(timeSeriesData).map(d => parseFloat(d['4. close'])).reverse();
+    if (dataPoints.length < 2) return;
+
+    const min = Math.min(...dataPoints);
+    const max = Math.max(...dataPoints);
+    const range = max - min;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const stepX = width / (dataPoints.length - 1);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = change >= 0 ? '#16a34a' : '#dc2626'; // Green for up, red for down
+
+    dataPoints.forEach((point, i) => {
+        const x = i * stepX;
+        const y = height - ((point - min) / range) * height;
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+
+    ctx.stroke();
+}
+
+async function displayMarketCalendar() {
+    const earningsContainer = document.getElementById('earnings-calendar-content');
+    const ipoContainer = document.getElementById('ipo-calendar-content');
+
+    if (!earningsContainer || !ipoContainer) return;
+
+    earningsContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
+    ipoContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
+
+    // Fetch Earnings Calendar
+    try {
+        const earningsResponse = await fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`);
+        const earningsCsv = await earningsResponse.text();
+        const earningsData = Papa.parse(earningsCsv, { header: true }).data;
+        
+        if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
+            const filteredEarnings = earningsData.filter(e => e.symbol).slice(0, 5); // Show top 5
+            earningsContainer.innerHTML = filteredEarnings.map(item => `
+                <div class="calendar-item">
+                    <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
+                    <p class="text-xs text-gray-500">Report Date: ${sanitizeText(item.reportDate)}</p>
+                </div>
+            `).join('');
+        } else {
+            earningsContainer.innerHTML = `<p class="text-gray-500">No upcoming earnings data available.</p>`;
+        }
+    } catch (error) {
+        console.error("Error fetching earnings calendar:", error);
+        earningsContainer.innerHTML = `<p class="text-red-500">Could not load earnings data.</p>`;
+    }
+
+    // Fetch IPO Calendar
+    try {
+        const ipoResponse = await fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`);
+        const ipoCsv = await ipoResponse.text();
+        const ipoData = Papa.parse(ipoCsv, { header: true }).data;
+
+        if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
+             const filteredIpos = ipoData.filter(i => i.symbol).slice(0, 5); // Show top 5
+             ipoContainer.innerHTML = filteredIpos.map(item => `
+                <div class="calendar-item">
+                    <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
+                    <p class="text-xs text-gray-500">IPO Date: ${sanitizeText(item.ipoDate)}</p>
+                </div>
+            `).join('');
+        } else {
+            ipoContainer.innerHTML = `<p class="text-gray-500">No upcoming IPO data available.</p>`;
+        }
+    } catch (error) {
+        console.error("Error fetching IPO calendar:", error);
+        ipoContainer.innerHTML = `<p class="text-red-500">Could not load IPO data.</p>`;
+    }
+}
+
 function renderSectorButtons() {
     const container = document.getElementById('sector-buttons-container');
     if (!container) return;
@@ -1159,10 +1268,25 @@ function renderOverviewCard(data, symbol) {
     const overviewData = data.OVERVIEW;
     if (!overviewData || !overviewData.Symbol) return '';
 
+    const quoteData = data.GLOBAL_QUOTE ? data.GLOBAL_QUOTE['Global Quote'] : {};
+    const price = quoteData && quoteData['05. price'] ? parseFloat(quoteData['05. price']).toFixed(2) : 'N/A';
+    const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
+    const changePercent = quoteData && quoteData['10. change percent'] ? parseFloat(quoteData['10. change percent'].replace('%','')).toFixed(2) : 0;
+    const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
+    const changeSign = change >= 0 ? '+' : '';
+
+    const smaData = data.SMA ? data.SMA['Technical Analysis: SMA'] : null;
+    let sma50 = 'N/A';
+    if (smaData) {
+        const latestSmaDate = Object.keys(smaData)[0];
+        if (latestSmaDate) {
+            sma50 = parseFloat(smaData[latestSmaDate]['SMA']).toFixed(2);
+        }
+    }
+    
     const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
-    const eps = overviewData.EPS !== "None" ? overviewData.EPS : "N/A";
-    const weekHigh = overviewData['52WeekHigh'] && overviewData['52WeekHigh'] !== "None" ? `$${overviewData['52WeekHigh']}` : "N/A";
+    const sma200 = overviewData['200DayMovingAverage'] && overviewData['200DayMovingAverage'] !== "None" ? `$${parseFloat(overviewData['200DayMovingAverage']).toFixed(2)}` : "N/A";
     const timestampString = data.cachedAt ? `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}` : '';
 
     return `
@@ -1172,16 +1296,27 @@ function renderOverviewCard(data, symbol) {
                     <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
-                <div class="flex-shrink-0"><button data-symbol="${symbol}" class="refresh-data-button text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button></div>
+                <div class="text-right flex-shrink-0">
+                    <p class="text-2xl font-bold">${price}</p>
+                    <p class="text-sm font-semibold ${changeColorClass}">${changeSign}${change.toFixed(2)} (${changeSign}${changePercent}%)</p>
+                </div>
             </div>
+            
+            <div class="my-4">
+                <canvas id="sparkline-${symbol}" width="400" height="50"></canvas>
+            </div>
+
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
+            
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
                 <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
-                <div><p class="text-sm text-gray-500">EPS</p><p class="text-lg font-semibold">${sanitizeText(eps)}</p></div>
-                <div><p class="text-sm text-gray-500">52 Week High</p><p class="text-lg font-semibold">${sanitizeText(weekHigh)}</p></div>
+                <div><p class="text-sm text-gray-500">50-Day MA</p><p class="text-lg font-semibold">$${sanitizeText(sma50)}</p></div>
+                <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">${sanitizeText(sma200)}</p></div>
             </div>
+
             <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-center">
+                <button data-symbol="${symbol}" class="refresh-data-button text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
                 <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View JSON</button>
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
@@ -1425,7 +1560,7 @@ async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTIO
         throw new Error(`Could not find cached data for ${symbol}. Please research it first.`);
     }
     const data = docSnap.data();
-    if (collection === CONSTANTS.DB_COLLECTION_CACHE && (!data.INCOME_STATEMENT || !data.BALANCE_SHEET || !data.CASH_FLOW || !data.OVERVIEW)) {
+    if (collection === CONSTANTS.DB_COLLECTION_CACHE && (!data.OVERVIEW)) {
          throw new Error(`Cached analysis data for ${symbol} is incomplete. Please refresh it.`);
     }
     return data;
