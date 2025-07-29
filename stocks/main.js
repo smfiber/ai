@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.1.5"; 
+const APP_VERSION = "7.1.6"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -977,7 +977,7 @@ async function handleRefreshData(symbol) {
         if(oldCard) {
              const tempDiv = document.createElement('div');
              tempDiv.innerHTML = newCardHtml;
-             oldCard.replaceWith(tempDiv.firstChild);
+             oldCard.replaceWith(tempDiv.firstElementChild);
              
              // Re-render sparkline
              const timeSeries = refreshedData.TIME_SERIES_DAILY ? refreshedData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
@@ -1163,24 +1163,21 @@ async function handleFetchNews(symbol) {
         const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=m[1]`;
         
         const newsData = await callApi(url);
-        let validArticles = filterValidNews(newsData.items);
+        const validArticles = filterValidNews(newsData.items || []);
 
-        // Filter for articles in the last 30 days that have a publication date
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
+        // The API call already restricts to the last month, so we just format the articles we received.
         const recentArticles = validArticles.map(a => {
             const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
-            if (!pubDateStr) return null;
-            const publicationDate = new Date(pubDateStr);
+            // Use the date if available, but don't filter out the article if it's missing.
+            const publicationDate = pubDateStr ? new Date(pubDateStr) : null;
             return { ...a, publicationDate };
-        }).filter(a => a && a.publicationDate >= thirtyDaysAgo);
+        });
 
         if (recentArticles.length > 0) {
             const articlesForPrompt = recentArticles.slice(0, 10).map(a => ({ 
                 title: a.title, 
                 snippet: a.snippet,
-                publicationDate: a.publicationDate.toISOString().split('T')[0] 
+                publicationDate: a.publicationDate ? a.publicationDate.toISOString().split('T')[0] : 'N/A' 
             }));
 
             const prompt = NEWS_SENTIMENT_PROMPT
@@ -1715,7 +1712,7 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
     let finalReport = await callGeminiApi(prompt);
 
     // Post-processing to inject verifiable source links
-    finalReport = finalReport.replace(/\[Source: (\d+)\]/g, (match, indexStr) => {
+    finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
         const index = parseInt(indexStr, 10);
         const article = originalArticles.find(a => a.articleIndex === index);
         if (article) {
