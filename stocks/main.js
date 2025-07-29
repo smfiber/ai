@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.5"; 
+const APP_VERSION = "7.0.7"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -46,6 +46,7 @@ const CONSTANTS = {
     DB_COLLECTION_CACHE: 'cached_stock_data',
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
+    DB_COLLECTION_CALENDAR: 'calendar_data',
 };
 
 // List of comprehensive data endpoints to fetch for caching
@@ -62,7 +63,14 @@ const FINANCIAL_NEWS_SOURCES = [
     'cnbc.com', 'finance.yahoo.com', 'seekingalpha.com', 'themotleyfool.com',
     'investors.com', 'barrons.com', 'forbes.com', 'investopedia.com',
     'benzinga.com', 'zacks.com', 'kiplinger.com', 'thestreet.com',
-    'morningstar.com', 'nasdaq.com', 'fool.com'
+    'morningstar.com', 'nasdaq.com', 'fool.com', 'businessinsider.com',
+    'fortune.com', 'cnn.com', 'foxbusiness.com', 'twst.com',
+    'americanbanker.com', 'theinformation.com', 'axios.com', 'asia.nikkei.com',
+    'caixinglobal.com', 'economist.com', 'theglobeandmail.com', 'economictimes.indiatimes.com',
+    'afr.com', 'tipranks.com', 'businesswire.com', 'prnewswire.com',
+    'globenewswire.com', 'apnews.com', 'money.usatoday.com', 'npr.org',
+    'theguardian.com', 'bbc.com', 'financialpost.com', 'scmp.com',
+    'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
 
 const FINANCIAL_ANALYSIS_PROMPT = [
@@ -381,6 +389,11 @@ function isValidHttpUrl(urlString) {
     } catch (_) {
         return false;
     }
+}
+
+function get(obj, path, defaultValue = undefined) {
+  const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
+  return value !== undefined ? value : defaultValue;
 }
 
 // --- MODAL HELPERS ---
@@ -1265,36 +1278,69 @@ async function displayMarketCalendar() {
     if (!calendarBody || !monthYearHeader) return;
 
     calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-gray-400">Loading calendar data...</div>`;
+
+    function processRawCalendarData(earningsData, ipoData) {
+        calendarEvents.earnings = [];
+        calendarEvents.ipos = [];
+        if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
+            calendarEvents.earnings = earningsData
+                .filter(e => e.symbol && e.reportDate)
+                .filter(e => !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
+                .map(e => ({...e, eventDate: new Date(e.reportDate)}));
+        }
+        if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
+             calendarEvents.ipos = ipoData
+                .filter(i => i.symbol && i.ipoDate)
+                .filter(i => !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
+                .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
+        }
+    }
     
-    // Fetch data only if it hasn't been fetched before
-    if (calendarEvents.earnings.length === 0 && calendarEvents.ipos.length === 0) {
-        try {
-            // Fetch Earnings Calendar for 3 months
-            const earningsResponse = await fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`);
-            const earningsCsv = await earningsResponse.text();
-            const earningsData = Papa.parse(earningsCsv, { header: true }).data;
+    const docRef = doc(db, CONSTANTS.DB_COLLECTION_CALENDAR, 'latest');
+    let shouldFetchNewData = true;
+
+    try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const cachedData = docSnap.data();
+            const cacheDate = cachedData.cachedAt.toDate();
+            const daysSinceCache = (new Date() - cacheDate) / (1000 * 60 * 60 * 24);
             
-            if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
-                calendarEvents.earnings = earningsData
-                    .filter(e => e.symbol && e.reportDate)
-                    .filter(e => !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
-                    .map(e => ({...e, eventDate: new Date(e.reportDate)}));
+            if (daysSinceCache < 30) {
+                processRawCalendarData(cachedData.earnings, cachedData.ipos);
+                shouldFetchNewData = false;
             }
+        }
+    } catch (dbError) {
+        console.error("Error reading calendar cache from Firestore:", dbError);
+        // Proceed to fetch new data if cache read fails
+    }
+    
+    if (shouldFetchNewData) {
+        try {
+            const [earningsResponse, ipoResponse] = await Promise.all([
+                fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`),
+                fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`)
+            ]);
 
-            // Fetch IPO Calendar
-            const ipoResponse = await fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`);
+            const earningsCsv = await earningsResponse.text();
             const ipoCsv = await ipoResponse.text();
-            const ipoData = Papa.parse(ipoCsv, { header: true }).data;
+            
+            const earningsData = Papa.parse(earningsCsv, { header: true, skipEmptyLines: true }).data;
+            const ipoData = Papa.parse(ipoCsv, { header: true, skipEmptyLines: true }).data;
+            
+            const dataToCache = { 
+                earnings: earningsData, 
+                ipos: ipoData, 
+                cachedAt: Timestamp.now() 
+            };
+            await setDoc(docRef, dataToCache);
 
-            if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
-                 calendarEvents.ipos = ipoData
-                    .filter(i => i.symbol && i.ipoDate)
-                    .filter(i => !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
-                    .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
-            }
-        } catch (error) {
-            console.error("Error fetching calendar data:", error);
-            calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-red-500">Could not load calendar data.</div>`;
+            processRawCalendarData(earningsData, ipoData);
+
+        } catch (apiError) {
+            console.error("Error fetching calendar data from API:", apiError);
+            calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-red-500">Could not load calendar data. The API might be unavailable.</div>`;
             monthYearHeader.textContent = 'Error';
             return;
         }
