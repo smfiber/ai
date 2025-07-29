@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.1.1"; 
+const APP_VERSION = "7.1.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -616,7 +616,7 @@ function initializeDriveTokenClient() {
     try {
         driveTokenClient = google.accounts.oauth2.initTokenClient({
             client_id: googleClientId,
-            scope: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
+            scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // Callback is handled by the promise in getDriveToken
         });
     } catch (error) {
@@ -1133,7 +1133,7 @@ async function handleFetchNews(symbol) {
         const stockData = await getStockDataFromCache(symbol);
         const companyName = get(stockData, 'OVERVIEW.Name', symbol);
         const query = encodeURIComponent(`${companyName} (${symbol}) stock market news`);
-        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date`;
+        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=m[1]`;
         
         const newsData = await callApi(url);
         let validArticles = filterValidNews(newsData.items);
@@ -1379,17 +1379,25 @@ async function displayMarketCalendar() {
             const earningsCsv = await earningsResponse.text();
             const ipoCsv = await ipoResponse.text();
             
-            const earningsData = Papa.parse(earningsCsv, { header: true, skipEmptyLines: true }).data;
-            const ipoData = Papa.parse(ipoCsv, { header: true, skipEmptyLines: true }).data;
+            const rawEarningsData = Papa.parse(earningsCsv, { header: true, skipEmptyLines: true }).data;
+            const rawIpoData = Papa.parse(ipoCsv, { header: true, skipEmptyLines: true }).data;
             
+            const earningsToCache = rawEarningsData
+                .filter(e => e.symbol && e.reportDate && !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
+                .map(e => ({ symbol: e.symbol, name: e.name, reportDate: e.reportDate }));
+            
+            const iposToCache = rawIpoData
+                .filter(i => i.symbol && i.ipoDate && !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
+                .map(i => ({ symbol: i.symbol, name: i.name, ipoDate: i.ipoDate }));
+
             const dataToCache = { 
-                earnings: earningsData, 
-                ipos: ipoData, 
+                earnings: earningsToCache, 
+                ipos: iposToCache, 
                 cachedAt: Timestamp.now() 
             };
             await setDoc(docRef, dataToCache);
 
-            processRawCalendarData(earningsData, ipoData);
+            processRawCalendarData(earningsToCache, iposToCache);
 
         } catch (apiError) {
             console.error("Error fetching calendar data from API:", apiError);
