@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.3"; 
+const APP_VERSION = "7.0.4"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -649,7 +649,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -667,7 +667,7 @@ async function callGeminiApi(prompt) {
 async function callGeminiApiWithTools(contents) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1122,35 +1122,68 @@ async function handleFetchNews(symbol) {
 function renderSparkline(canvasId, timeSeriesData, change) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !timeSeriesData) return;
-    const ctx = canvas.getContext('2d');
+    
+    // Destroy previous chart instance if it exists
+    const existingChart = Chart.getChart(canvasId);
+    if (existingChart) {
+        existingChart.destroy();
+    }
 
-    const dataPoints = Object.values(timeSeriesData).map(d => parseFloat(d['4. close'])).reverse();
+    const dataPoints = Object.entries(timeSeriesData).map(([date, values]) => ({
+        x: new Date(date),
+        y: parseFloat(values['4. close'])
+    })).reverse();
+
     if (dataPoints.length < 2) return;
 
-    const min = Math.min(...dataPoints);
-    const max = Math.max(...dataPoints);
-    const range = max - min;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const stepX = width / (dataPoints.length - 1);
-
-    ctx.clearRect(0, 0, width, height);
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = change >= 0 ? '#16a34a' : '#dc2626'; // Green for up, red for down
-
-    dataPoints.forEach((point, i) => {
-        const x = i * stepX;
-        const y = height - ((point - min) / range) * height;
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                data: dataPoints,
+                borderColor: change >= 0 ? '#16a34a' : '#dc2626',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    intersect: false,
+                    mode: 'index',
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day'
+                    },
+                    display: false
+                },
+                y: {
+                    display: false
+                }
+            }
         }
     });
-
-    ctx.stroke();
 }
 
 function renderCalendar() {
@@ -1230,6 +1263,7 @@ async function displayMarketCalendar() {
             if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
                 calendarEvents.earnings = earningsData
                     .filter(e => e.symbol && e.reportDate)
+                    .filter(e => !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
                     .map(e => ({...e, eventDate: new Date(e.reportDate)}));
             }
 
@@ -1241,6 +1275,7 @@ async function displayMarketCalendar() {
             if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
                  calendarEvents.ipos = ipoData
                     .filter(i => i.symbol && i.ipoDate)
+                    .filter(i => !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
                     .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
             }
         } catch (error) {
@@ -1300,8 +1335,8 @@ function renderOverviewCard(data, symbol) {
                 </div>
             </div>
             
-            <div class="my-4">
-                <canvas id="sparkline-${symbol}" width="400" height="50"></canvas>
+            <div class="my-4 h-20 relative">
+                <canvas id="sparkline-${symbol}"></canvas>
             </div>
 
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
