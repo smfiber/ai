@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.9"; 
+const APP_VERSION = "7.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -147,8 +147,8 @@ const FINANCIAL_ANALYSIS_PROMPT = [
 ].join('\n');
 
 const UNDERVALUED_ANALYSIS_PROMPT = [
-    'Role: You are a Chartered Financial Analyst (CFA) level AI. Your objective is to conduct a meticulous stock valuation analysis for an informed investor. You must synthesize fundamental data, technical indicators, and profitability metrics to determine if a stock is potentially trading below its intrinsic value. Your reasoning must be transparent, data-driven, and based exclusively on the provided JSON.',
-    'Output Format: The final report must be delivered in a professional markdown report. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points. Direct and professional language is required.',
+    'Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply. Your analysis must be derived exclusively from the provided JSON data.',
+    'Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.',
     'IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.',
     '',
     'Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.',
@@ -157,60 +157,81 @@ const UNDERVALUED_ANALYSIS_PROMPT = [
     '{jsonData}',
     '',
     'Based on the data, generate the following in-depth report:',
-    '# Investment Valuation Report: {companyName} ({tickerSymbol})',
+    '# Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?',
     '',
-    '## 1. Executive Verdict',
-    'Provide a concise, top-line conclusion (3-4 sentences) that immediately answers the core question: Based on a synthesis of all available data, does the stock appear Undervalued, Fairly Valued, or Overvalued? Briefly state the primary factors (e.g., strong cash flow, low multiples, technical trends) that support this initial verdict.',
+    '## 1. The Bottom Line: Our Verdict',
+    'Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem Undervalued, Fairly Valued, or Overvalued? Briefly mention the top 1-2 reasons for this verdict in plain English, considering its fundamentals, health, and market sentiment.',
     '',
-    '## 2. Fundamental Valuation Deep Dive',
-    "Evaluate the company窶冱 intrinsic value through a rigorous examination of its financial health and market multiples.",
-    '### 2.1. Relative Valuation Multiples',
-    '- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Interpret this by comparing the TrailingPE to the ForwardPE. Does the difference suggest anticipated earnings growth or decline?',
-    "- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain what this ratio indicates about how the market values the company's net assets. A value under 1.0 is particularly noteworthy.",
-    '- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Analyze this in the context of profitability. Is a low P/S ratio a sign of undervaluation or indicative of low-profit margins?',
-    "- **Enterprise Value-to-EBITDA (EV/EBITDA):** [Value from OVERVIEW.EVToEBITDA]. Explain this ratio's significance as a capital structure-neutral valuation metric.",
-    '### 2.2. Growth and Profitability-Adjusted Value',
-    '- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Interpret this critical figure. A PEG ratio under 1.0 often suggests a stock may be undervalued relative to its expected earnings growth.',
-    "- **Return on Equity (ROE):** [Value from OVERVIEW.ReturnOnEquityTTM]%. Analyze this as a measure of core profitability and management's effectiveness at generating profits from shareholder capital.",
-    '### 2.3. Dividend Analysis',
-    '- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%.',
-    '- **Sustainability Check:** Calculate the Cash Flow Payout Ratio by dividing dividendPayout (from the most recent annual CASH_FLOW report) by operatingCashflow. A low ratio (<60%) suggests the dividend is well-covered and sustainable.',
-    '### 2.4. Wall Street Consensus',
-    "- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. Compare this target to the stock's recent price movement as indicated by its moving averages and 52-week range.",
+    '## 2. Is the Price Fair? (Fundamental & Health Analysis)',
+    "Let's look at the company's valuation metrics and financial health to see if the price makes sense.",
+    '### 2.1. Valuation Multiples Explained',
+    '- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Explain this simply: It’s the price you pay for $1 of the company’s profit. Compare the current P/E to the Forward P/E to see if analysts expect profits to rise or fall.',
+    "- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain this as the stock's price compared to the company's net worth on paper. A value under 1.0 can sometimes suggest it's a bargain.",
+    '- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Explain this as the price you pay for $1 of the company’s sales. Is it a good deal, or does it signal low profitability?',
+    '### 2.2. Financial Health Check (Debt Load)',
+    '- **Debt-to-Equity Ratio:** Calculate this using totalLiabilities / totalShareholderEquity from the most recent annual BALANCE_SHEET. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.',
+    '### 2.3. Value vs. Growth (The PEG Ratio)',
+    '- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Explain this as the secret weapon for value investors. It balances the P/E ratio with future growth expectations. A PEG ratio under 1.0 is often a green flag for an undervalued growth stock.',
+    "### 2.4. Getting Paid to Wait (Dividend Analysis)",
+    '- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%. Explain this as the annual return you get from dividends, like interest from a savings account.',
+    '- **Is the Dividend Safe?** Calculate the Cash Flow Payout Ratio (dividendPayout / operatingCashflow). Explain what this means for the dividend\'s sustainability. A low number is a good sign.',
+    '### 2.5. What Does Wall Street Think?',
+    "- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. How does Wall Street's target price compare to the current price? Is there potential upside according to the pros?",
     '',
-    '## 3. Technical Analysis & Market Dynamics',
-    "Assess the stock's current price action and market sentiment to determine if the timing is opportune.",
-    '### 3.1. Trend Analysis',
-    '- **50-Day MA:** $[Value from OVERVIEW.50DayMovingAverage]',
-    '- **200-Day MA:** $[Value from OVERVIEW.200DayMovingAverage]',
-    "- **Interpretation:** Analyze the stock's current trend. Is it in a bullish trend (trading above both MAs), a bearish trend (below both), or at an inflection point? How do these averages contain the price?",
-    '### 3.2. Momentum and Volatility',
-    '- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Where is the price currently situated within this range based on its moving averages? A price near the low may suggest value, while a price near the high suggests strong momentum.',
-    '- **Market Volatility (Beta):** [Value from OVERVIEW.Beta]. Interpret the Beta. Does the stock tend to be more or less volatile than the overall market?',
+    '## 3. Sizing Up the Competition (Relative Value)',
+    'A stock might seem cheap or expensive on its own, but how does it look compared to its peers?',
+    '- **Industry Context:** Using the `Industry` from the OVERVIEW data, comment on the valuation. For example, are the P/E and P/S ratios high or low for a company in this specific industry? (e.g., "Tech stocks often have higher P/E ratios than banks.") This provides crucial context.',
     '',
-    '## 4. Synthesized Conclusion: Framing the Opportunity',
-    'Combine the fundamental and technical findings into a final, actionable synthesis.',
-    '- **Fundamental Case:** Summarize the evidence. Do the valuation multiples, profitability, and growth metrics collectively suggest the stock is fundamentally cheap, expensive, or fairly priced?',
-    '- **Technical Case:** Summarize the market sentiment. Is the current price trend and momentum working for or against a potential investment right now?',
-    '- **Final Verdict & Investment Profile:** State a clear, final conclusion on whether the stock appears to be a compelling value opportunity. Characterize the potential investment by its profile. For example: "The stock appears fundamentally undervalued due to its low P/E and PEG ratios, supported by a sustainable dividend. However, technicals are currently bearish as the price is below its key moving averages, suggesting a patient approach may be warranted."',
+    '## 4. Market Mood & Stock Trends (Sentiment & Technicals)',
+    "Let's check the stock's recent price trends and what other investors are doing.",
+    '### 4.1. The Trend is Your Friend',
+    '- **50-Day & 200-Day Moving Averages:** Analyze the stock\'s current trend by comparing the price to these key levels. Is it in a "hot" uptrend or a "cold" downtrend?',
+    '### 4.2. Where Does the Price Stand?',
+    '- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Is the price currently near its yearly low (a potential discount) or its high (strong momentum)?',
+    '### 4.3. Market Sentiment Check',
+    '- **Short Interest:** [Value from OVERVIEW.ShortPercentOutstanding]%. Explain this as the percentage of shares being bet *against* the company. A high number (>10%) is a red flag that many investors expect the price to fall.',
+    '- **Insider Ownership:** [Value from OVERVIEW.PercentInsiders]%. Explain this as "skin in the game." When executives and directors own a good chunk of the stock, their interests are better aligned with shareholders.',
+    '',
+    '## 5. Final Conclusion: The Investment Case',
+    'Combine all our findings into a final, clear summary.',
+    '- **The Case for a Bargain:** Summarize the key data points (e.g., low P/E, healthy balance sheet, positive trend, strong insider ownership) that suggest the stock is undervalued.',
+    '- **The Case for Caution:** Summarize the key risks or red flags (e.g., high debt, high valuation vs. peers, bearish trend, high short interest) that suggest the stock might not be a good deal right now.',
+    '- **Final Takeaway:** End with a clear, final statement. For example: "The stock looks like a potential bargain based on its fundamentals and low debt. However, it appears expensive compared to its industry, and high short interest suggests market caution. A patient approach may be warranted."',
     '',
     '**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.'
 ].join('\n');
 
 const NEWS_SENTIMENT_PROMPT = [
-    'Role: You are an expert financial news sentiment analyst.',
-    'Task: Analyze the sentiment of the following news articles for {companyName} ({tickerSymbol}). Classify each article as \'Positive\', \'Negative\', or \'Neutral\'. Provide a brief, one-sentence justification for your classification.',
-    'Format: Return a JSON array of objects, where each object has "sentiment" and "justification" keys. The array order must match the article order.',
+    'Role: You are a financial news analyst AI who is an expert at cutting through the noise and explaining what headlines *really* mean for an everyday investor. Your goal is to assess the mood and key narratives surrounding a company based on recent news.',
+    'Task: Analyze the sentiment of the following news articles for {companyName} ({tickerSymbol}). IMPORTANT: Process only the articles that include a publication date. Ignore any articles where this date is missing.',
+    'For each valid article, you will perform five actions:',
+    '1. Extract the publication date (format as YYYY-MM-DD).',
+    '2. Classify the sentiment as \'Bullish\' (good news), \'Bearish\' (bad news), or \'Neutral\' (factual).',
+    '3. Classify the impact as \'High\', \'Medium\', or \'Low\'. High impact news (like earnings reports, CEO changes, or major lawsuits) is likely to move the stock price.',
+    '4. Categorize the news into one of the following themes: \'Financials\', \'Legal/Regulatory\', \'Product/Innovation\', \'Management\', or \'Market\'.',
+    '5. Provide a brief, one-sentence summary explaining the key takeaway for a potential investor.',
+    '',
+    'After analyzing all articles, you will provide a final, overall summary of the news sentiment.',
+    '',
+    'Output Format:',
+    'First, return a JSON array of objects for programmatic use. Each object must have "date", "sentiment", "impact", "category", and "summary" keys. The final JSON array MUST be sorted by impact, from \'High\' down to \'Low\'. This JSON block must be clean, with no text before or after it.',
+    'Second, after the JSON block, add a final markdown section titled "## Overall News Pulse". In this section, provide a 2-3 sentence summary of the collective sentiment. Focus on the most impactful news. Are there any recurring themes (e.g., multiple articles about legal troubles or product successes)?',
     '',
     'Articles (JSON format):',
     '{news_articles_json}',
     '',
-    'Example Output:',
+    '--- START OF EXAMPLE ---',
+    'Example JSON Output:',
     '[',
-    '  { "sentiment": "Positive", "justification": "The article reports higher-than-expected quarterly earnings and a positive outlook." },',
-    '  { "sentiment": "Negative", "justification": "The article discusses a new regulatory investigation into the company\'s sales practices." },',
-    '  { "sentiment": "Neutral", "justification": "The article provides a factual overview of the company\'s upcoming shareholder meeting." }',
-    ']'
+    '  { "date": "2025-07-28", "sentiment": "Bullish", "impact": "High", "category": "Financials", "summary": "The company reported stronger-than-expected earnings, which is a significant positive for profitability." },',
+    '  { "date": "2025-07-27", "sentiment": "Bearish", "impact": "High", "category": "Legal/Regulatory", "summary": "A new regulatory investigation creates uncertainty and potentially significant legal and financial risks." },',
+    '  { "date": "2025-07-25", "sentiment": "Bearish", "impact": "Medium", "category": "Product/Innovation", "summary": "A key product launch has been delayed by one quarter, potentially affecting next quarter\'s revenue." },',
+    '  { "date": "2025-07-26", "sentiment": "Neutral", "impact": "Low", "category": "Management", "summary": "The article factually reports on an upcoming shareholder meeting without offering a strong opinion." }',
+    ']',
+    '',
+    '## Overall News Pulse',
+    'The overall news sentiment is mixed but defined by high-impact events. While the strong earnings report is very bullish, it is counter-balanced by a new, high-risk regulatory investigation. The dominant theme is a conflict between strong financial performance and emerging legal risks.',
+    '--- END OF EXAMPLE ---'
 ].join('\n');
 
 const BULL_VS_BEAR_PROMPT = [
@@ -1033,18 +1054,20 @@ function filterValidNews(articles) {
 
 function getSentimentDisplay(sentiment) {
     switch (sentiment) {
+        case 'Bullish':
         case 'Positive':
-            return { icon: '総', colorClass: 'text-green-600', bgClass: 'bg-green-100' };
+            return { icon: '総', colorClass: 'text-green-600', bgClass: 'bg-green-100', textClass: 'text-green-800' };
+        case 'Bearish':
         case 'Negative':
-            return { icon: '綜', colorClass: 'text-red-600', bgClass: 'bg-red-100' };
+            return { icon: '綜', colorClass: 'text-red-600', bgClass: 'bg-red-100', textClass: 'text-red-800' };
         case 'Neutral':
-            return { icon: '', colorClass: 'text-gray-600', bgClass: 'bg-gray-100' };
+            return { icon: '', colorClass: 'text-gray-600', bgClass: 'bg-gray-100', textClass: 'text-gray-800' };
         default:
-            return { icon: '', colorClass: '', bgClass: '' };
+            return { icon: '', colorClass: '', bgClass: '', textClass: '' };
     }
 }
 
-function renderNewsArticles(articles, symbol) {
+function renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol) {
     const card = document.getElementById(`card-${symbol}`);
     if (!card) return;
 
@@ -1054,33 +1077,30 @@ function renderNewsArticles(articles, symbol) {
     const newsContainer = document.createElement('div');
     newsContainer.className = 'news-container mt-4 border-t pt-4';
 
-    if (articles.length === 0) {
-        newsContainer.innerHTML = `<p class="text-sm text-gray-500">No recent news articles found.</p>`;
+    if (articlesWithSentiment.length === 0) {
+        newsContainer.innerHTML = `<p class="text-sm text-gray-500">No recent news articles found in the last 30 days.</p>`;
     } else {
-        const articlesHtml = articles.slice(0, 5).map(article => {
-            let sentimentHtml = '';
-            if (article.sentiment && article.sentiment.sentiment) {
-                const { icon, colorClass, bgClass } = getSentimentDisplay(article.sentiment.sentiment);
-                sentimentHtml = `
-                    <div class="mt-2 p-2 rounded-lg ${bgClass} flex items-start gap-2">
-                        <span class="text-lg ${colorClass}">${icon}</span>
-                        <p class="text-sm ${colorClass}">
-                            <span class="font-semibold">${article.sentiment.sentiment}:</span>
-                            ${sanitizeText(article.sentiment.justification)}
-                        </p>
-                    </div>
-                `;
-            }
+        const impactColorMap = { 'High': 'bg-red-500', 'Medium': 'bg-yellow-500', 'Low': 'bg-blue-500' };
+        const articlesHtml = articlesWithSentiment.map(article => {
+            const { bgClass: sentimentBg, textClass: sentimentText } = getSentimentDisplay(article.sentiment);
+            const impactColor = impactColorMap[article.impact] || 'bg-gray-500';
 
             return `
-                <div class="mb-4">
-                    <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">${sanitizeText(article.title)}</a>
-                    <p class="text-sm text-gray-600 mt-1">${sanitizeText(article.snippet)}</p>
-                    ${sentimentHtml}
+                <div class="mb-4 p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
+                    <p class="text-sm text-gray-700 mb-3">"${sanitizeText(article.summary)}"</p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
+                        <span class="px-2 py-1 rounded-full ${sentimentBg} ${sentimentText}">${sanitizeText(article.sentiment)}</span>
+                        <span class="px-2 py-1 rounded-full text-white ${impactColor}">Impact: ${sanitizeText(article.impact)}</span>
+                        <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.category)}</span>
+                        <span class="px-2 py-1 rounded-full bg-gray-200 text-gray-800">${sanitizeText(article.date)}</span>
+                    </div>
                 </div>
             `;
         }).join('');
-        newsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-2">Recent News</h3>${articlesHtml}`;
+        
+        const summaryHtml = summaryMarkdown ? marked.parse(summaryMarkdown) : '';
+        newsContainer.innerHTML = `<h3 class="text-lg font-bold text-gray-700 mb-3">Recent News Analysis</h3>${articlesHtml}${summaryHtml}`;
     }
     card.appendChild(newsContainer);
 }
@@ -1106,34 +1126,59 @@ async function handleFetchNews(symbol) {
         const newsData = await callApi(url);
         let validArticles = filterValidNews(newsData.items);
 
-        if (validArticles.length > 0) {
-            try {
-                const articlesForPrompt = validArticles.slice(0, 5).map(a => ({ title: a.title, snippet: a.snippet }));
-                const prompt = NEWS_SENTIMENT_PROMPT
-                    .replace('{companyName}', companyName)
-                    .replace('{tickerSymbol}', symbol)
-                    .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+        // Filter for articles in the last 30 days that have a publication date
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-                const sentimentResult = await callGeminiApi(prompt);
-                const cleanedJsonString = sentimentResult.replace(/```json\n|```/g, '').trim();
-                const sentiments = JSON.parse(cleanedJsonString);
-                
-                if (Array.isArray(sentiments) && sentiments.length === articlesForPrompt.length) {
-                    validArticles = validArticles.map((article, index) => ({
-                        ...article,
-                        sentiment: sentiments[index]
-                    }));
-                }
-            } catch (sentimentError) {
-                console.error("Could not perform sentiment analysis:", sentimentError);
+        const recentArticles = validArticles.map(a => {
+            const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
+            if (!pubDateStr) return null;
+            const publicationDate = new Date(pubDateStr);
+            return { ...a, publicationDate };
+        }).filter(a => a && a.publicationDate >= thirtyDaysAgo);
+
+        if (recentArticles.length > 0) {
+            const articlesForPrompt = recentArticles.slice(0, 10).map(a => ({ 
+                title: a.title, 
+                snippet: a.snippet,
+                publicationDate: a.publicationDate.toISOString().split('T')[0] 
+            }));
+
+            const prompt = NEWS_SENTIMENT_PROMPT
+                .replace('{companyName}', companyName)
+                .replace('{tickerSymbol}', symbol)
+                .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
+
+            const rawResult = await callGeminiApi(prompt);
+            
+            // Separate JSON from markdown summary
+            const jsonMatch = rawResult.match(/```json\n([\s\S]*?)\n```|(\[[\s\S]*\])/);
+            const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[2]).trim() : '';
+            const summaryMarkdown = rawResult.split(jsonMatch ? jsonMatch[0] : ']').pop().trim();
+
+            const sentiments = JSON.parse(jsonString);
+            
+            // The prompt asks the AI to return data for the articles we sent.
+            // We can add the link back by matching the titles or assuming the order is preserved.
+            // Assuming order is preserved is simpler and likely correct.
+            if (Array.isArray(sentiments) && sentiments.length === articlesForPrompt.length) {
+                const articlesWithSentiment = sentiments.map((sentiment, index) => ({
+                    ...sentiment,
+                    title: recentArticles[index].title,
+                    link: recentArticles[index].link
+                }));
+                 renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol);
+            } else {
+                 renderNewsArticles([], '', symbol); // Fallback if parsing fails
             }
+        } else {
+             renderNewsArticles([], '', symbol);
         }
-
-        renderNewsArticles(validArticles, symbol);
 
     } catch (error) {
         console.error("Error fetching news:", error);
         displayMessageInModal(`Could not fetch news: ${error.message}`, 'error');
+        renderNewsArticles([], '', symbol); // Render empty state on error
     } finally {
         button.disabled = false;
         button.textContent = 'Fetch News';
