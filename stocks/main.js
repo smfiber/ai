@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.2"; 
+const APP_VERSION = "7.0.3"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -64,75 +64,6 @@ const FINANCIAL_NEWS_SOURCES = [
     'benzinga.com', 'zacks.com', 'kiplinger.com', 'thestreet.com',
     'morningstar.com', 'nasdaq.com', 'fool.com'
 ];
-
-const SECTOR_SYNTHESIS_PROMPT = [
-    'Role: You are a data extraction AI. Your task is to process a list of financial news articles and structure the key information into a clean JSON object.',
-    'Task: Read the provided JSON data of news articles. For each article, extract the companies mentioned and the context of the mention.',
-    'Output Format: Return ONLY a valid JSON object. The JSON should have a single key "companies" which is an array of objects. Each object should have "companyName", "ticker", and "mentions" keys. "mentions" should be an array of objects, each with "context", "sentiment", and "articleIndex" (the original index of the source article).',
-    'CRITICAL: Your entire response must be ONLY the raw JSON object. Do not include any surrounding text, explanations, or markdown formatting like ```json.',
-    '',
-    'News Articles JSON Data:',
-    '{news_articles_json}',
-    '',
-    'Example Output:',
-    '{',
-    '  "companies": [',
-    '    {',
-    '      "companyName": "NVIDIA Corp",',
-    '      "ticker": "NVDA",',
-    '      "mentions": [',
-    '        { "context": "Reported record-breaking quarterly revenue in its data center division.", "sentiment": "Positive", "articleIndex": 0 }',
-    '      ]',
-    '    }',
-    '  ]',
-    '}'
-].join('\n');
-
-const SECTOR_RANKING_PROMPT = [
-    'Role: You are a quantitative analyst AI. Your task is to rank companies based on pre-processed news data.',
-    'Task: Based ONLY on the provided JSON data summarizing recent news, identify the Top 5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports > product updates) and sentiment ("Positive" mentions only) of the news.',
-    'Output Format: Return ONLY a valid JSON object. The JSON should have a single key "top5" which is an array of objects. Each object should contain "companyName", "ticker", and a "rankingJustification" that briefly explains why it was ranked highly based on its positive news mentions.',
-    '',
-    'Pre-processed News Analysis JSON:',
-    '{synthesis_json}',
-    '',
-    'Example Output:',
-    '{',
-    '  "top5": [',
-    '    { "companyName": "NVIDIA Corp", "ticker": "NVDA", "rankingJustification": "Ranked first due to the high significance of its record-breaking quarterly revenue and the announcement of a new generation of AI accelerators." },',
-    '    { "companyName": "Apple Inc.", "ticker": "AAPL", "rankingJustification": "Ranked second for its successful launch of a new product line and positive early sales figures." }',
-    '  ]',
-    '}'
-].join('\n');
-
-const SECTOR_DEEP_DIVE_PROMPT = [
-    'Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.',
-    'Task: You will be given two JSON inputs: a "synthesis" of all companies mentioned in the news, and a "ranking" of the top companies. Use this data to generate a comprehensive report that is insightful and detailed.',
-    'Output Format: Use professional markdown. For each catalyst, you MUST append a source placeholder at the end of the line, like this: `[Source: X]`, where X is the `articleIndex` from the synthesis data.',
-    '',
-    'Full News Synthesis JSON:',
-    '{synthesis_json}',
-    '',
-    'Top Ranked Companies JSON:',
-    '{ranking_json}',
-    '',
-    '---',
-    '',
-    '## AI-Powered Market Analysis: {sectorName} Sector',
-    '',
-    '### Overall Sector Outlook & Key Themes',
-    'First, provide a 2-3 sentence summary of the overall outlook for the sector based on the collective news. Identify the most significant themes present in the full synthesis data.',
-    '',
-    '### Deeper Dive: Top Companies in the News',
-    'For each of the companies in the "Top Ranked Companies JSON", create a detailed section:',
-    '1. Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)").',
-    '2. **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably.',
-    '3. **Positive Catalysts:** Create a bulleted list of the specific positive events mentioned in the news. For each bullet point, use the "context" from the synthesis JSON and append its corresponding `articleIndex` as a placeholder, like this: `* Reported record-breaking quarterly revenue. [Source: 0]`',
-    '4. **Analyst Commentary:** If any news snippets mention specific analyst firms or commentary, summarize that here. If none, state "No specific analyst commentary was found in the provided news snippets."',
-    '',
-    '---',
-    '**Disclaimer:** This is an AI-generated summary based on recent news articles and is for informational and educational purposes only. It is NOT financial advice. The information may not be comprehensive or real-time and is based on data from the last 30 days. Always conduct your own thorough research and consult with a qualified financial advisor before making any investment decisions.'
-].join('\n');
 
 const FINANCIAL_ANALYSIS_PROMPT = [
     "Role: You are a senior investment analyst AI. Your purpose is to generate a rigorous, data-driven financial statement analysis for a sophisticated audience (e.g., portfolio managers, institutional investors). Your analysis must be objective, precise, and derived exclusively from the provided JSON data. All calculations and interpretations must be clearly explained.",
@@ -718,7 +649,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -732,6 +663,24 @@ async function callGeminiApi(prompt) {
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API.");
 }
+
+async function callGeminiApiWithTools(contents) {
+    if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const data = await callApi(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contents),
+    });
+
+    if (data.candidates?.[0]?.content) {
+        return data.candidates[0].content;
+    }
+    console.error("Unexpected Gemini API response structure:", data);
+    throw new Error("Failed to parse the response from the Gemini API with tools.");
+}
+
 
 // --- PORTFOLIO MANAGEMENT (v6.0.0) ---
 
@@ -1467,7 +1416,7 @@ function setupEventListeners() {
     document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button.btn-sector');
         if (target && target.dataset.sector) {
-            handleSectorAnalysis(target.dataset.sector);
+            handleSectorAnalysisWithAIAgent(target.dataset.sector);
         }
     });
 
@@ -1484,133 +1433,252 @@ function setupEventListeners() {
     setupGlobalEventListeners();
 }
 
-// --- AI ANALYSIS REPORT GENERATORS ---
+// --- SECTOR ANALYSIS: AI AGENT WORKFLOW (v7.0.3) ---
 
-async function handleSectorAnalysis(sectorName) {
+/**
+ * Tool 1: Searches for recent news articles for a given financial sector.
+ * This tool is declared to the Gemini model, which can then request its execution.
+ */
+async function searchSectorNews({ sectorName }) {
     if (!searchApiKey || !searchEngineId) {
-        displayMessageInModal("This feature requires the Web Search API Key and Search Engine ID.", "warning");
+        throw new Error("Web Search API Key and Search Engine ID are required for news search.");
+    }
+    const siteQuery = FINANCIAL_NEWS_SOURCES.map(site => `site:${site}`).join(' OR ');
+    const query = encodeURIComponent(`"${sectorName} sector" ("earnings report" OR "analyst rating" OR "growth driver" OR "stock upgrade") (${siteQuery})`);
+    const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=d[30]&num=10`;
+    
+    const newsData = await callApi(url);
+    const validArticles = filterValidNews(newsData.items || []);
+
+    if (validArticles.length === 0) {
+        // Return a structured error that the model can understand
+        return { error: "No relevant news articles found", detail: `Could not find any recent news for the ${sectorName} sector in the last 30 days.` };
+    }
+
+    // Return a clean list of articles for the next tool
+    return { 
+        articles: validArticles.map((a, index) => ({
+            title: a.title,
+            snippet: a.snippet,
+            link: a.link,
+            source: a.displayLink,
+            publicationDate: a.pagemap?.newsarticle?.[0]?.datepublished ? new Date(a.pagemap.newsarticle[0].datepublished).toISOString().split('T')[0] : 'N/A',
+            articleIndex: index
+        }))
+    };
+}
+
+/**
+ * Tool 2: Synthesizes news articles to identify and rank noteworthy companies.
+ * This tool is declared to the Gemini model.
+ */
+async function synthesizeAndRankCompanies({ newsArticles }) {
+    const prompt = `
+        Role: You are a quantitative financial analyst AI. Your task is to analyze a list of financial news articles and identify the most noteworthy companies based on the significance and sentiment of the news.
+
+        Task:
+        1. Read the provided JSON data of news articles.
+        2. For each article, extract any mentioned companies, their ticker symbols (if possible), and the context of the mention.
+        3. Based on the collective news, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports > product updates) and positive sentiment of the news.
+        
+        Output Format: Return ONLY a valid JSON object. The JSON should have a single key "topCompanies" which is an array of objects. Each object must contain "companyName", "ticker", and a "rankingJustification" that briefly explains why it was ranked highly based on its positive news mentions. Include the source article indices in the justification.
+
+        News Articles JSON Data:
+        ${JSON.stringify(newsArticles, null, 2)}
+    `;
+
+    const resultText = await callGeminiApi(prompt);
+    try {
+        // Clean and parse the JSON response from the model
+        const cleanedJson = resultText.replace(/```json\n|```/g, '').trim();
+        return JSON.parse(cleanedJson);
+    } catch (error) {
+        console.error("Error parsing synthesis result:", error);
+        return { error: "Failed to parse analysis from AI", detail: error.message };
+    }
+}
+
+/**
+ * Tool 3: Generates the final, user-facing deep-dive report.
+ * This tool is declared to the Gemini model.
+ */
+async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArticles }) {
+    const prompt = `
+        Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.
+
+        Task: Use the provided "Top Companies" JSON to generate a comprehensive markdown report. For each company, create a detailed section including an investment thesis and a list of the positive catalysts mentioned in the news.
+
+        Output Format: Use professional markdown. For each catalyst, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data.
+
+        Top Ranked Companies JSON:
+        ${JSON.stringify(companyAnalysis, null, 2)}
+
+        ---
+        ## AI-Powered Market Analysis: ${sectorName} Sector
+
+        ### Overall Sector Outlook & Key Themes
+        Provide a 2-3 sentence summary of the overall outlook for the ${sectorName} sector based on the collective news represented in the ranked companies. Identify the most significant themes present.
+
+        ### Deeper Dive: Top Companies in the News
+        For each of the companies in the "Top Ranked Companies JSON", create a detailed section:
+        1. Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)").
+        2. **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably based on the provided justification.
+        3. **Positive Catalysts:** Create a bulleted list of the specific positive events mentioned in the news. Use the 'rankingJustification' to construct these points and append the source placeholder for verifiability.
+    `;
+    
+    let finalReport = await callGeminiApi(prompt);
+
+    // Post-processing to inject verifiable source links
+    finalReport = finalReport.replace(/\[Source: (\d+)\]/g, (match, indexStr) => {
+        const index = parseInt(indexStr, 10);
+        const article = originalArticles.find(a => a.articleIndex === index);
+        if (article) {
+            const sourceParts = article.source.split('.');
+            const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
+            return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+        }
+        return match; // Return original placeholder if article not found
+    });
+
+    return { report: finalReport };
+}
+
+
+/**
+ * Main orchestrator function for the AI-driven sector analysis.
+ * This function manages the conversation with Gemini, including executing tool calls.
+ */
+async function handleSectorAnalysisWithAIAgent(sectorName) {
+    if (!searchApiKey || !searchEngineId || !geminiApiKey) {
+        displayMessageInModal("This feature requires the Web Search API Key, Search Engine ID, and Gemini API Key.", "warning");
         return;
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Searching news for the ${sectorName} sector...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Initiating AI analysis for the ${sectorName} sector...`;
+
+    // 1. Define the tools available to the Gemini model.
+    const tools = {
+        functionDeclarations: [
+            {
+                name: "searchSectorNews",
+                description: "Searches for recent (last 30 days) financial news articles for a given economic sector from a list of reputable sources.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        sectorName: { type: "string", description: "The financial sector to search for, e.g., 'Technology' or 'Health Care'." },
+                    },
+                    required: ["sectorName"],
+                },
+            },
+            {
+                name: "synthesizeAndRankCompanies",
+                description: "Analyzes a list of news articles to identify and rank the top 3-5 most favorably mentioned companies, returning a JSON object with justifications.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        newsArticles: { type: "array", description: "An array of news article objects, each with a title and snippet.", items: { type: "object" } },
+                    },
+                    required: ["newsArticles"],
+                },
+            },
+            {
+                name: "generateDeepDiveReport",
+                description: "Generates a final, user-facing markdown report summarizing the analysis of top companies in a sector.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        companyAnalysis: { type: "object", description: "The JSON object containing the ranked list of top companies and their analysis." },
+                        sectorName: { type: "string", description: "The name of the sector being analyzed." },
+                        originalArticles: { type: "array", description: "The original array of articles, needed for adding source links.", items: { type: "object" } },
+                    },
+                    required: ["companyAnalysis", "sectorName", "originalArticles"],
+                },
+            },
+        ],
+    };
+
+    // 2. Map tool names to their actual callable JavaScript functions.
+    const toolFunctions = {
+        'searchSectorNews': searchSectorNews,
+        'synthesizeAndRankCompanies': synthesizeAndRankCompanies,
+        'generateDeepDiveReport': generateDeepDiveReport,
+    };
+
+    // 3. Start the conversation with the initial user request.
+    const conversationHistory = [{
+        role: "user",
+        parts: [{ text: `Generate a deep-dive analysis report for the ${sectorName} sector. Start by searching for relevant news.` }],
+    }];
+    
+    let originalArticles = []; // Store articles to pass to the final tool
 
     try {
-        // Step 1: Search for relevant news from the last 30 days across specific sources
-        const siteQuery = FINANCIAL_NEWS_SOURCES.map(site => `site:${site}`).join(' OR ');
-        const query = encodeURIComponent(`"${sectorName} sector" ("earnings report" OR "analyst rating" OR "growth driver" OR "stock upgrade") (${siteQuery})`);
-        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=d[30]&num=10`;
-        const newsData = await callApi(url);
-        const validArticles = filterValidNews(newsData.items || []);
-
-        if (validArticles.length === 0) {
-            throw new Error(`Could not find any recent news articles for the ${sectorName} sector in the last 30 days from specified sources.`);
-        }
-
-        const articlesForPrompt = validArticles.map((a, index) => {
-            const pubDate = a.pagemap?.newsarticle?.[0]?.datepublished;
-            return {
-                title: a.title,
-                snippet: a.snippet,
-                link: a.link,
-                source: a.displayLink,
-                publicationDate: pubDate ? new Date(pubDate).toISOString().split('T')[0] : 'N/A',
-                articleIndex: index
+        for (let i = 0; i < 5; i++) { // Max 5 turns to prevent infinite loops
+            const contents = {
+                contents: conversationHistory,
+                tools: [tools]
             };
-        });
-
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving initial news data to database...`;
-        const runDocRef = doc(collection(db, CONSTANTS.DB_COLLECTION_SECTOR_ANALYSIS));
-        const runId = runDocRef.id;
-        const initialRunData = {
-            id: runId,
-            sectorName: sectorName,
-            createdAt: Timestamp.now(),
-            status: 'articles_fetched',
-            articles: articlesForPrompt,
-        };
-        await setDoc(runDocRef, initialRunData);
-
-        // Step 2: First AI Pass - Synthesize news into structured JSON
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 1/3: Synthesizing news data...`;
-        
-        const synthesisPrompt = SECTOR_SYNTHESIS_PROMPT
-            .replace(/{sectorName}/g, sectorName)
-            .replace('{news_articles_json}', JSON.stringify(articlesForPrompt, null, 2));
-
-        const synthesisResult = await callGeminiApi(synthesisPrompt);
-        const cleanedSynthesisJson = synthesisResult.replace(/```json\n|```/g, '').trim();
-        const synthesisJson = JSON.parse(cleanedSynthesisJson);
-
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving synthesis results to database...`;
-        await setDoc(runDocRef, {
-            status: 'synthesis_complete',
-            synthesis: synthesisJson,
-            updatedAt: Timestamp.now()
-        }, { merge: true });
-
-        // Step 3: Second AI Pass - Rank companies
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 2/3: Ranking noteworthy companies...`;
-        const rankingPrompt = SECTOR_RANKING_PROMPT
-            .replace(/{sectorName}/g, sectorName)
-            .replace('{synthesis_json}', JSON.stringify(synthesisJson, null, 2));
             
-        const rankingResult = await callGeminiApi(rankingPrompt);
-        const cleanedRankingJson = rankingResult.replace(/```json\n|```/g, '').trim();
-        const rankingJson = JSON.parse(cleanedRankingJson);
-        
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ranking results to database...`;
-        await setDoc(runDocRef, {
-            status: 'ranking_complete',
-            ranking: rankingJson,
-            updatedAt: Timestamp.now()
-        }, { merge: true });
+            const responseContent = await callGeminiApiWithTools(contents);
+            const responseParts = responseContent.parts;
+            conversationHistory.push({ role: 'model', parts: responseParts });
 
-        // Step 4: Third AI Pass - Generate the final deep-dive report
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Step 3/3: Generating final deep-dive report...`;
-        const deepDivePrompt = SECTOR_DEEP_DIVE_PROMPT
-            .replace(/{sectorName}/g, sectorName)
-            .replace('{synthesis_json}', JSON.stringify(synthesisJson, null, 2))
-            .replace('{ranking_json}', JSON.stringify(rankingJson, null, 2));
+            const toolCalls = responseParts
+                .filter(part => part.functionCall)
+                .map(part => part.functionCall);
 
-        let finalReport = await callGeminiApi(deepDivePrompt);
-
-        // Step 5: Post-processing to inject verifiable source links
-        finalReport = finalReport.replace(/\[Source: (\d+)\]/g, (match, indexStr) => {
-            const index = parseInt(indexStr, 10);
-            const article = articlesForPrompt[index];
-            if (article) {
-                const sourceParts = article.source.split('.');
-                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
-                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            if (toolCalls.length === 0) {
+                // Final response received from the model
+                loadingMessage.textContent = 'Finalizing report...';
+                const finalReportText = responseParts.map(part => part.text || '').join('\n');
+                document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReportText);
+                document.getElementById('custom-analysis-modal-title').textContent = `Sector Analysis | ${sectorName}`;
+                openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+                break; // Exit the loop
             }
-            return match; // Return original placeholder if article not found
-        });
-        
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving final report to database...`;
-        await setDoc(runDocRef, {
-            status: 'complete',
-            report: finalReport,
-            updatedAt: Timestamp.now()
-        }, { merge: true });
 
-        // Step 6: Display final report
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReport);
-        document.getElementById('custom-analysis-modal-title').textContent = `Sector Analysis | ${sectorName}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+            // Execute tool calls in parallel
+            loadingMessage.textContent = `AI is running tools: ${toolCalls.map(tc => tc.name).join(', ')}...`;
+            const toolExecutionPromises = toolCalls.map(toolCall => {
+                const func = toolFunctions[toolCall.name];
+                if (!func) throw new Error(`Unknown tool: ${toolCall.name}`);
+                
+                // Special handling to pass original articles to the final reporting tool
+                if (toolCall.name === 'generateDeepDiveReport') {
+                    toolCall.args.originalArticles = originalArticles;
+                }
+                
+                return func(toolCall.args);
+            });
+            
+            const toolResults = await Promise.all(toolExecutionPromises);
 
+            // Store articles if they were just fetched
+            const newsSearchResult = toolResults.find((res, idx) => toolCalls[idx].name === 'searchSectorNews');
+            if(newsSearchResult && newsSearchResult.articles) {
+                originalArticles = newsSearchResult.articles;
+            }
+
+            // Add tool responses to conversation history
+            conversationHistory.push({
+                role: 'user', // Function results are sent back as the user
+                parts: toolResults.map((result, i) => ({
+                    functionResponse: { name: toolCalls[i].name, response: result }
+                }))
+            });
+        }
     } catch (error) {
-        console.error("Error during sector analysis:", error);
-        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+        console.error("Error during AI agent sector analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-function get(obj, path, defaultValue = "N/A") {
-    const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
-    return value !== undefined && value !== null && value !== "None" ? value : defaultValue;
-}
+
+// --- AI ANALYSIS REPORT GENERATORS ---
 
 async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTION_CACHE) {
     const docRef = doc(db, collection, symbol);
