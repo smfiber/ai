@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.1.3"; 
+const APP_VERSION = "7.1.4"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1777,9 +1777,8 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
                     properties: {
                         companyAnalysis: { type: "object", description: "The JSON object containing the ranked list of top companies and their analysis." },
                         sectorName: { type: "string", description: "The name of the sector being analyzed." },
-                        originalArticles: { type: "array", description: "The original array of articles, needed for adding source links.", items: { type: "object" } },
                     },
-                    required: ["companyAnalysis", "sectorName", "originalArticles"],
+                    required: ["companyAnalysis", "sectorName"],
                 },
             },
         ],
