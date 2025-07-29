@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.4"; 
+const APP_VERSION = "7.0.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -657,9 +657,16 @@ async function callGeminiApi(prompt) {
         body: JSON.stringify(body)
     });
 
-    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        return data.candidates[0].content.parts[0].text;
+    const candidate = data.candidates?.[0];
+
+    if (candidate?.content?.parts?.[0]?.text) {
+        return candidate.content.parts[0].text;
     }
+    
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
+    }
+
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API.");
 }
@@ -674,9 +681,16 @@ async function callGeminiApiWithTools(contents) {
         body: JSON.stringify(contents),
     });
 
-    if (data.candidates?.[0]?.content) {
-        return data.candidates[0].content;
+    const candidate = data.candidates?.[0];
+
+    if (candidate?.content) {
+        return candidate.content;
     }
+
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
+    }
+
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API with tools.");
 }
@@ -1132,7 +1146,7 @@ function renderSparkline(canvasId, timeSeriesData, change) {
     const dataPoints = Object.entries(timeSeriesData).map(([date, values]) => ({
         x: new Date(date),
         y: parseFloat(values['4. close'])
-    })).reverse();
+    })).sort((a, b) => a.x - b.x);
 
     if (dataPoints.length < 2) return;
 
@@ -1491,15 +1505,18 @@ async function searchSectorNews({ sectorName }) {
     }
 
     // Return a clean list of articles for the next tool
-    return { 
-        articles: validArticles.map((a, index) => ({
-            title: a.title,
-            snippet: a.snippet,
-            link: a.link,
-            source: a.displayLink,
-            publicationDate: a.pagemap?.newsarticle?.[0]?.datepublished ? new Date(a.pagemap.newsarticle[0].datepublished).toISOString().split('T')[0] : 'N/A',
-            articleIndex: index
-        }))
+    return {
+        articles: validArticles.map((a, index) => {
+            const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
+            return {
+                title: a.title,
+                snippet: a.snippet,
+                link: a.link,
+                source: a.displayLink,
+                publicationDate: pubDateStr ? new Date(pubDateStr).toISOString().split('T')[0] : 'N/A',
+                articleIndex: index
+            };
+        })
     };
 }
 
