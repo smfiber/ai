@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.1.0"; 
+const APP_VERSION = "7.1.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -235,51 +235,63 @@ const NEWS_SENTIMENT_PROMPT = [
 ].join('\n');
 
 const BULL_VS_BEAR_PROMPT = [
-    'Role: You are a skilled financial debater AI. Your task is to generate a concise and data-driven Bull and Bear case for {companyName} using ONLY the provided JSON data.',
-    'Output Format: Use markdown format. Create a clear "Bull Case" section and a "Bear Case" section, each with 3-4 bullet points supported by specific data from the JSON.',
+    'Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. Use ONLY the provided JSON data to build your arguments.',
+    'Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.',
     '',
     'JSON Data:',
     '{jsonData}',
     '',
-    '# Bull vs. Bear Analysis: {companyName} ({tickerSymbol})',
+    '# The Investment Debate: {companyName} ({tickerSymbol})',
     '',
-    '## The Bull Case (Reasons to be Optimistic)',
-    'Construct an argument based on the company\'s strengths. Focus on metrics like:',
-    '- Consistent revenue or earnings growth (from INCOME_STATEMENT).',
-    '- Strong profitability margins (ProfitMargin, ROE from OVERVIEW).',
-    '- Robust operating cash flow (from CASH_FLOW).',
-    '- A potentially undervalued state based on key multiples (PERatio, PEGRatio from OVERVIEW).',
+    '## The Bull Case (The Bright Side: Reasons to be Optimistic)',
+    'Construct a positive argument for the company. For each point, state the supporting data and then briefly explain *why* it matters to an investor.',
+    'Focus on strengths like:',
+    '- **Strong Growth:** Is revenue or profit consistently increasing? (Use INCOME_STATEMENT data).',
+    '- **High Profitability:** Is the company a good money-maker? (Use ProfitMargin, ROE from OVERVIEW). Explain ROE as a "grade" for how well management uses shareholder money.',
+    '- **Solid Cash Flow:** Is the business generating real cash? (Use operatingCashflow from CASH_FLOW). Explain this as the company\'s "lifeblood".',
+    '- **Potential Bargain:** Does the stock seem cheap relative to its earnings or growth? (Use PERatio, PEGRatio from OVERVIEW).',
+    '- **Wall Street Optimism:** Does the AnalystTargetPrice suggest significant upside from the current price, indicating that market experts are also bullish?',
     '',
-    '## The Bear Case (Reasons for Caution)',
-    'Construct an argument based on the company\'s weaknesses. Focus on metrics like:',
-    '- High debt levels or leverage (Debt-to-Equity from BALANCE_SHEET).',
-    '- Declining revenue or shrinking margins.',
-    '- Weak cash flow or a high reliance on financing activities.',
-    '- A potentially overvalued state, indicated by high valuation multiples compared to growth.',
+    '## The Bear Case (The Cautious View: Reasons for Concern)',
+    'Construct a negative argument for the company. For each point, state the supporting data and explain the potential risk.',
+    'Focus on weaknesses like:',
+    '- **Heavy Debt Load:** Does the company owe a lot of money? (Use Debt-to-Equity from BALANCE_SHEET). Explain this like having a large mortgage; it can be risky if times get tough.',
+    '- **Slowing Growth or Profitability:** Are sales or profits shrinking, potentially falling behind competitors? (Use INCOME_STATEMENT data).',
+    '- **Weak Cash Flow:** Is the company burning through cash? (Use CASH_FLOW data).',
+    '- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples from OVERVIEW).',
+    '- **Analyst Skepticism:** Is the AnalystTargetPrice near or below the current price, suggesting experts see limited room for growth?',
+    '',
+    '## The Final Takeaway: What\'s the Core Debate?',
+    'Conclude with a 1-2 sentence summary that frames the central conflict for an investor. For example: "The core debate for {companyName} is whether its strong profitability and growth (the bull case) are enough to outweigh its significant debt load and increasing competition (the bear case)."'
 ].join('\n');
 
 const MOAT_ANALYSIS_PROMPT = [
-    'Role: You are a business strategy analyst AI. Your goal is to assess the likely strength of {companyName}\'s economic moat using the provided financial data.',
-    'Output Format: Provide a brief report in markdown, concluding with a qualitative verdict on the moat\'s strength (e.g., "Wide," "Narrow," or "None").',
+    'Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}\'s competitive advantages.',
+    'Concept: An "economic moat" is a company\'s ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.',
+    'Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat\'s strength.',
     '',
     'JSON Data:',
     '{jsonData}',
     '',
-    '# Economic Moat Assessment: {companyName} ({tickerSymbol})',
+    '# Economic Moat Analysis: {companyName} ({tickerSymbol})',
     '',
-    '## 1. Evidence of Competitive Advantage',
+    '## 1. What Gives This Company Its Edge? (Sources of the Moat)',
     'Analyze the data for signs of a durable competitive advantage. Discuss:',
-    '- **Profitability as a Signal:** Are the ProfitMargin, OperatingMarginTTM, and ReturnOnEquityTTM (from OVERVIEW) consistently high, suggesting pricing power?',
-    '- **Brand/Intangible Assets:** While not directly stated, does the company\'s Description hint at a strong brand that supports its margins?',
-    '- **Scale or Cost Advantages:** Does the trend in gross margins (calculable from INCOME_STATEMENT) show stability even as revenue grows?',
+    '- **Return on Invested Capital (ROIC):** Calculate a simplified ROIC using (EBIT / (totalAssets - totalCurrentLiabilities)). Explain this as the "gold standard" for moat analysis: it shows how much profit the company generates for every dollar of capital invested. A consistently high ROIC (>15%) is a strong sign of a moat.',
+    '- **Pricing Power:** Are the ProfitMargin and OperatingMarginTTM consistently high? Explain this as a sign that the company can charge more for its products without losing customers, often due to a strong brand or unique technology.',
+    '- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company\'s Description. Does it mention a "platform," "network," or "marketplace" that grows more valuable as more people use it? Does it sell "enterprise software" or "integrated systems" that would be difficult for a customer to switch away from?',
+    '- **Shareholder Returns (ROE):** Is the ReturnOnEquityTTM (ROE) high? Explain this as a sign that management is highly effective at turning shareholder money into profits, a hallmark of a well-run company.',
     '',
-    '## 2. Moat Sustainability',
+    '## 2. How Strong is the Castle Wall? (Moat Sustainability)',
     'Assess how sustainable this advantage might be by looking at:',
-    '- **Capital Allocation:** How is cash from operations being used? Are capitalExpenditures (from CASH_FLOW) significant, suggesting reinvestment to maintain the moat?',
-    '- **Financial Health:** Is the balance sheet strong enough (low Debt-to-Equity) to fend off competitors?',
+    '- **Reinvesting in the Business:** Are capitalExpenditures (from CASH_FLOW) significant? Explain this as the company spending money to strengthen its moat, like building higher castle walls.',
+    '- **Financial Fortress:** Is the balance sheet strong (low Debt-to-Equity)? A company with low debt is better equipped to survive tough times and fight off competitors.',
     '',
-    '## 3. Verdict on Moat Strength',
-    'Based on the evidence, provide a concluding assessment of the company\'s economic moat.',
+    '## 3. The Verdict: How Wide is the Moat?',
+    'Based on all the evidence (quantitative and qualitative), provide a concluding assessment. Classify the moat as "Wide," "Narrow," or "None," and explain what this means for a long-term investor.',
+    '- **Wide Moat:** The company has strong, sustainable advantages (like high ROIC and clear network effects) that are very difficult for competitors to copy.',
+    '- **Narrow Moat:** The company has some advantages (like good profitability), but they could be overcome by competitors over time.',
+    '- **No Moat:** The company has no clear, sustainable competitive advantage and is vulnerable to competition.'
 ].join('\n');
 
 const DIVIDEND_SAFETY_PROMPT = [
