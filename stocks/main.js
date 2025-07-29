@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.0.1"; 
+const APP_VERSION = "7.0.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -415,6 +415,8 @@ let googleClientId = "";
 let driveTokenClient = null;
 let driveFolderId = null; // Cache for Drive folder
 let portfolioCache = [];
+let calendarEvents = { earnings: [], ipos: [] };
+let calendarCurrentDate = new Date();
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -1202,81 +1204,105 @@ function renderSparkline(canvasId, timeSeriesData, change) {
     ctx.stroke();
 }
 
-async function displayMarketCalendar() {
-    const earningsContainer = document.getElementById('earnings-calendar-content');
-    const ipoContainer = document.getElementById('ipo-calendar-content');
-
-    if (!earningsContainer || !ipoContainer) return;
-
-    earningsContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
-    ipoContainer.innerHTML = `<p class="text-gray-400">Loading...</p>`;
+function renderCalendar() {
+    const year = calendarCurrentDate.getFullYear();
+    const month = calendarCurrentDate.getMonth();
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const calendarBody = document.getElementById('calendar-grid-body');
+    const monthYearHeader = document.getElementById('month-year-header');
+    if (!calendarBody || !monthYearHeader) return;
+    
+    monthYearHeader.textContent = `${calendarCurrentDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
-    // Fetch Earnings Calendar
-    try {
-        const earningsResponse = await fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`);
-        const earningsCsv = await earningsResponse.text();
-        const earningsData = Papa.parse(earningsCsv, { header: true }).data;
-        
-        if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
-            const upcomingEarnings = earningsData
-                .filter(e => e.symbol && e.reportDate)
-                .map(e => ({...e, reportDateObj: new Date(e.reportDate)}))
-                .filter(e => e.reportDateObj >= today)
-                .sort((a, b) => a.reportDateObj - b.reportDateObj)
-                .slice(0, 5);
-
-            if (upcomingEarnings.length > 0) {
-                earningsContainer.innerHTML = upcomingEarnings.map(item => `
-                    <div class="calendar-item">
-                        <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
-                        <p class="text-xs text-gray-500">Report Date: ${sanitizeText(item.reportDate)}</p>
-                    </div>
-                `).join('');
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    calendarBody.innerHTML = '';
+    
+    let date = 1;
+    let html = '';
+    
+    for (let i = 0; i < 6; i++) { // 6 rows
+        for (let j = 0; j < 7; j++) { // 7 days
+            if (i === 0 && j < firstDayOfMonth) {
+                html += `<div class="calendar-day calendar-day-other-month"></div>`;
+            } else if (date > daysInMonth) {
+                html += `<div class="calendar-day calendar-day-other-month"></div>`;
             } else {
-                 earningsContainer.innerHTML = `<p class="text-gray-500">No upcoming earnings reports in the next 3 months.</p>`;
+                const currentDate = new Date(year, month, date);
+                const today = new Date();
+                let todayClass = '';
+                if (date === today.getDate() && year === today.getFullYear() && month === today.getMonth()) {
+                    todayClass = ' calendar-day-today';
+                }
+
+                // Find events for this day
+                const earningsForDay = calendarEvents.earnings.filter(e => e.eventDate.toDateString() === currentDate.toDateString());
+                const iposForDay = calendarEvents.ipos.filter(i => i.eventDate.toDateString() === currentDate.toDateString());
+                
+                let eventsHtml = '<div class="overflow-y-auto h-full">';
+                earningsForDay.forEach(e => {
+                    eventsHtml += `<div class="calendar-event calendar-event-earnings" title="${sanitizeText(e.name)}">${sanitizeText(e.symbol)}</div>`;
+                });
+                iposForDay.forEach(i => {
+                    eventsHtml += `<div class="calendar-event calendar-event-ipo" title="${sanitizeText(i.name)}">${sanitizeText(i.symbol)}</div>`;
+                });
+                eventsHtml += '</div>';
+
+                html += `
+                    <div class="calendar-day${todayClass}">
+                        <div class="font-semibold text-gray-700">${date}</div>
+                        ${eventsHtml}
+                    </div>
+                `;
+                date++;
             }
-        } else {
-            earningsContainer.innerHTML = `<p class="text-gray-500">No upcoming earnings data available.</p>`;
         }
-    } catch (error) {
-        console.error("Error fetching earnings calendar:", error);
-        earningsContainer.innerHTML = `<p class="text-red-500">Could not load earnings data.</p>`;
     }
+    calendarBody.innerHTML = html;
+}
 
-    // Fetch IPO Calendar
-    try {
-        const ipoResponse = await fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`);
-        const ipoCsv = await ipoResponse.text();
-        const ipoData = Papa.parse(ipoCsv, { header: true }).data;
+async function displayMarketCalendar() {
+    const calendarBody = document.getElementById('calendar-grid-body');
+    const monthYearHeader = document.getElementById('month-year-header');
 
-        if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
-             const upcomingIpos = ipoData
-                .filter(i => i.symbol && i.ipoDate)
-                .map(i => ({...i, ipoDateObj: new Date(i.ipoDate)}))
-                .filter(i => i.ipoDateObj >= today)
-                .sort((a, b) => a.ipoDateObj - b.ipoDateObj)
-                .slice(0, 5);
+    if (!calendarBody || !monthYearHeader) return;
+
+    calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-gray-400">Loading calendar data...</div>`;
+    
+    // Fetch data only if it hasn't been fetched before
+    if (calendarEvents.earnings.length === 0 && calendarEvents.ipos.length === 0) {
+        try {
+            // Fetch Earnings Calendar for 3 months
+            const earningsResponse = await fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`);
+            const earningsCsv = await earningsResponse.text();
+            const earningsData = Papa.parse(earningsCsv, { header: true }).data;
             
-            if(upcomingIpos.length > 0) {
-                ipoContainer.innerHTML = upcomingIpos.map(item => `
-                    <div class="calendar-item">
-                        <p class="font-bold">${sanitizeText(item.symbol)} - ${sanitizeText(item.name)}</p>
-                        <p class="text-xs text-gray-500">IPO Date: ${sanitizeText(item.ipoDate)}</p>
-                    </div>
-                `).join('');
-            } else {
-                ipoContainer.innerHTML = `<p class="text-gray-500">No upcoming IPOs found.</p>`;
+            if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
+                calendarEvents.earnings = earningsData
+                    .filter(e => e.symbol && e.reportDate)
+                    .map(e => ({...e, eventDate: new Date(e.reportDate)}));
             }
-        } else {
-            ipoContainer.innerHTML = `<p class="text-gray-500">No upcoming IPO data available.</p>`;
+
+            // Fetch IPO Calendar
+            const ipoResponse = await fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`);
+            const ipoCsv = await ipoResponse.text();
+            const ipoData = Papa.parse(ipoCsv, { header: true }).data;
+
+            if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
+                 calendarEvents.ipos = ipoData
+                    .filter(i => i.symbol && i.ipoDate)
+                    .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
+            }
+        } catch (error) {
+            console.error("Error fetching calendar data:", error);
+            calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-red-500">Could not load calendar data.</div>`;
+            monthYearHeader.textContent = 'Error';
+            return;
         }
-    } catch (error) {
-        console.error("Error fetching IPO calendar:", error);
-        ipoContainer.innerHTML = `<p class="text-red-500">Could not load IPO data.</p>`;
     }
+
+    renderCalendar();
 }
 
 function renderSectorButtons() {
@@ -1443,6 +1469,16 @@ function setupEventListeners() {
         if (target && target.dataset.sector) {
             handleSectorAnalysis(target.dataset.sector);
         }
+    });
+
+    document.getElementById('prev-month-button')?.addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    document.getElementById('next-month-button')?.addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+        renderCalendar();
     });
 
     setupGlobalEventListeners();
