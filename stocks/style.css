@@ -93,18 +93,63 @@ body.modal-open {
     border-bottom: 1px solid #e5e7eb;
 }
 
-.dashboard-list-item {
+/* --- New Dashboard List Styles (v7.5.0) --- */
+.sector-group summary::-webkit-details-marker {
+    display: none; 
+}
+.sector-header {
+    cursor: pointer;
+    padding: 0.75rem 0.5rem;
+    font-weight: 700;
+    font-size: 1.125rem; /* text-lg */
+    color: #3730a3; /* text-indigo-900 */
+    border-bottom: 1px solid #e0e7ff;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem;
-    border-radius: 0.5rem; /* rounded-lg */
     transition: background-color 0.2s;
 }
-.dashboard-list-item:hover {
-    background-color: #f3f4f6; /* bg-gray-100 */
+.sector-header:hover {
+    background-color: #eef2ff; /* indigo-50 */
 }
-
+.sector-toggle-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    transition: transform 0.2s ease-in-out;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%234f46e5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E");
+}
+.sector-group[open] > .sector-header > .sector-toggle-icon {
+    transform: rotate(180deg);
+}
+.dashboard-list-item-detailed {
+    display: grid;
+    grid-template-columns: 2fr 3fr 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 0.5rem;
+}
+.stock-main-info button {
+    display: block;
+    text-align: left;
+}
+.stock-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    text-align: right;
+    font-size: 0.875rem; /* text-sm */
+}
+.metric-label {
+    display: block;
+    font-size: 0.75rem; /* text-xs */
+    color: #6b7280; /* text-gray-500 */
+}
+.stock-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+}
 .dashboard-item-edit {
     font-size: 0.75rem; /* text-xs */
     font-weight: 600;
