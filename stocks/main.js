@@ -416,9 +416,99 @@ const RISK_ASSESSMENT_PROMPT = [
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 
-const TECHNOLOGY_SECTOR_PROMPT = `Act as a senior feature writer for WIRED magazine. Your editor has tasked you with writing an article called "The Next Frontier." Using your web search capabilities, identify the top 3-5 most futuristic and groundbreaking technologies currently in the R&D pipeline within major tech companies (e.g., quantum computing, neural interfaces, general-purpose robotics, AI hardware). For each technology, write a mini-feature that explains: 1. What is it, in layman's terms? 2. Which key companies are the pioneers in this space? 3. What is the audacious, world-changing promise of this technology if they succeed? Conclude the entire article with a single, bold prediction for the next decade in technology. The tone should be inspiring and forward-thinking.`;
-const HEALTH_CARE_SECTOR_PROMPT = `Adopt the persona of a bioethicist and journalist. Search for a recent, major breakthrough in the Health Care sector that carries significant ethical implications (e.g., CRISPR-based therapies, AI in diagnostics replacing doctors, new anti-aging drugs). Write a balanced article that: 1. First, explains the science behind the breakthrough in simple, understandable terms. 2. Second, explores the incredible potential benefits to humanity. 3. Finally, delves into the complex ethical questions and potential societal risks it raises. Conclude not with an answer, but by posing the central question that society must grapple with as this technology becomes a reality.`;
-const FINANCIALS_SECTOR_PROMPT = `Write an article in the narrative style of author Michael Lewis. Your topic is the ongoing battle for the future of money. Using web search, find recent news, funding rounds, and product launches that illustrate the conflict between FinTech startups (neobanks, DeFi platforms, payment innovators) and traditional banking giants. Frame the article as a 'David vs. Goliath' story. - Identify a key "Goliath" (a major bank) and its recent defensive move. - Identify a key "David" (a disruptive startup) and its recent aggressive move. - Use storytelling and analogy to explain their competing strategies and what this high-stakes war means for the average person's wallet.`;
+const TECHNOLOGY_SECTOR_PROMPT = `
+Act as a lead writer for a publication like Bloomberg Businessweek or the Financial Times, where deep tech analysis meets savvy market commentary. Your editor has commissioned a major feature article called "The Tech Investor's Playbook for 2025." The goal is to give readers a clear-eyed guide to the technologies defining the rest of the decade and the investment landscape surrounding them.
+
+Using your web search capabilities, focus on 3-4 key technology sectors that are moving from hype into real-world application and revenue generation. Examples could include the operationalization of AI in enterprise software, the emerging consumer hardware for spatial computing, the platform wars in robotics, or breakthroughs in battery and grid-scale energy storage.
+
+For each sector, provide a comprehensive analysis covering two distinct angles:
+
+1. The Technology Report:
+
+The State of Play: What are the tangible, real-world products or services emerging right now?
+
+The Key Players: Who are the dominant public companies, and who are the surprising private challengers or startups to watch?
+
+The Road Ahead: What are the immediate challenges, regulatory hurdles, or controversies shaping the future of this tech?
+
+2. The Investment Angle:
+
+The Value Chain: Where is the money being made? Is it in the hardware, the software, the data, the integration services, or the raw materials? (e.g., In AI, is the value in the chips, the foundation models, or the application layer?)
+
+Market Thesis: Based on your analysis, what is a smart investment thesis for this sector? This should focus on types of companies or sub-sectors that are well-positioned for growth (e.g., "investing in the 'picks and shovels' of AI" or "focusing on companies that bridge the physical and digital worlds").
+
+Risk Factors: What are the specific risks investors should be aware of in this sector, such as new competition, technological obsolescence, or changing regulations?
+
+Conclusion:
+Conclude the article with a powerful synthesis. Based on your reporting, which single technology trend offers the most compelling risk/reward profile for an investor over the next five years, and why?
+
+Crucial Disclaimer:
+End the article with a clear and prominent disclaimer, such as: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative, analytical, and grounded in verifiable market data and trends.
+`;
+const HEALTH_CARE_SECTOR_PROMPT = `
+Act as a senior analyst and writer for a specialized publication like STAT News or Fierce Biotech, where deep scientific understanding meets sharp market analysis. Your editor has tasked you with a major feature: "The Healthcare Investor's Playbook for the Next Decade." Your mission is to identify the most transformative areas of medicine and biotech that are moving from the lab into the clinic and marketplace.
+
+Using your web search capabilities, focus on 3-4 of the most promising domains in healthcare innovation. Examples could include gene editing therapies (CRISPR), the GLP-1 revolution in metabolic disease, AI-driven drug discovery, personalized oncology (e.g., CAR-T), or neurotechnology for brain-computer interfaces.
+
+For each domain, create a comprehensive analysis with two distinct sections:
+
+1. The Clinical & Scientific Report:
+
+The Breakthrough: In layman's terms, what is the core scientific innovation, and why is it reaching a critical inflection point now?
+
+The Key Players: Who are the pioneering academic labs, the disruptive biotech startups, and the established pharmaceutical giants leading this space?
+
+The Regulatory Pathway: What is the status of clinical trials (e.g., Phase I, II, III)? What are the major hurdles with regulatory bodies like the FDA or EMA that must be overcome?
+
+2. The Investment Angle:
+
+The Value Chain: Where is the primary value being created? Is it in the intellectual property (patents), the diagnostic tools, the manufacturing process, the data platforms that personalize treatment, or the final therapeutic drug itself?
+
+Market Thesis: What is a compelling investment thesis for this domain? Should investors focus on diversified "platform" companies with multiple shots on goal, single-asset biotechs with blockbuster potential, or the "picks and shovels" companies that supply the entire sector?
+
+Risk Factors: What are the unique risks? Be specific about the potential for clinical trial failures, unexpected side effects, patent disputes, challenges with insurance reimbursement, and competition from other emerging treatments.
+
+Conclusion:
+To conclude, provide a powerful synthesis. Based on your analysis, which single healthcare domain offers the most compelling long-term risk/reward profile for an investor, and why?
+
+Crucial Disclaimer:
+At the end of the article, you must include a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial or medical advice. Readers should consult with qualified financial and healthcare professionals before making any decisions."
+
+The tone should be authoritative and analytical, grounded in peer-reviewed science, clinical trial data, and sober market analysis.
+`;
+const FINANCIALS_SECTOR_PROMPT = `
+Act as a senior financial analyst and contributing editor for a publication like The Wall Street Journal or Bloomberg, known for rigorous analysis of the financial markets. Your editor has greenlit a cornerstone article for the quarter: "The Future of Money: An Investor's Playbook for the Financials Sector." The objective is to cut through the noise and identify the most durable investment themes in a sector being fundamentally reshaped.
+
+Using your web search capabilities, identify and analyze 3-4 of the most significant trends disrupting and defining the financial industry today. Potential topics could include the integration of AI in wealth management and trading, the rise of embedded finance, the ongoing battle between FinTech and incumbent banks, the evolution of digital payments, or the maturation of Decentralized Finance (DeFi) and its link to traditional markets.
+
+For each trend, construct a detailed two-part analysis:
+
+1. The Sector Disruption Report:
+
+The Market Shift: What is the fundamental change occurring? Describe the "old way" versus the "new way" and explain the technological or behavioral drivers behind this shift.
+
+The Key Players: Profile the landscape of companies involved. Include the incumbent giants (e.g., JPMorgan, Visa), the agile FinTech challengers (e.g., Stripe, Plaid, SoFi), and the essential infrastructure providers (e.g., core banking software, API connectors).
+
+The Regulatory and Adoption Hurdles: What are the primary obstacles? Discuss specific regulatory pressures from bodies like the SEC, the Fed, or international counterparts. Analyze the challenges of achieving mainstream consumer trust and adoption.
+
+2. The Investment Angle:
+
+The Value Chain: Where is the profit concentrated? Is it in charging transaction fees, licensing software (SaaS models), earning interest spreads, managing assets, or providing the secure infrastructure that underpins it all?
+
+Market Thesis: Formulate a clear investment thesis for this trend. Should investors favor the disruptive startups with high growth potential, the resilient incumbents who are successfully adapting, or the critical "picks and shovels" infrastructure players?
+
+Risk Factors: What are the specific financial risks to consider? Analyze factors like sensitivity to interest rates, credit cycle exposure, the threat of regulatory crackdowns, cybersecurity vulnerabilities, and high valuations among the newer players.
+
+Conclusion:
+Conclude with a decisive synthesis. Of the trends you analyzed, which one presents the most compelling risk/reward profile for a portfolio over the next five to seven years, and why?
+
+Crucial Disclaimer:
+The article must conclude with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative, insightful, and grounded in hard market data, regulatory filings, and established financial principles.
+`;
 const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = `Act as a cultural strategist and trend forecaster. Using web search, identify the most significant consumer trend currently shaping the Consumer Discretionary sector (this could be a fashion aesthetic, a new form of entertainment, a travel philosophy, etc.). Write an article that deconstructs this trend: - Give the trend a catchy name. - Explain its origins and what it says about our culture. - Identify 2-3 companies that are masterfully capitalizing on it. - Analyze *how* their products, marketing, and branding tap into this zeitgeist.`;
 const COMMUNICATION_SERVICES_SECTOR_PROMPT = `Act as a senior media critic for Vulture. Your column is about 'The Streaming Wars: The Final Season?' Using web search, analyze the current state of the video streaming industry. Has the market reached saturation? Your article must explore: 1. The major players' recent, painful moves toward profitability (e.g., password sharing crackdowns, ad-supported tiers, content purges). 2. The latest consolidations and mergers shaping the industry. 3. A concluding, sharp-witted take on who is best positioned to be a long-term winner and why.`;
 const INDUSTRIALS_SECTOR_PROMPT = `Act as a tech reporter for Bloomberg writing a story on the 'Silent Revolution' in the Industrials sector. Using your web search capabilities, investigate how robotics, the Internet of Things (IoT), and AI are transforming legacy manufacturing, logistics, and heavy machinery companies. Profile 2-3 specific companies and describe their 'factory of the future.' How are they using technology to increase efficiency, improve worker safety, and bring manufacturing back onshore? The article should highlight the surprising level of innovation in a sector often overlooked by tech journalism.`;
