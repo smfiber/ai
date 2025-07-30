@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.2.0"; 
+const APP_VERSION = "7.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -47,6 +47,21 @@ const CONSTANTS = {
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_CALENDAR: 'calendar_data',
+};
+
+// --- NEW (v7.3.0) ---
+const SECTOR_ICONS = {
+    'Technology': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l7-7 7 7M5 12a7 7 0 1114 0M5 12a7 7 0 0014 0" /></svg>`,
+    'Health Care': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`,
+    'Financials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>`,
+    'Consumer Discretionary': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>`,
+    'Communication Services': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>`,
+    'Industrials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`,
+    'Consumer Staples': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>`,
+    'Energy': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`,
+    'Utilities': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>`,
+    'Real Estate': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>`,
+    'Materials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>`
 };
 
 // List of comprehensive data endpoints to fetch for caching
@@ -296,7 +311,7 @@ const MOAT_ANALYSIS_PROMPT = [
 
 const DIVIDEND_SAFETY_PROMPT = [
     'Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.',
-    'Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn\'t threatened by high debt.',
+    'Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn't threatened by high debt.',
     'Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.',
     '',
     'JSON Data:',
@@ -1304,71 +1319,70 @@ function renderSparkline(canvasId, timeSeriesData, change) {
     });
 }
 
-function renderCalendar() {
-    const year = calendarCurrentDate.getFullYear();
-    const month = calendarCurrentDate.getMonth();
-    
-    const calendarBody = document.getElementById('calendar-grid-body');
-    const monthYearHeader = document.getElementById('month-year-header');
-    if (!calendarBody || !monthYearHeader) return;
-    
-    monthYearHeader.textContent = `${calendarCurrentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+function renderDailyCalendarView() {
+    const dayHeader = document.getElementById('day-header');
+    const eventsContainer = document.getElementById('daily-events-container');
+    if (!dayHeader || !eventsContainer) return;
 
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    calendarBody.innerHTML = '';
-    
-    let date = 1;
-    let html = '';
-    
-    for (let i = 0; i < 6; i++) { // 6 rows
-        for (let j = 0; j < 7; j++) { // 7 days
-            if (i === 0 && j < firstDayOfMonth) {
-                html += `<div class="calendar-day calendar-day-other-month"></div>`;
-            } else if (date > daysInMonth) {
-                html += `<div class="calendar-day calendar-day-other-month"></div>`;
-            } else {
-                const currentDate = new Date(year, month, date);
-                const today = new Date();
-                let todayClass = '';
-                if (date === today.getDate() && year === today.getFullYear() && month === today.getMonth()) {
-                    todayClass = ' calendar-day-today';
-                }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const viewingDate = new Date(calendarCurrentDate);
+    viewingDate.setHours(0, 0, 0, 0);
 
-                // Find events for this day
-                const earningsForDay = calendarEvents.earnings.filter(e => e.eventDate.toDateString() === currentDate.toDateString());
-                const iposForDay = calendarEvents.ipos.filter(i => i.eventDate.toDateString() === currentDate.toDateString());
-                
-                let eventsHtml = '<div class="overflow-y-auto h-full">';
-                earningsForDay.forEach(e => {
-                    eventsHtml += `<div class="calendar-event calendar-event-earnings" title="${sanitizeText(e.name)}">${sanitizeText(e.symbol)}</div>`;
-                });
-                iposForDay.forEach(i => {
-                    eventsHtml += `<div class="calendar-event calendar-event-ipo" title="${sanitizeText(i.name)}">${sanitizeText(i.symbol)}</div>`;
-                });
-                eventsHtml += '</div>';
-
-                html += `
-                    <div class="calendar-day${todayClass}">
-                        <div class="font-semibold text-gray-700">${date}</div>
-                        ${eventsHtml}
-                    </div>
-                `;
-                date++;
-            }
-        }
+    let dateLabel = viewingDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (viewingDate.getTime() === today.getTime()) {
+        dateLabel = `Today, ${dateLabel}`;
     }
-    calendarBody.innerHTML = html;
+
+    dayHeader.textContent = dateLabel;
+
+    const earningsForDay = calendarEvents.earnings.filter(e => new Date(e.eventDate).toDateString() === calendarCurrentDate.toDateString());
+    const iposForDay = calendarEvents.ipos.filter(i => new Date(i.eventDate).toDateString() === calendarCurrentDate.toDateString());
+
+    eventsContainer.innerHTML = '';
+    let html = '';
+
+    if (earningsForDay.length > 0) {
+        html += '<h3 class="text-lg font-semibold text-green-700 mb-2 mt-4">Upcoming Earnings</h3>';
+        html += '<ul class="space-y-3">';
+        earningsForDay.forEach(e => {
+            html += `
+                <li class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p class="font-bold text-green-800">${sanitizeText(e.name)} (${sanitizeText(e.symbol)})</p>
+                </li>
+            `;
+        });
+        html += '</ul>';
+    }
+
+    if (iposForDay.length > 0) {
+        html += '<h3 class="text-lg font-semibold text-blue-700 mb-2 mt-4">Upcoming IPOs</h3>';
+        html += '<ul class="space-y-3">';
+        iposForDay.forEach(i => {
+            html += `
+                <li class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="font-bold text-blue-800">${sanitizeText(i.name)} (${sanitizeText(i.symbol)})</p>
+                </li>
+            `;
+        });
+        html += '</ul>';
+    }
+
+    if (html === '') {
+        html = '<p class="text-center text-gray-500 py-8">No scheduled events for this day.</p>';
+    }
+
+    eventsContainer.innerHTML = html;
 }
 
+
 async function displayMarketCalendar() {
-    const calendarBody = document.getElementById('calendar-grid-body');
-    const monthYearHeader = document.getElementById('month-year-header');
+    const eventsContainer = document.getElementById('daily-events-container');
+    const dayHeader = document.getElementById('day-header');
 
-    if (!calendarBody || !monthYearHeader) return;
+    if (!eventsContainer || !dayHeader) return;
 
-    calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-gray-400">Loading calendar data...</div>`;
+    eventsContainer.innerHTML = `<div class="p-4 text-center text-gray-400">Loading calendar data...</div>`;
 
     function processRawCalendarData(earningsData, ipoData) {
         calendarEvents.earnings = [];
@@ -1439,21 +1453,27 @@ async function displayMarketCalendar() {
 
         } catch (apiError) {
             console.error("Error fetching calendar data from API:", apiError);
-            calendarBody.innerHTML = `<div class="col-span-7 p-4 text-center text-red-500">Could not load calendar data. The API might be unavailable.</div>`;
-            monthYearHeader.textContent = 'Error';
+            eventsContainer.innerHTML = `<div class="p-4 text-center text-red-500">Could not load calendar data. The API might be unavailable.</div>`;
+            dayHeader.textContent = 'Error';
             return;
         }
     }
 
-    renderCalendar();
+    renderDailyCalendarView();
 }
 
 function renderSectorButtons() {
     const container = document.getElementById('sector-buttons-container');
     if (!container) return;
-    container.innerHTML = SECTORS.map(sector => 
-        `<button class="btn-sector bg-sky-100 text-sky-800 hover:bg-sky-200 font-semibold py-2 px-4 rounded-lg transition-all duration-200" data-sector="${sanitizeText(sector)}">${sanitizeText(sector)}</button>`
-    ).join('');
+    container.innerHTML = SECTORS.map(sector => {
+        const icon = SECTOR_ICONS[sector] || '';
+        return `
+            <button class="flex flex-col items-center justify-center p-4 text-center bg-sky-100 text-sky-800 hover:bg-sky-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-sector="${sanitizeText(sector)}">
+                ${icon}
+                <span class="mt-2 font-semibold text-sm">${sanitizeText(sector)}</span>
+            </button>
+        `
+    }).join('');
 }
 
 function renderOverviewCard(data, symbol) {
@@ -1621,20 +1641,20 @@ function setupEventListeners() {
     });
     
     document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
-        const target = e.target.closest('button.btn-sector');
+        const target = e.target.closest('button');
         if (target && target.dataset.sector) {
             handleSectorSelection(target.dataset.sector);
         }
     });
 
-    document.getElementById('prev-month-button')?.addEventListener('click', () => {
-        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
-        renderCalendar();
+    document.getElementById('prev-day-button')?.addEventListener('click', () => {
+        calendarCurrentDate.setDate(calendarCurrentDate.getDate() - 1);
+        renderDailyCalendarView();
     });
 
-    document.getElementById('next-month-button')?.addEventListener('click', () => {
-        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
-        renderCalendar();
+    document.getElementById('next-day-button')?.addEventListener('click', () => {
+        calendarCurrentDate.setDate(calendarCurrentDate.getDate() + 1);
+        renderDailyCalendarView();
     });
 
     setupGlobalEventListeners();
@@ -1916,17 +1936,27 @@ function handleSectorSelection(sectorName) {
     
     selectorContainer.innerHTML = ''; // Clear previous buttons
 
-    // --- Group 1: Data-Driven Analysis ---
-    let buttonsHtml = `<div class="w-full text-center mb-2"><span class="text-xs font-bold text-gray-500 uppercase">Data-Driven Analysis</span></div>`;
-    buttonsHtml += `<button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MarketTrends">Market Trends</button>`;
-    
-    // --- Group 2: Creative & Narrative Analysis ---
-    buttonsHtml += `<div class="w-full text-center mt-3 mb-2"><span class="text-xs font-bold text-gray-500 uppercase">Creative & Narrative Analysis</span></div>`;
     const creativeAnalysis = creativePromptMap[sectorName];
+    let creativeButtonHtml = '';
     if (creativeAnalysis) {
-        buttonsHtml += `<button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>`;
+        creativeButtonHtml = `
+            <div class="text-center">
+                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Creative & Narrative Analysis</span>
+                <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
+            </div>
+        `;
     }
 
+    let buttonsHtml = `
+        <div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">
+            <div class="text-center">
+                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Data-Driven Analysis</span>
+                <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MarketTrends">Market Trends</button>
+            </div>
+            ${creativeButtonHtml}
+        </div>
+    `;
+    
     selectorContainer.innerHTML = buttonsHtml.replace(/<button class="sector-analysis-btn"/g, '<button class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm"');
     
     openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
