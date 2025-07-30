@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.4.1"; 
+const APP_VERSION = "7.4.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1353,7 +1353,6 @@ function renderDailyCalendarView() {
         listHtml += '<ul class="space-y-3">';
         events.forEach(e => {
             const fidelityUrl = `https://digital.fidelity.com/prgw/digital/research/quote/dashboard/summary?symbol=${e.symbol}`;
-            const etradeUrl = `https://us.etrade.com/market-quote/stock/${e.symbol}`;
             listHtml += `
                 <li class="p-3 ${itemBg} ${itemBorder} rounded-lg">
                     <div class="flex justify-between items-center">
@@ -1362,7 +1361,6 @@ function renderDailyCalendarView() {
                         </div>
                         <div class="flex items-center gap-3 text-xs">
                             <a href="${fidelityUrl}" target="_blank" rel="noopener noreferrer" class="broker-link">Fidelity</a>
-                            <a href="${etradeUrl}" target="_blank" rel="noopener noreferrer" class="broker-link">E-Trade</a>
                         </div>
                     </div>
                 </li>
@@ -1399,16 +1397,18 @@ async function displayMarketCalendar() {
     function processRawCalendarData(earningsData, ipoData) {
         calendarEvents.earnings = [];
         calendarEvents.ipos = [];
+        const symbolRegex = /^[A-Z]{1,4}$/;
+
         if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
             calendarEvents.earnings = earningsData
                 .filter(e => e.symbol && e.reportDate)
-                .filter(e => !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
+                .filter(e => symbolRegex.test(e.symbol) && !e.name.toUpperCase().includes('OTC'))
                 .map(e => ({...e, eventDate: new Date(e.reportDate)}));
         }
         if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
              calendarEvents.ipos = ipoData
                 .filter(i => i.symbol && i.ipoDate)
-                .filter(i => !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
+                .filter(i => symbolRegex.test(i.symbol) && !i.name.toUpperCase().includes('OTC'))
                 .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
         }
     }
@@ -1445,13 +1445,14 @@ async function displayMarketCalendar() {
             
             const rawEarningsData = Papa.parse(earningsCsv, { header: true, skipEmptyLines: true }).data;
             const rawIpoData = Papa.parse(ipoCsv, { header: true, skipEmptyLines: true }).data;
+            const symbolRegex = /^[A-Z]{1,4}$/;
             
             const earningsToCache = rawEarningsData
-                .filter(e => e.symbol && e.reportDate && !e.symbol.includes('.') && e.symbol.length <= 4 && !e.name.toUpperCase().includes('OTC'))
+                .filter(e => e.symbol && e.reportDate && symbolRegex.test(e.symbol) && !e.name.toUpperCase().includes('OTC'))
                 .map(e => ({ symbol: e.symbol, name: e.name, reportDate: e.reportDate }));
             
             const iposToCache = rawIpoData
-                .filter(i => i.symbol && i.ipoDate && !i.symbol.includes('.') && i.symbol.length <= 4 && !i.name.toUpperCase().includes('OTC'))
+                .filter(i => i.symbol && i.ipoDate && symbolRegex.test(i.symbol) && !i.name.toUpperCase().includes('OTC'))
                 .map(i => ({ symbol: i.symbol, name: i.name, ipoDate: i.ipoDate }));
 
             const dataToCache = { 
