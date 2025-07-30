@@ -22,7 +22,7 @@
 <body class="bg-gray-100">
 
     <header class="relative bg-gray-800 text-white p-6 shadow-lg">
-        <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20"></div>
+        <div id="header-bg-image" class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('http://googleusercontent.com/file_content/0');"></div>
         <div class="relative container mx-auto flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold tracking-tight">Stock Research Hub</h1>
@@ -38,7 +38,7 @@
     <div id="app-container" class="hidden">
         <main class="container mx-auto p-4 sm:p-6 lg:p-8">
 
-            <div id="dashboard-section" class="grid grid-cols-1 lg:grid-cols-3 gap-8 hidden">
+            <div id="dashboard-section" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-2">
                     <div class="dashboard-card">
                         <h2 class="dashboard-card-title">
@@ -59,7 +59,24 @@
                 </div>
             </div>
 
-            <div id="market-calendar-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
+            <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8">
+                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add Stock to Portfolio or Watchlist</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker to add it to your lists.</p>
+                <form id="stock-research-form" class="flex items-center gap-4">
+                    <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
+                    <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
+                    <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Add Stock</button>
+                </form>
+            </div>
+
+            <div id="sector-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8">
+                <h2 class="text-xl font-bold mb-1 text-sky-500">Sector Opportunity Screener</h2>
+                <p class="text-sm text-gray-500 mb-4">Select a sector to generate an AI-powered analysis of recent trends and noteworthy companies based on public news.</p>
+                <div id="sector-buttons-container" class="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    </div>
+            </div>
+
+            <div id="market-calendar-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8">
                 <div id="calendar-header" class="flex justify-between items-center mb-4">
                     <button id="prev-day-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">&lt; Prev Day</button>
                     <h2 id="day-header" class="text-xl font-bold text-cyan-500 text-center"></h2>
@@ -76,23 +93,6 @@
                     </div>
                 </div>
                 <div id="daily-events-container" class="mt-4">
-                    </div>
-            </div>
-
-            <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
-                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add Stock to Portfolio or Watchlist</h2>
-                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker to add it to your lists.</p>
-                <form id="stock-research-form" class="flex items-center gap-4">
-                    <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
-                    <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
-                    <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Add Stock</button>
-                </form>
-            </div>
-
-            <div id="sector-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
-                <h2 class="text-xl font-bold mb-1 text-sky-500">Sector Opportunity Screener</h2>
-                <p class="text-sm text-gray-500 mb-4">Select a sector to generate an AI-powered analysis of recent trends and noteworthy companies based on public news.</p>
-                <div id="sector-buttons-container" class="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                     </div>
             </div>
 
