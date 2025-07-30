@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.2"; 
+const APP_VERSION = "7.5.3"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -66,7 +66,9 @@ const SECTOR_ICONS = {
 };
 
 // List of comprehensive data endpoints to fetch for caching
-const API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE', 'TIME_SERIES_DAILY', 'EARNINGS', 'SMA'];
+const ESSENTIAL_API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE'];
+const OPTIONAL_API_FUNCTIONS = ['TIME_SERIES_DAILY', 'EARNINGS', 'SMA'];
+const ALL_API_FUNCTIONS = [...ESSENTIAL_API_FUNCTIONS, ...OPTIONAL_API_FUNCTIONS];
 
 const SECTORS = [
     'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
@@ -831,10 +833,17 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
         stocks.forEach(stock => {
             const cached = stock.cachedData;
             const quote = get(cached, 'GLOBAL_QUOTE.Global Quote', {});
-            const price = parseFloat(get(quote, '05. price', 'N/A')).toFixed(2);
-            const changeRaw = get(quote, '10. change percent', '0%');
-            const change = parseFloat(changeRaw.replace('%',''));
-            const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
+            
+            const priceStr = get(quote, '05. price');
+            const changeStr = get(quote, '10. change percent');
+
+            const priceNum = parseFloat(priceStr);
+            const changeNum = parseFloat(changeStr);
+
+            const displayPrice = !isNaN(priceNum) ? `$${priceNum.toFixed(2)}` : 'N/A';
+            const displayChange = !isNaN(changeNum) ? `${changeNum.toFixed(2)}%` : 'N/A';
+            const changeColorClass = !isNaN(changeNum) && changeNum >= 0 ? 'price-gain' : 'price-loss';
+            
             const peRatio = get(cached, 'OVERVIEW.PERatio', 'N/A');
             const marketCap = formatLargeNumber(get(cached, 'OVERVIEW.MarketCapitalization', 'N/A'));
             const refreshedAt = cached.cachedAt ? cached.cachedAt.toDate().toLocaleString() : 'N/A';
@@ -846,8 +855,8 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
                         <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
                     </div>
                     <div class="stock-metrics">
-                        <div><span class="metric-label">Price</span> $${price}</div>
-                        <div class="${changeColorClass}"><span class="metric-label">Change</span> ${change.toFixed(2)}%</div>
+                        <div><span class="metric-label">Price</span> ${displayPrice}</div>
+                        <div class="${changeColorClass}"><span class="metric-label">Change</span> ${displayChange}</div>
                         <div><span class="metric-label">P/E</span> ${peRatio}</div>
                         <div><span class="metric-label">Mkt Cap</span> ${marketCap}</div>
                     </div>
@@ -1001,44 +1010,37 @@ async function handleDeleteStock(ticker) {
 
 async function fetchAndCacheStockData(symbol) {
     const dataToCache = {};
-    const failedFetches = [];
+    const promises = ALL_API_FUNCTIONS.map(async (func) => {
+        const url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
+        const data = await callApi(url);
+        if (data.Note || Object.keys(data).length === 0 || data.Information || data["Error Message"]) {
+            throw new Error(data.Note || data.Information || data["Error Message"] || `No data returned for ${func}.`);
+        }
+        return { func, data };
+    });
 
-    const promises = API_FUNCTIONS.map(async (func) => {
-        try {
-            let url;
-            if (func === 'SMA') {
-                url = `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${alphaVantageApiKey}`;
-            } else {
-                url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
+    const results = await Promise.allSettled(promises);
+    const failedEssentialFetches = [];
+
+    results.forEach((result, index) => {
+        const func = ALL_API_FUNCTIONS[index];
+        if (result.status === 'fulfilled' && result.value) {
+            dataToCache[func] = result.value.data;
+        } else {
+            const errorMessage = result.reason ? result.reason.message : 'Unknown error';
+            if (ESSENTIAL_API_FUNCTIONS.includes(func)) {
+                failedEssentialFetches.push(func);
             }
-            if (func === 'TIME_SERIES_DAILY') {
-                url += '&outputsize=compact';
-            }
-            
-            const data = await callApi(url);
-            if (data.Note || Object.keys(data).length === 0 || data.Information || data["Error Message"]) {
-                throw new Error(data.Note || data.Information || data["Error Message"] || 'No data returned.');
-            }
-            return { func, data };
-        } catch (error) {
-            console.error(`Failed to fetch ${func} for ${symbol}:`, error);
-            failedFetches.push(func);
-            return null;
+            console.warn(`Optional fetch failed for ${func} on symbol ${symbol}: ${errorMessage}`);
         }
     });
 
-    const results = await Promise.all(promises);
-
-    if (failedFetches.length > 0) {
-        throw new Error(`Could not retrieve all required data. Failed to fetch: ${failedFetches.join(', ')}.`);
+    if (failedEssentialFetches.length > 0) {
+        throw new Error(`Could not retrieve essential data for ${symbol}. Failed to fetch: ${failedEssentialFetches.join(', ')}.`);
     }
 
-    results.forEach(result => {
-        if (result) dataToCache[result.func] = result.data;
-    });
-
     if (!dataToCache.OVERVIEW || !dataToCache.OVERVIEW.Symbol) {
-        throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched. The symbol may be invalid.`);
+        throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched or was invalid. The symbol may not be supported.`);
     }
 
     dataToCache.cachedAt = Timestamp.now();
