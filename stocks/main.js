@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.4.2"; 
+const APP_VERSION = "7.4.3"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -18,6 +18,7 @@ const CONSTANTS = {
     MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
+    MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
@@ -486,7 +487,7 @@ function get(obj, path, defaultValue = undefined) {
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        document.body.classList.add(CONSTANTS.CLASS_BODY_MOCAL_OPEN);
+        document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
         modal.classList.add(CONSTANTS.CLASS_MODAL_OPEN);
     }
 }
@@ -930,6 +931,9 @@ async function handleDeleteStock(ticker) {
             try {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
                 await renderDashboard();
+                if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
+                    renderPortfolioManagerList(); // Refresh the manager list if it's open
+                }
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -1565,6 +1569,58 @@ function renderOverviewCard(data, symbol, status) {
         </div>`;
 }
 
+// --- PORTFOLIO MANAGER MODAL ---
+function renderPortfolioManagerList() {
+    const container = document.getElementById('portfolio-manager-list-container');
+    if (!container) return;
+
+    if (portfolioCache.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
+        return;
+    }
+
+    const groupedByExchange = portfolioCache.reduce((acc, stock) => {
+        const exchange = stock.exchange || 'Unknown';
+        if (!acc[exchange]) {
+            acc[exchange] = [];
+        }
+        acc[exchange].push(stock);
+        return acc;
+    }, {});
+
+    let html = '';
+    for (const exchange in groupedByExchange) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
+        html += '<ul class="divide-y divide-gray-200">';
+        groupedByExchange[exchange].forEach(stock => {
+            const statusBadge = stock.status === 'Portfolio'
+                ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
+                : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+
+            html += `
+                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
+                    <div>
+                        <p class="font-semibold text-gray-800">${sanitizeText(stock.companyName)} (${sanitizeText(stock.ticker)})</p>
+                        <p class="text-sm text-gray-500">${statusBadge}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="edit-stock-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                        <button class="delete-stock-btn text-sm font-medium text-red-600 hover:text-red-800" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
+                    </div>
+                </li>
+            `;
+        });
+        html += '</ul>';
+    }
+    container.innerHTML = html;
+}
+
+
+function openPortfolioManagerModal() {
+    renderPortfolioManagerList();
+    openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
+}
+
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
@@ -1615,6 +1671,22 @@ function setupGlobalEventListeners() {
             }
         }
     });
+
+    document.getElementById('portfolioManagerModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const ticker = target.dataset.ticker;
+        if (!ticker) return;
+
+        if (target.classList.contains('edit-stock-btn')) {
+            const stockData = portfolioCache.find(s => s.ticker === ticker);
+            if (stockData) {
+                openManageStockModal({ ...stockData, isEditMode: true });
+            }
+        } else if (target.classList.contains('delete-stock-btn')) {
+            handleDeleteStock(ticker);
+        }
+    });
 }
 
 function setupEventListeners() {
@@ -1641,6 +1713,8 @@ function setupEventListeners() {
     const scrollTopBtn = document.getElementById(CONSTANTS.BUTTON_SCROLL_TOP);
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
+    document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
+
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
@@ -1648,6 +1722,7 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
+        { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
