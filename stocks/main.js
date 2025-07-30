@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.1"; 
+const APP_VERSION = "7.5.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -948,10 +948,22 @@ async function handleSaveStock(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to your lists...";
     
     try {
+        // Delete the old document if the ticker has changed
         if (originalTicker && originalTicker !== newTicker) {
             await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
         }
+
+        // Save the stock to the portfolio list
         await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
+
+        // Check if the detailed data is cached. If not, fetch and cache it now.
+        const cacheDocRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, newTicker);
+        const cacheDocSnap = await getDoc(cacheDocRef);
+        if (!cacheDocSnap.exists()) {
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching data for ${newTicker}...`;
+            await fetchAndCacheStockData(newTicker);
+        }
+
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
         await renderDashboard();
     } catch(error) {
@@ -2145,11 +2157,14 @@ async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTIO
     const docRef = doc(db, collection, symbol);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
-        throw new Error(`Could not find cached data for ${symbol}. Please research it first.`);
+        // This is not an error in the context of renderDashboard, so we return null instead of throwing.
+        console.warn(`Could not find cached data for ${symbol}. It will be excluded from the dashboard view.`);
+        return null;
     }
     const data = docSnap.data();
     if (collection === CONSTANTS.DB_COLLECTION_CACHE && (!data.OVERVIEW)) {
-         throw new Error(`Cached analysis data for ${symbol} is incomplete. Please refresh it.`);
+         console.warn(`Cached analysis data for ${symbol} is incomplete. It will be excluded from the dashboard view.`);
+         return null;
     }
     return data;
 }
@@ -2159,6 +2174,7 @@ async function handleViewFullData(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
         document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
         document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}`;
@@ -2175,6 +2191,7 @@ async function handleFinancialAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
@@ -2200,6 +2217,7 @@ async function handleUndervaluedAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
     try {
         const cachedData = await getStockDataFromCache(symbol);
+        if (!cachedData) throw new Error(`No cached data found for ${symbol}.`);
         
         const companyName = get(cachedData, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(cachedData, 'OVERVIEW.Symbol', symbol);
@@ -2226,6 +2244,7 @@ async function handleBullBearAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Bull vs. Bear case for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = BULL_VS_BEAR_PROMPT
@@ -2248,6 +2267,7 @@ async function handleMoatAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Moat analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
@@ -2270,6 +2290,7 @@ async function handleDividendSafetyAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Dividend Safety analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = DIVIDEND_SAFETY_PROMPT
@@ -2292,6 +2313,7 @@ async function handleGrowthOutlookAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Growth Outlook analysis for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = GROWTH_OUTLOOK_PROMPT
@@ -2314,6 +2336,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Risk Assessment for ${symbol}...`;
     try {
         const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
