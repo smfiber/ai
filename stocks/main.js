@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.0"; 
+const APP_VERSION = "7.5.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1059,7 +1059,7 @@ async function handleRefreshData(symbol) {
         } else { 
             await displayStockCard(symbol);
         }
-
+        await renderDashboard(); // Refresh the main dashboard lists
     } catch (error) {
         console.error("Error refreshing stock data:", error);
         displayMessageInModal(error.message, 'error');
@@ -1679,6 +1679,11 @@ function setupGlobalEventListeners() {
             } else {
                 displayStockCard(ticker);
             }
+        }
+
+        const refreshButton = e.target.closest('.dashboard-refresh-button');
+        if (refreshButton) {
+            renderDashboard();
         }
     });
 
