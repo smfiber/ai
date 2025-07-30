@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.4.3"; 
+const APP_VERSION = "7.5.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -569,7 +569,7 @@ async function initializeAppContent() {
     document.getElementById('dashboard-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
-    document.getElementById('market-calendar-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('market-calendar-accordion').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await renderDashboard();
     displayMarketCalendar();
@@ -800,6 +800,69 @@ async function callGeminiApiWithTools(contents) {
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT (v7.4.0) ---
 
+function _renderGroupedStockList(container, stocksWithData, listType) {
+    container.innerHTML = ''; 
+    if (stocksWithData.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
+        return;
+    }
+
+    const groupedBySector = stocksWithData.reduce((acc, stock) => {
+        const sector = get(stock, 'cachedData.OVERVIEW.Sector', 'Unknown');
+        if (!acc[sector]) acc[sector] = [];
+        acc[sector].push(stock);
+        return acc;
+    }, {});
+
+    const sortedSectors = Object.keys(groupedBySector).sort();
+
+    let html = '';
+    sortedSectors.forEach(sector => {
+        const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
+        html += `
+            <details class="sector-group" open>
+                <summary class="sector-header">
+                    <span>${sanitizeText(sector)}</span>
+                    <span class="sector-toggle-icon"></span>
+                </summary>
+                <div class="sector-content">
+                    <ul class="divide-y divide-gray-200">`;
+        
+        stocks.forEach(stock => {
+            const cached = stock.cachedData;
+            const quote = get(cached, 'GLOBAL_QUOTE.Global Quote', {});
+            const price = parseFloat(get(quote, '05. price', 'N/A')).toFixed(2);
+            const changeRaw = get(quote, '10. change percent', '0%');
+            const change = parseFloat(changeRaw.replace('%',''));
+            const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
+            const peRatio = get(cached, 'OVERVIEW.PERatio', 'N/A');
+            const marketCap = formatLargeNumber(get(cached, 'OVERVIEW.MarketCapitalization', 'N/A'));
+            const refreshedAt = cached.cachedAt ? cached.cachedAt.toDate().toLocaleString() : 'N/A';
+
+            html += `
+                <li class="dashboard-list-item-detailed">
+                    <div class="stock-main-info">
+                        <button class="font-bold text-indigo-700 hover:underline" data-ticker="${sanitizeText(stock.ticker)}">${sanitizeText(stock.companyName)}</button>
+                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                    </div>
+                    <div class="stock-metrics">
+                        <div><span class="metric-label">Price</span> $${price}</div>
+                        <div class="${changeColorClass}"><span class="metric-label">Change</span> ${change.toFixed(2)}%</div>
+                        <div><span class="metric-label">P/E</span> ${peRatio}</div>
+                        <div><span class="metric-label">Mkt Cap</span> ${marketCap}</div>
+                    </div>
+                    <div class="stock-actions">
+                         <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                         <p class="text-xs text-gray-400 mt-1" title="Last Refreshed">${refreshedAt}</p>
+                    </div>
+                </li>`;
+        });
+
+        html += `</ul></div></details>`;
+    });
+    container.innerHTML = html;
+}
+
 async function renderDashboard() {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard...";
@@ -810,57 +873,35 @@ async function renderDashboard() {
     try {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
         portfolioCache = querySnapshot.docs.map(doc => doc.data());
-        portfolioCache.sort((a, b) => a.companyName.localeCompare(b.companyName));
 
-        const portfolioStocks = portfolioCache.filter(s => s.status === 'Portfolio');
-        const watchlistStocks = portfolioCache.filter(s => s.status === 'Watchlist');
+        const stockDataPromises = portfolioCache.map(stock => getStockDataFromCache(stock.ticker));
+        const results = await Promise.allSettled(stockDataPromises);
 
-        // Render Portfolio Snapshot
-        if (portfolioStocks.length === 0) {
-            portfolioContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your portfolio. Add one below!</p>`;
-        } else {
-            const listHtml = portfolioStocks.map(stock => `
-                <li class="dashboard-list-item">
-                    <button class="text-left w-full" data-ticker="${sanitizeText(stock.ticker)}">
-                        <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
-                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
-                    </button>
-                    <div class="flex gap-2">
-                        <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                    </div>
-                </li>
-            `).join('');
-            portfolioContainer.innerHTML = `<ul class="space-y-2">${listHtml}</ul>`;
-        }
+        const stocksWithData = portfolioCache.map((stock, index) => {
+            if (results[index].status === 'fulfilled') {
+                return { ...stock, cachedData: results[index].value };
+            }
+            return { ...stock, cachedData: null }; // Mark as having no cached data
+        }).filter(stock => stock.cachedData); // Only include stocks with data
+
+        const portfolioStocks = stocksWithData.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = stocksWithData.filter(s => s.status === 'Watchlist');
+
+        _renderGroupedStockList(portfolioContainer, portfolioStocks, 'portfolio');
+        _renderGroupedStockList(watchlistContainer, watchlistStocks, 'watchlist');
+
         document.getElementById('portfolio-count').textContent = portfolioStocks.length;
-
-        // Render Watchlist
-        if (watchlistStocks.length === 0) {
-            watchlistContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your watchlist.</p>`;
-        } else {
-            const listHtml = watchlistStocks.map(stock => `
-                 <li class="dashboard-list-item">
-                    <button class="text-left w-full" data-ticker="${sanitizeText(stock.ticker)}">
-                        <p class="font-bold text-sky-700">${sanitizeText(stock.companyName)}</p>
-                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
-                    </button>
-                    <div class="flex gap-2">
-                        <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                    </div>
-                </li>
-            `).join('');
-            watchlistContainer.innerHTML = `<ul class="space-y-2">${listHtml}</ul>`;
-        }
         document.getElementById('watchlist-count').textContent = watchlistStocks.length;
 
     } catch (error) {
         console.error("Error loading dashboard:", error);
         displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
+        portfolioContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load portfolio data.</p>`;
+        watchlistContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load watchlist data.</p>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
-
 
 async function openManageStockModal(stockData = {}) {
     const form = document.getElementById('manage-stock-form');
@@ -1625,18 +1666,19 @@ function openPortfolioManagerModal() {
 
 function setupGlobalEventListeners() {
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
-        const target = e.target.closest('button');
+        const target = e.target.closest('button, summary');
         if (!target) return;
-        const ticker = target.dataset.ticker;
-        if (!ticker) return;
 
-        if (target.classList.contains('dashboard-item-edit')) {
-            const stockData = portfolioCache.find(s => s.ticker === ticker);
-            if (stockData) {
-                openManageStockModal({ ...stockData, isEditMode: true });
+        const ticker = target.dataset.ticker;
+        if (ticker) {
+            if (target.classList.contains('dashboard-item-edit')) {
+                const stockData = portfolioCache.find(s => s.ticker === ticker);
+                if (stockData) {
+                    openManageStockModal({ ...stockData, isEditMode: true });
+                }
+            } else {
+                displayStockCard(ticker);
             }
-        } else {
-            displayStockCard(ticker);
         }
     });
 
@@ -1751,6 +1793,13 @@ function setupEventListeners() {
     document.getElementById('next-day-button')?.addEventListener('click', () => {
         calendarCurrentDate.setDate(calendarCurrentDate.getDate() + 1);
         renderDailyCalendarView();
+    });
+
+    document.getElementById('calendar-accordion-toggle')?.addEventListener('click', () => {
+        const content = document.getElementById('market-calendar-content');
+        const icon = document.getElementById('calendar-toggle-icon');
+        content.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
     });
 
     setupGlobalEventListeners();
