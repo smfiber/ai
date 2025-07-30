@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.3.0"; 
+const APP_VERSION = "7.4.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -486,7 +486,7 @@ function get(obj, path, defaultValue = undefined) {
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
-        document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
+        document.body.classList.add(CONSTANTS.CLASS_BODY_MOCAL_OPEN);
         modal.classList.add(CONSTANTS.CLASS_MODAL_OPEN);
     }
 }
@@ -564,10 +564,13 @@ function safeParseConfig(str) {
 async function initializeAppContent() {
     if (appIsInitialized) return;
     appIsInitialized = true;
-    document.getElementById('main-view').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    
+    document.getElementById('dashboard-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('market-calendar-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    
+    await renderDashboard();
     displayMarketCalendar();
     renderSectorButtons();
 }
@@ -794,99 +797,90 @@ async function callGeminiApiWithTools(contents) {
 }
 
 
-// --- PORTFOLIO MANAGEMENT (v6.0.0) ---
+// --- PORTFOLIO & DASHBOARD MANAGEMENT (v7.4.0) ---
 
-async function renderPortfolioView() {
+async function renderDashboard() {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading portfolio...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard...";
     
+    const portfolioContainer = document.getElementById('portfolio-snapshot-container');
+    const watchlistContainer = document.getElementById('watchlist-container');
+
     try {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
         portfolioCache = querySnapshot.docs.map(doc => doc.data());
         portfolioCache.sort((a, b) => a.companyName.localeCompare(b.companyName));
 
-        const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
-        if (portfolioCache.length === 0) {
-            container.innerHTML = `<p class="p-8 text-center text-gray-500">Your portfolio is empty. Add a stock to get started.</p>`;
-            closeModal(CONSTANTS.MODAL_LOADING);
-            return;
-        }
+        const portfolioStocks = portfolioCache.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = portfolioCache.filter(s => s.status === 'Watchlist');
 
-        displayFilteredPortfolio(); // Initial display
-        
+        // Render Portfolio Snapshot
+        if (portfolioStocks.length === 0) {
+            portfolioContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your portfolio. Add one below!</p>`;
+        } else {
+            const listHtml = portfolioStocks.map(stock => `
+                <li class="dashboard-list-item">
+                    <button class="text-left w-full" data-ticker="${sanitizeText(stock.ticker)}">
+                        <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
+                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                    </button>
+                    <div class="flex gap-2">
+                        <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                    </div>
+                </li>
+            `).join('');
+            portfolioContainer.innerHTML = `<ul class="space-y-2">${listHtml}</ul>`;
+        }
+        document.getElementById('portfolio-count').textContent = portfolioStocks.length;
+
+        // Render Watchlist
+        if (watchlistStocks.length === 0) {
+            watchlistContainer.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your watchlist.</p>`;
+        } else {
+            const listHtml = watchlistStocks.map(stock => `
+                 <li class="dashboard-list-item">
+                    <button class="text-left w-full" data-ticker="${sanitizeText(stock.ticker)}">
+                        <p class="font-bold text-sky-700">${sanitizeText(stock.companyName)}</p>
+                        <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
+                    </button>
+                    <div class="flex gap-2">
+                        <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                    </div>
+                </li>
+            `).join('');
+            watchlistContainer.innerHTML = `<ul class="space-y-2">${listHtml}</ul>`;
+        }
+        document.getElementById('watchlist-count').textContent = watchlistStocks.length;
+
     } catch (error) {
-        console.error("Error loading portfolio:", error);
-        displayMessageInModal(`Failed to load portfolio: ${error.message}`, 'error');
+        console.error("Error loading dashboard:", error);
+        displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
-function displayFilteredPortfolio(filter = '') {
-    const container = document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST);
-    const lowercasedFilter = filter.toLowerCase();
 
-    const filteredPortfolio = portfolioCache.filter(stock => 
-        stock.companyName.toLowerCase().includes(lowercasedFilter) || 
-        stock.ticker.toLowerCase().includes(lowercasedFilter)
-    );
-
-    if (filteredPortfolio.length === 0) {
-        container.innerHTML = `<p class="p-8 text-center text-gray-500">No stocks match your search.</p>`;
-        return;
-    }
-
-    const groupedByExchange = filteredPortfolio.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Uncategorized';
-        if (!acc[exchange]) acc[exchange] = [];
-        acc[exchange].push(stock);
-        return acc;
-    }, {});
-
-    const sortedExchanges = Object.keys(groupedByExchange).sort();
-    
-    let html = '';
-    for (const exchange of sortedExchanges) {
-        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
-        html += `<ul class="divide-y divide-gray-200">`;
-        for (const stock of groupedByExchange[exchange]) {
-            html += `
-                <li class="p-4 flex justify-between items-center hover:bg-gray-50">
-                    <div>
-                        <button class="text-left portfolio-item-view" data-ticker="${sanitizeText(stock.ticker)}">
-                            <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
-                            <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
-                        </button>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="portfolio-item-edit text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200 font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                        <button class="portfolio-item-delete text-sm bg-red-100 text-red-800 hover:bg-red-200 font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Delete</button>
-                    </div>
-                </li>`;
-        }
-        html += `</ul>`;
-    }
-    container.innerHTML = html;
-}
-
-async function openManageStockModal(ticker = null) {
+async function openManageStockModal(stockData = {}) {
     const form = document.getElementById('manage-stock-form');
     form.reset();
     
-    if (ticker) {
+    if (stockData.isEditMode) {
         // Edit mode
-        document.getElementById('manage-stock-modal-title').textContent = `Edit ${ticker}`;
-        const stockData = portfolioCache.find(s => s.ticker === ticker);
-        if (stockData) {
-            document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
-            document.getElementById('manage-stock-ticker').value = stockData.ticker;
-            document.getElementById('manage-stock-name').value = stockData.companyName;
-            document.getElementById('manage-stock-exchange').value = stockData.exchange;
-        }
+        document.getElementById('manage-stock-modal-title').textContent = `Edit ${stockData.ticker}`;
+        document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
+        document.getElementById('manage-stock-ticker').value = stockData.ticker;
+        document.getElementById('manage-stock-name').value = stockData.companyName;
+        document.getElementById('manage-stock-exchange').value = stockData.exchange;
+        document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
     } else {
         // Add mode
         document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
         document.getElementById('manage-stock-original-ticker').value = '';
+        document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
+        document.getElementById('manage-stock-name').value = stockData.companyName || '';
+        document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
+        document.getElementById('manage-stock-status').value = 'Watchlist'; // Default to watchlist
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
@@ -905,10 +899,11 @@ async function handleSaveStock(e) {
         ticker: newTicker,
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
+        status: document.getElementById('manage-stock-status').value.trim(),
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to portfolio...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to your lists...";
     
     try {
         if (originalTicker && originalTicker !== newTicker) {
@@ -916,7 +911,7 @@ async function handleSaveStock(e) {
         }
         await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
-        await renderPortfolioView(); 
+        await renderDashboard();
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -928,13 +923,13 @@ async function handleSaveStock(e) {
 async function handleDeleteStock(ticker) {
     openConfirmationModal(
         `Delete ${ticker}?`, 
-        `Are you sure you want to remove ${ticker} from your portfolio? This will not delete the cached API data.`,
+        `Are you sure you want to remove ${ticker} from your lists? This will not delete the cached API data.`,
         async () => {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
-                await renderPortfolioView();
+                await renderDashboard();
             } catch (error) {
                 console.error("Error deleting stock:", error);
                 displayMessageInModal(`Could not delete ${ticker}: ${error.message}`, 'error');
@@ -1001,7 +996,10 @@ async function handleRefreshData(symbol) {
         const refreshedData = await fetchAndCacheStockData(symbol);
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
         
-        const newCardHtml = renderOverviewCard(refreshedData, symbol);
+        const portfolioInfo = portfolioCache.find(s => s.ticker === symbol);
+        const status = portfolioInfo ? portfolioInfo.status : null;
+        const newCardHtml = renderOverviewCard(refreshedData, symbol, status);
+
         const oldCard = document.getElementById(`card-${symbol}`);
         if(oldCard) {
              const tempDiv = document.createElement('div');
@@ -1035,12 +1033,12 @@ async function handleResearchSubmit(e) {
     }
     
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking portfolio for ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
     
     try {
         const docRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
         if ((await getDoc(docRef)).exists()) {
-             displayMessageInModal(`${symbol} is already in your portfolio.`, 'info');
+             displayMessageInModal(`${symbol} is already in your portfolio or watchlist. You can edit it from the dashboard.`, 'info');
              tickerInput.value = '';
              closeModal(CONSTANTS.MODAL_LOADING);
              return;
@@ -1057,14 +1055,11 @@ async function handleResearchSubmit(e) {
             ticker: overviewData.Symbol,
             companyName: overviewData.Name,
             exchange: overviewData.Exchange,
+            isEditMode: false
         };
         
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Adding ${symbol} to portfolio...`;
-        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newStock.ticker), newStock);
-
         tickerInput.value = '';
-        displayMessageInModal(`${symbol} has been added to your portfolio.`, 'info');
-        await displayStockCard(newStock.ticker);
+        openManageStockModal(newStock);
 
     } catch (error) {
         console.error("Error during stock research:", error);
@@ -1095,7 +1090,10 @@ async function displayStockCard(ticker) {
             stockData = await fetchAndCacheStockData(ticker);
         }
 
-        const newCardHtml = renderOverviewCard(stockData, ticker);
+        const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
+        const status = portfolioInfo ? portfolioInfo.status : null;
+        const newCardHtml = renderOverviewCard(stockData, ticker, status);
+
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
         
         const timeSeries = stockData.TIME_SERIES_DAILY ? stockData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
@@ -1342,30 +1340,44 @@ function renderDailyCalendarView() {
     eventsContainer.innerHTML = '';
     let html = '';
 
-    if (earningsForDay.length > 0) {
-        html += '<h3 class="text-lg font-semibold text-green-700 mb-2 mt-4">Upcoming Earnings</h3>';
-        html += '<ul class="space-y-3">';
-        earningsForDay.forEach(e => {
-            html += `
-                <li class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p class="font-bold text-green-800">${sanitizeText(e.name)} (${sanitizeText(e.symbol)})</p>
+    const renderEventList = (events, type) => {
+        let listHtml = '';
+        const isEarning = type === 'earnings';
+        const headerText = isEarning ? 'Upcoming Earnings' : 'Upcoming IPOs';
+        const headerColor = isEarning ? 'text-green-700' : 'text-blue-700';
+        const itemBg = isEarning ? 'bg-green-50' : 'bg-blue-50';
+        const itemBorder = isEarning ? 'border-green-200' : 'border-blue-200';
+        const itemTextColor = isEarning ? 'text-green-800' : 'text-blue-800';
+
+        listHtml += `<h3 class="text-lg font-semibold ${headerColor} mb-2 mt-4">${headerText}</h3>`;
+        listHtml += '<ul class="space-y-3">';
+        events.forEach(e => {
+            const fidelityUrl = `https://digital.fidelity.com/prgw/digital/research/quote/dashboard/summary?symbol=${e.symbol}`;
+            const etradeUrl = `https://us.etrade.com/market-quote/stock/${e.symbol}`;
+            listHtml += `
+                <li class="p-3 ${itemBg} ${itemBorder} rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold ${itemTextColor}">${sanitizeText(e.name)} (${sanitizeText(e.symbol)})</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <a href="${fidelityUrl}" target="_blank" rel="noopener noreferrer" class="broker-link">Fidelity</a>
+                            <a href="${etradeUrl}" target="_blank" rel="noopener noreferrer" class="broker-link">E-Trade</a>
+                        </div>
+                    </div>
                 </li>
             `;
         });
-        html += '</ul>';
+        listHtml += '</ul>';
+        return listHtml;
+    };
+
+    if (earningsForDay.length > 0) {
+        html += renderEventList(earningsForDay, 'earnings');
     }
 
     if (iposForDay.length > 0) {
-        html += '<h3 class="text-lg font-semibold text-blue-700 mb-2 mt-4">Upcoming IPOs</h3>';
-        html += '<ul class="space-y-3">';
-        iposForDay.forEach(i => {
-            html += `
-                <li class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="font-bold text-blue-800">${sanitizeText(i.name)} (${sanitizeText(i.symbol)})</p>
-                </li>
-            `;
-        });
-        html += '</ul>';
+        html += renderEventList(iposForDay, 'ipos');
     }
 
     if (html === '') {
@@ -1476,7 +1488,7 @@ function renderSectorButtons() {
     }).join('');
 }
 
-function renderOverviewCard(data, symbol) {
+function renderOverviewCard(data, symbol, status) {
     const overviewData = data.OVERVIEW;
     if (!overviewData || !overviewData.Symbol) return '';
 
@@ -1486,6 +1498,13 @@ function renderOverviewCard(data, symbol) {
     const changePercent = quoteData && quoteData['10. change percent'] ? parseFloat(quoteData['10. change percent'].replace('%','')).toFixed(2) : 0;
     const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
     const changeSign = change >= 0 ? '+' : '';
+
+    let statusBadge = '';
+    if (status === 'Portfolio') {
+        statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>';
+    } else if (status === 'Watchlist') {
+        statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
+    }
 
     const smaData = data.SMA ? data.SMA['Technical Analysis: SMA'] : null;
     let sma50 = 'N/A';
@@ -1505,7 +1524,7 @@ function renderOverviewCard(data, symbol) {
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)})</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)}) ${statusBadge}</h2>
                     <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
                 </div>
                 <div class="text-right flex-shrink-0">
@@ -1548,6 +1567,22 @@ function renderOverviewCard(data, symbol) {
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
+    document.getElementById('dashboard-section').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const ticker = target.dataset.ticker;
+        if (!ticker) return;
+
+        if (target.classList.contains('dashboard-item-edit')) {
+            const stockData = portfolioCache.find(s => s.ticker === ticker);
+            if (stockData) {
+                openManageStockModal({ ...stockData, isEditMode: true });
+            }
+        } else {
+            displayStockCard(ticker);
+        }
+    });
+
     document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -1567,20 +1602,6 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
     });
 
-    document.getElementById(CONSTANTS.CONTAINER_PORTFOLIO_LIST).addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        const ticker = target.dataset.ticker;
-        if (!ticker) return;
-
-        if (target.classList.contains('portfolio-item-view')) {
-            displayStockCard(ticker);
-            closeModal(CONSTANTS.MODAL_PORTFOLIO);
-        }
-        if (target.classList.contains('portfolio-item-edit')) openManageStockModal(ticker);
-        if (target.classList.contains('portfolio-item-delete')) handleDeleteStock(ticker);
-    });
-
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
         const target = e.target.closest('button[data-prompt-name]');
         if (target) {
@@ -1598,16 +1619,16 @@ function setupGlobalEventListeners() {
 function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
-    document.getElementById(CONSTANTS.BUTTON_VIEW_STOCKS)?.addEventListener('click', () => {
-        renderPortfolioView();
-        openModal(CONSTANTS.MODAL_PORTFOLIO);
-    });
-
-    document.getElementById('portfolio-search-input')?.addEventListener('input', (e) => displayFilteredPortfolio(e.target.value));
-    document.getElementById(CONSTANTS.BUTTON_ADD_NEW_STOCK)?.addEventListener('click', () => openManageStockModal());
-
+    
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
     document.getElementById('cancel-manage-stock-button')?.addEventListener('click', () => closeModal(CONSTANTS.MODAL_MANAGE_STOCK));
+    document.getElementById('delete-stock-button')?.addEventListener('click', (e) => {
+        const ticker = document.getElementById('manage-stock-original-ticker').value;
+        if(ticker) {
+            closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
+            handleDeleteStock(ticker);
+        }
+    });
 
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -1624,7 +1645,6 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
-        { modal: CONSTANTS.MODAL_PORTFOLIO, button: 'close-portfolio-modal', bg: 'close-portfolio-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
     ];
