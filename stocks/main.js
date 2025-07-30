@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.1.6"; 
+const APP_VERSION = "7.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -395,6 +395,20 @@ const RISK_ASSESSMENT_PROMPT = [
     '## 4. The Bottom Line: What Are the Biggest Worries?',
     'Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.'
 ].join('\n');
+
+// --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
+
+const TECHNOLOGY_SECTOR_PROMPT = `Act as a senior feature writer for WIRED magazine. Your editor has tasked you with writing an article called "The Next Frontier." Using your web search capabilities, identify the top 3-5 most futuristic and groundbreaking technologies currently in the R&D pipeline within major tech companies (e.g., quantum computing, neural interfaces, general-purpose robotics, AI hardware). For each technology, write a mini-feature that explains: 1. What is it, in layman's terms? 2. Which key companies are the pioneers in this space? 3. What is the audacious, world-changing promise of this technology if they succeed? Conclude the entire article with a single, bold prediction for the next decade in technology. The tone should be inspiring and forward-thinking.`;
+const HEALTH_CARE_SECTOR_PROMPT = `Adopt the persona of a bioethicist and journalist. Search for a recent, major breakthrough in the Health Care sector that carries significant ethical implications (e.g., CRISPR-based therapies, AI in diagnostics replacing doctors, new anti-aging drugs). Write a balanced article that: 1. First, explains the science behind the breakthrough in simple, understandable terms. 2. Second, explores the incredible potential benefits to humanity. 3. Finally, delves into the complex ethical questions and potential societal risks it raises. Conclude not with an answer, but by posing the central question that society must grapple with as this technology becomes a reality.`;
+const FINANCIALS_SECTOR_PROMPT = `Write an article in the narrative style of author Michael Lewis. Your topic is the ongoing battle for the future of money. Using web search, find recent news, funding rounds, and product launches that illustrate the conflict between FinTech startups (neobanks, DeFi platforms, payment innovators) and traditional banking giants. Frame the article as a 'David vs. Goliath' story. - Identify a key "Goliath" (a major bank) and its recent defensive move. - Identify a key "David" (a disruptive startup) and its recent aggressive move. - Use storytelling and analogy to explain their competing strategies and what this high-stakes war means for the average person's wallet.`;
+const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = `Act as a cultural strategist and trend forecaster. Using web search, identify the most significant consumer trend currently shaping the Consumer Discretionary sector (this could be a fashion aesthetic, a new form of entertainment, a travel philosophy, etc.). Write an article that deconstructs this trend: - Give the trend a catchy name. - Explain its origins and what it says about our culture. - Identify 2-3 companies that are masterfully capitalizing on it. - Analyze *how* their products, marketing, and branding tap into this zeitgeist.`;
+const COMMUNICATION_SERVICES_SECTOR_PROMPT = `Act as a senior media critic for Vulture. Your column is about 'The Streaming Wars: The Final Season?' Using web search, analyze the current state of the video streaming industry. Has the market reached saturation? Your article must explore: 1. The major players' recent, painful moves toward profitability (e.g., password sharing crackdowns, ad-supported tiers, content purges). 2. The latest consolidations and mergers shaping the industry. 3. A concluding, sharp-witted take on who is best positioned to be a long-term winner and why.`;
+const INDUSTRIALS_SECTOR_PROMPT = `Act as a tech reporter for Bloomberg writing a story on the 'Silent Revolution' in the Industrials sector. Using your web search capabilities, investigate how robotics, the Internet of Things (IoT), and AI are transforming legacy manufacturing, logistics, and heavy machinery companies. Profile 2-3 specific companies and describe their 'factory of the future.' How are they using technology to increase efficiency, improve worker safety, and bring manufacturing back onshore? The article should highlight the surprising level of innovation in a sector often overlooked by tech journalism.`;
+const CONSUMER_STAPLES_SECTOR_PROMPT = `Write a business case study in the style of the Harvard Business Review. The topic is "Legacy on the Line: How CPG Giants are Battling the DTC Insurgency." Using web search, identify a major consumer staples category (e.g., razors, coffee, pet food) where a legacy giant has been significantly challenged by a direct-to-consumer startup. - First, analyze the startup's playbook (branding, social media marketing, subscription models). - Then, detail the legacy company's response (acquiring the startup, launching its own DTC brand, innovating its product line). Conclude with a strategic analysis of the lessons learned for other legacy industries facing digital disruption.`;
+const ENERGY_SECTOR_PROMPT = `You are a geopolitical analyst for The Economist Intelligence Unit. Search for a current major geopolitical event (e.g., a conflict, a new trade alliance, a critical election). Write an analytical brief titled "The Geopolitics of a Barrel of Oil: [Event Name]'s Impact on Global Energy." Your analysis must cover: - The immediate impact on energy prices and supply chains. - The strategic risks and opportunities this creates for specific countries. - How key multinational energy companies are likely to respond. The tone should be objective, analytical, and focused on strategic implications.`;
+const UTILITIES_SECTOR_PROMPT = `Write a script for a YouTube documentary titled "The Grid: Upgrading America's Most Important Machine." Using web search, explain in simple, clear terms why the existing electrical grid is unprepared for the twin demands of the green energy transition (intermittent renewables) and the massive energy consumption of AI data centers. Explain the key challenges (energy storage, transmission bottlenecks). Then, highlight the innovative solutions and massive infrastructure projects being undertaken by major utility companies to create a resilient "smart grid." The script should be visual, with clear sections and callouts for potential graphics.`;
+const REAL_ESTATE_SECTOR_PROMPT = `You are an urbanism contributor for The New York Times. Your article is titled: "The Great Conversion: What Happens After the Death of the Downtown Office?" Using web search, investigate the current state of commercial office real estate in major US cities. Explore the innovative ways developers and real estate companies are repurposing empty or under-utilized office buildings. Are they becoming residential apartments, vertical farms, labs, or something else entirely? Profile one or two ambitious conversion projects, detailing the architectural challenges, financial risks, and the potential to revitalize the urban core.`;
+const MATERIALS_SECTOR_PROMPT = `Write a feature article in the style of National Geographic. The title is "The Battle for Tomorrow's Elements." Search for information on the critical materials essential for the green energy transition (lithium, cobalt, copper, rare earth elements). Your article must be a compelling narrative that covers: 1. Why these specific materials are the building blocks for technologies like EV batteries and wind turbines. 2. The geopolitical hotspots where these materials are concentrated and mined. 3. The complex environmental and human costs associated with their extraction. Conclude by exploring the global race to innovate, find sustainable alternatives, and secure these vital supply chains.`;
 
 // --- Global State ---
 let db;
@@ -1546,6 +1560,19 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('portfolio-item-edit')) openManageStockModal(ticker);
         if (target.classList.contains('portfolio-item-delete')) handleDeleteStock(ticker);
     });
+
+    document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button[data-prompt-name]');
+        if (target) {
+            const sector = target.dataset.sector;
+            const promptName = target.dataset.promptName;
+            if (promptName === 'MarketTrends') {
+                handleSectorAnalysisWithAIAgent(sector);
+            } else {
+                handleCreativeSectorAnalysis(sector, promptName);
+            }
+        }
+    });
 }
 
 function setupEventListeners() {
@@ -1596,7 +1623,7 @@ function setupEventListeners() {
     document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button.btn-sector');
         if (target && target.dataset.sector) {
-            handleSectorAnalysisWithAIAgent(target.dataset.sector);
+            handleSectorSelection(target.dataset.sector);
         }
     });
 
@@ -1740,6 +1767,11 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Initiating AI analysis for the ${sectorName} sector...`;
+    
+    // Also update the content area in the modal
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis for the ${sectorName} sector...</div>`;
+
 
     // 1. Define the tools available to the Gemini model.
     const tools = {
@@ -1816,8 +1848,6 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
                 loadingMessage.textContent = 'Finalizing report...';
                 const finalReportText = responseParts.map(part => part.text || '').join('\n');
                 document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReportText);
-                document.getElementById('custom-analysis-modal-title').textContent = `Sector Analysis | ${sectorName}`;
-                openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
                 break; // Exit the loop
             }
 
@@ -1854,6 +1884,75 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
     } catch (error) {
         console.error("Error during AI agent sector analysis:", error);
         displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+// --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
+
+const creativePromptMap = {
+    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'The Next Frontier' },
+    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Bio-Ethical Dilemma' },
+    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'The FinTech War Room' },
+    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Decoding the Zeitgeist' },
+    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'The Streaming Wars' },
+    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'The Silent Revolution' },
+    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Legacy on the Line' },
+    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Geopolitics of Oil' },
+    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Upgrading The Grid' },
+    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'The Great Conversion' },
+    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Battle for Elements' },
+};
+
+function handleSectorSelection(sectorName) {
+    const modalTitle = document.getElementById('custom-analysis-modal-title');
+    const selectorContainer = document.getElementById('custom-analysis-selector-container');
+    const contentArea = document.getElementById('custom-analysis-content');
+
+    modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
+    contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    
+    selectorContainer.innerHTML = ''; // Clear previous buttons
+
+    // --- Group 1: Data-Driven Analysis ---
+    let buttonsHtml = `<div class="w-full text-center mb-2"><span class="text-xs font-bold text-gray-500 uppercase">Data-Driven Analysis</span></div>`;
+    buttonsHtml += `<button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MarketTrends">Market Trends</button>`;
+    
+    // --- Group 2: Creative & Narrative Analysis ---
+    buttonsHtml += `<div class="w-full text-center mt-3 mb-2"><span class="text-xs font-bold text-gray-500 uppercase">Creative & Narrative Analysis</span></div>`;
+    const creativeAnalysis = creativePromptMap[sectorName];
+    if (creativeAnalysis) {
+        buttonsHtml += `<button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>`;
+    }
+
+    selectorContainer.innerHTML = buttonsHtml.replace(/<button class="sector-analysis-btn"/g, '<button class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm"');
+    
+    openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+}
+
+async function handleCreativeSectorAnalysis(sectorName, promptNameKey) {
+    const promptData = creativePromptMap[sectorName];
+    if (!promptData) {
+        displayMessageInModal(`No creative analysis prompt found for sector: ${sectorName}`, 'error');
+        return;
+    }
+    
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "${promptData.label}"...`;
+    
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "${promptData.label}"...</div>`;
+
+    try {
+        const report = await callGeminiApi(promptData.prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating creative analysis for ${sectorName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -2088,32 +2187,36 @@ async function handleSaveToDrive(modalId) {
     let contentToSave = '';
     let stockSymbol = '';
     let analysisType = '';
+    let fileName = '';
 
     if (modalId === CONSTANTS.MODAL_FULL_DATA) {
         contentToSave = modal.querySelector('#full-data-content').textContent;
         stockSymbol = modal.querySelector('#full-data-modal-title').textContent.replace('Full Cached Data for ', '').trim();
         analysisType = 'FullData';
+        fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
     } else {
-        const proseContent = modal.querySelector('.prose').innerHTML;
-        contentToSave = proseContent.replace(/<br\s*\/?>/gi, '\n')
-                                     .replace(/<p>/gi, '\n').replace(/<\/p>/gi, '')
-                                     .replace(/<h2>/gi, '## ').replace(/<\/h2>/gi, '\n')
-                                     .replace(/<h3>/gi, '### ').replace(/<\/h3>/gi, '\n')
-                                     .replace(/<ul>/gi, '').replace(/<\/ul>/gi, '')
-                                     .replace(/<li>/gi, '* ').replace(/<\/li>/gi, '\n');
+        const proseContainer = modal.querySelector('.prose');
+        contentToSave = proseContainer.innerHTML; // Save as HTML for now to preserve formatting
         
         const titleText = modal.querySelector('h2').textContent;
+        const titleParts = titleText.split(' | ');
+
         if (modalId === CONSTANTS.MODAL_CUSTOM_ANALYSIS) {
-            const parts = titleText.split(' | ');
-            analysisType = parts[0].trim().replace(/\s/g, '');
-            stockSymbol = parts[1].trim();
-        } else {
-            stockSymbol = titleText.split(' for ')[1].trim();
-            analysisType = titleText.split(' for ')[0].replace(/\s/g, '');
+            if (titleParts.length > 1) { // Sector Deep Dive | Technology
+                const sectorName = titleParts[1].trim();
+                const selectedButton = modal.querySelector('#custom-analysis-selector-container button[disabled]'); // A bit fragile, better way? Maybe store last analysis type
+                const analysisLabel = selectedButton ? selectedButton.textContent : 'CustomAnalysis';
+                 fileName = `${sectorName.replace(/\s/g, '_')}_${analysisLabel.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
+            } else {
+                fileName = `${titleText.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
+            }
+        } else { // Individual stock analyses
+            stockSymbol = titleParts.length > 1 ? titleParts[1].trim() : titleParts[0];
+            analysisType = titleParts[0].trim().replace(/\s/g, '');
+            fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
         }
     }
 
-    const fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
