@@ -37,11 +37,28 @@
 
     <div id="app-container" class="hidden">
         <main class="container mx-auto p-4 sm:p-6 lg:p-8">
-            <div id="main-view" class="text-center py-16">
-                <button id="view-stocks-button" class="btn-main-action bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg">
-                    View My Stock Portfolio
-                </button>
+
+            <div id="dashboard-section" class="grid grid-cols-1 lg:grid-cols-3 gap-8 hidden">
+                <div class="lg:col-span-2">
+                    <div class="dashboard-card">
+                        <h2 class="dashboard-card-title">
+                            My Portfolio (<span id="portfolio-count">0</span>)
+                        </h2>
+                        <div id="portfolio-snapshot-container">
+                            </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-1">
+                    <div class="dashboard-card">
+                        <h2 class="dashboard-card-title">
+                            My Watchlist (<span id="watchlist-count">0</span>)
+                        </h2>
+                        <div id="watchlist-container">
+                            </div>
+                    </div>
+                </div>
             </div>
+
             <div id="market-calendar-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
                 <div id="calendar-header" class="flex justify-between items-center mb-4">
                     <button id="prev-day-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">&lt; Prev Day</button>
@@ -61,21 +78,24 @@
                 <div id="daily-events-container" class="mt-4">
                     </div>
             </div>
+
             <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
-                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add New Stock to Portfolio</h2>
-                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker symbol to add it to your portfolio.</p>
+                <h2 class="text-xl font-bold mb-1 text-emerald-500">Add Stock to Portfolio or Watchlist</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter a stock ticker to add it to your lists.</p>
                 <form id="stock-research-form" class="flex items-center gap-4">
                     <label for="ticker-input" class="sr-only">Stock Ticker Symbol</label>
                     <input type="text" id="ticker-input" class="border border-gray-300 rounded-lg w-full transition-all duration-200 ease-in-out focus:ring-2 focus:ring-indigo-600 focus:border-transparent bg-white text-gray-800 shadow-sm flex-grow p-3 text-lg uppercase" placeholder="e.g., AAPL, MSFT, NVDA">
                     <button type="submit" id="research-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600">Add Stock</button>
                 </form>
             </div>
+
             <div id="sector-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
                 <h2 class="text-xl font-bold mb-1 text-sky-500">Sector Opportunity Screener</h2>
                 <p class="text-sm text-gray-500 mb-4">Select a sector to generate an AI-powered analysis of recent trends and noteworthy companies based on public news.</p>
                 <div id="sector-buttons-container" class="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                     </div>
             </div>
+
             <div id="dynamic-content-container" class="space-y-8"></div>
         </main>
         <button id="scroll-to-top-button" class="fixed w-14 h-14 rounded-full shadow-lg text-2xl flex items-center justify-center transition-transform duration-200 hover:scale-110 bg-indigo-600 hover:bg-indigo-700 text-white z-30 hidden" style="bottom: 2rem; left: 2rem;">&uarr;</button>
@@ -190,8 +210,7 @@
         </div>
     </div>
 
-    <div id="portfolioModal" class="fixed inset-0 z-[105] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-portfolio-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-4xl h-full max-h-[90vh] m-4"><div class="p-6 border-b border-gray-200 flex justify-between items-center"><h2 class="text-2xl font-bold text-gray-800">My Stock Portfolio</h2><button id="close-portfolio-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div><div class="p-4 border-b border-gray-200"><input type="text" id="portfolio-search-input" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Search by Company or Ticker..."></div><div id="portfolio-list-container" class="overflow-y-auto flex-grow"></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end"><button id="add-new-stock-button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Add New Stock</button></div></div></div>
-    <div id="manageStockModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-stock-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4"><form id="manage-stock-form" class="flex flex-col h-full"><div class="p-6 border-b border-gray-200"><h2 id="manage-stock-modal-title" class="text-2xl font-bold text-gray-800">Manage Stock</h2></div><div class="p-6 overflow-y-auto flex-grow space-y-4"><input type="hidden" id="manage-stock-original-ticker"><div><label for="manage-stock-ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label><input type="text" id="manage-stock-ticker" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" required></div><div><label for="manage-stock-name" class="block text-sm font-medium text-gray-700">Company Name</label><input type="text" id="manage-stock-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-exchange" class="block text-sm font-medium text-gray-700">Exchange</label><input type="text" id="manage-stock-exchange" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-4"><button type="button" id="cancel-manage-stock-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button></div></form></div></div>
+    <div id="manageStockModal" class="fixed inset-0 z-[106] items-center justify-center p-4 modal"><div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="close-manage-stock-modal-bg"></div><div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col w-full max-w-2xl h-full max-h-[90vh] m-4"><form id="manage-stock-form" class="flex flex-col h-full"><div class="p-6 border-b border-gray-200"><h2 id="manage-stock-modal-title" class="text-2xl font-bold text-gray-800">Manage Stock</h2></div><div class="p-6 overflow-y-auto flex-grow space-y-4"><input type="hidden" id="manage-stock-original-ticker"><div><label for="manage-stock-ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label><input type="text" id="manage-stock-ticker" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" required></div><div><label for="manage-stock-name" class="block text-sm font-medium text-gray-700">Company Name</label><input type="text" id="manage-stock-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-exchange" class="block text-sm font-medium text-gray-700">Exchange</label><input type="text" id="manage-stock-exchange" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div><div><label for="manage-stock-status" class="block text-sm font-medium text-gray-700">Status</label><select id="manage-stock-status" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"><option value="Portfolio">Portfolio</option><option value="Watchlist">Watchlist</option></select></div></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center"><button type="button" id="delete-stock-button" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg">Delete</button><div class="flex gap-4"><button type="button" id="cancel-manage-stock-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button><button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button></div></div></form></div></div>
 
     <script type="module" src="main.js"></script>
 </body>
