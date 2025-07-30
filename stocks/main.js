@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.4.0"; 
+const APP_VERSION = "7.4.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -311,7 +311,7 @@ const MOAT_ANALYSIS_PROMPT = [
 
 const DIVIDEND_SAFETY_PROMPT = [
     'Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.',
-    'Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn't threatened by high debt.',
+    'Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn\'t threatened by high debt.',
     'Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.',
     '',
     'JSON Data:',
