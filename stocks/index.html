@@ -44,9 +44,9 @@
             </div>
             <div id="market-calendar-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
                 <div id="calendar-header" class="flex justify-between items-center mb-4">
-                    <button id="prev-month-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">&lt;</button>
-                    <h2 id="month-year-header" class="text-xl font-bold text-cyan-500"></h2>
-                    <button id="next-month-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">&gt;</button>
+                    <button id="prev-day-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">&lt; Prev Day</button>
+                    <h2 id="day-header" class="text-xl font-bold text-cyan-500 text-center"></h2>
+                    <button id="next-day-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold transition-colors">Next Day &gt;</button>
                 </div>
                 <div id="calendar-legend" class="flex justify-end items-center gap-4 text-xs text-gray-600 mb-2">
                     <div class="flex items-center gap-2">
@@ -58,16 +58,7 @@
                         <span>Upcoming IPOs</span>
                     </div>
                 </div>
-                <div id="calendar-grid-header" class="grid grid-cols-7 gap-1 text-center font-semibold text-gray-600 text-sm mb-2">
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
-                </div>
-                <div id="calendar-grid-body" class="grid grid-cols-7 gap-1">
+                <div id="daily-events-container" class="mt-4">
                     </div>
             </div>
             <div id="stock-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
@@ -82,7 +73,7 @@
             <div id="sector-screener-section" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 my-8 hidden">
                 <h2 class="text-xl font-bold mb-1 text-sky-500">Sector Opportunity Screener</h2>
                 <p class="text-sm text-gray-500 mb-4">Select a sector to generate an AI-powered analysis of recent trends and noteworthy companies based on public news.</p>
-                <div id="sector-buttons-container" class="flex flex-wrap gap-3 justify-center">
+                <div id="sector-buttons-container" class="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                     </div>
             </div>
             <div id="dynamic-content-container" class="space-y-8"></div>
