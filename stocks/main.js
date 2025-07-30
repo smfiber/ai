@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.3"; 
+const APP_VERSION = "7.5.4"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -822,7 +822,7 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
     sortedSectors.forEach(sector => {
         const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
         html += `
-            <details class="sector-group" open>
+            <details class="sector-group">
                 <summary class="sector-header">
                     <span>${sanitizeText(sector)}</span>
                     <span class="sector-toggle-icon"></span>
@@ -1698,6 +1698,18 @@ function setupGlobalEventListeners() {
         const refreshButton = e.target.closest('.dashboard-refresh-button');
         if (refreshButton) {
             renderDashboard();
+        }
+
+        const expandBtn = e.target.closest('.expand-all-btn');
+        if (expandBtn) {
+            const card = expandBtn.closest('.dashboard-card');
+            card.querySelectorAll('details.sector-group').forEach(detail => detail.open = true);
+        }
+
+        const collapseBtn = e.target.closest('.collapse-all-btn');
+        if (collapseBtn) {
+            const card = collapseBtn.closest('.dashboard-card');
+            card.querySelectorAll('details.sector-group').forEach(detail => detail.open = false);
         }
     });
 
