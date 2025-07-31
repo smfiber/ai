@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.6"; 
+const APP_VERSION = "7.5.7"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -413,6 +413,22 @@ const RISK_ASSESSMENT_PROMPT = [
     '## 4. The Bottom Line: What Are the Biggest Worries?',
     'Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.'
 ].join('\n');
+
+const CAPITAL_ALLOCATORS_PROMPT = `
+	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
+	Your task is to analyze one CEO/management team from the {tickerSymbol} sector known for their skill in capital allocation.
+	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
+	1. The CEO's Philosophy:
+		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
+	2. The Track Record: Analyzing the Decisions
+		○ Analyze their capital allocation decisions over the last 5-10 years across three key areas:
+			§ Reinvestment in the Business: Have their internal investments (R&D, new factories) generated high returns on capital?
+			§ Acquisitions (M&A): Has their track record of buying other companies been successful and created value, or have they overpaid?
+			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
+	3. The Scorecard & Investment Thesis:
+		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
+`;
 
 const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
@@ -2004,6 +2020,7 @@ function renderOverviewCard(data, symbol, status) {
                 <button data-symbol="${symbol}" class="dividend-safety-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg">Dividend Safety</button>
                 <button data-symbol="${symbol}" class="growth-outlook-button text-sm bg-lime-500 hover:bg-lime-600 text-white font-semibold py-2 px-4 rounded-lg">Growth Outlook</button>
                 <button data-symbol="${symbol}" class="risk-assessment-button text-sm bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg">Risk Assessment</button>
+                <button data-symbol="${symbol}" class="capital-allocators-button text-sm bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg">Capital Allocators</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
         </div>`;
@@ -2115,6 +2132,7 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
         if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
+        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
     });
 
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
@@ -2798,6 +2816,28 @@ async function handleRiskAssessmentAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
         document.getElementById('custom-analysis-modal-title').textContent = `Risk Assessment | ${symbol}`;
+        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleCapitalAllocatorsAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Capital Allocators analysis for ${symbol}...`;
+    try {
+        const data = await getStockDataFromCache(symbol);
+        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const prompt = CAPITAL_ALLOCATORS_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol);
+        const report = await callGeminiApi(prompt);
+        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
+        document.getElementById('custom-analysis-modal-title').textContent = `Capital Allocators | ${symbol}`;
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
