@@ -456,25 +456,22 @@ What is the long-term bull case? Analyze the Total Addressable Market (TAM) they
 6. Investment Thesis Summary
 
 Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
-Crucial Disclaimer:
-The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
 const MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
 	1. The Wave (The Macro Trend):
-		○ Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
+		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
 	2. The 'Surfboard' (The Company):
-		○ Within the [SECTOR NAME] sector, identify 1-2 companies that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
+		- Within the [SECTOR NAME] sector, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
 	3. Quantifying the Tail-Wind:
-		○ How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
+		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
 	4. Thesis Risks (When the Wave Breaks):
-		○ What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
+		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
 	5. Conclusion: Investing in a Megatrend
-		○ Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
-	Crucial Disclaimer: [Include standard disclaimer]
-Why it's useful: This helps you invest with the wind at your back. It aligns your portfolio with powerful, long-lasting forces, which can provide a significant tailwind for growth over many years.
+		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
 `;
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
@@ -2496,17 +2493,17 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
 // --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
 
 const creativePromptMap = {
-    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook Analysis' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
+    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
+    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
+    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook' },
+    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook' },
+    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook' },
+    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook' },
+    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
+    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
+    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
+    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' },
 };
 
 function handleSectorSelection(sectorName) {
@@ -2524,11 +2521,11 @@ function handleSectorSelection(sectorName) {
     if (creativeAnalysis) {
         creativeButtonHtml = `
             <div class="text-center">
-                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Creative & Narrative Analysis</span>
+                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Analysis</span>
                 <div class="flex flex-wrap justify-center gap-4">
                     <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
-                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="DisruptorAnalysis">Disruptor Analysis</button>
-                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MacroPlaybook">Macro Playbook</button>
+                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="DisruptorAnalysis">Disruptor</button>
+                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MacroPlaybook">Macro Trend</button>
                 </div>
             </div>
         `;
