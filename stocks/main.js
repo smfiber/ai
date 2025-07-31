@@ -509,14 +509,262 @@ The article must conclude with a clear and prominent disclaimer: "This article i
 
 The tone should be authoritative, insightful, and grounded in hard market data, regulatory filings, and established financial principles.
 `;
-const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = `Act as a cultural strategist and trend forecaster. Using web search, identify the most significant consumer trend currently shaping the Consumer Discretionary sector (this could be a fashion aesthetic, a new form of entertainment, a travel philosophy, etc.). Write an article that deconstructs this trend: - Give the trend a catchy name. - Explain its origins and what it says about our culture. - Identify 2-3 companies that are masterfully capitalizing on it. - Analyze *how* their products, marketing, and branding tap into this zeitgeist.`;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = `Act as a senior media critic for Vulture. Your column is about 'The Streaming Wars: The Final Season?' Using web search, analyze the current state of the video streaming industry. Has the market reached saturation? Your article must explore: 1. The major players' recent, painful moves toward profitability (e.g., password sharing crackdowns, ad-supported tiers, content purges). 2. The latest consolidations and mergers shaping the industry. 3. A concluding, sharp-witted take on who is best positioned to be a long-term winner and why.`;
-const INDUSTRIALS_SECTOR_PROMPT = `Act as a tech reporter for Bloomberg writing a story on the 'Silent Revolution' in the Industrials sector. Using your web search capabilities, investigate how robotics, the Internet of Things (IoT), and AI are transforming legacy manufacturing, logistics, and heavy machinery companies. Profile 2-3 specific companies and describe their 'factory of the future.' How are they using technology to increase efficiency, improve worker safety, and bring manufacturing back onshore? The article should highlight the surprising level of innovation in a sector often overlooked by tech journalism.`;
-const CONSUMER_STAPLES_SECTOR_PROMPT = `Write a business case study in the style of the Harvard Business Review. The topic is "Legacy on the Line: How CPG Giants are Battling the DTC Insurgency." Using web search, identify a major consumer staples category (e.g., razors, coffee, pet food) where a legacy giant has been significantly challenged by a direct-to-consumer startup. - First, analyze the startup's playbook (branding, social media marketing, subscription models). - Then, detail the legacy company's response (acquiring the startup, launching its own DTC brand, innovating its product line). Conclude with a strategic analysis of the lessons learned for other legacy industries facing digital disruption.`;
-const ENERGY_SECTOR_PROMPT = `You are a geopolitical analyst for The Economist Intelligence Unit. Search for a current major geopolitical event (e.g., a conflict, a new trade alliance, a critical election). Write an analytical brief titled "The Geopolitics of a Barrel of Oil: [Event Name]'s Impact on Global Energy." Your analysis must cover: - The immediate impact on energy prices and supply chains. - The strategic risks and opportunities this creates for specific countries. - How key multinational energy companies are likely to respond. The tone should be objective, analytical, and focused on strategic implications.`;
-const UTILITIES_SECTOR_PROMPT = `Write a script for a YouTube documentary titled "The Grid: Upgrading America's Most Important Machine." Using web search, explain in simple, clear terms why the existing electrical grid is unprepared for the twin demands of the green energy transition (intermittent renewables) and the massive energy consumption of AI data centers. Explain the key challenges (energy storage, transmission bottlenecks). Then, highlight the innovative solutions and massive infrastructure projects being undertaken by major utility companies to create a resilient "smart grid." The script should be visual, with clear sections and callouts for potential graphics.`;
-const REAL_ESTATE_SECTOR_PROMPT = `You are an urbanism contributor for The New York Times. Your article is titled: "The Great Conversion: What Happens After the Death of the Downtown Office?" Using web search, investigate the current state of commercial office real estate in major US cities. Explore the innovative ways developers and real estate companies are repurposing empty or under-utilized office buildings. Are they becoming residential apartments, vertical farms, labs, or something else entirely? Profile one or two ambitious conversion projects, detailing the architectural challenges, financial risks, and the potential to revitalize the urban core.`;
-const MATERIALS_SECTOR_PROMPT = `Write a feature article in the style of National Geographic. The title is "The Battle for Tomorrow's Elements." Search for information on the critical materials essential for the green energy transition (lithium, cobalt, copper, rare earth elements). Your article must be a compelling narrative that covers: 1. Why these specific materials are the building blocks for technologies like EV batteries and wind turbines. 2. The geopolitical hotspots where these materials are concentrated and mined. 3. The complex environmental and human costs associated with their extraction. Conclude by exploring the global race to innovate, find sustainable alternatives, and secure these vital supply chains.`;
+const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = `
+Act as a senior consumer trends and market strategist for a publication like Bloomberg or The Economist Intelligence Unit, known for connecting macroeconomic trends with consumer behavior. You're writing a lead feature titled: "Beyond the Hype: An Investor's Playbook for the Modern Consumer." The goal is to identify durable investment theses in a sector defined by fickle tastes and economic sensitivity.
+
+Using your web search capabilities, identify and analyze 3-4 of the most powerful trends shaping the consumer discretionary landscape. Potential areas could include the "experience economy" (travel, events, dining), the bifurcation of retail into luxury vs. value, the impact of AI on personalization and e-commerce, the rise of direct-to-consumer (DTC) brands, or the growing influence of sustainability and ethical consumption.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Consumer Shift Report:
+
+The Behavioral Shift: What is the fundamental change in consumer psychology or spending habits? Explain the "why" behind this shift—is it driven by technology, social media, economic pressures, or changing values post-pandemic?
+
+The Key Players: Who is winning and losing? Profile the legacy giants (e.g., Amazon, LVMH, McDonald's), the disruptive DTC brands challenging the status quo, and the enabling platforms (e.g., Shopify, social media marketplaces).
+
+The Headwinds and Fickle Tastes: What are the primary obstacles? Analyze the impact of inflation on disposable income, supply chain vulnerabilities, high marketing costs, and the extreme speed at which consumer trends can appear and vanish.
+
+2. The Investment Angle:
+
+The Brand & Margin Analysis: Where does the real value lie? Is it in the brand equity that commands a price premium (like a luxury moat), manufacturing and supply chain efficiency, control over customer data, or a recurring revenue model?
+
+Market Thesis: Formulate a clear investment thesis. Should investors prioritize companies with unshakeable brand loyalty, asset-light platforms that cater to many brands, or low-cost leaders who thrive in economic downturns?
+
+Risk Factors: What are the specific risks inherent to this sector? Focus on high sensitivity to the economic cycle (recession risk), the threat of brand dilution or scandal, intense competition with low barriers to entry, and shifts in consumer taste.
+
+Conclusion:
+Conclude with a strong, forward-looking synthesis. Of the trends analyzed, which one offers the most resilient risk/reward profile for an investor navigating the economic uncertainties of the next five years, and why?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and analytical, grounded in consumer sentiment data, retail sales figures, and corporate financial reports.
+`;
+const COMMUNICATION_SERVICES_SECTOR_PROMPT = `
+Act as a senior TMT (Technology, Media, & Telecom) analyst for a publication like The Wall Street Journal or the Financial Times. Your editor has commissioned a definitive feature for the current market, titled: "The Attention Economy: An Investor's Playbook for Communication Services." Your goal is to dissect the sector's main pillars—connectivity, content, and platforms—to find the most compelling investment theses for the years ahead.
+
+Using your web search capabilities, identify and analyze 3-4 of the most significant trends shaping the Communication Services sector as of late 2025. Potential topics could include the shifting economics of the streaming wars, the monetization of the creator economy, the battle for dominance in interactive entertainment (gaming and virtual worlds), the future of advertising in a privacy-focused world, or the return on investment from 5G and fiber infrastructure.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Media & Connectivity Report:
+
+The Battle for Engagement: Describe the fundamental shift in how people consume media, interact, and spend their time. Who is gaining or losing "share of attention," and what technological or cultural forces are driving this?
+
+The Key Players (Pipes, Content, & Platforms): Profile the main competitors. Clearly distinguish between the "Pipes" (the foundational telecom and cable companies like AT&T, Verizon), the "Content" (the media and entertainment creators like Disney, Netflix), and the "Platforms" (the interactive social/search giants like Meta and Alphabet/Google).
+
+The Content, Churn, and Regulatory Crosswinds: What are the major challenges? Analyze issues like escalating content production costs, high subscriber churn rates, net neutrality debates, and the growing threat of antitrust and data privacy regulation for the dominant platforms.
+
+2. The Investment Angle:
+
+Monetization Models & Moats: Where is the profit being generated? Is it through recurring subscription fees (SaaS), advertising revenue, licensing valuable intellectual property (IP), in-app/in-game purchases, or the reliable fees from providing core connectivity? What is the most durable competitive moat: the infrastructure, the content library, or the user network effect?
+
+Market Thesis: Formulate a clear investment thesis. In the current environment, is the smarter bet on the predictable cash flows of the "pipes," the high-risk/high-reward growth of "content" creators, or the dominant, high-margin "platforms"?
+
+Risk Factors: What are the specific risks associated with each model? Analyze factors like cyclicality of the advertising market, content pipeline failures (e.g., a movie flopping), subscriber fatigue, technological disruption from new apps, and major regulatory action.
+
+Conclusion:
+Conclude with a decisive synthesis. In the current battle for attention, does the greatest risk-adjusted opportunity for investors lie with the owners of the pipes, the creators of content, or the masters of the platforms? Justify your choice based on your analysis.
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and strategic, grounded in subscriber data, advertising market trends, and an understanding of the sector's unique regulatory landscape.
+`;
+const INDUSTRIALS_SECTOR_PROMPT = `
+Act as a senior industrial and economic analyst for a publication like The Wall Street Journal or Barron's, respected for your deep understanding of the cyclical and capital-intensive nature of the industrial economy. Your editor has assigned a lead feature for the third quarter of 2025: "Rebuilding the World: An Investor's Playbook for the Modern Industrial Renaissance." The objective is to look past the headlines and identify the most durable investment theses in the sector that forms the literal backbone of our economy.
+
+Using your web search capabilities, identify and analyze 3-4 of the most powerful macro trends driving the Industrials sector in mid-2025. Potential themes should include the ongoing re-shoring and factory build-out in North America and Europe, the massive capital spending on electrification and green energy infrastructure, the widespread adoption of automation and robotics (Industry 4.0), or the peak spending cycle from government infrastructure modernization programs.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Macro & Modernization Report:
+
+The Driving Force: What is the primary catalyst for this trend? Is it driven by geopolitical realignment (e.g., US-China relations), government policy (e.g., the Bipartisan Infrastructure Law), or a technological imperative (e.g., the need for automation to solve labor shortages)?
+
+The Key Players: Who are the corporate leaders executing on this trend? Profile the diversified legacy giants (e.g., Caterpillar, Siemens), the specialized leaders in a niche (e.g., in robotics, electrical components, or engineering services), and the critical suppliers of equipment and raw materials.
+
+The Backlog, Bottlenecks, and Cyclical Risks: What is the health of the order books (the "backlog") for these companies? What are the primary bottlenecks—be it skilled labor, raw materials, or regulatory permits? How vulnerable is this trend to a potential economic slowdown?
+
+2. The Investment Angle:
+
+The Profit & Cyclicality Profile: Where is the most defensible profit made in this value chain? Is it in the initial sale of heavy equipment, in high-margin consumable parts, in long-term service and maintenance contracts (e.g., aerospace), or in project management? Crucially, how does the business model hold up during different phases of the economic cycle?
+
+Market Thesis: Formulate a clear investment thesis. Should investors favor the highly cyclical "pure-plays" that offer maximum exposure to a trend, the diversified giants that can weather a downturn, or the companies with significant, stable, recurring service revenue?
+
+Risk Factors: What are the specific risks inherent to industrial operations? Analyze factors such as sensitivity to GDP growth and interest rates, execution risk on massive projects, volatility in commodity prices, and reliance on government spending and contracts.
+
+Conclusion:
+Conclude with a strategic outlook. Of the industrial trends you analyzed, which offers the most durable risk/reward profile for an investor looking through to the end of the decade, considering the ever-present threat of economic cycles?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and pragmatic, grounded in macroeconomic data, industrial production figures, and corporate order backlogs.
+`;
+const CONSUMER_STAPLES_SECTOR_PROMPT = `
+Act as a senior equity analyst specializing in consumer goods for a publication like The Wall Street Journal or Bloomberg Intelligence. Your editor has assigned a feature for your Q3 2025 report titled: "The Essential Dollar: An Investor's Playbook for Consumer Staples." The goal is to analyze which companies are best positioned to defend their margins and market share in an environment of cautious consumer spending and intense competition.
+
+Using your web search capabilities, identify and analyze 3-4 of the most critical trends shaping the Consumer Staples sector in mid-2025. Key themes should include the ongoing tug-of-war between branded products and private labels, the strategic use of automation and AI in supply chains, the persistent consumer shift towards health & wellness or sustainable products, and the evolution of online grocery and direct-to-consumer (DTC) channels.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Shopper & Shelf-Space Report:
+
+The Consumer & Cost Pressure: What is the core dynamic at play? Is it consumers "trading down" to cheaper alternatives to combat budget fatigue? Is it a demand for new, "better-for-you" products? How are shopping habits (online vs. in-store) evolving for essential goods?
+
+The Key Players & Power Dynamics: Profile the main actors. This must include the Brand Giants (e.g., Procter & Gamble, Nestlé, Coca-Cola), the Retail Titans who control the physical and digital shelf space (e.g., Walmart, Costco, Kroger), and the rising threat of their own Private Label products (e.g., Kirkland Signature, Great Value).
+
+The Margin Squeeze and Supply Chain Hurdles: What are the primary operational challenges? Analyze the struggle to protect profit margins against volatile input/commodity costs, intense pricing pressure from powerful retailers, and the need for constant investment in logistics and supply chain resilience.
+
+2. The Investment Angle:
+
+The Brand Moat & Pricing Power Analysis: Where is the most durable value created? Is it through the brand loyalty that allows for price increases without losing customers (i.e., "pricing power")? Is it through unmatched scale and operational efficiency that lowers costs? Or is it through innovation in high-growth niches?
+
+Market Thesis: Formulate a clear investment thesis. In the current economic climate, should investors favor the diversified giants with massive scale, the nimble innovators capturing new health-conscious trends, or the dominant retailers who are effectively becoming their own competition?
+
+Risk Factors: What are the specific risks for a staples company? Analyze the potential for market share erosion to private labels, margin compression from the inability to pass on costs, shifts in consumer taste away from legacy products, and currency exchange rate volatility for these global corporations.
+
+Conclusion:
+Conclude with a defensive-minded synthesis. For an investor seeking stability and dividend safety in the current economic climate, which trend or type of company within the staples sector offers the most resilient and defensive risk/reward profile for the next several years?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be pragmatic and analytical, grounded in consumer price index (CPI) data, retail scanner data, and corporate margin analysis.
+`;
+const ENERGY_SECTOR_PROMPT = `
+Act as a senior energy market analyst for a top-tier publication like BloombergNEF or The Wall Street Journal, known for your pragmatic view on the global energy landscape. For your Q3 2025 outlook, you are writing a feature article titled: "Powering the Future: An Investor's Playbook for the Great Energy Transition." The objective is to analyze the entire energy value chain—from fossil fuels to renewables—to identify where the most compelling risk-adjusted returns can be found.
+
+Using your web search capabilities, identify and analyze 3-4 of the most critical trends shaping the global energy sector in mid-2025. Key themes should include the deployment of capital from traditional oil & gas profits, the challenge of making renewable projects profitable at scale, the emerging economics of hydrogen and carbon capture, the critical build-out of grid infrastructure, or the ongoing impact of geopolitics on commodity prices.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Technology & Policy Report:
+
+The Driving Force: What is the primary catalyst for this trend? Is it geopolitical necessity (e.g., ensuring energy security), government policy (e.g., incentives from the Inflation Reduction Act), or a technological breakthrough (e.g., improved battery storage efficiency)?
+
+The Key Players: Profile the company landscape. Clearly distinguish between the Integrated Oil Majors (e.g., ExxonMobil, Shell), the Pure-Play Renewable Developers (e.g., NextEra Energy), the critical Energy Services & Equipment providers (e.g., SLB, Baker Hughes), and the Midstream/Infrastructure operators.
+
+The Execution, Integration, and Regulatory Hurdles: What are the real-world obstacles? Analyze the challenges of executing massive, multi-year projects on budget, integrating intermittent renewable sources into the existing power grid, and navigating the complex and lengthy process of environmental permitting.
+
+2. The Investment Angle:
+
+The Capital Cycle & Cash Flow Analysis: Where are we in the capital investment cycle for this trend (boom, bust, or equilibrium)? What is the nature of the cash flow—is it highly variable and tied to volatile commodity prices, or is it stable and secured by long-term power purchase agreements (PPAs)?
+
+Market Thesis: Formulate a clear investment thesis. Should investors prioritize the immense free cash flow of traditional energy players, the high-growth potential of renewable developers, or the "picks and shovels" service companies that stand to benefit from all forms of energy investment?
+
+Risk Factors: What are the specific risks? Analyze the acute threat of commodity price volatility, project cost overruns, sudden shifts in government policy or subsidies, long-term stranded asset risk for fossil fuel infrastructure, and technological obsolescence.
+
+Conclusion:
+Conclude with a strategic assessment of the "energy trilemma." For an investor balancing the need for near-term energy security, long-term sustainability, and affordability, which part of the energy sector offers the most compelling investment case for the rest of the decade?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and deeply informed, balancing an understanding of geopolitics, project economics, and technological potential.
+`;
+const UTILITIES_SECTOR_PROMPT = `
+Act as a senior equity analyst specializing in regulated utilities and power infrastructure for a publication like Barron's or The Wall Street Journal's "Heard on the Street" column. You are writing a lead feature for Q3 2025 titled: "The Quiet Revolution: An Investor's Playbook for America's Utilities." The goal is to analyze how these traditionally conservative companies are navigating a period of unprecedented capital investment and transformation, and to identify the most attractive investment profiles in the current interest rate environment.
+
+Using your web search capabilities, identify and analyze 3-4 of the most significant trends defining the Utilities sector in mid-2025. Key themes should include the massive rate base growth driven by decarbonization, the critical need for grid hardening and modernization in response to extreme weather, the challenges of integrating renewables and battery storage at scale, and the impact of interest rate policy on utility valuations.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Regulatory & Engineering Report:
+
+The Mandate: What is the primary driver compelling this action? Is it a state-level clean energy mandate, a federal push for grid reliability, or the need to harden infrastructure against specific climate threats (e.g., wildfire risk in the West, hurricane resilience in the Southeast)?
+
+The Key Players & Their Regulators: Profile the types of utilities leading this trend (e.g., vertically integrated, transmission-focused). Critically, analyze the role of their Public Utility Commissions (PUCs). Is the regulatory environment in their service territory considered constructive and favorable to investment?
+
+The Regulatory Lag and Project Execution Risks: What are the major obstacles? Analyze the risk that regulators will not approve rate increases in a timely manner ("regulatory lag") to cover expenses. Assess the utility's track record of executing large, complex infrastructure projects on time and on budget.
+
+2. The Investment Angle:
+
+The Rate Base & Dividend Profile: This is the core of the investment case. How fast is the company projected to grow its rate base (the value of assets on which it can earn a regulated return)? What is the Allowed Return on Equity (ROE) granted by its regulator? How secure is the dividend, and what is its projected growth rate?
+
+Market Thesis: Formulate a clear investment thesis. In the current environment, should investors prioritize utilities with the fastest rate base growth, those operating in the most favorable regulatory states, or those that appear undervalued due to their sensitivity to interest rates?
+
+Risk Factors: What are the specific risks inherent to this sector? Analyze the potential for unfavorable regulatory rulings (rate case denials), rising interest rates making their dividends less attractive, major project cost overruns, and operational or liability risks (e.g., wildfire lawsuits).
+
+Conclusion:
+Conclude with a strategic assessment. For an investor seeking a balance of dividend income and capital appreciation, what is the key characteristic to look for in a utility in 2025—is it the scale of its clean energy transition plan, the constructive nature of its relationship with its regulator, or its valuation relative to the bond market?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be conservative and deeply analytical, grounded in regulatory filings, company capital expenditure plans, and macroeconomic interest rate forecasts.
+`;
+const REAL_ESTATE_SECTOR_PROMPT = `
+Act as a senior real estate investment analyst for a publication like The Wall Street Journal's property section or Barron's, with a focus on Real Estate Investment Trusts (REITs). You are writing the definitive Q3 2025 feature: "The Great Divergence: An Investor's Playbook for the New Real Estate Market." The objective is to move beyond generalities and provide a clear-eyed analysis of the distinct winners and losers across the major real estate sub-sectors.
+
+Using your web search capabilities, provide an analysis of the current state of the U.S. real estate market by examining 3-4 of the most critical and divergent property sub-sectors. Your analysis must compare and contrast areas like:
+
+The Digital Backbone: Data Centers and Industrial/Logistics real estate.
+
+The Human Element: Multifamily apartments and the Build-to-Rent single-family boom.
+
+The Troubled Core: Downtown office properties.
+
+The Resilient Niche: Sectors like self-storage or healthcare facilities.
+
+For each sub-sector you analyze, provide a detailed two-part report:
+
+1. The Property & Tenant Report:
+
+The Secular Trend: What is the powerful, long-term force shaping this sub-sector? Is it the growth of AI and cloud computing (for data centers), e-commerce and supply chain on-shoring (for industrial), the national housing shortage (for residential), or the persistence of hybrid work (for office)?
+
+The Key Players: Profile the dominant publicly-traded REITs in this space (e.g., Prologis in industrial; Equinix in data centers). Who are the blue-chip leaders, and are there any specialized niche players worth noting?
+
+The Supply, Demand, and Cap Rate Outlook: This is the core of the physical market analysis. Is new construction (supply) keeping pace with, or exceeding, tenant demand? Are vacancy rates rising or falling? And critically, how are property yields ("cap rates") responding to the current interest rate environment and perceived risk?
+
+2. The REIT & FFO Analysis:
+
+The Financial Picture: Analyze the health of the representative REITs. What is the consensus outlook for their Funds From Operations (FFO) growth—the key earnings metric for REITs? How safe is the dividend, and what is the current FFO payout ratio? How leveraged are their balance sheets?
+
+Market Thesis: Formulate a clear investment thesis for this sub-sector. Is it a "growth" play on a durable tech trend, a "value" play on a beaten-down sector with recovery potential, or a "stable income" play on a resilient, needs-based property type?
+
+Risk Factors: What are the specific risks? Analyze the impact of high interest rates on financing and property values, tenant default or vacancy risk, the threat of oversupply in hot markets, and geographic risks such as climate-related costs in coastal states like Florida.
+
+Conclusion:
+Conclude with a strategic allocation perspective. In this divergent market of mid-2025, where should an investor looking for a blend of growth and income focus their capital within the real estate sector? Which sub-sector offers the most compelling risk-adjusted return for the next five years?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and deeply analytical, grounded in real estate-specific metrics like Funds From Operations (FFO), Net Operating Income (NOI), and capitalization rates.
+`;
+const MATERIALS_SECTOR_PROMPT = `
+Act as a senior commodities and materials analyst for Bloomberg or The Financial Times, respected for your global perspective on supply chains and industrial economies. You are writing the definitive Q3 2025 feature: "The Building Blocks of Tomorrow: An Investor's Playbook for the Materials Sector." Your objective is to dissect the global scramble for critical materials and identify the most strategic investment theses in this highly cyclical and geopolitically sensitive sector.
+
+Using your web search capabilities, identify and analyze 3-4 of the most powerful trends shaping the materials landscape in mid-2025. Key themes should include the demand supercycle for "green metals" (copper, lithium, nickel) driven by the energy transition, the geopolitical imperative to secure critical mineral supply chains, the growth of high-margin specialty chemicals, or the outlook for core cyclical materials tied to global industrial production.
+
+For each trend, provide a detailed two-part analysis:
+
+1. The Global Supply & Demand Report:
+
+The Demand Driver: What is the primary force fueling this trend? Is it decarbonization (e.g., EV and grid-scale battery production), geopolitical strategy (e.g., nations securing their own semiconductor or defense supply chains), or the underlying pulse of the global industrial cycle?
+
+The Key Players: Profile the major producers. Distinguish between the diversified mining giants (e.g., BHP, Rio Tinto), the leading specialty chemical companies (e.g., DuPont, Air Liquide), and the pure-play producers focused on a single strategic commodity (e.g., a leading lithium or copper miner).
+
+The Supply, CAPEX, and Geopolitical Headwinds: What is the outlook for bringing new supply online? Analyze the industry's capital expenditure (CAPEX) cycle and the long lead times for new mines or production facilities. What are the key geopolitical risks, such as resource nationalism, export controls, or trade tariffs?
+
+2. The Investment Angle:
+
+The Cost Curve & Profitability Analysis: This is the core of commodity investing. Where do the key players sit on the global cost curve for their main products? Analyze their production costs (e.g., "All-in Sustaining Costs" for miners) and operating margins to determine their resilience during periods of low commodity prices.
+
+Market Thesis: Formulate a clear investment thesis. For exposure to this trend, should investors favor the diversified, lower-risk giants; the high-beta, pure-play producers; or the more stable, value-added specialty materials companies that are less tied to raw commodity prices?
+
+Risk Factors: What are the specific risks inherent to this sector? Analyze the impact of extreme commodity price volatility, high sensitivity to the global economic cycle (particularly Chinese industrial demand), operational risks (e.g., mining accidents), geopolitical events, and evolving environmental regulations.
+
+Conclusion:
+Conclude with a strategic outlook. In the global scramble for the 21st century's resources, which part of the materials value chain—the upstream commodity producers or the downstream, value-added specialty creators—offers the more compelling risk-adjusted return for investors today?
+
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+
+The tone should be authoritative and global in scope, grounded in macroeconomic indicators (like Global Manufacturing PMI), commodity price futures, and corporate capital expenditure plans.
+`;
 
 // --- Global State ---
 let db;
