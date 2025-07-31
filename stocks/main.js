@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.5"; 
+const APP_VERSION = "7.5.6"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -443,6 +443,22 @@ Conclude with a concise summary for an investor. In 2-3 sentences, what is the c
 Crucial Disclaimer:
 The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
+`;
+
+const MACRO_PLAYBOOK_PROMPT = `
+Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
+	1. The Wave (The Macro Trend):
+		○ Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
+	2. The 'Surfboard' (The Company):
+		○ Within the [SECTOR NAME] sector, identify 1-2 companies that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
+	3. Quantifying the Tail-Wind:
+		○ How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
+	4. Thesis Risks (When the Wave Breaks):
+		○ What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
+	5. Conclusion: Investing in a Megatrend
+		○ Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+	Crucial Disclaimer: [Include standard disclaimer]
+Why it's useful: This helps you invest with the wind at your back. It aligns your portfolio with powerful, long-lasting forces, which can provide a significant tailwind for growth over many years.
 `;
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
@@ -2110,6 +2126,8 @@ function setupGlobalEventListeners() {
                 handleSectorAnalysisWithAIAgent(sector);
             } else if (promptName === 'DisruptorAnalysis') {
                 handleDisruptorAnalysis(sector);
+            } else if (promptName === 'MacroPlaybook') {
+                handleMacroPlaybookAnalysis(sector);
             } else {
                 handleCreativeSectorAnalysis(sector, promptName);
             }
@@ -2492,6 +2510,7 @@ function handleSectorSelection(sectorName) {
                 <div class="flex flex-wrap justify-center gap-4">
                     <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
                     <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="DisruptorAnalysis">Disruptor Analysis</button>
+                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MacroPlaybook">Macro Playbook</button>
                 </div>
             </div>
         `;
@@ -2552,6 +2571,30 @@ async function handleDisruptorAnalysis(sectorName) {
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${sectorName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleMacroPlaybookAnalysis(sectorName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "Macro Playbook"...`;
+
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
+
+    try {
+        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
+        const prompt = MACRO_PLAYBOOK_PROMPT
+            .replace(/\[SECTOR NAME\]/g, sectorName)
+            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
+        const report = await callGeminiApi(prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating macro playbook analysis for ${sectorName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
