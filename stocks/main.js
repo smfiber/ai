@@ -2427,17 +2427,17 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
 // --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
 
 const creativePromptMap = {
-    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'The Next Frontier' },
-    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Bio-Ethical Dilemma' },
-    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'The FinTech War Room' },
-    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Decoding the Zeitgeist' },
-    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'The Streaming Wars' },
-    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'The Silent Revolution' },
-    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Legacy on the Line' },
-    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Geopolitics of Oil' },
-    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Upgrading The Grid' },
-    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'The Great Conversion' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Battle for Elements' },
+    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
+    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
+    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
+    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook' },
+    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook' },
+    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook' },
+    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook' },
+    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
+    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
+    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
+    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' },
 };
 
 function handleSectorSelection(sectorName) {
