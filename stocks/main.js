@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.4"; 
+const APP_VERSION = "7.5.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -414,6 +414,37 @@ const RISK_ASSESSMENT_PROMPT = [
     'Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.'
 ].join('\n');
 
+const DISRUPTOR_ANALYSIS_PROMPT = `
+Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+For the [SECTOR NAME] sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Sub-Industry] Market"
+Your analysis must be structured as follows:
+1. Introduction: The Challenger Appears
+
+Briefly introduce the company and its bold, simple mission. What industry is it targeting, and what fundamental problem is it solving?
+2. The Old Guard and The Opening
+
+Who are the established, legacy competitors (the "Goliaths")? Briefly describe the "old way" of doing things in this market and explain what inefficiency, technological gap, or customer dissatisfaction created the opening for a disruptor.
+3. The Disruptor's Edge: The 'How'
+
+This is the core of the analysis. What is this company's unique advantage or "unfair" edge? Focus on one or two of the following:
+Technological Moat: Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
+Business Model Innovation: Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
+Go-to-Market Strategy: Are they acquiring customers in a novel, cheaper, or more efficient way than the incumbents?
+4. 'Hitting Their Stride': The Proof
+
+Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully? (e.g., exponential revenue growth, accelerating customer adoption, major strategic partnerships, achieving positive cash flow, etc.).
+5. The Path to Dominance: The Future
+
+What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles (e.g., competition waking up, regulatory threats, execution risk) that could derail their ascent?
+6. Investment Thesis Summary
+
+Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
+Crucial Disclaimer:
+The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
+The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
+`;
+
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 
 const TECHNOLOGY_SECTOR_PROMPT = `
@@ -595,7 +626,7 @@ Market Thesis: Formulate a clear investment thesis. Should investors favor the h
 Risk Factors: What are the specific risks inherent to industrial operations? Analyze factors such as sensitivity to GDP growth and interest rates, execution risk on massive projects, volatility in commodity prices, and reliance on government spending and contracts.
 
 Conclusion:
-Conclude with a strategic outlook. Of the industrial trends you analyzed, which offers the most durable risk/reward profile for an investor looking through to the end of the decade, considering the ever-present threat of economic cycles?
+Conclude with a strategic outlook. Of the industrial trends you analyzed, which one offers the most durable risk/reward profile for an investor looking through to the end of the decade, considering the ever-present threat of economic cycles?
 
 Crucial Disclaimer:
 The article must end with a clear and prominent disclaimer: "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions."
@@ -2077,6 +2108,8 @@ function setupGlobalEventListeners() {
             const promptName = target.dataset.promptName;
             if (promptName === 'MarketTrends') {
                 handleSectorAnalysisWithAIAgent(sector);
+            } else if (promptName === 'DisruptorAnalysis') {
+                handleDisruptorAnalysis(sector);
             } else {
                 handleCreativeSectorAnalysis(sector, promptName);
             }
@@ -2427,17 +2460,17 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
 // --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
 
 const creativePromptMap = {
-    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
-    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook' },
-    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook' },
-    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook' },
-    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook' },
-    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
-    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
-    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' },
+    'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Consumer Discretionary': { prompt: CONSUMER_DISCRETIONARY_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Communication Services': { prompt: COMMUNICATION_SERVICES_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Industrials': { prompt: INDUSTRIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Consumer Staples': { prompt: CONSUMER_STAPLES_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook Analysis' },
+    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook Analysis' },
 };
 
 function handleSectorSelection(sectorName) {
@@ -2456,7 +2489,10 @@ function handleSectorSelection(sectorName) {
         creativeButtonHtml = `
             <div class="text-center">
                 <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Creative & Narrative Analysis</span>
-                <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
+                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="DisruptorAnalysis">Disruptor Analysis</button>
+                </div>
             </div>
         `;
     }
@@ -2495,6 +2531,27 @@ async function handleCreativeSectorAnalysis(sectorName, promptNameKey) {
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating creative analysis for ${sectorName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleDisruptorAnalysis(sectorName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "Disruptor Analysis"...`;
+
+    const contentArea = document.getElementById('custom-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+
+    try {
+        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, sectorName);
+        const report = await callGeminiApi(prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating disruptor analysis for ${sectorName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
