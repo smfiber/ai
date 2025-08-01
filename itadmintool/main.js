@@ -2245,8 +2245,8 @@ async function generateFullDetailedGuide(button) {
         
         // [MODIFIED] Removed the replace() call that was stripping the header from the security module.
         let finalCompleteGuideMarkdown = refinedDraftMarkdown
-            .replace('[SECURITY_CONSIDERATIONS_PLACEHOLDER]', securityModuleMarkdown)
             .replace(/### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/, `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`)
+            .replace(/### 9\. Security Considerations[\s\S]*?(?=### 10\.|\n$)/, securityModuleMarkdown.trim())
             .replace(/### 12\. Helpful Resources[\s\S]*?$/, `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`);
 
         detailedContentEl.innerHTML = getLoaderHTML('Step 5/5: Assembling final document...');
