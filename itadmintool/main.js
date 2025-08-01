@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.6"; // [REFACTORED] Consolidated guide generation to improve speed and reliability.
+const APP_VERSION = "1.5.7"; // [FIXED] Corrected an error in the Explanatory Article feature caused by the previous refactoring.
 
 // --- Global State ---
 let db;
@@ -1479,7 +1479,7 @@ async function generateAndApplyDefaultTheme() {
     showThemeLoading(true);
     const themePrompt = "Modern Data Center";
     try {
-        const colors = await callColorGenAPI(themePrompt);
+        const colors = await callColorGenAPI(prompt);
         applyTheme(colors);
     } catch (error) {
         handleApiError(null, null, 'default theme');
@@ -2359,9 +2359,12 @@ async function handleExplanatoryArticleRequest(topicId, categoryId) {
         const expansionText = await callGeminiAPI(expansionPrompt, false, "Explanatory Article Expansion");
         if (!expansionText) throw new Error("AI failed to generate the article's expansion.");
 
-        // Step 3: Search for and validate sources
+        // Step 3: Search for sources
         contentEl.innerHTML = getLoaderHTML('Step 3/4: Searching for references...');
-        const sources = await generateVerifiedResources(item.title, fullHierarchyPath);
+        const resourceLinks = await searchGoogleForTopic([...fullHierarchyPath.map(p => p.title), item.title].join(' '));
+        const sources = resourceLinks.length > 0
+            ? resourceLinks.map(item => `* [${item.title}](${item.link}) - *${item.snippet}*`).join('\n')
+            : `*No relevant online resources were found for "${item.title}".*`;
 
         // Step 4: Perform Final Review and add citations
         contentEl.innerHTML = getLoaderHTML('Step 4/4: Performing final review and adding citations...');
