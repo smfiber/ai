@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.5"; // [FIXED] Resolved an infinite loop in the Google Drive authentication flow.
+const APP_VERSION = "1.5.6"; // [REFACTORED] Consolidated guide generation to improve speed and reliability.
 
 // --- Global State ---
 let db;
@@ -1741,7 +1741,6 @@ function getRefinementPrompt(originalText = '{original_text}', refinementRequest
  */
 function getMasterGuidePrompt(type, context) {
     const {
-        blueprintMarkdown = '',
         coreTask = '',
         persona = '',
         tone = '',
@@ -1795,51 +1794,6 @@ Additional Context: ${additionalContext || 'None'}`;
         2.  **Format:** Use '###' for headers. Return ONLY markdown for these four sections.`;
     }
 
-    if (type === 'fullGuide') {
-        return `
-        //-- MASTER INSTRUCTION: COMPLETE THE GUIDE --//
-        You have ALREADY CREATED the foundational blueprint (sections 1-4). Your mission is to generate ONLY the remaining detailed sections (5 through 12) with expert-level detail.
-        
-        //-- CONTEXT: THE GUIDE BLUEPRINT (SECTIONS 1-4) --//
-        ${blueprintMarkdown}
-        ${personaAndObjective}
-        
-        //-- CRITICAL QUALITY CONTROL (MANDATORY) --//
-        - **Brand Accuracy:** The primary subject is "HPE Active Health System (AHS)". You MUST NOT use incorrect brand names like "Altiris".
-        - **Actionable Content:** All instructions must be practical and clear for a technical audience.
-
-        //-- REQUIRED OUTPUT: GENERATE SECTIONS 5-12 WITH ENHANCED SPECIFICITY --//
-        
-        ### 5. Detailed Implementation Guide
-        **CRITICAL:** This section must be highly practical.
-        - Provide exact click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
-        
-        ### 6. Verification and Validation
-        **CRITICAL:** Provide concrete, objective success criteria. Do not use abstract descriptions.
-        - Give specific commands (e.g., \`ping <server>\`) or GUI steps (e.g., "Check the status light; it should be solid green.").
-        - Any command provided **must** use modern, non-obsolete, and non-aliased cmdlets (e.g., use \`Get-Service\` not \`gsv\`). Prefer native cmdlets over those requiring third-party modules.
-        - Describe the exact expected output or visual confirmation of success.
-        
-        ### 7. Best Practices
-        - List 3-5 actionable best practices directly related to the topic.
-        
-        ### 8. Automation Techniques
-        - [AUTOMATION_RESOURCES_PLACEHOLDER]
-        
-        ### 9. Security Considerations
-        - [SECURITY_CONSIDERATIONS_PLACEHOLDER]
-        
-        ### 10. Advanced Use Cases & Scenarios
-        - Describe at least two advanced scenarios where this knowledge could be applied.
-        
-        ### 11. Troubleshooting
-        - **CRITICAL:** List three advanced troubleshooting scenarios for an L3 engineer. Focus on issues where initial diagnostics are inconclusive or where there is a complex interaction between components. For each, describe the subtle symptoms and the logical process for isolating the true root cause.
-        
-        ### 12. Helpful Resources
-        - Provide a list of 3-4 placeholder links to high-quality, relevant resources. This section will be replaced by a live web search.
-        
-        Your response must contain ONLY the markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".`;
-    }
     return '';
 }
 
@@ -1983,182 +1937,106 @@ async function handleExploreInDepth(topicId, fullHierarchyPath) {
     }
 }
 
-/**
- * [MODIFIED] Performs a "Search, Validate, and Format" process for generating helpful resources.
- * Now includes a summary for each link and uses the full hierarchy for context.
- * @param {string} topic The core topic of the guide.
- * @param {Array} fullHierarchyPath The hierarchical path of the topic.
- * @returns {Promise<string>} A markdown string for the "Helpful Resources" section.
- */
-async function generateVerifiedResources(topic, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
-        console.warn("Google Search Engine ID not configured. Skipping real-time resource search.");
-        return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
+async function searchGoogleForTopic(query) {
+    if (!GOOGLE_SEARCH_ENGINE_ID || !geminiApiKey) {
+        console.warn("Google Search credentials not configured. Skipping real-time search.");
+        return [];
     }
-
-    const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
-    const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic].join(' ');
-
     try {
-        // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
+        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(query)}`;
         const searchResponse = await fetch(searchApiUrl);
         if (!searchResponse.ok) {
             const errorData = await searchResponse.json();
             throw new Error(`Google Search API request failed: ${errorData.error.message}`);
         }
         const searchResults = await searchResponse.json();
-        const searchItems = searchResults.items?.slice(0, 8) || [];
-
-        if (searchItems.length === 0) {
-            return `*No relevant online resources were found for "${contextualTopic}".*`;
-        }
-
-        // 2. Validate and Summarize with full context
-        const validationPrompt = `
-            Persona: You are a senior ${mainCategory} expert and technical content curator.
-            Task: Review the following list of web search results. Your job is to find the most relevant and authoritative resources.
-
-            //-- CRITICAL CONTEXT --//
-            The guide's full hierarchy is: "${fullHierarchyPath.map(p => p.title).join(' / ')}".
-            The specific topic is: "${topic}".
-            You MUST prioritize links that are relevant to this full context, not just the topic in isolation.
-
-            //-- SEARCH RESULTS TO EVALUATE --//
-            ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
-
-            //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Based on the CRITICAL CONTEXT, discard any links that are irrelevant, severely outdated, or low-quality (e.g., forum posts, marketing pages).
-            2.  **Select the Best:** Choose the top 3-4 most valuable links that directly relate to the full hierarchy.
-            3.  **Summarize:** For each selected link, write a concise, one-sentence summary of its content.
-            4.  **Return JSON:** Your response MUST be a valid JSON array of objects. Each object must have three keys: "title", "link", and "summary". Do not add any other text.
-        `;
-        const validatedLinksJson = await callGeminiAPI(validationPrompt, true, "Validate Search Results");
-        const validatedLinks = parseJsonWithCorrections(validatedLinksJson);
-
-        if (!validatedLinks || validatedLinks.length === 0) {
-            return `*AI validation did not find any high-quality resources from the initial search for "${contextualTopic}".*`;
-        }
-        
-        // 3. Format for display
-        return validatedLinks.map(link => `* [${link.title}](${link.link}) - *${link.summary}*`).join('\n');
-
+        return searchResults.items?.slice(0, 8) || [];
     } catch (error) {
-        console.error("Could not fetch, validate, or format helpful resources:", error);
-        return `*An error occurred while trying to find real-time resources: ${error.message}*`;
+        console.error(`Error during Google Search for "${query}":`, error);
+        return []; // Return empty array on error to not break the flow
     }
 }
 
-/**
- * [MODIFIED] Performs a "Search, Validate, and Format" process for the "Automation Techniques" section.
- * Now includes a description for each link and uses the full hierarchy for context.
- * @param {string} topic The core topic of the guide.
- * @param {Array} fullHierarchyPath The hierarchical path of the topic.
- * @returns {Promise<string>} A markdown string for the "Automation Techniques" section.
- */
-async function generateVerifiedAutomationResources(topic, fullHierarchyPath) {
-    if (!GOOGLE_SEARCH_ENGINE_ID) {
-        console.warn("Google Search Engine ID not configured. Skipping automation resource search.");
-        return "*Real-time resource search is not configured. Please add a Google Programmable Search Engine ID in the settings.*";
-    }
+function getConsolidatedGuidePrompt(context) {
+    const {
+        blueprintMarkdown = '',
+        coreTask = '',
+        fullHierarchyPath = [],
+        automationLinks = [],
+        resourceLinks = []
+    } = context;
 
-    const mainCategory = (fullHierarchyPath && fullHierarchyPath.length > 0) ? fullHierarchyPath[0].title : 'IT';
-    const contextualTopic = [...fullHierarchyPath.map(p => p.title), topic, "automation script", "tutorial"].join(' ');
+    const pathString = fullHierarchyPath.map(p => p.title || p).join(' -> ');
 
-    try {
-        // 1. Search
-        const searchApiUrl = `https://www.googleapis.com/customsearch/v1?key=${geminiApiKey}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(contextualTopic)}`;
-        const searchResponse = await fetch(searchApiUrl);
-        if (!searchResponse.ok) {
-            const errorData = await searchResponse.json();
-            throw new Error(`Google Search API request failed for automation resources: ${errorData.error.message}`);
-        }
-        const searchResults = await searchResponse.json();
-        const searchItems = searchResults.items?.slice(0, 8) || [];
+    const automationLinksMarkdown = automationLinks.length > 0
+        ? automationLinks.map(item => `- [${item.title}](${item.link}): ${item.snippet}`).join('\n')
+        : 'No relevant automation links were found.';
 
-        if (searchItems.length === 0) {
-            return `*No relevant automation resources were found for "${contextualTopic}".*`;
-        }
+    const resourceLinksMarkdown = resourceLinks.length > 0
+        ? resourceLinks.map(item => `- [${item.title}](${item.link}): ${item.snippet}`).join('\n')
+        : 'No relevant resource links were found.';
 
-        // 2. Validate and Summarize with full context
-        const validationPrompt = `
-            Persona: You are a senior IT infrastructure specialist and technical content curator.
-            Task: Review the following list of web search results to find high-quality automation resources.
+    return `
+//-- MASTER INSTRUCTION: GENERATE A COMPLETE, HIGH-QUALITY TECHNICAL GUIDE --//
+You are an expert technical writer and subject matter expert. Your task is to expand upon the provided guide blueprint (sections 1-4) by generating the remaining detailed sections (5 through 12). You must follow all instructions precisely to produce a comprehensive, accurate, and practical guide.
 
-            //-- CRITICAL CONTEXT --//
-            The guide's full hierarchy is: "${fullHierarchyPath.map(p => p.title).join(' / ')}".
-            The specific topic is: "${topic}".
-            You MUST prioritize links that provide automation techniques (scripts, tutorials, API docs) relevant to this full context.
+//-- PART 1: GUIDE BLUEPRINT (SECTIONS 1-4) --//
+This is the existing introduction and context for the guide. Do NOT repeat or rewrite this part.
+---
+${blueprintMarkdown}
+---
 
-            //-- SEARCH RESULTS TO EVALUATE --//
-            ${JSON.stringify(searchItems.map(item => ({title: item.title, link: item.link, snippet: item.snippet})))}
+//-- PART 2: CONTEXTUAL INFORMATION --//
+- **Full Subject Path:** ${pathString}
+- **Core Topic:** ${coreTask}
 
-            //-- INSTRUCTIONS --//
-            1.  **Critically Evaluate:** Based on the CRITICAL CONTEXT, discard links that are low-quality, marketing-focused, or irrelevant.
-            2.  **Select the Best:** Choose the top 3-4 most valuable links providing practical automation techniques for the full hierarchy.
-            3.  **Summarize & Describe:**
-                * Write a brief, 2-3 sentence summary of the core automation concepts or primary commands relevant to the topic.
-                * For each selected link, write a one-sentence description of what the resource provides (e.g., "A PowerShell script for...", "A video tutorial on...").
-            4.  **Return JSON:** Your response MUST be a valid JSON object with two keys:
-                * "keyConcepts": A string containing the summary you wrote.
-                * "links": An array of objects, where each object has "title", "link", and "description".
-        `;
-        const validatedContentJson = await callGeminiAPI(validationPrompt, true, "Validate Automation Resources");
-        const validatedContent = parseJsonWithCorrections(validatedContentJson);
+//-- PART 3: LIVE WEB-SEARCH RESULTS FOR YOUR ANALYSIS --//
+You MUST use the following web links to inform your writing for sections 8 and 12.
 
-        if (!validatedContent || !validatedContent.links || validatedContent.links.length === 0) {
-            return `*AI validation did not find any high-quality automation resources for "${topic}".*`;
-        }
-        
-        // 3. Format for display
-        const keyConceptsMarkdown = validatedContent.keyConcepts || '';
-        const linksMarkdown = validatedContent.links.map(link => `* [${link.title}](${link.link}) - *${link.description}*`).join('\n');
-        
-        return `${keyConceptsMarkdown}\n\n${linksMarkdown}`;
+**Automation Techniques Links:**
+${automationLinksMarkdown}
 
-    } catch (error) {
-        console.error("Could not fetch, validate, or format automation resources:", error);
-        return `*An error occurred while trying to find automation resources: ${error.message}*`;
-    }
+**Helpful Resources Links:**
+${resourceLinksMarkdown}
+
+//-- PART 4: YOUR TASK - GENERATE SECTIONS 5-12 --//
+Generate all of the following sections based on the context provided. Your response MUST contain ONLY the complete markdown for sections 5 through 12. Start directly with "### 5. Detailed Implementation Guide".
+
+### 5. Detailed Implementation Guide
+**CRITICAL:** This section must be highly practical and detailed.
+- Provide exact, step-by-step click-paths and UI element names (e.g., "Navigate to Storage > Controllers > Array A").
+- Include names of buttons, menus, and input fields.
+- Where applicable, provide sample commands or code snippets with explanations.
+
+### 6. Verification and Validation
+**CRITICAL:** Provide concrete, objective success criteria.
+- Give specific commands (e.g., \`ping <server>\` or \`Get-Service\`) and their expected output.
+- Describe the exact visual confirmation of success in a GUI (e.g., "The status light should be solid green.").
+
+### 7. Best Practices
+- List 3-5 actionable best practices directly related to the topic.
+
+### 8. Automation Techniques
+- Based on the "Automation Techniques Links" provided above, write a summary of key automation concepts for this topic.
+- Then, create a formatted list of the most relevant links, each with a concise one-sentence description of what the resource provides.
+
+### 9. Security Considerations
+- Identify the 3-4 most critical security topics for "${coreTask}".
+- For each topic, use bold markdown for the subheading (e.g., "**Principle of Least Privilege**").
+- Provide a concise paragraph explaining its importance and a bulleted list of 2-3 actionable best practices.
+
+### 10. Advanced Use Cases & Scenarios
+- Describe at least two advanced or non-obvious scenarios where this knowledge could be applied.
+
+### 11. Troubleshooting
+- **CRITICAL:** List three common but challenging troubleshooting scenarios.
+- For each, describe the subtle symptoms and the logical process an L3 engineer would follow to isolate the root cause.
+
+### 12. Helpful Resources
+- Based on the "Helpful Resources Links" provided above, create a formatted list of the top 3-4 most valuable resources.
+- Each link in the list must have a one-sentence summary of its content.
+`;
 }
-
-/**
- * [MODIFIED] Generates the "Security Considerations" module using a more direct, refined prompt.
- * @param {string} coreTopic The central topic of the guide to tailor the security advice.
- * @returns {Promise<string>} A markdown string for the complete, refined security section.
- */
-async function generateSecurityConsiderationsModule(coreTopic) {
-    const generationPrompt = `
-        You are an expert cybersecurity consultant creating a "Security Considerations" section for a technical guide on: "${coreTopic}".
-
-        //-- OBJECTIVE --//
-        Generate a single, cohesive markdown block for the "Security Considerations" section. The content must be structured to appear within one single accordion item in the final UI.
-
-        //-- INSTRUCTIONS --//
-        1.  **Identify Key Topics:** Select the 3-4 most critical and relevant security topics for "${coreTopic}".
-        2.  **Use Bold for Subheadings:** For each topic you identify, use bold markdown (e.g., "**Principle of Least Privilege**") for the subheading. DO NOT use '###' or '####' headers for these topics.
-        3.  **Provide Content:** For each topic, write a concise paragraph explaining the concept and its importance, followed by a bulleted list of 2-3 actionable best practices.
-        4.  **Include Links:** For each topic, provide 1-2 high-quality, relevant URLs from official documentation or reputable security sources.
-        5.  **Strict Formatting:** The entire output must be a single, continuous block of markdown.
-
-        //-- MANDATORY FINAL OUTPUT --//
-        Return ONLY the markdown for the security topics. Start directly with the first bolded subheading. DO NOT include a "### 9. Security Considerations" header, any introductory/concluding text, or any other content outside of this single, structured block.
-    `;
-
-    try {
-        const securityMarkdown = await callGeminiAPI(generationPrompt, false, "Generate Security Module");
-        if (!securityMarkdown) {
-            throw new Error("AI did not return content for the security module.");
-        }
-        // The prompt now instructs the AI *not* to include the main header, so we add it here for consistency.
-        return `### 9. Security Considerations\n\n${securityMarkdown}`;
-
-    } catch (error) {
-        console.error("Could not generate the Security Considerations module:", error);
-        return `### 9. Security Considerations\n\n*An error occurred while generating this section: ${error.message}*`;
-    }
-}
-
 
 async function generateFullDetailedGuide(button) {
     const firstModalFooter = document.getElementById('inDepthModalFooter');
@@ -2194,63 +2072,37 @@ async function generateFullDetailedGuide(button) {
     openModal('inDepthDetailedModal');
 
     try {
-        detailedContentEl.innerHTML = getLoaderHTML('Step 1/5: Writing first draft...');
+        detailedContentEl.innerHTML = getLoaderHTML('Step 1/2: Searching for real-time resources...');
         const coreTopic = detailedModalTitleText.trim();
+        const contextualAutomationQuery = [...fullHierarchyPath.map(p => p.title), coreTopic, "automation script", "tutorial"].join(' ');
+        const contextualResourceQuery = [...fullHierarchyPath.map(p => p.title), coreTopic].join(' ');
+
+        // Step 1: Parallel Information Gathering
+        const [automationLinks, resourceLinks] = await Promise.all([
+            searchGoogleForTopic(contextualAutomationQuery),
+            searchGoogleForTopic(contextualResourceQuery)
+        ]);
+
+        detailedContentEl.innerHTML = getLoaderHTML('Step 2/2: Generating and assembling the complete guide...');
         
+        // Step 2: A Single, Comprehensive Gemini Call
         const context = {
             blueprintMarkdown: blueprintMarkdown,
+            coreTask: coreTopic,
             fullHierarchyPath: fullHierarchyPath,
-            coreTask: coreTopic
+            automationLinks: automationLinks,
+            resourceLinks: resourceLinks
         };
 
-        const finalContentPrompt = getMasterGuidePrompt('fullGuide', context);
-        let firstDraftMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Draft)");
-        firstDraftMarkdown = firstDraftMarkdown ? firstDraftMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim() : '';
+        const finalContentPrompt = getConsolidatedGuidePrompt(context);
+        let finalCompleteGuideMarkdown = await callGeminiAPI(finalContentPrompt, false, "Generate Full Guide (Consolidated)");
 
-        if (!firstDraftMarkdown) {
+        if (!finalCompleteGuideMarkdown) {
             throw new Error("The AI did not return any content for the detailed guide sections.");
         }
+        finalCompleteGuideMarkdown = finalCompleteGuideMarkdown.replace(/^```(markdown)?\n?/g, '').replace(/\n?```$/g, '').trim();
 
-        detailedContentEl.innerHTML = getLoaderHTML('Step 2/5: Performing auto-refinement...');
-        const section5Regex = /### 5\. Detailed Implementation Guide([\s\S]*?)(?=### 6\.|\n$)/;
-        const section5Match = firstDraftMarkdown.match(section5Regex);
-        const implementationGuideDraft = section5Match ? section5Match[1].trim() : null;
-
-        if (!implementationGuideDraft) {
-            throw new Error("Could not extract the 'Detailed Implementation Guide' from the draft for refinement.");
-        }
-        
-        const refinementPrompt = `
-            Critically review and rewrite the following 'Detailed Implementation Guide' section. Your goal is to make it more specific, practical, and actionable. Add more concrete details, step-by-step click-paths, names of UI elements (buttons, menus), and practical examples. Ensure the output is a complete, rewritten section starting with "### 5. Detailed Implementation Guide".
-            
-            Original Section:
-            ${implementationGuideDraft}
-        `;
-        let refinedImplementationGuide = await callGeminiAPI(refinementPrompt, false, "Auto-Refine Implementation Guide");
-        if (!refinedImplementationGuide.startsWith('### 5.')) {
-            refinedImplementationGuide = `### 5. Detailed Implementation Guide\n\n${refinedImplementationGuide}`;
-        }
-        
-        let refinedDraftMarkdown = firstDraftMarkdown.replace(section5Regex, refinedImplementationGuide);
-
-        detailedContentEl.innerHTML = getLoaderHTML('Step 3/5: Generating Security Considerations...');
-        
-        const [securityModuleMarkdown, automationResourcesMarkdown, helpfulResourcesMarkdown] = await Promise.all([
-            generateSecurityConsiderationsModule(coreTopic),
-            generateVerifiedAutomationResources(coreTopic, fullHierarchyPath),
-            generateVerifiedResources(coreTopic, fullHierarchyPath)
-        ]);
-        
-        detailedContentEl.innerHTML = getLoaderHTML('Step 4/5: Integrating dynamic content...');
-        
-        // [MODIFIED] Removed the replace() call that was stripping the header from the security module.
-        let finalCompleteGuideMarkdown = refinedDraftMarkdown
-            .replace(/### 8\. Automation Techniques[\s\S]*?(?=### 9\.|\n$)/, `### 8. Automation Techniques\n${automationResourcesMarkdown.trim()}`)
-            .replace(/### 9\. Security Considerations[\s\S]*?(?=### 10\.|\n$)/, securityModuleMarkdown.trim())
-            .replace(/### 12\. Helpful Resources[\s\S]*?$/, `### 12. Helpful Resources\n${helpfulResourcesMarkdown.trim()}`);
-
-        detailedContentEl.innerHTML = getLoaderHTML('Step 5/5: Assembling final document...');
-
+        // Step 3: Render
         const fullFinalMarkdown = [
             blueprintMarkdown,
             finalCompleteGuideMarkdown
@@ -2262,7 +2114,7 @@ async function generateFullDetailedGuide(button) {
         renderAccordionFromMarkdown(fullFinalMarkdown, detailedContentEl);
         
         addDetailedModalActionButtons(detailedButtonContainer, !!(oauthToken && oauthToken.access_token));
-        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated and verified successfully!';
+        document.getElementById('detailed-modal-status-message').textContent = 'Full guide generated successfully!';
 
     } catch (error) {
         handleApiError(error, detailedContentEl, 'full detailed guide');
@@ -2271,7 +2123,6 @@ async function generateFullDetailedGuide(button) {
         button.innerHTML = `Generate Full Detailed Guide`;
     }
 }
-
 
 function addModalActionButtons(buttonContainer, isInitialPhase = false, hasToken = false) {
     buttonContainer.innerHTML = '';
