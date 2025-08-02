@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.9"; 
+const APP_VERSION = "7.6.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -48,6 +48,7 @@ const CONSTANTS = {
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_CALENDAR: 'calendar_data',
+    DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
 };
 
 // --- NEW (v7.3.0) ---
@@ -833,6 +834,7 @@ let userId;
 let firebaseConfig = null;
 let appIsInitialized = false;
 let alphaVantageApiKey = "";
+let fmpApiKey = "";
 let geminiApiKey = "";
 let searchApiKey = "";
 let searchEngineId = "";
@@ -1013,6 +1015,7 @@ async function initializeFirebase() {
 async function handleApiKeySubmit(e) {
     e.preventDefault();
     alphaVantageApiKey = document.getElementById(CONSTANTS.INPUT_ALPHA_VANTAGE_KEY).value.trim();
+    fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
     geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
     googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
     searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
@@ -1020,7 +1023,7 @@ async function handleApiKeySubmit(e) {
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!alphaVantageApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
+    if (!alphaVantageApiKey || !fmpApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
@@ -2015,6 +2018,7 @@ function renderOverviewCard(data, symbol, status) {
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
+                <button data-symbol="${symbol}" class="analyst-estimates-button text-sm bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg">Analyst Estimates</button>
             </div>
             <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="bull-bear-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg">Bull vs. Bear</button>
@@ -2080,6 +2084,45 @@ function openPortfolioManagerModal() {
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
 }
 
+// --- FMP API INTEGRATION (v7.6.0) ---
+async function handleFmpAnalystEstimates(symbol) {
+    if (!fmpApiKey) {
+        displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching Analyst Estimates for ${symbol}...`;
+
+    try {
+        const url = `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?period=annual&apikey=${fmpApiKey}`;
+        const data = await callApi(url);
+
+        if (data.length === 0) {
+            throw new Error("No analyst estimate data returned from FMP API.");
+        }
+
+        const dataToCache = {
+            cachedAt: Timestamp.now(),
+            estimates: data
+        };
+
+        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol), dataToCache);
+
+        document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
+        document.getElementById('full-data-modal-title').textContent = `FMP Analyst Estimates for ${symbol}`;
+        document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${dataToCache.cachedAt.toDate().toLocaleString()}`;
+        openModal(CONSTANTS.MODAL_FULL_DATA);
+
+    } catch (error) {
+        console.error("Error fetching FMP analyst estimates:", error);
+        displayMessageInModal(`Could not fetch analyst estimates: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
@@ -2135,6 +2178,7 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
         if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
+        if (target.classList.contains('analyst-estimates-button')) handleFmpAnalystEstimates(symbol);
     });
 
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
