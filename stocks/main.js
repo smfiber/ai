@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.7"; 
+const APP_VERSION = "7.5.8"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -402,7 +402,7 @@ const RISK_ASSESSMENT_PROMPT = [
     'These are risks related to the stock\'s price and behavior in the market.',
     '- **Negative Market Sentiment (Short Interest):** Is the ShortPercentOutstanding high (e.g., >10%)? Explain that this means a significant number of investors are betting that the stock price will fall.',
     '- **Volatility (The "Drama" Level):** Is the Beta (from OVERVIEW) greater than 1? This means the stock tends to have bigger price swings (both up and down) than the overall market.',
-    '- **Priced for Perfection? (Valuation Risk):** Is the PERatio or PriceToSalesRatioTTM exceptionally high? Explain that this means the stock price is built on high expectations and could fall sharply if the company delivers even slightly disappointing news.',
+    '- **Priced for Perfection? (Valuation Risk):** Is the PERatio or PriceToSalesRatioTTM exceptionally high? Explain that a stock price is built on high expectations and could fall sharply if the company delivers even slightly disappointing news.',
     '',
     '## 3. Business Risks (Are There Cracks in the Operations?)',
     'These are risks related to the day-to-day health of the business.',
@@ -1151,7 +1151,7 @@ async function callApi(url, options = {}) {
 async function callGeminiApi(prompt) {
     if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -1409,7 +1409,12 @@ async function handleDeleteStock(ticker) {
 async function fetchAndCacheStockData(symbol) {
     const dataToCache = {};
     const promises = ALL_API_FUNCTIONS.map(async (func) => {
-        const url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
+        let url;
+        if (func === 'SMA') {
+            url = `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${alphaVantageApiKey}`;
+        } else {
+            url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
+        }
         const data = await callApi(url);
         if (data.Note || Object.keys(data).length === 0 || data.Information || data["Error Message"]) {
             throw new Error(data.Note || data.Information || data["Error Message"] || `No data returned for ${func}.`);
