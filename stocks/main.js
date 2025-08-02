@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.5.8"; 
+const APP_VERSION = "7.5.9"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -67,7 +67,7 @@ const SECTOR_ICONS = {
 
 // List of comprehensive data endpoints to fetch for caching
 const ESSENTIAL_API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE'];
-const OPTIONAL_API_FUNCTIONS = ['TIME_SERIES_DAILY', 'EARNINGS', 'SMA'];
+const OPTIONAL_API_FUNCTIONS = ['TIME_SERIES_DAILY', 'EARNINGS', 'SMA', 'CASH_FLOW'];
 const ALL_API_FUNCTIONS = [...ESSENTIAL_API_FUNCTIONS, ...OPTIONAL_API_FUNCTIONS];
 
 const SECTORS = [
