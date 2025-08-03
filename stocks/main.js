@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.3"; 
+const APP_VERSION = "9.1.4"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1919,7 +1919,8 @@ async function handleRefreshFmpData(symbol) {
 
             const dataToCache = {
                 cachedAt: Timestamp.now(),
-                data: data
+                data: data,
+                name: endpoint.name
             };
 
             const docRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
@@ -2628,8 +2629,8 @@ async function getFmpStockData(symbol) {
 
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
-        const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
-        allData[endpointName] = docData.data;
+        const endpointKey = (docData.name || docSnap.id).toLowerCase().replace(/\s+/g, '_');
+        allData[endpointKey] = docData.data;
 
         if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
