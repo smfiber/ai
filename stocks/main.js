@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.8.0"; 
+const APP_VERSION = "8.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1565,16 +1565,7 @@ async function displayStockCard(ticker) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading card for ${ticker}...`;
     
     try {
-        let stockData;
-        const cachedDocRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, ticker);
-        const cachedDocSnap = await getDoc(cachedDocRef);
-
-        if (cachedDocSnap.exists()) {
-            stockData = cachedDocSnap.data();
-        } else {
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time load: Fetching all data for ${ticker}...`;
-            stockData = await fetchAndCacheStockData(ticker);
-        }
+        const stockData = await getAndTransformFmpDataForAnalysis(ticker);
 
         const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
         const status = portfolioInfo ? portfolioInfo.status : null;
@@ -1994,16 +1985,8 @@ function renderOverviewCard(data, symbol, status, fmpTimestamp) {
     } else if (status === 'Watchlist') {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
     }
-
-    const smaData = data.SMA ? data.SMA['Technical Analysis: SMA'] : null;
-    let sma50 = 'N/A';
-    if (smaData) {
-        const latestSmaDate = Object.keys(smaData)[0];
-        if (latestSmaDate) {
-            sma50 = parseFloat(smaData[latestSmaDate]['SMA']).toFixed(2);
-        }
-    }
     
+    const sma50 = overviewData['50DayMovingAverage'] && overviewData['50DayMovingAverage'] !== "None" ? parseFloat(overviewData['50DayMovingAverage']).toFixed(2) : "N/A";
     const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const sma200 = overviewData['200DayMovingAverage'] && overviewData['200DayMovingAverage'] !== "None" ? `$${parseFloat(overviewData['200DayMovingAverage']).toFixed(2)}` : "N/A";
@@ -2033,7 +2016,7 @@ function renderOverviewCard(data, symbol, status, fmpTimestamp) {
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
                 <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
-                <div><p class="text-sm text-gray-500">50-Day MA</p><p class="text-lg font-semibold">$${sanitizeText(sma50)}</p></div>
+                <div><p class="text-sm text-gray-500">50-Day Avg</p><p class="text-lg font-semibold">$${sanitizeText(sma50)}</p></div>
                 <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">${sanitizeText(sma200)}</p></div>
             </div>
 
@@ -2308,6 +2291,19 @@ function handleDeleteFmpEndpoint(id) {
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
+    document.body.addEventListener('click', (e) => {
+        const accordionToggle = e.target.closest('#financial-analysis-data-accordion button, #undervalued-analysis-data-accordion button, #custom-analysis-data-accordion button');
+        if (accordionToggle) {
+            e.preventDefault();
+            const content = accordionToggle.nextElementSibling;
+            const icon = accordionToggle.querySelector('svg');
+            if (content && icon) {
+                content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            }
+        }
+    });
+
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
         const target = e.target.closest('button, summary');
         if (!target) return;
@@ -2734,11 +2730,13 @@ function handleSectorSelection(sectorName) {
     const modalTitle = document.getElementById('custom-analysis-modal-title');
     const selectorContainer = document.getElementById('custom-analysis-selector-container');
     const contentArea = document.getElementById('custom-analysis-content');
+    const accordion = document.getElementById('custom-analysis-data-accordion');
 
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
     
     selectorContainer.innerHTML = '';
+    accordion.classList.add('hidden');
 
     const creativeAnalysis = creativePromptMap[sectorName];
     let creativeButtonHtml = '';
@@ -2859,6 +2857,111 @@ async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTIO
     return data;
 }
 
+async function getAndTransformFmpDataForAnalysis(symbol) {
+    // 1. Fetch all FMP endpoint definitions to get their names
+    const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+    const endpointNames = {};
+    endpointsSnapshot.forEach(doc => {
+        endpointNames[doc.id] = doc.data().name || 'Unknown';
+    });
+
+    // 2. Fetch all cached FMP data for the symbol
+    const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+    const fmpCacheSnapshot = await getDocs(fmpCacheRef);
+
+    if (fmpCacheSnapshot.empty) {
+        throw new Error(`No FMP data has been cached for ${symbol} yet. Use the "Refresh FMP" button first.`);
+    }
+
+    // 3. Process and combine the data
+    const rawFmpData = {};
+    let latestCacheTimestamp = null;
+    fmpCacheSnapshot.docs.forEach(doc => {
+        const endpointName = endpointNames[doc.id];
+        const endpointData = doc.data();
+        if (endpointName) {
+            rawFmpData[endpointName] = endpointData.data;
+            if (!latestCacheTimestamp || endpointData.cachedAt.toDate() > latestCacheTimestamp) {
+                latestCacheTimestamp = endpointData.cachedAt.toDate();
+            }
+        }
+    });
+    
+    // 4. Transform the combined data into the Alpha Vantage-like structure
+    const transformedData = {
+        OVERVIEW: {},
+        GLOBAL_QUOTE: { 'Global Quote': {} },
+        INCOME_STATEMENT: [],
+        BALANCE_SHEET: [],
+        CASH_FLOW: [],
+        TIME_SERIES_DAILY: { 'Time Series (Daily)': {} },
+        cachedAt: Timestamp.fromDate(latestCacheTimestamp || new Date())
+    };
+
+    // --- Map Profile, Quote, and Key Metrics to OVERVIEW and GLOBAL_QUOTE ---
+    const profile = (rawFmpData['Company Profile'] || [])[0] || {};
+    const quote = (rawFmpData['Quote'] || [])[0] || {};
+    const keyMetrics = (rawFmpData['Key Metrics TTM'] || [])[0] || {};
+
+    transformedData.OVERVIEW = {
+        Symbol: profile.symbol || symbol,
+        Name: profile.companyName || 'N/A',
+        Description: profile.description || 'N/A',
+        Exchange: profile.exchangeShortName || 'N/A',
+        Sector: profile.sector || 'N/A',
+        Industry: profile.industry || 'N/A',
+        MarketCapitalization: profile.mktCap || 0,
+        Beta: profile.beta || 'N/A',
+        '52WeekHigh': profile.range ? profile.range.split('-')[1].trim() : (quote.yearHigh || 'N/A'),
+        '52WeekLow': profile.range ? profile.range.split('-')[0].trim() : (quote.yearLow || 'N/A'),
+        '200DayMovingAverage': quote.priceAvg200 || 'N/A',
+        '50DayMovingAverage': quote.priceAvg50 || 'N/A',
+        AnalystTargetPrice: profile.lastDiv, // This is a placeholder; FMP has this in a separate, often paid, endpoint.
+        PERatio: keyMetrics.peRatioTTM || 'N/A',
+        PriceToSalesRatioTTM: keyMetrics.priceToSalesRatioTTM || 'N/A',
+        PriceToBookRatio: keyMetrics.priceToBookRatioTTM || 'N/A',
+        DividendYield: keyMetrics.dividendYieldTTM || 'N/A',
+        ReturnOnEquityTTM: keyMetrics.roeTTM || 'N/A',
+        PEGRatio: keyMetrics.pegRatioTTM || 'N/A',
+        ForwardPE: 'N/A', 
+        ProfitMargin: keyMetrics.netProfitMarginTTM || 'N/A',
+        OperatingMarginTTM: keyMetrics.operatingMarginTTM || 'N/A',
+        ReturnOnAssetsTTM: keyMetrics.roaTTM || 'N/A',
+        QuarterlyRevenueGrowthYOY: keyMetrics.revenueGrowth,
+        QuarterlyEarningsGrowthYOY: keyMetrics.netIncomeGrowth,
+    };
+
+    transformedData.GLOBAL_QUOTE['Global Quote'] = {
+        '05. price': quote.price || 'N/A',
+        '09. change': quote.change || 0,
+        '10. change percent': `${quote.changesPercentage || 0}%`,
+    };
+    
+    // --- Map Financial Statements ---
+    if (rawFmpData['Income Statement Annual']) {
+        transformedData.INCOME_STATEMENT = rawFmpData['Income Statement Annual'];
+    }
+    if (rawFmpData['Balance Sheet Annual']) {
+        transformedData.BALANCE_SHEET = rawFmpData['Balance Sheet Annual'];
+    }
+    if (rawFmpData['Cash Flow Annual']) {
+        transformedData.CASH_FLOW = rawFmpData['Cash Flow Annual'];
+    }
+    
+    // --- Map Historical Data for Sparkline ---
+    if (rawFmpData['Historical Daily']) {
+        const historicalData = (rawFmpData['Historical Daily'].historical || rawFmpData['Historical Daily']) || [];
+        historicalData.slice(0, 100).forEach(day => { // Limit to 100 for performance
+            transformedData.TIME_SERIES_DAILY['Time Series (Daily)'][day.date] = {
+                '4. close': day.close
+            };
+        });
+    }
+    
+    return transformedData;
+}
+
+
 async function handleViewFullData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
@@ -2879,9 +2982,16 @@ async function handleViewFullData(symbol) {
 async function handleFinancialAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
+    const accordion = document.getElementById('financial-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+        
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
@@ -2897,6 +3007,7 @@ async function handleFinancialAnalysis(symbol) {
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -2905,17 +3016,23 @@ async function handleFinancialAnalysis(symbol) {
 async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
+    const accordion = document.getElementById('undervalued-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+
     try {
-        const cachedData = await getStockDataFromCache(symbol);
-        if (!cachedData) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
         
-        const companyName = get(cachedData, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(cachedData, 'OVERVIEW.Symbol', symbol);
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+
+        const companyName = get(data, 'OVERVIEW.Name', 'the company');
+        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
 
         const prompt = UNDERVALUED_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(cachedData, null, 2));
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
         
         const report = await callGeminiApi(prompt);
         document.getElementById('undervalued-analysis-content').innerHTML = marked.parse(report);
@@ -2924,6 +3041,7 @@ async function handleUndervaluedAnalysis(symbol) {
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -2932,9 +3050,16 @@ async function handleUndervaluedAnalysis(symbol) {
 async function handleBullBearAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Bull vs. Bear case for ${symbol}...`;
+    const accordion = document.getElementById('custom-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+    
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+        
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = BULL_VS_BEAR_PROMPT
@@ -2947,6 +3072,7 @@ async function handleBullBearAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -2955,9 +3081,16 @@ async function handleBullBearAnalysis(symbol) {
 async function handleMoatAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Moat analysis for ${symbol}...`;
+    const accordion = document.getElementById('custom-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+        
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
@@ -2970,6 +3103,7 @@ async function handleMoatAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -2978,9 +3112,16 @@ async function handleMoatAnalysis(symbol) {
 async function handleDividendSafetyAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Dividend Safety analysis for ${symbol}...`;
+    const accordion = document.getElementById('custom-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+    
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+        
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = DIVIDEND_SAFETY_PROMPT
@@ -2993,6 +3134,7 @@ async function handleDividendSafetyAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3001,9 +3143,16 @@ async function handleDividendSafetyAnalysis(symbol) {
 async function handleGrowthOutlookAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Growth Outlook analysis for ${symbol}...`;
+    const accordion = document.getElementById('custom-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+    
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = GROWTH_OUTLOOK_PROMPT
@@ -3016,6 +3165,7 @@ async function handleGrowthOutlookAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3024,9 +3174,16 @@ async function handleGrowthOutlookAnalysis(symbol) {
 async function handleRiskAssessmentAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Risk Assessment for ${symbol}...`;
+    const accordion = document.getElementById('custom-analysis-data-accordion');
+    const preTag = accordion?.querySelector('pre');
+    
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
+        const data = await getAndTransformFmpDataForAnalysis(symbol);
+        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+        
+        preTag.textContent = JSON.stringify(data, null, 2);
+        accordion.classList.remove('hidden');
+        
         const companyName = get(data, 'OVERVIEW.Name', 'the company');
         const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
@@ -3039,6 +3196,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
