@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.6.0"; 
+const APP_VERSION = "7.7.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -49,6 +49,7 @@ const CONSTANTS = {
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_CALENDAR: 'calendar_data',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
+    DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
 };
 
 // --- NEW (v7.3.0) ---
@@ -1557,7 +1558,18 @@ async function displayStockCard(ticker) {
 
         const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
         const status = portfolioInfo ? portfolioInfo.status : null;
-        const newCardHtml = renderOverviewCard(stockData, ticker, status);
+        
+        // Fetch the first FMP timestamp to display on the card
+        let fmpTimestamp = null;
+        const fmpEndpointsRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints');
+        const q = query(fmpEndpointsRef, limit(1));
+        const fmpQuerySnapshot = await getDocs(q);
+        if (!fmpQuerySnapshot.empty) {
+            const firstDoc = fmpQuerySnapshot.docs[0].data();
+            fmpTimestamp = firstDoc.cachedAt || null;
+        }
+
+        const newCardHtml = renderOverviewCard(stockData, ticker, status, fmpTimestamp);
 
         document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
         
@@ -1954,7 +1966,7 @@ function renderSectorButtons() {
     }).join('');
 }
 
-function renderOverviewCard(data, symbol, status) {
+function renderOverviewCard(data, symbol, status, fmpTimestamp) {
     const overviewData = data.OVERVIEW;
     if (!overviewData || !overviewData.Symbol) return '';
 
@@ -1984,7 +1996,9 @@ function renderOverviewCard(data, symbol, status) {
     const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
     const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
     const sma200 = overviewData['200DayMovingAverage'] && overviewData['200DayMovingAverage'] !== "None" ? `$${parseFloat(overviewData['200DayMovingAverage']).toFixed(2)}` : "N/A";
-    const timestampString = data.cachedAt ? `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}` : '';
+    
+    const avTimestampString = data.cachedAt ? `Alpha Vantage Data Stored On: ${data.cachedAt.toDate().toLocaleString()}` : '';
+    const fmpTimestampString = fmpTimestamp ? `FMP Data Stored On: ${fmpTimestamp.toDate().toLocaleDateString()}` : '';
 
     return `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
@@ -2018,7 +2032,7 @@ function renderOverviewCard(data, symbol, status) {
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
-                <button data-symbol="${symbol}" class="analyst-estimates-button text-sm bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg">Analyst Estimates</button>
+                <button data-symbol="${symbol}" class="analyst-estimates-button text-sm bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg">Fetch FMP Data</button>
             </div>
             <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="bull-bear-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg">Bull vs. Bear</button>
@@ -2028,7 +2042,10 @@ function renderOverviewCard(data, symbol, status) {
                 <button data-symbol="${symbol}" class="risk-assessment-button text-sm bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg">Risk Assessment</button>
                 <button data-symbol="${symbol}" class="capital-allocators-button text-sm bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg">Capital Allocators</button>
             </div>
-            <div class="text-right text-xs text-gray-400 mt-4">${timestampString}</div>
+            <div class="text-right text-xs text-gray-400 mt-4">
+                <div>${avTimestampString}</div>
+                <div>${fmpTimestampString}</div>
+            </div>
         </div>`;
 }
 
@@ -2092,31 +2109,54 @@ async function handleFmpAnalystEstimates(symbol) {
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching Analyst Estimates for ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all FMP data for ${symbol}...`;
 
     try {
-        const url = `https://financialmodelingprep.com/stable/analyst-estimates?symbol=${symbol}&period=annual&apikey=${fmpApiKey}`;
-        const data = await callApi(url);
-
-        if (data.length === 0) {
-            throw new Error("No analyst estimate data returned from FMP API.");
+        const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        if (endpointsSnapshot.empty) {
+            throw new Error("No FMP endpoints configured in the database.");
         }
 
-        const dataToCache = {
-            cachedAt: Timestamp.now(),
-            estimates: data
-        };
+        const endpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let successfulFetches = 0;
 
-        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol), dataToCache);
+        for (const endpoint of endpoints) {
+            if (!endpoint.url_template || !endpoint.name) continue;
 
-        document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
-        document.getElementById('full-data-modal-title').textContent = `FMP Analyst Estimates for ${symbol}`;
-        document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${dataToCache.cachedAt.toDate().toLocaleString()}`;
-        openModal(CONSTANTS.MODAL_FULL_DATA);
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching FMP Data: ${endpoint.name}...`;
+            
+            const url = endpoint.url_template
+                .replace('${symbol}', symbol)
+                .replace('${fmpApiKey}', fmpApiKey);
+            
+            const data = await callApi(url);
+
+            if (data.length === 0 || (data[0] && data[0].symbol === undefined && data[0].date === undefined)) {
+                 console.warn(`No data or invalid data returned from FMP for endpoint: ${endpoint.name}`);
+                 continue;
+            }
+
+            const dataToCache = {
+                cachedAt: Timestamp.now(),
+                data: data
+            };
+
+            const docRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
+            await setDoc(docRef, dataToCache);
+            successfulFetches++;
+        }
+        
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        
+        // Refresh the card to show the new timestamp
+        const oldCard = document.getElementById(`card-${symbol}`);
+        if(oldCard) {
+            await displayStockCard(symbol); // This will re-fetch and re-render the card
+        }
 
     } catch (error) {
-        console.error("Error fetching FMP analyst estimates:", error);
-        displayMessageInModal(`Could not fetch analyst estimates: ${error.message}`, 'error');
+        console.error("Error fetching FMP data:", error);
+        displayMessageInModal(`Could not fetch FMP data: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
