@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.9.0"; 
+const APP_VERSION = "9.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -12,7 +12,6 @@ const CONSTANTS = {
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
     MODAL_CONFIRMATION: 'confirmationModal',
-    MODAL_FULL_DATA: 'fullDataModal',
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
     MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
@@ -25,7 +24,6 @@ const CONSTANTS = {
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
     INPUT_TICKER: 'ticker-input',
-    INPUT_ALPHA_VANTAGE_KEY: 'alphaVantageApiKeyInput',
     INPUT_GEMINI_KEY: 'geminiApiKeyInput',
     INPUT_GOOGLE_CLIENT_ID: 'googleClientIdInput',
     INPUT_WEB_SEARCH_KEY: 'webSearchApiKeyInput',
@@ -34,19 +32,15 @@ const CONSTANTS = {
     CONTAINER_DYNAMIC_CONTENT: 'dynamic-content-container',
     CONTAINER_PORTFOLIO_LIST: 'portfolio-list-container',
     ELEMENT_LOADING_MESSAGE: 'loading-message',
-    ELEMENT_FULL_DATA_CONTENT: 'full-data-content',
     ELEMENT_FINANCIAL_ANALYSIS_CONTENT: 'financial-analysis-content',
     ELEMENT_UNDERVALUED_ANALYSIS_CONTENT: 'undervalued-analysis-content',
     // Buttons
     BUTTON_SCROLL_TOP: 'scroll-to-top-button',
-    BUTTON_VIEW_STOCKS: 'view-stocks-button',
-    BUTTON_ADD_NEW_STOCK: 'add-new-stock-button',
     // Classes
     CLASS_MODAL_OPEN: 'is-open',
     CLASS_BODY_MODAL_OPEN: 'modal-open',
     CLASS_HIDDEN: 'hidden',
     // Database Collections
-    DB_COLLECTION_CACHE: 'cached_stock_data',
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
     DB_COLLECTION_CALENDAR: 'calendar_data',
@@ -54,7 +48,6 @@ const CONSTANTS = {
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
 };
 
-// --- NEW (v7.3.0) ---
 const SECTOR_ICONS = {
     'Technology': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l7-7 7 7M5 12a7 7 0 1114 0M5 12a7 7 0 0014 0" /></svg>`,
     'Health Care': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`,
@@ -68,11 +61,6 @@ const SECTOR_ICONS = {
     'Real Estate': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>`,
     'Materials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>`
 };
-
-// List of comprehensive data endpoints to fetch for caching
-const ESSENTIAL_API_FUNCTIONS = ['OVERVIEW', 'GLOBAL_QUOTE'];
-const OPTIONAL_API_FUNCTIONS = ['TIME_SERIES_DAILY', 'EARNINGS', 'SMA', 'CASH_FLOW'];
-const ALL_API_FUNCTIONS = [...ESSENTIAL_API_FUNCTIONS, ...OPTIONAL_API_FUNCTIONS];
 
 const SECTORS = [
     'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
@@ -165,7 +153,7 @@ Identify 2-3 of the most significant financial strengths and what they mean for 
 ### The Bear Case (Potential Weaknesses & Risks)
 Identify 2-3 of the most significant weaknesses or financial red flags from the FMP data. What is the primary "bear" argument against owning this stock?
 ### Final Verdict: The "Moat" and Long-Hold Potential
-Based purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
+Based on purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
 const UNDERVALUED_ANALYSIS_PROMPT = `
@@ -837,7 +825,6 @@ let auth;
 let userId;
 let firebaseConfig = null;
 let appIsInitialized = false;
-let alphaVantageApiKey = "";
 let fmpApiKey = "";
 let geminiApiKey = "";
 let searchApiKey = "";
@@ -1018,7 +1005,6 @@ async function initializeFirebase() {
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
-    alphaVantageApiKey = document.getElementById(CONSTANTS.INPUT_ALPHA_VANTAGE_KEY).value.trim();
     fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
     geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
     googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
@@ -1027,7 +1013,7 @@ async function handleApiKeySubmit(e) {
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!alphaVantageApiKey || !fmpApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
+    if (!fmpApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
@@ -1213,7 +1199,7 @@ async function callGeminiApiWithTools(contents) {
 }
 
 
-// --- PORTFOLIO & DASHBOARD MANAGEMENT (v7.4.0) ---
+// --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
@@ -1223,7 +1209,7 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
     }
 
     const groupedBySector = stocksWithData.reduce((acc, stock) => {
-        const sector = get(stock, 'fmpData.company_profile.sector', 'Unknown');
+        const sector = get(stock, 'fmpData.company_profile.0.sector', 'Unknown');
         if (!acc[sector]) acc[sector] = [];
         acc[sector].push(stock);
         return acc;
@@ -1245,21 +1231,20 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
         
         stocks.forEach(stock => {
             const fmp = stock.fmpData;
-            const quote = fmp.stock_quote || {};
-            const profile = fmp.company_profile || {};
-            const metrics = fmp.key_metrics || {};
-            const income = fmp.income_statement || {};
+            const quote = get(fmp, 'stock_quote.0', {});
+            const profile = get(fmp, 'company_profile.0', {});
+            const income = get(fmp, 'income_statement.0', {});
             
             const priceNum = get(quote, 'price');
-            const changeNum = get(quote, 'changePercentage');
+            const changeNum = get(quote, 'changesPercentage');
 
             const displayPrice = !isNaN(priceNum) ? `$${priceNum.toFixed(2)}` : 'N/A';
             const displayChange = !isNaN(changeNum) ? `${changeNum.toFixed(2)}%` : 'N/A';
             const changeColorClass = !isNaN(changeNum) && changeNum >= 0 ? 'price-gain' : 'price-loss';
             
             const netIncome = get(income, 'netIncome', 0);
-            const marketCap = get(profile, 'marketCap', 0);
-            const peRatio = (marketCap && netIncome) ? (marketCap / netIncome).toFixed(2) : 'N/A';
+            const marketCap = get(profile, 'mktCap', 0);
+            const peRatio = (marketCap && netIncome && netIncome > 0) ? (marketCap / netIncome).toFixed(2) : 'N/A';
             
             const displayMarketCap = formatLargeNumber(marketCap);
             const refreshedAt = fmp.cachedAt ? fmp.cachedAt.toDate().toLocaleString() : 'N/A';
@@ -1333,7 +1318,6 @@ async function openManageStockModal(stockData = {}) {
     form.reset();
     
     if (stockData.isEditMode) {
-        // Edit mode
         document.getElementById('manage-stock-modal-title').textContent = `Edit ${stockData.ticker}`;
         document.getElementById('manage-stock-original-ticker').value = stockData.ticker;
         document.getElementById('manage-stock-ticker').value = stockData.ticker;
@@ -1341,13 +1325,12 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-exchange').value = stockData.exchange;
         document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
     } else {
-        // Add mode
         document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
         document.getElementById('manage-stock-original-ticker').value = '';
         document.getElementById('manage-stock-ticker').value = stockData.ticker || '';
         document.getElementById('manage-stock-name').value = stockData.companyName || '';
         document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
-        document.getElementById('manage-stock-status').value = 'Watchlist'; // Default to watchlist
+        document.getElementById('manage-stock-status').value = 'Watchlist';
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
@@ -1373,15 +1356,12 @@ async function handleSaveStock(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Saving to your lists...";
     
     try {
-        // Delete the old document if the ticker has changed
         if (originalTicker && originalTicker !== newTicker) {
             await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
         }
 
-        // Save the stock to the portfolio list
         await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
 
-        // Check if the FMP data is cached. If not, fetch and cache it now.
         const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
         const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
         if (fmpSnapshot.empty) {
@@ -1410,7 +1390,7 @@ async function handleDeleteStock(ticker) {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
                 await renderDashboard();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
-                    renderPortfolioManagerList(); // Refresh the manager list if it's open
+                    renderPortfolioManagerList();
                 }
             } catch (error) {
                 console.error("Error deleting stock:", error);
@@ -1423,68 +1403,6 @@ async function handleDeleteStock(ticker) {
 }
 
 // --- CORE STOCK RESEARCH LOGIC ---
-
-async function fetchAndCacheStockData(symbol) {
-    const dataToCache = {};
-    const promises = ALL_API_FUNCTIONS.map(async (func) => {
-        let url;
-        if (func === 'SMA') {
-            url = `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${alphaVantageApiKey}`;
-        } else {
-            url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${alphaVantageApiKey}`;
-        }
-        const data = await callApi(url);
-        if (data.Note || Object.keys(data).length === 0 || data.Information || data["Error Message"]) {
-            throw new Error(data.Note || data.Information || data["Error Message"] || `No data returned for ${func}.`);
-        }
-        return { func, data };
-    });
-
-    const results = await Promise.allSettled(promises);
-    const failedEssentialFetches = [];
-
-    results.forEach((result, index) => {
-        const func = ALL_API_FUNCTIONS[index];
-        if (result.status === 'fulfilled' && result.value) {
-            dataToCache[func] = result.value.data;
-        } else {
-            const errorMessage = result.reason ? result.reason.message : 'Unknown error';
-            if (ESSENTIAL_API_FUNCTIONS.includes(func)) {
-                failedEssentialFetches.push(func);
-            }
-            console.warn(`Optional fetch failed for ${func} on symbol ${symbol}: ${errorMessage}`);
-        }
-    });
-
-    if (failedEssentialFetches.length > 0) {
-        throw new Error(`Could not retrieve essential data for ${symbol}. Failed to fetch: ${failedEssentialFetches.join(', ')}.`);
-    }
-
-    if (!dataToCache.OVERVIEW || !dataToCache.OVERVIEW.Symbol) {
-        throw new Error(`Essential 'OVERVIEW' data for ${symbol} could not be fetched or was invalid. The symbol may not be supported.`);
-    }
-
-    dataToCache.cachedAt = Timestamp.now();
-    await setDoc(doc(db, CONSTANTS.DB_COLLECTION_CACHE, symbol), dataToCache);
-    return dataToCache;
-}
-
-async function handleRefreshData(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing Alpha Vantage data for ${symbol}...`;
-    try {
-        await fetchAndCacheStockData(symbol);
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
-        
-        await displayStockCard(symbol);
-        await renderDashboard();
-    } catch (error) {
-        console.error("Error refreshing stock data:", error);
-        displayMessageInModal(error.message, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
 
 async function handleResearchSubmit(e) {
     e.preventDefault();
@@ -1564,13 +1482,6 @@ async function displayStockCard(ticker) {
         } else {
             container.insertAdjacentHTML('beforeend', newCardHtml);
         }
-
-        // Sparkline rendering would need a historical data source from FMP.
-        // This part is commented out as the FMP historical endpoint wasn't specified.
-        // const timeSeries = ... ; 
-        // const change = get(stockData, 'stock_quote.change', 0);
-        // renderSparkline(`sparkline-${ticker}`, timeSeries, change);
-
     } catch(error) {
         console.error(`Error displaying card for ${ticker}:`, error);
         displayMessageInModal(error.message, 'error');
@@ -1584,7 +1495,7 @@ async function displayStockCard(ticker) {
 function filterValidNews(articles) {
     if (!Array.isArray(articles)) return [];
     return articles.filter(article => 
-        article.title && article.snippet && isValidHttpUrl(article.link)
+        article.title && article.text && isValidHttpUrl(article.url)
     );
 }
 
@@ -1623,7 +1534,7 @@ function renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol) {
 
             return `
                 <div class="mb-4 p-4 rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <a href="${sanitizeText(article.link)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
+                    <a href="${sanitizeText(article.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold block mb-2">${sanitizeText(article.title)}</a>
                     <p class="text-sm text-gray-700 mb-3">"${sanitizeText(article.summary)}"</p>
                     <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
                         <span class="px-2 py-1 rounded-full ${sentimentBg} ${sentimentText}">${sanitizeText(article.sentiment)}</span>
@@ -1644,35 +1555,23 @@ function renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol) {
 async function handleFetchNews(symbol) {
     const button = document.querySelector(`#card-${symbol} .fetch-news-button`);
     if (!button) return;
-
-    if (!searchApiKey || !searchEngineId) {
-        displayMessageInModal("News feature requires the Web Search API Key and Search Engine ID.", "warning");
-        return;
-    }
     
     button.disabled = true;
     button.textContent = 'Analyzing...';
 
     try {
         const stockData = await getFmpStockData(symbol);
-        const companyName = get(stockData, 'company_profile.companyName', symbol);
-        const query = encodeURIComponent(`${companyName} (${symbol}) stock market news`);
-        const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=m[1]`;
+        const companyName = get(stockData, 'company_profile.0.companyName', symbol);
+        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${fmpApiKey}`;
         
         const newsData = await callApi(url);
-        const validArticles = filterValidNews(newsData.items || []);
+        const validArticles = filterValidNews(newsData);
 
-        const recentArticles = validArticles.map(a => {
-            const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
-            const publicationDate = pubDateStr ? new Date(pubDateStr) : null;
-            return { ...a, publicationDate };
-        });
-
-        if (recentArticles.length > 0) {
-            const articlesForPrompt = recentArticles.slice(0, 10).map(a => ({ 
+        if (validArticles.length > 0) {
+            const articlesForPrompt = validArticles.slice(0, 10).map(a => ({ 
                 title: a.title, 
-                snippet: a.snippet,
-                publicationDate: a.publicationDate ? a.publicationDate.toISOString().split('T')[0] : 'N/A' 
+                snippet: a.text,
+                publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A' 
             }));
 
             const prompt = NEWS_SENTIMENT_PROMPT
@@ -1691,8 +1590,8 @@ async function handleFetchNews(symbol) {
             if (Array.isArray(sentiments) && sentiments.length > 0) {
                  const articlesWithSentiment = sentiments.map((sentiment, index) => ({
                     ...sentiment,
-                    title: recentArticles[index].title,
-                    link: recentArticles[index].link
+                    title: validArticles[index].title,
+                    url: validArticles[index].url
                 }));
                  renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol);
             } else {
@@ -1714,72 +1613,6 @@ async function handleFetchNews(symbol) {
 
 // --- UI RENDERING ---
 
-function renderSparkline(canvasId, timeSeriesData, change) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas || !timeSeriesData) return;
-    
-    const existingChart = Chart.getChart(canvasId);
-    if (existingChart) {
-        existingChart.destroy();
-    }
-
-    const dataPoints = Object.entries(timeSeriesData).map(([date, values]) => ({
-        x: new Date(date),
-        y: parseFloat(values['4. close'])
-    })).sort((a, b) => a.x - b.x);
-
-    if (dataPoints.length < 2) return;
-
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: [{
-                data: dataPoints,
-                borderColor: change >= 0 ? '#16a34a' : '#dc2626',
-                borderWidth: 2,
-                pointRadius: 0,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    intersect: false,
-                    mode: 'index',
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day'
-                    },
-                    display: false
-                },
-                y: {
-                    display: false
-                }
-            }
-        }
-    });
-}
-
 function renderDailyCalendarView() {
     const dayHeader = document.getElementById('day-header');
     const eventsContainer = document.getElementById('daily-events-container');
@@ -1797,8 +1630,8 @@ function renderDailyCalendarView() {
 
     dayHeader.textContent = dateLabel;
 
-    const earningsForDay = calendarEvents.earnings.filter(e => new Date(e.eventDate).toDateString() === calendarCurrentDate.toDateString());
-    const iposForDay = calendarEvents.ipos.filter(i => new Date(i.eventDate).toDateString() === calendarCurrentDate.toDateString());
+    const earningsForDay = calendarEvents.earnings.filter(e => new Date(e.date).toDateString() === calendarCurrentDate.toDateString());
+    const iposForDay = calendarEvents.ipos.filter(i => new Date(i.date).toDateString() === calendarCurrentDate.toDateString());
 
     eventsContainer.innerHTML = '';
     let html = '';
@@ -1820,7 +1653,7 @@ function renderDailyCalendarView() {
                 <li class="p-3 ${itemBg} ${itemBorder} rounded-lg">
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="font-bold ${itemTextColor}">${sanitizeText(e.name)} (${sanitizeText(e.symbol)})</p>
+                            <p class="font-bold ${itemTextColor}">${sanitizeText(e.company || e.symbol)} (${sanitizeText(e.symbol)})</p>
                         </div>
                         <div class="flex items-center gap-3 text-xs">
                             <a href="${fidelityUrl}" target="_blank" rel="noopener noreferrer" class="broker-link">Fidelity</a>
@@ -1857,26 +1690,7 @@ async function displayMarketCalendar() {
 
     eventsContainer.innerHTML = `<div class="p-4 text-center text-gray-400">Loading calendar data...</div>`;
 
-    function processRawCalendarData(earningsData, ipoData) {
-        calendarEvents.earnings = [];
-        calendarEvents.ipos = [];
-        const symbolRegex = /^[A-Z]{1,4}$/;
-
-        if (earningsData && earningsData.length > 0 && earningsData[0].symbol) {
-            calendarEvents.earnings = earningsData
-                .filter(e => e.symbol && e.reportDate)
-                .filter(e => symbolRegex.test(e.symbol) && !e.name.toUpperCase().includes('OTC'))
-                .map(e => ({...e, eventDate: new Date(e.reportDate)}));
-        }
-        if (ipoData && ipoData.length > 0 && ipoData[0].symbol) {
-             calendarEvents.ipos = ipoData
-                .filter(i => i.symbol && i.ipoDate)
-                .filter(i => symbolRegex.test(i.symbol) && !i.name.toUpperCase().includes('OTC'))
-                .map(i => ({...i, eventDate: new Date(i.ipoDate)}));
-        }
-    }
-    
-    const docRef = doc(db, CONSTANTS.DB_COLLECTION_CALENDAR, 'latest');
+    const docRef = doc(db, CONSTANTS.DB_COLLECTION_CALENDAR, 'latest_fmp');
     let shouldFetchNewData = true;
 
     try {
@@ -1886,8 +1700,9 @@ async function displayMarketCalendar() {
             const cacheDate = cachedData.cachedAt.toDate();
             const daysSinceCache = (new Date() - cacheDate) / (1000 * 60 * 60 * 24);
             
-            if (daysSinceCache < 30) {
-                processRawCalendarData(cachedData.earnings, cachedData.ipos);
+            if (daysSinceCache < 1) { // FMP data can be refreshed daily
+                calendarEvents.earnings = cachedData.earnings || [];
+                calendarEvents.ipos = cachedData.ipos || [];
                 shouldFetchNewData = false;
             }
         }
@@ -1897,37 +1712,29 @@ async function displayMarketCalendar() {
     
     if (shouldFetchNewData) {
         try {
-            const [earningsResponse, ipoResponse] = await Promise.all([
-                fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${alphaVantageApiKey}`),
-                fetch(`https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${alphaVantageApiKey}`)
+            const today = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(today.getMonth() + 1);
+            const from = today.toISOString().split('T')[0];
+            const to = nextMonth.toISOString().split('T')[0];
+
+            const [earningsData, ipoData] = await Promise.all([
+                callApi(`https://financialmodelingprep.com/api/v3/earning_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`),
+                callApi(`https://financialmodelingprep.com/api/v3/ipo_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`)
             ]);
 
-            const earningsCsv = await earningsResponse.text();
-            const ipoCsv = await ipoResponse.text();
-            
-            const rawEarningsData = Papa.parse(earningsCsv, { header: true, skipEmptyLines: true }).data;
-            const rawIpoData = Papa.parse(ipoCsv, { header: true, skipEmptyLines: true }).data;
-            const symbolRegex = /^[A-Z]{1,4}$/;
-            
-            const earningsToCache = rawEarningsData
-                .filter(e => e.symbol && e.reportDate && symbolRegex.test(e.symbol) && !e.name.toUpperCase().includes('OTC'))
-                .map(e => ({ symbol: e.symbol, name: e.name, reportDate: e.reportDate }));
-            
-            const iposToCache = rawIpoData
-                .filter(i => i.symbol && i.ipoDate && symbolRegex.test(i.symbol) && !i.name.toUpperCase().includes('OTC'))
-                .map(i => ({ symbol: i.symbol, name: i.name, ipoDate: i.ipoDate }));
+            calendarEvents.earnings = earningsData || [];
+            calendarEvents.ipos = ipoData || [];
 
             const dataToCache = { 
-                earnings: earningsToCache, 
-                ipos: iposToCache, 
+                earnings: calendarEvents.earnings, 
+                ipos: calendarEvents.ipos, 
                 cachedAt: Timestamp.now() 
             };
             await setDoc(docRef, dataToCache);
 
-            processRawCalendarData(earningsToCache, iposToCache);
-
         } catch (apiError) {
-            console.error("Error fetching calendar data from API:", apiError);
+            console.error("Error fetching calendar data from FMP API:", apiError);
             eventsContainer.innerHTML = `<div class="p-4 text-center text-red-500">Could not load calendar data. The API might be unavailable.</div>`;
             dayHeader.textContent = 'Error';
             return;
@@ -1952,16 +1759,15 @@ function renderSectorButtons() {
 }
 
 function renderOverviewCard(data, symbol, status) {
-    const profile = get(data, 'company_profile', {});
-    const quote = get(data, 'stock_quote', {});
-    const metrics = get(data, 'key_metrics', {});
-    const income = get(data, 'income_statement', {});
+    const profile = get(data, 'company_profile.0', {});
+    const quote = get(data, 'stock_quote.0', {});
+    const income = get(data, 'income_statement.0', {});
 
     if (!profile.symbol) return '';
 
     const price = get(quote, 'price', 0);
     const change = get(quote, 'change', 0);
-    const changePercent = get(quote, 'changePercentage', 0);
+    const changePercent = get(quote, 'changesPercentage', 0);
     const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
     const changeSign = change >= 0 ? '+' : '';
 
@@ -1972,14 +1778,13 @@ function renderOverviewCard(data, symbol, status) {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
     }
 
-    const marketCap = formatLargeNumber(get(profile, 'marketCap'));
+    const marketCap = formatLargeNumber(get(profile, 'mktCap'));
     const netIncome = get(income, 'netIncome', 0);
-    const peRatio = (marketCap && netIncome) ? (profile.marketCap / netIncome).toFixed(2) : 'N/A';
+    const peRatio = (profile.mktCap && netIncome && netIncome > 0) ? (profile.mktCap / netIncome).toFixed(2) : 'N/A';
     
     const sma50 = get(quote, 'priceAvg50', 'N/A');
     const sma200 = get(quote, 'priceAvg200', 'N/A');
-
-    const avTimestampString = data.alphaVantageCachedAt ? `Alpha Vantage Data Stored On: ${data.alphaVantageCachedAt.toDate().toLocaleString()}` : '';
+    
     const fmpTimestampString = data.cachedAt ? `FMP Data Stored On: ${data.cachedAt.toDate().toLocaleDateString()}` : '';
 
     return `
@@ -1995,10 +1800,6 @@ function renderOverviewCard(data, symbol, status) {
                 </div>
             </div>
             
-            <div class="my-4 h-20 relative">
-                <canvas id="sparkline-${symbol}"></canvas>
-            </div>
-
             <p class="mt-4 text-sm text-gray-600">${sanitizeText(profile.description)}</p>
             
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
@@ -2009,9 +1810,6 @@ function renderOverviewCard(data, symbol, status) {
             </div>
 
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
-                <button data-symbol="${symbol}" class="refresh-data-button text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-2 px-4 rounded-lg">Refresh Alpha</button>
-                <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View Alpha JSON</button>
-                <div class="button-group-separator"></div>
                 <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
                 <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
             </div>
@@ -2027,7 +1825,6 @@ function renderOverviewCard(data, symbol, status) {
                 <button data-symbol="${symbol}" class="capital-allocators-button text-sm bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg">Capital Allocators</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">
-                <div>${avTimestampString}</div>
                 <div>${fmpTimestampString}</div>
             </div>
         </div>`;
@@ -2115,8 +1912,8 @@ async function handleRefreshFmpData(symbol) {
             
             const data = await callApi(url);
 
-            if (data.length === 0 || (data[0] && data[0].symbol === undefined && data[0].date === undefined)) {
-                 console.warn(`No data or invalid data returned from FMP for endpoint: ${endpoint.name}`);
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                 console.warn(`No data returned from FMP for endpoint: ${endpoint.name}`);
                  continue;
             }
 
@@ -2127,12 +1924,19 @@ async function handleRefreshFmpData(symbol) {
 
             const docRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
             await setDoc(docRef, dataToCache);
+            
+            const endpointDocRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, endpoint.id);
+            await updateDoc(endpointDocRef, {
+                usageCount: increment(1)
+            });
+
             successfulFetches++;
         }
         
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
         
         await displayStockCard(symbol);
+        await renderDashboard();
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -2206,7 +2010,7 @@ async function renderFmpEndpointsList() {
         container.innerHTML = endpoints.map(ep => `
             <div class="p-3 bg-white border rounded-lg flex justify-between items-center">
                 <div>
-                    <p class="font-semibold text-gray-700">${sanitizeText(ep.name)}</p>
+                    <p class="font-semibold text-gray-700">${sanitizeText(ep.name)} <span class="text-xs font-normal text-gray-500">(Used: ${ep.usageCount || 0})</span></p>
                     <p class="text-xs text-gray-500 font-mono">${sanitizeText(ep.url_template)}</p>
                 </div>
                 <div class="flex gap-2">
@@ -2250,9 +2054,10 @@ async function handleSaveFmpEndpoint(e) {
     const data = { name, url_template };
     
     try {
-        if (id) { // Editing an existing endpoint
-            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data);
-        } else { // Adding a new one
+        if (id) {
+            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data, { merge: true });
+        } else {
+            data.usageCount = 0;
             await addDoc(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS), data);
         }
         cancelFmpEndpointEdit();
@@ -2308,8 +2113,6 @@ function setupGlobalEventListeners() {
         const symbol = target.dataset.symbol || target.dataset.ticker;
         if (!symbol) return;
 
-        if (target.classList.contains('refresh-data-button')) handleRefreshData(symbol);
-        if (target.classList.contains('view-json-button')) handleViewFullData(symbol);
         if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
         if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
@@ -2400,7 +2203,6 @@ function setupEventListeners() {
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
 
     const modalsToClose = [
-        { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
@@ -2449,54 +2251,44 @@ function setupEventListeners() {
     setupGlobalEventListeners();
 }
 
-// --- SECTOR ANALYSIS: AI AGENT WORKFLOW (v7.0.3) ---
+// --- SECTOR ANALYSIS: AI AGENT WORKFLOW ---
 
-/**
- * Tool 1: Searches for recent news articles for a given financial sector.
- * This tool is declared to the Gemini model, which can then request its execution.
- */
-async function searchSectorNews({ sectorName }) {
-    if (!searchApiKey || !searchEngineId) {
-        throw new Error("Web Search API Key and Search Engine ID are required for news search.");
+async function searchSectorNews({ sectorName, sectorStocks }) {
+    if (!fmpApiKey) {
+        throw new Error("FMP API Key is required for news search.");
     }
-    const siteQuery = FINANCIAL_NEWS_SOURCES.map(site => `site:${site}`).join(' OR ');
-    const query = encodeURIComponent(`"${sectorName} sector" ("earnings report" OR "analyst rating" OR "growth driver" OR "stock upgrade") (${siteQuery})`);
-    const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=d[30]&num=10`;
+    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=100&apikey=${fmpApiKey}`;
     
     const newsData = await callApi(url);
-    const validArticles = filterValidNews(newsData.items || []);
+    const validArticles = filterValidNews(newsData || []);
 
     if (validArticles.length === 0) {
-        return { error: "No relevant news articles found", detail: `Could not find any recent news for the ${sectorName} sector in the last 30 days.` };
+        return { error: "No relevant news articles found", detail: `Could not find any recent news.` };
     }
 
     return {
-        articles: validArticles.map((a, index) => {
-            const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
-            return {
-                title: a.title,
-                snippet: a.snippet,
-                link: a.link,
-                source: a.displayLink,
-                publicationDate: pubDateStr ? new Date(pubDateStr).toISOString().split('T')[0] : 'N/A',
-                articleIndex: index
-            };
-        })
+        articles: validArticles.map((a, index) => ({
+            title: a.title,
+            snippet: a.text,
+            link: a.url,
+            source: a.site,
+            symbol: a.symbol,
+            publicationDate: a.publishedDate ? a.publishedDate.split(' ')[0] : 'N/A',
+            articleIndex: index
+        })),
+        sectorStocks: sectorStocks
     };
 }
 
-/**
- * Tool 2: Synthesizes news articles to identify and rank noteworthy companies.
- * This tool is declared to the Gemini model.
- */
-async function synthesizeAndRankCompanies({ newsArticles }) {
+async function synthesizeAndRankCompanies({ newsArticles, sectorStocks }) {
     const prompt = `
-        Role: You are a quantitative financial analyst AI. Your task is to analyze a list of financial news articles and identify the most noteworthy companies based on the significance and sentiment of the news.
+        Role: You are a quantitative financial analyst AI. Your task is to analyze a general list of financial news articles and identify the most noteworthy companies that belong to a specific sector.
 
         Task:
-        1. Read the provided JSON data of news articles.
-        2. For each article, extract any mentioned companies, their ticker symbols (if possible), and the context of the mention.
-        3. Based on the collective news, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports > product updates) and positive sentiment of the news.
+        1. You are given a list of stock tickers that belong to the target sector: [${sectorStocks.join(', ')}].
+        2. Read the provided JSON data of general news articles.
+        3. Filter these articles, considering only those where the article's "symbol" matches one of the tickers in the provided sector list.
+        4. From this filtered list, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports > product updates) and positive sentiment of the news.
         
         Output Format: Return ONLY a valid JSON object. The JSON should have a single key "topCompanies" which is an array of objects. Each object must contain "companyName", "ticker", and a "rankingJustification" that briefly explains why it was ranked highly based on its positive news mentions. Include the source article indices in the justification.
 
@@ -2514,10 +2306,6 @@ async function synthesizeAndRankCompanies({ newsArticles }) {
     }
 }
 
-/**
- * Tool 3: Generates the final, user-facing deep-dive report.
- * This tool is declared to the Gemini model.
- */
 async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArticles }) {
     const prompt = `
         Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.
@@ -2558,16 +2346,7 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
     return { report: finalReport };
 }
 
-
-/**
- * Main orchestrator function for the AI-driven sector analysis.
- */
 async function handleSectorAnalysisWithAIAgent(sectorName) {
-    if (!searchApiKey || !searchEngineId || !geminiApiKey) {
-        displayMessageInModal("This feature requires the Web Search API Key, Search Engine ID, and Gemini API Key.", "warning");
-        return;
-    }
-
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Initiating AI analysis for the ${sectorName} sector...`;
@@ -2575,29 +2354,30 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
     const contentArea = document.getElementById('custom-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis for the ${sectorName} sector...</div>`;
 
-
     const tools = {
         functionDeclarations: [
             {
                 name: "searchSectorNews",
-                description: "Searches for recent (last 30 days) financial news articles for a given economic sector from a list of reputable sources.",
+                description: "Fetches a list of recent general stock market news articles and identifies which stocks in the user's portfolio belong to the specified sector.",
                 parameters: {
                     type: "object",
                     properties: {
-                        sectorName: { type: "string", description: "The financial sector to search for, e.g., 'Technology' or 'Health Care'." },
+                        sectorName: { type: "string", description: "The financial sector to analyze, e.g., 'Technology'." },
+                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols belonging to the specified sector." }
                     },
-                    required: ["sectorName"],
+                    required: ["sectorName", "sectorStocks"],
                 },
             },
             {
                 name: "synthesizeAndRankCompanies",
-                description: "Analyzes a list of news articles to identify and rank the top 3-5 most favorably mentioned companies, returning a JSON object with justifications.",
+                description: "Filters a general news list to find articles relevant to a specific list of sector stocks, then analyzes them to rank the top 3-5 most favorably mentioned companies.",
                 parameters: {
                     type: "object",
                     properties: {
-                        newsArticles: { type: "array", description: "An array of news article objects, each with a title and snippet.", items: { type: "object" } },
+                        newsArticles: { type: "array", description: "An array of general news article objects.", items: { type: "object" } },
+                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols for the target sector." }
                     },
-                    required: ["newsArticles"],
+                    required: ["newsArticles", "sectorStocks"],
                 },
             },
             {
@@ -2621,14 +2401,29 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
         'generateDeepDiveReport': generateDeepDiveReport,
     };
 
-    const conversationHistory = [{
-        role: "user",
-        parts: [{ text: `Generate a deep-dive analysis report for the ${sectorName} sector. Start by searching for relevant news.` }],
-    }];
-    
-    let originalArticles = [];
-
     try {
+        loadingMessage.textContent = `Identifying stocks in the ${sectorName} sector...`;
+        const portfolioSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        const portfolio = portfolioSnapshot.docs.map(doc => doc.data());
+        
+        const fmpDataPromises = portfolio.map(stock => getFmpStockData(stock.ticker).then(data => ({...stock, fmpData: data })));
+        const stocksWithFmpData = await Promise.all(fmpDataPromises);
+
+        const sectorStocks = stocksWithFmpData
+            .filter(stock => get(stock, 'fmpData.company_profile.0.sector') === sectorName)
+            .map(stock => stock.ticker);
+
+        if (sectorStocks.length === 0) {
+            throw new Error(`You have no stocks from the ${sectorName} sector in your portfolio or watchlist to analyze.`);
+        }
+
+        const conversationHistory = [{
+            role: "user",
+            parts: [{ text: `Generate a deep-dive analysis report for the ${sectorName} sector. The stocks in this sector are ${sectorStocks.join(', ')}. Start by searching for relevant news.` }],
+        }];
+        
+        let originalArticles = [];
+
         for (let i = 0; i < 5; i++) { 
             const contents = {
                 contents: conversationHistory,
@@ -2657,6 +2452,10 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
                 
                 if (toolCall.name === 'generateDeepDiveReport') {
                     toolCall.args.originalArticles = originalArticles;
+                } else if (toolCall.name === 'searchSectorNews') {
+                    toolCall.args.sectorStocks = sectorStocks;
+                } else if (toolCall.name === 'synthesizeAndRankCompanies') {
+                    toolCall.args.sectorStocks = sectorStocks;
                 }
                 
                 return func(toolCall.args);
@@ -2815,21 +2614,6 @@ async function handleMacroPlaybookAnalysis(sectorName) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
-async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTION_CACHE) {
-    const docRef = doc(db, collection, symbol);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
-        console.warn(`Could not find cached data for ${symbol}. It will be excluded from the dashboard view.`);
-        return null;
-    }
-    const data = docSnap.data();
-    if (collection === CONSTANTS.DB_COLLECTION_CACHE && (!data.OVERVIEW)) {
-         console.warn(`Cached analysis data for ${symbol} is incomplete. It will be excluded from the dashboard view.`);
-         return null;
-    }
-    return data;
-}
-
 async function getFmpStockData(symbol) {
     const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
     const fmpCacheSnapshot = await getDocs(fmpCacheRef);
@@ -2845,7 +2629,7 @@ async function getFmpStockData(symbol) {
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
         const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
-        allData[endpointName] = docData.data[0]; // Assuming data is always an array with one object
+        allData[endpointName] = docData.data;
 
         if (docData.cachedAt) {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
@@ -2855,33 +2639,7 @@ async function getFmpStockData(symbol) {
     });
 
     allData.cachedAt = latestTimestamp;
-    
-    // Add alpha vantage data for sparkline if it exists
-    const avData = await getStockDataFromCache(symbol);
-    if(avData) {
-        allData.time_series_daily = get(avData, 'TIME_SERIES_DAILY.Time Series (Daily)');
-        allData.alphaVantageCachedAt = get(avData, 'cachedAt');
-    }
-
     return allData;
-}
-
-
-async function handleViewFullData(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading full data for ${symbol}...`;
-    try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
-        document.getElementById(CONSTANTS.ELEMENT_FULL_DATA_CONTENT).textContent = JSON.stringify(data, null, 2);
-        document.getElementById('full-data-modal-title').textContent = `Full Cached Data for ${symbol}`;
-        document.getElementById('full-data-modal-timestamp').textContent = `Data Stored On: ${data.cachedAt.toDate().toLocaleString()}`;
-        openModal(CONSTANTS.MODAL_FULL_DATA);
-    } catch (error) {
-        displayMessageInModal(`Error loading data: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
 }
 
 async function handleFinancialAnalysis(symbol) {
@@ -2890,8 +2648,8 @@ async function handleFinancialAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
 
         const prompt = FINANCIAL_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
@@ -2917,8 +2675,8 @@ async function handleUndervaluedAnalysis(symbol) {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
 
         const prompt = UNDERVALUED_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
@@ -2943,8 +2701,8 @@ async function handleBullBearAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = BULL_VS_BEAR_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -2966,8 +2724,8 @@ async function handleMoatAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -2989,8 +2747,8 @@ async function handleDividendSafetyAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = DIVIDEND_SAFETY_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3012,8 +2770,8 @@ async function handleGrowthOutlookAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = GROWTH_OUTLOOK_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3035,8 +2793,8 @@ async function handleRiskAssessmentAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3058,8 +2816,8 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = CAPITAL_ALLOCATORS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol);
@@ -3075,7 +2833,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
 }
 
 
-// --- GOOGLE DRIVE FUNCTIONS (v6.1.0) ---
+// --- GOOGLE DRIVE FUNCTIONS ---
 
 function getDriveToken() {
     return new Promise((resolve, reject) => {
@@ -3108,38 +2866,21 @@ async function handleSaveToDrive(modalId) {
     if (!modal) return;
 
     let contentToSave = '';
-    let stockSymbol = '';
-    let analysisType = '';
     let fileName = '';
 
-    if (modalId === CONSTANTS.MODAL_FULL_DATA) {
-        contentToSave = modal.querySelector('#full-data-content').textContent;
-        stockSymbol = modal.querySelector('#full-data-modal-title').textContent.replace('Full Cached Data for ', '').trim();
-        analysisType = 'FullData';
-        fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
+    const titleText = modal.querySelector('h2').textContent;
+    const proseContainer = modal.querySelector('.prose, pre');
+    contentToSave = proseContainer.innerHTML;
+    
+    const titleParts = titleText.split('|').map(s => s.trim());
+    let baseName = titleParts[0];
+    let symbolOrSector = titleParts.length > 1 ? titleParts[1] : '';
+
+    if (symbolOrSector) {
+        fileName = `${symbolOrSector.replace(/\s/g, '_')}_${baseName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
     } else {
-        const proseContainer = modal.querySelector('.prose');
-        contentToSave = proseContainer.innerHTML; // Save as HTML for now to preserve formatting
-        
-        const titleText = modal.querySelector('h2').textContent;
-        const titleParts = titleText.split(' | ');
-
-        if (modalId === CONSTANTS.MODAL_CUSTOM_ANALYSIS) {
-            if (titleParts.length > 1) { // Sector Deep Dive | Technology
-                const sectorName = titleParts[1].trim();
-                const selectedButton = modal.querySelector('#custom-analysis-selector-container button[disabled]'); // A bit fragile, better way? Maybe store last analysis type
-                const analysisLabel = selectedButton ? selectedButton.textContent : 'CustomAnalysis';
-                 fileName = `${sectorName.replace(/\s/g, '_')}_${analysisLabel.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
-            } else {
-                fileName = `${titleText.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
-            }
-        } else { // Individual stock analyses
-            stockSymbol = titleParts.length > 1 ? titleParts[1].trim() : titleParts[0];
-            analysisType = titleParts[0].trim().replace(/\s/g, '');
-            fileName = `${stockSymbol}_${analysisType}_${new Date().toISOString().split('T')[0]}.md`;
-        }
+        fileName = `${baseName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
     }
-
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
