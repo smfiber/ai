@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.4"; 
+const APP_VERSION = "9.1.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1919,8 +1919,7 @@ async function handleRefreshFmpData(symbol) {
 
             const dataToCache = {
                 cachedAt: Timestamp.now(),
-                data: data,
-                name: endpoint.name
+                data: data
             };
 
             const docRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
@@ -2058,8 +2057,9 @@ async function handleSaveFmpEndpoint(e) {
         if (id) {
             await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data, { merge: true });
         } else {
+            const docId = name.toLowerCase().replace(/\s+/g, '_');
             data.usageCount = 0;
-            await addDoc(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS), data);
+            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, docId), data);
         }
         cancelFmpEndpointEdit();
         await renderFmpEndpointsList();
@@ -2629,8 +2629,8 @@ async function getFmpStockData(symbol) {
 
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
-        const endpointKey = (docData.name || docSnap.id).toLowerCase().replace(/\s+/g, '_');
-        allData[endpointKey] = docData.data;
+        const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
+        allData[endpointName] = docData.data;
 
         if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
