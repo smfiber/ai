@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.2"; 
+const APP_VERSION = "9.1.3"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -2631,7 +2631,7 @@ async function getFmpStockData(symbol) {
         const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
         allData[endpointName] = docData.data;
 
-        if (docData.cachedAt) {
+        if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
                 latestTimestamp = docData.cachedAt;
             }
