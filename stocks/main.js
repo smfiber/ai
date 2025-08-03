@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "7.7.0"; 
+const APP_VERSION = "7.8.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -18,6 +18,8 @@ const CONSTANTS = {
     MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
+    MODAL_VIEW_FMP_DATA: 'viewFmpDataModal',
+    MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
@@ -1457,14 +1459,25 @@ async function fetchAndCacheStockData(symbol) {
 
 async function handleRefreshData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing all data for ${symbol}...`;
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing Alpha Vantage data for ${symbol}...`;
     try {
         const refreshedData = await fetchAndCacheStockData(symbol);
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
         
         const portfolioInfo = portfolioCache.find(s => s.ticker === symbol);
         const status = portfolioInfo ? portfolioInfo.status : null;
-        const newCardHtml = renderOverviewCard(refreshedData, symbol, status);
+        
+        // We need to re-fetch the FMP timestamp to keep the card consistent
+        let fmpTimestamp = null;
+        const fmpEndpointsRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+        const q = query(fmpEndpointsRef, limit(1));
+        const fmpQuerySnapshot = await getDocs(q);
+        if (!fmpQuerySnapshot.empty) {
+            const firstDoc = fmpQuerySnapshot.docs[0].data();
+            fmpTimestamp = firstDoc.cachedAt || null;
+        }
+
+        const newCardHtml = renderOverviewCard(refreshedData, symbol, status, fmpTimestamp);
 
         const oldCard = document.getElementById(`card-${symbol}`);
         if(oldCard) {
@@ -1472,7 +1485,6 @@ async function handleRefreshData(symbol) {
              tempDiv.innerHTML = newCardHtml;
              oldCard.replaceWith(tempDiv.firstElementChild);
              
-             // Re-render sparkline
              const timeSeries = refreshedData.TIME_SERIES_DAILY ? refreshedData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
              const quoteData = refreshedData.GLOBAL_QUOTE ? refreshedData.GLOBAL_QUOTE['Global Quote'] : {};
              const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
@@ -1480,7 +1492,7 @@ async function handleRefreshData(symbol) {
         } else { 
             await displayStockCard(symbol);
         }
-        await renderDashboard(); // Refresh the main dashboard lists
+        await renderDashboard();
     } catch (error) {
         console.error("Error refreshing stock data:", error);
         displayMessageInModal(error.message, 'error');
@@ -1559,7 +1571,6 @@ async function displayStockCard(ticker) {
         const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
         const status = portfolioInfo ? portfolioInfo.status : null;
         
-        // Fetch the first FMP timestamp to display on the card
         let fmpTimestamp = null;
         const fmpEndpointsRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints');
         const q = query(fmpEndpointsRef, limit(1));
@@ -1669,10 +1680,8 @@ async function handleFetchNews(symbol) {
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData.items || []);
 
-        // The API call already restricts to the last month, so we just format the articles we received.
         const recentArticles = validArticles.map(a => {
             const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
-            // Use the date if available, but don't filter out the article if it's missing.
             const publicationDate = pubDateStr ? new Date(pubDateStr) : null;
             return { ...a, publicationDate };
         });
@@ -1691,16 +1700,12 @@ async function handleFetchNews(symbol) {
 
             const rawResult = await callGeminiApi(prompt);
             
-            // Separate JSON from markdown summary
             const jsonMatch = rawResult.match(/```json\n([\s\S]*?)\n```|(\[[\s\S]*\])/);
             const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[2]).trim() : '';
             const summaryMarkdown = rawResult.split(jsonMatch ? jsonMatch[0] : ']').pop().trim();
 
             const sentiments = JSON.parse(jsonString);
             
-            // The prompt asks the AI to return data for the articles we sent.
-            // We can add the link back by matching the titles or assuming the order is preserved.
-            // Assuming order is preserved is simpler and likely correct.
             if (Array.isArray(sentiments) && sentiments.length === articlesForPrompt.length) {
                 const articlesWithSentiment = sentiments.map((sentiment, index) => ({
                     ...sentiment,
@@ -1709,7 +1714,7 @@ async function handleFetchNews(symbol) {
                 }));
                  renderNewsArticles(articlesWithSentiment, summaryMarkdown, symbol);
             } else {
-                 renderNewsArticles([], '', symbol); // Fallback if parsing fails
+                 renderNewsArticles([], '', symbol);
             }
         } else {
              renderNewsArticles([], '', symbol);
@@ -1718,7 +1723,7 @@ async function handleFetchNews(symbol) {
     } catch (error) {
         console.error("Error fetching news:", error);
         displayMessageInModal(`Could not fetch news: ${error.message}`, 'error');
-        renderNewsArticles([], '', symbol); // Render empty state on error
+        renderNewsArticles([], '', symbol);
     } finally {
         button.disabled = false;
         button.textContent = 'Fetch News';
@@ -1731,7 +1736,6 @@ function renderSparkline(canvasId, timeSeriesData, change) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !timeSeriesData) return;
     
-    // Destroy previous chart instance if it exists
     const existingChart = Chart.getChart(canvasId);
     if (existingChart) {
         existingChart.destroy();
@@ -1907,7 +1911,6 @@ async function displayMarketCalendar() {
         }
     } catch (dbError) {
         console.error("Error reading calendar cache from Firestore:", dbError);
-        // Proceed to fetch new data if cache read fails
     }
     
     if (shouldFetchNewData) {
@@ -2026,15 +2029,17 @@ function renderOverviewCard(data, symbol, status, fmpTimestamp) {
                 <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">${sanitizeText(sma200)}</p></div>
             </div>
 
-            <div class="mt-6 border-t pt-4 flex flex-wrap gap-2 justify-center">
-                <button data-symbol="${symbol}" class="refresh-data-button text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-1 px-3 rounded-full">Refresh Data</button>
-                <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View JSON</button>
+            <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
+                <button data-symbol="${symbol}" class="refresh-data-button text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold py-2 px-4 rounded-lg">Refresh Alpha</button>
+                <button data-symbol="${symbol}" class="view-json-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View Alpha JSON</button>
+                <div class="button-group-separator"></div>
+                <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
+                <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
+            </div>
+            <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
                 <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
                 <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
-                <button data-symbol="${symbol}" class="analyst-estimates-button text-sm bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg">Fetch FMP Data</button>
-            </div>
-            <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="bull-bear-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg">Bull vs. Bear</button>
                 <button data-symbol="${symbol}" class="moat-analysis-button text-sm bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg">Moat Analysis</button>
                 <button data-symbol="${symbol}" class="dividend-safety-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg">Dividend Safety</button>
@@ -2101,8 +2106,8 @@ function openPortfolioManagerModal() {
     openModal(CONSTANTS.MODAL_PORTFOLIO_MANAGER);
 }
 
-// --- FMP API INTEGRATION (v7.6.0) ---
-async function handleFmpAnalystEstimates(symbol) {
+// --- FMP API INTEGRATION & MANAGEMENT ---
+async function handleRefreshFmpData(symbol) {
     if (!fmpApiKey) {
         displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
         return;
@@ -2114,7 +2119,7 @@ async function handleFmpAnalystEstimates(symbol) {
     try {
         const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
         if (endpointsSnapshot.empty) {
-            throw new Error("No FMP endpoints configured in the database.");
+            throw new Error("No FMP endpoints configured. Please add endpoints via the manager.");
         }
 
         const endpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2146,13 +2151,9 @@ async function handleFmpAnalystEstimates(symbol) {
             successfulFetches++;
         }
         
-        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
         
-        // Refresh the card to show the new timestamp
-        const oldCard = document.getElementById(`card-${symbol}`);
-        if(oldCard) {
-            await displayStockCard(symbol); // This will re-fetch and re-render the card
-        }
+        await displayStockCard(symbol);
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -2160,6 +2161,139 @@ async function handleFmpAnalystEstimates(symbol) {
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
+}
+
+async function handleViewFmpData(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading FMP data for ${symbol}...`;
+    
+    const contentContainer = document.getElementById('view-fmp-data-content');
+    contentContainer.innerHTML = '';
+
+    try {
+        const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        const endpointNames = {};
+        endpointsSnapshot.forEach(doc => {
+            endpointNames[doc.id] = doc.data().name || 'Unnamed Endpoint';
+        });
+
+        const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+        const fmpCacheSnapshot = await getDocs(fmpCacheRef);
+
+        if (fmpCacheSnapshot.empty) {
+            contentContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No FMP data has been cached for this stock yet. Use the "Refresh FMP" button first.</p>';
+        } else {
+            const fmpData = fmpCacheSnapshot.docs.map(doc => ({
+                name: endpointNames[doc.id] || `Unknown (${doc.id})`,
+                ...doc.data()
+            })).sort((a, b) => a.name.localeCompare(b.name));
+
+            const html = fmpData.map(item => `
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">${sanitizeText(item.name)}</h3>
+                    <p class="text-xs text-gray-500 mb-2">Cached On: ${item.cachedAt.toDate().toLocaleString()}</p>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-white p-4 rounded-lg border">${sanitizeText(JSON.stringify(item.data, null, 2))}</pre>
+                </div>
+            `).join('');
+            contentContainer.innerHTML = html;
+        }
+
+        document.getElementById('view-fmp-data-modal-title').textContent = `Cached FMP Data for ${symbol}`;
+        openModal(CONSTANTS.MODAL_VIEW_FMP_DATA);
+
+    } catch (error) {
+        console.error("Error viewing FMP data:", error);
+        displayMessageInModal(`Could not display FMP data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function openManageFmpEndpointsModal() {
+    await renderFmpEndpointsList();
+    openModal(CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS);
+}
+
+async function renderFmpEndpointsList() {
+    const container = document.getElementById('fmp-endpoints-list-container');
+    container.innerHTML = 'Loading endpoints...';
+    try {
+        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        if (querySnapshot.empty) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
+            return;
+        }
+        const endpoints = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        container.innerHTML = endpoints.map(ep => `
+            <div class="p-3 bg-white border rounded-lg flex justify-between items-center">
+                <div>
+                    <p class="font-semibold text-gray-700">${sanitizeText(ep.name)}</p>
+                    <p class="text-xs text-gray-500 font-mono">${sanitizeText(ep.url_template)}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="edit-fmp-endpoint-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-id="${ep.id}" data-name="${sanitizeText(ep.name)}" data-url="${sanitizeText(ep.url_template)}">Edit</button>
+                    <button class="delete-fmp-endpoint-btn text-sm font-medium text-red-600 hover:text-red-800" data-id="${ep.id}">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error rendering FMP endpoints:', error);
+        container.innerHTML = '<p class="text-red-500">Could not load endpoints.</p>';
+    }
+}
+
+function handleEditFmpEndpoint(id, name, url) {
+    document.getElementById('fmp-endpoint-id').value = id;
+    document.getElementById('fmp-endpoint-name').value = name;
+    document.getElementById('fmp-endpoint-url').value = url;
+    document.getElementById('cancel-fmp-endpoint-edit').classList.remove('hidden');
+    document.querySelector('#manage-fmp-endpoint-form button[type="submit"]').textContent = "Update Endpoint";
+}
+
+function cancelFmpEndpointEdit() {
+    document.getElementById('manage-fmp-endpoint-form').reset();
+    document.getElementById('fmp-endpoint-id').value = '';
+    document.getElementById('cancel-fmp-endpoint-edit').classList.add('hidden');
+    document.querySelector('#manage-fmp-endpoint-form button[type="submit"]').textContent = "Save Endpoint";
+}
+
+async function handleSaveFmpEndpoint(e) {
+    e.preventDefault();
+    const id = document.getElementById('fmp-endpoint-id').value;
+    const name = document.getElementById('fmp-endpoint-name').value.trim();
+    const url_template = document.getElementById('fmp-endpoint-url').value.trim();
+
+    if (!name || !url_template) {
+        displayMessageInModal('Endpoint Name and URL Template are required.', 'warning');
+        return;
+    }
+
+    const data = { name, url_template };
+    
+    try {
+        if (id) { // Editing an existing endpoint
+            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data);
+        } else { // Adding a new one
+            await addDoc(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS), data);
+        }
+        cancelFmpEndpointEdit();
+        await renderFmpEndpointsList();
+    } catch (error) {
+        console.error('Error saving FMP endpoint:', error);
+        displayMessageInModal(`Could not save endpoint: ${error.message}`, 'error');
+    }
+}
+
+function handleDeleteFmpEndpoint(id) {
+    openConfirmationModal('Delete Endpoint?', 'Are you sure you want to delete this endpoint? This cannot be undone.', async () => {
+        try {
+            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id));
+            await renderFmpEndpointsList();
+        } catch (error) {
+            console.error('Error deleting FMP endpoint:', error);
+            displayMessageInModal(`Could not delete endpoint: ${error.message}`, 'error');
+        }
+    });
 }
 
 
@@ -2186,18 +2320,6 @@ function setupGlobalEventListeners() {
         if (refreshButton) {
             renderDashboard();
         }
-
-        const expandBtn = e.target.closest('.expand-all-btn');
-        if (expandBtn) {
-            const card = expandBtn.closest('.dashboard-card');
-            card.querySelectorAll('details.sector-group').forEach(detail => detail.open = true);
-        }
-
-        const collapseBtn = e.target.closest('.collapse-all-btn');
-        if (collapseBtn) {
-            const card = collapseBtn.closest('.dashboard-card');
-            card.querySelectorAll('details.sector-group').forEach(detail => detail.open = false);
-        }
     });
 
     document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).addEventListener('click', (e) => {
@@ -2218,7 +2340,8 @@ function setupGlobalEventListeners() {
         if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
         if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
-        if (target.classList.contains('analyst-estimates-button')) handleFmpAnalystEstimates(symbol);
+        if (target.classList.contains('refresh-fmp-button')) handleRefreshFmpData(symbol);
+        if (target.classList.contains('view-fmp-data-button')) handleViewFmpData(symbol);
     });
 
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
@@ -2253,6 +2376,18 @@ function setupGlobalEventListeners() {
             handleDeleteStock(ticker);
         }
     });
+    
+    document.getElementById('manageFmpEndpointsModal')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const id = target.dataset.id;
+        if (target.classList.contains('edit-fmp-endpoint-btn')) {
+            handleEditFmpEndpoint(id, target.dataset.name, target.dataset.url);
+        } else if (target.classList.contains('delete-fmp-endpoint-btn')) {
+            handleDeleteFmpEndpoint(id);
+        }
+    });
 }
 
 function setupEventListeners() {
@@ -2269,6 +2404,9 @@ function setupEventListeners() {
         }
     });
 
+    document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
+    document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
+
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
             const modalId = e.target.dataset.modalId;
@@ -2280,6 +2418,7 @@ function setupEventListeners() {
     if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
+    document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
 
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_FULL_DATA, button: 'close-full-data-modal', bg: 'close-full-data-modal-bg' },
@@ -2289,6 +2428,8 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
+        { modal: CONSTANTS.MODAL_VIEW_FMP_DATA, button: 'close-view-fmp-data-modal', bg: 'close-view-fmp-data-modal-bg' },
+        { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -2347,11 +2488,9 @@ async function searchSectorNews({ sectorName }) {
     const validArticles = filterValidNews(newsData.items || []);
 
     if (validArticles.length === 0) {
-        // Return a structured error that the model can understand
         return { error: "No relevant news articles found", detail: `Could not find any recent news for the ${sectorName} sector in the last 30 days.` };
     }
 
-    // Return a clean list of articles for the next tool
     return {
         articles: validArticles.map((a, index) => {
             const pubDateStr = a.pagemap?.newsarticle?.[0]?.datepublished || a.pagemap?.metatags?.[0]?.['article:published_time'] || a.pagemap?.metatags?.[0]?.date;
@@ -2388,7 +2527,6 @@ async function synthesizeAndRankCompanies({ newsArticles }) {
 
     const resultText = await callGeminiApi(prompt);
     try {
-        // Clean and parse the JSON response from the model
         const cleanedJson = resultText.replace(/```json\n|```/g, '').trim();
         return JSON.parse(cleanedJson);
     } catch (error) {
@@ -2427,7 +2565,6 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
     
     let finalReport = await callGeminiApi(prompt);
 
-    // Post-processing to inject verifiable source links
     finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
         const index = parseInt(indexStr, 10);
         const article = originalArticles.find(a => a.articleIndex === index);
@@ -2436,7 +2573,7 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
             const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
             return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
         }
-        return match; // Return original placeholder if article not found
+        return match;
     });
 
     return { report: finalReport };
@@ -2445,7 +2582,6 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
 
 /**
  * Main orchestrator function for the AI-driven sector analysis.
- * This function manages the conversation with Gemini, including executing tool calls.
  */
 async function handleSectorAnalysisWithAIAgent(sectorName) {
     if (!searchApiKey || !searchEngineId || !geminiApiKey) {
@@ -2457,12 +2593,10 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Initiating AI analysis for the ${sectorName} sector...`;
     
-    // Also update the content area in the modal
     const contentArea = document.getElementById('custom-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis for the ${sectorName} sector...</div>`;
 
 
-    // 1. Define the tools available to the Gemini model.
     const tools = {
         functionDeclarations: [
             {
@@ -2502,23 +2636,21 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
         ],
     };
 
-    // 2. Map tool names to their actual callable JavaScript functions.
     const toolFunctions = {
         'searchSectorNews': searchSectorNews,
         'synthesizeAndRankCompanies': synthesizeAndRankCompanies,
         'generateDeepDiveReport': generateDeepDiveReport,
     };
 
-    // 3. Start the conversation with the initial user request.
     const conversationHistory = [{
         role: "user",
         parts: [{ text: `Generate a deep-dive analysis report for the ${sectorName} sector. Start by searching for relevant news.` }],
     }];
     
-    let originalArticles = []; // Store articles to pass to the final tool
+    let originalArticles = [];
 
     try {
-        for (let i = 0; i < 5; i++) { // Max 5 turns to prevent infinite loops
+        for (let i = 0; i < 5; i++) { 
             const contents = {
                 contents: conversationHistory,
                 tools: [tools]
@@ -2533,20 +2665,17 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
                 .map(part => part.functionCall);
 
             if (toolCalls.length === 0) {
-                // Final response received from the model
                 loadingMessage.textContent = 'Finalizing report...';
                 const finalReportText = responseParts.map(part => part.text || '').join('\n');
                 document.getElementById('custom-analysis-content').innerHTML = marked.parse(finalReportText);
-                break; // Exit the loop
+                break;
             }
 
-            // Execute tool calls in parallel
             loadingMessage.textContent = `AI is running tools: ${toolCalls.map(tc => tc.name).join(', ')}...`;
             const toolExecutionPromises = toolCalls.map(toolCall => {
                 const func = toolFunctions[toolCall.name];
                 if (!func) throw new Error(`Unknown tool: ${toolCall.name}`);
                 
-                // Special handling to pass original articles to the final reporting tool
                 if (toolCall.name === 'generateDeepDiveReport') {
                     toolCall.args.originalArticles = originalArticles;
                 }
@@ -2556,15 +2685,13 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
             
             const toolResults = await Promise.all(toolExecutionPromises);
 
-            // Store articles if they were just fetched
             const newsSearchResult = toolResults.find((res, idx) => toolCalls[idx].name === 'searchSectorNews');
             if(newsSearchResult && newsSearchResult.articles) {
                 originalArticles = newsSearchResult.articles;
             }
 
-            // Add tool responses to conversation history
             conversationHistory.push({
-                role: 'user', // Function results are sent back as the user
+                role: 'user',
                 parts: toolResults.map((result, i) => ({
                     functionResponse: { name: toolCalls[i].name, response: result }
                 }))
@@ -2603,7 +2730,7 @@ function handleSectorSelection(sectorName) {
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
     
-    selectorContainer.innerHTML = ''; // Clear previous buttons
+    selectorContainer.innerHTML = '';
 
     const creativeAnalysis = creativePromptMap[sectorName];
     let creativeButtonHtml = '';
@@ -2713,7 +2840,6 @@ async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTIO
     const docRef = doc(db, collection, symbol);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
-        // This is not an error in the context of renderDashboard, so we return null instead of throwing.
         console.warn(`Could not find cached data for ${symbol}. It will be excluded from the dashboard view.`);
         return null;
     }
