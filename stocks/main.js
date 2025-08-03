@@ -1140,11 +1140,19 @@ async function callApi(url, options = {}) {
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
+
         if (!response.ok) {
+            const errorText = await response.text(); // Read the body ONCE as text.
             let errorBody;
-            try { errorBody = await response.json(); } catch { errorBody = await response.text(); }
-            const errorMsg = errorBody?.error?.message || errorBody?.Information || response.statusText;
-            throw new Error(`API request failed: ${errorMsg}`);
+            try {
+                // Now, try to parse the text as JSON.
+                errorBody = JSON.parse(errorText);
+            } catch {
+                // If parsing fails, use the raw text.
+                errorBody = errorText;
+            }
+            const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information) : errorBody;
+            throw new Error(`API request failed: ${response.statusText || errorMsg}`);
         }
         return await response.json();
     } catch (error) {
