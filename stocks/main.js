@@ -2095,7 +2095,7 @@ async function handleFmpAnalystEstimates(symbol) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching Analyst Estimates for ${symbol}...`;
 
     try {
-        const url = `https://financialmodelingprep.com/api/v3/analyst-estimates/${symbol}?period=annual&apikey=${fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/analyst-estimates/?symbol=${symbol}&period=annual&${fmpApiKey}`;
         const data = await callApi(url);
 
         if (data.length === 0) {
