@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "8.0.0"; 
+const APP_VERSION = "7.9.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -95,133 +95,137 @@ const FINANCIAL_NEWS_SOURCES = [
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
 
-const FINANCIAL_ANALYSIS_PROMPT = [
-    "Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts (e.g., comparing debt to a mortgage). Your analysis must be derived exclusively from the provided JSON data.",
-    "Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.",
-    "IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.",
-    '',
-    'Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    'Based on the provided data, generate the following multi-faceted financial report:',
-    '',
-    '# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})',
-    '',
-    '## 1. Executive Summary',
-    "Begin with a concise, one-paragraph summary written in plain English. For someone in a hurry, what is the most important takeaway about this company's financial health, performance, and overall story as a potential investment?",
-    '',
-    '## 2. Company Profile (What Do They Actually Do?)',
-    '### Business Description',
-    "In simple terms, describe the company's business based on the Description, Sector, and Industry from the OVERVIEW data. Avoid jargon.",
-    '### Market Snapshot',
-    'Present key market-related metrics for context.',
-    '- Market Capitalization: $XXX.XX Billion',
-    '- 52-Week Price Range: $XX.XX - $XX.XX',
-    '- 50-Day Moving Average: $XX.XX',
-    '- 200-Day Moving Average: $XX.XX',
-    '- Analyst Target Price: $XX.XX',
-    '',
-    '## 3. Performance & Profitability (How Well Does It Make Money?)',
-    "Assess the company's ability to generate profit. Explain all concepts simply.",
-    '### 3.1. Revenue & Earnings Trend',
-    'Analyze the historical trend of totalRevenue and netIncome. Is the company making more money and keeping more profit over time? Discuss the Year-over-Year (YoY) growth rates for the most recent two years in simple terms.',
-    '### 3.2. Profitability Margins & Returns',
-    'Explain what ProfitMargin and OperatingMarginTTM mean. For every $100 in sales, how much is actual profit? Analyze the trend in these margins. Are they getting better or worse?',
-    "Explain ReturnOnEquityTTM (ROE) and ReturnOnAssetsTTM (ROA) as a grade for the management team. How well are they using shareholder money and company resources to make a profit?",
-    '',
-    '## 4. Financial Health & Risk (Is the Company on Solid Ground?)',
-    "Evaluate the company's financial stability. Use an analogy to explain debt (e.g., like a mortgage on a house).",
-    '### 4.1. Liquidity Analysis',
-    "Calculate and interpret the Current Ratio. Explain its meaning: Does the company have enough cash and easily-sold assets to pay its bills for the next year?",
-    "Calculate and interpret the Quick Ratio. Explain what this reveals about its reliance on selling inventory to pay its bills.",
-    '### 4.2. Solvency and Debt Structure',
-    "Analyze the Debt-to-Equity Ratio. How much of the company is funded by debt versus shareholder money? Is the trend getting riskier or safer?",
-    "Explain the Interest Coverage Ratio simply: From its operating earnings, how many times over can the company pay the interest on its debt? A high number is safer.",
-    '',
-    '## 5. Cash Flow Analysis (Following the Actual Cash)',
-    'Analyze where the company\'s cash came from and where it went. Explain the key difference between "profit" (netIncome) and "cash flow" (operatingCashflow).',
-    '### Operating Cash Flow (OCF)',
-    'Is the company consistently generating real cash from its main business operations? Is this amount growing?',
-    '### Quality of Earnings',
-    "Compare operatingCashflow to netIncome. Are the company's profits backed by actual cash? A big difference can be a red flag.",
-    '### Investing and Financing Activities',
-    "Briefly explain what the company is doing with its cash. Is it reinvesting for growth (capitalExpenditures), paying down debt, or returning money to shareholders (dividendPayout, stock buybacks)?",
-    '',
-    '## 6. Valuation Analysis (Is the Stock Price Fair?)',
-    "Assess if the company's stock price seems expensive, cheap, or reasonable. Explain what the key ratios mean.",
-    'Present and interpret the following valuation multiples:',
-    '- P/E Ratio (PERatio): Explain this simply (e.g., "The price you pay for $1 of the company\'s profit").',
-    '- Forward P/E (ForwardPE): Compare this to the P/E Ratio to see if analysts expect profits to grow or shrink.',
-    '- Price-to-Sales Ratio (PriceToSalesRatioTTM)',
-    '- Price-to-Book Ratio (PriceToBookRatio)',
-    'Briefly discuss what these multiples imply. Is the stock priced for high growth, or is it seen as a stable value company?',
-    '',
-    '## 7. The Long-Term Investment Thesis: Bull vs. Bear',
-    'Conclude with a final synthesis that integrates all the preceding analyses into a clear bull and bear case.',
-    '### The Bull Case (Key Strengths & Competitive Edge)',
-    'Identify 2-3 of the most significant financial strengths and what they mean for a long-term investor. What is the primary "bull" argument for owning this stock?',
-    '### The Bear Case (Potential Weaknesses & Risks)',
-    'Identify 2-3 of the most significant weaknesses or financial red flags. What is the primary "bear" argument against owning this stock?',
-    '### Final Verdict: The "Moat" and Long-Hold Potential',
-    'Based purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.'
-].join('\n');
+const FINANCIAL_ANALYSIS_PROMPT = `
+Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts (e.g., comparing debt to a mortgage). Your analysis must be derived exclusively from the provided JSON data from the Financial Modeling Prep (FMP) API.
 
-const UNDERVALUED_ANALYSIS_PROMPT = [
-    'Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply. Your analysis must be derived exclusively from the provided JSON data.',
-    'Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.',
-    'IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.',
-    '',
-    'Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    'Based on the data, generate the following in-depth report:',
-    '# Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?',
-    '',
-    '## 1. The Bottom Line: Our Verdict',
-    'Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem Undervalued, Fairly Valued, or Overvalued? Briefly mention the top 1-2 reasons for this verdict in plain English, considering its fundamentals, health, and market sentiment.',
-    '',
-    '## 2. Is the Price Fair? (Fundamental & Health Analysis)',
-    "Let's look at the company's valuation metrics and financial health to see if the price makes sense.",
-    '### 2.1. Valuation Multiples Explained',
-    '- **Price-to-Earnings (P/E) Ratio:** [Value from OVERVIEW.PERatio]. Explain this simply: It’s the price you pay for $1 of the company’s profit. Compare the current P/E to the Forward P/E to see if analysts expect profits to rise or fall.',
-    "- **Price-to-Book (P/B) Ratio:** [Value from OVERVIEW.PriceToBookRatio]. Explain this as the stock's price compared to the company's net worth on paper. A value under 1.0 can sometimes suggest it's a bargain.",
-    '- **Price-to-Sales (P/S) Ratio:** [Value from OVERVIEW.PriceToSalesRatioTTM]. Explain this as the price you pay for $1 of the company’s sales. Is it a good deal, or does it signal low profitability?',
-    '### 2.2. Financial Health Check (Debt Load)',
-    '- **Debt-to-Equity Ratio:** Calculate this using totalLiabilities / totalShareholderEquity from the most recent annual BALANCE_SHEET. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.',
-    '### 2.3. Value vs. Growth (The PEG Ratio)',
-    '- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Explain this as the secret weapon for value investors. It balances the P/E ratio with future growth expectations. A PEG ratio under 1.0 is often a green flag for an undervalued growth stock.',
-    "### 2.4. Getting Paid to Wait (Dividend Analysis)",
-    '- **Dividend Yield:** [Value from OVERVIEW.DividendYield]%. Explain this as the annual return you get from dividends, like interest from a savings account.',
-    '- **Is the Dividend Safe?** Calculate the Cash Flow Payout Ratio (dividendPayout / operatingCashflow). Explain what this means for the dividend\'s sustainability. A low number is a good sign.',
-    '### 2.5. What Does Wall Street Think?',
-    "- **Analyst Target Price:** $[Value from OVERVIEW.AnalystTargetPrice]. How does Wall Street's target price compare to the current price? Is there potential upside according to the pros?",
-    '',
-    '## 3. Sizing Up the Competition (Relative Value)',
-    'A stock might seem cheap or expensive on its own, but how does it look compared to its peers?',
-    '- **Industry Context:** Using the `Industry` from the OVERVIEW data, comment on the valuation. For example, are the P/E and P/S ratios high or low for a company in this specific industry? (e.g., "Tech stocks often have higher P/E ratios than banks.") This provides crucial context.',
-    '',
-    '## 4. Market Mood & Stock Trends (Sentiment & Technicals)',
-    "Let's check the stock's recent price trends and what other investors are doing.",
-    '### 4.1. The Trend is Your Friend',
-    '- **50-Day & 200-Day Moving Averages:** Analyze the stock\'s current trend by comparing the price to these key levels. Is it in a "hot" uptrend or a "cold" downtrend?',
-    '### 4.2. Where Does the Price Stand?',
-    '- **52-Week Range:** The stock has traded between $[Value from OVERVIEW.52WeekLow] and $[Value from OVERVIEW.52WeekHigh]. Is the price currently near its yearly low (a potential discount) or its high (strong momentum)?',
-    '### 4.3. Market Sentiment Check',
-    '- **Short Interest:** [Value from OVERVIEW.ShortPercentOutstanding]%. Explain this as the percentage of shares being bet *against* the company. A high number (>10%) is a red flag that many investors expect the price to fall.',
-    '- **Insider Ownership:** [Value from OVERVIEW.PercentInsiders]%. Explain this as "skin in the game." When executives and directors own a good chunk of the stock, their interests are better aligned with shareholders.',
-    '',
-    '## 5. Final Conclusion: The Investment Case',
-    'Combine all our findings into a final, clear summary.',
-    '- **The Case for a Bargain:** Summarize the key data points (e.g., low P/E, healthy balance sheet, positive trend, strong insider ownership) that suggest the stock is undervalued.',
-    '- **The Case for Caution:** Summarize the key risks or red flags (e.g., high debt, high valuation vs. peers, bearish trend, high short interest) that suggest the stock might not be a good deal right now.',
-    '- **Final Takeaway:** End with a clear, final statement. For example: "The stock looks like a potential bargain based on its fundamentals and low debt. However, it appears expensive compared to its industry, and high short interest suggests market caution. A patient approach may be warranted."',
-    '',
-    '**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.'
-].join('\n');
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
+
+IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
+
+Analyze the comprehensive financial data for {companyName} (Ticker: {tickerSymbol}) provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+
+JSON Data:
+{jsonData}
+
+Based on the provided data, generate the following multi-faceted financial report:
+
+# Comprehensive Financial Analysis: {companyName} ({tickerSymbol})
+
+## 1. Executive Summary
+Begin with a concise, one-paragraph summary written in plain English. For someone in a hurry, what is the most important takeaway about this company's financial health, performance, and overall story as a potential investment, based on the provided FMP data?
+
+## 2. Company Profile (What Do They Actually Do?)
+### Business Description
+In simple terms, describe the company's business based on the 'description', 'sector', and 'industry' from the 'company_profile' data. Avoid jargon.
+### Market Snapshot
+Present key market-related metrics for context from the 'stock_quote' and 'company_profile' data.
+- Market Capitalization: $XXX.XX Billion (from 'marketCap')
+- 52-Week Price Range: $XX.XX - $XX.XX (from 'range' in profile or 'yearLow'/'yearHigh' in quote)
+- 50-Day Moving Average: $XX.XX (from 'priceAvg50')
+- 200-Day Moving Average: $XX.XX (from 'priceAvg200')
+
+## 3. Performance & Profitability (How Well Does It Make Money?)
+Assess the company's ability to generate profit. Explain all concepts simply.
+### 3.1. Revenue & Earnings Trend
+Analyze the historical trend of 'revenue' and 'netIncome' from the 'income_statement' array. Is the company making more money and keeping more profit over time? Discuss the Year-over-Year (YoY) growth rates for the most recent two years in simple terms.
+### 3.2. Profitability Margins & Returns
+Explain what 'netProfitMargin' means from the 'key_metrics' data. For every $100 in sales, how much is actual profit? Analyze the trend in this margin. Is it getting better or worse?
+Explain 'returnOnEquity' (ROE) and 'returnOnAssets' (ROA) from 'key_metrics' as a grade for the management team. How well are they using shareholder money and company resources to make a profit?
+
+## 4. Financial Health & Risk (Is the Company on Solid Ground?)
+Evaluate the company's financial stability. Use an analogy to explain debt (e.g., like a mortgage on a house).
+### 4.1. Liquidity Analysis
+Interpret the 'currentRatio' from the 'key_metrics' data. Explain its meaning: Does the company have enough cash and easily-sold assets to pay its bills for the next year?
+### 4.2. Solvency and Debt Structure
+Analyze the 'debtToEquity' ratio from 'key_metrics'. How much of the company is funded by debt versus shareholder money? Is the trend getting riskier or safer?
+Explain the 'interestCoverage' ratio from 'key_metrics' simply: From its operating earnings, how many times over can the company pay the interest on its debt? A high number is safer.
+
+## 5. Cash Flow Analysis (Following the Actual Cash)
+Analyze where the company's cash came from and where it went using the 'cash_flow_statement' array. Explain the key difference between "profit" ('netIncome') and "cash flow" ('operatingCashFlow').
+### Operating Cash Flow (OCF)
+Is the company consistently generating real cash from its main business operations ('operatingCashFlow')? Is this amount growing?
+### Quality of Earnings
+Compare 'operatingCashFlow' to 'netIncome'. Are the company's profits backed by actual cash? A big difference can be a red flag.
+### Investing and Financing Activities
+Briefly explain what the company is doing with its cash. Is it reinvesting for growth ('capitalExpenditure'), paying down debt ('debtRepayment'), or returning money to shareholders ('dividendsPaid')?
+
+## 6. Valuation Analysis (Is the Stock Price Fair?)
+Assess if the company's stock price seems expensive, cheap, or reasonable. Explain what the key ratios mean.
+Present and interpret the following valuation multiples from the 'key_metrics' data:
+- P/E Ratio ('peRatio'): Explain this simply (e.g., "The price you pay for $1 of the company's profit").
+- Price-to-Sales Ratio ('priceToSalesRatio')
+- Price-to-Book Ratio ('priceToBookRatio')
+- Enterprise Value to EBITDA ('enterpriseValueOverEBITDA')
+Briefly discuss what these multiples imply. Is the stock priced for high growth, or is it seen as a stable value company?
+
+## 7. The Long-Term Investment Thesis: Bull vs. Bear
+Conclude with a final synthesis that integrates all the preceding analyses into a clear bull and bear case.
+### The Bull Case (Key Strengths & Competitive Edge)
+Identify 2-3 of the most significant financial strengths and what they mean for a long-term investor. What is the primary "bull" argument for owning this stock based on the FMP data?
+### The Bear Case (Potential Weaknesses & Risks)
+Identify 2-3 of the most significant weaknesses or financial red flags from the FMP data. What is the primary "bear" argument against owning this stock?
+### Final Verdict: The "Moat" and Long-Hold Potential
+Based purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
+`.trim();
+
+const UNDERVALUED_ANALYSIS_PROMPT = `
+Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply. Your analysis must be derived exclusively from the provided FMP JSON data.
+
+Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
+
+IMPORTANT: Do not include any HTML tags in your output. Generate pure markdown only.
+
+Conduct a comprehensive valuation analysis for {companyName} (Ticker: {tickerSymbol}) using the financial data provided below. If a specific data point is "N/A" or missing, state that clearly in your analysis.
+
+JSON Data:
+{jsonData}
+
+Based on the data, generate the following in-depth report:
+# Investment Valuation Report: Is {companyName} ({tickerSymbol}) a Bargain?
+
+## 1. The Bottom Line: Our Verdict
+Provide a concise, one-paragraph conclusion that immediately answers the main question: Based on the data, does this stock seem Undervalued, Fairly Valued, or Overvalued? Briefly mention the top 1-2 reasons for this verdict in plain English, considering its fundamentals, health, and market sentiment.
+
+## 2. Is the Price Fair? (Fundamental & Health Analysis)
+Let's look at the company's valuation metrics and financial health to see if the price makes sense.
+### 2.1. Valuation Multiples Explained
+- **Price-to-Earnings (P/E) Ratio:** [Value from 'key_metrics.peRatio']. Explain this simply: It’s the price you pay for $1 of the company’s profit.
+- **Price-to-Book (P/B) Ratio:** [Value from 'key_metrics.priceToBookRatio']. Explain this as the stock's price compared to the company's net worth on paper. A value under 1.0 can sometimes suggest it's a bargain.
+- **Price-to-Sales (P/S) Ratio:** [Value from 'key_metrics.priceToSalesRatio']. Explain this as the price you pay for $1 of the company’s sales. Is it a good deal, or does it signal low profitability?
+- **Enterprise Value to Sales (EV/Sales):** [Value from 'key_metrics.evToSales']. Explain this is often considered a more thorough valuation metric than P/S.
+
+### 2.2. Financial Health Check (Debt Load)
+- **Debt-to-Equity Ratio:** [Value from 'key_metrics.debtToEquity']. Explain this like a personal debt-to-income ratio. A high number means the company relies heavily on debt, which can be risky.
+
+### 2.3. Value vs. Growth (The Graham Number)
+- **Graham Number:** [Value from 'key_metrics.grahamNumber']. Explain this as a theoretical intrinsic value for defensive investors, calculated by Benjamin Graham. If the current stock price ('stock_quote.price') is below the Graham Number, it may be considered undervalued.
+
+### 2.4. Getting Paid to Wait (Dividend Analysis)
+- **Dividend Yield:** [Value from 'key_metrics.dividendYield']%. Explain this as the annual return you get from dividends, like interest from a savings account.
+- **Is the Dividend Safe?** Calculate the Cash Flow Payout Ratio ('cash_flow_statement.dividendsPaid' / 'cash_flow_statement.operatingCashFlow'). Explain what this means for the dividend's sustainability. A low number is a good sign.
+
+### 2.5. What Does Wall Street Think?
+- **Analyst Grades:** Review the 'stock_grade_news' array. Summarize the recent analyst actions (e.g., "Upgraded to Buy from Hold"). How does this sentiment compare to the stock's current valuation?
+
+## 3. Sizing Up the Competition (Relative Value)
+A stock might seem cheap or expensive on its own, but how does it look compared to its peers?
+- **Industry Context:** Using the 'industry' from the 'company_profile' data, comment on the valuation. For example, are the P/E and P/S ratios high or low for a company in this specific industry? (e.g., "Tech stocks often have higher P/E ratios than banks.") This provides crucial context.
+
+## 4. Market Mood & Stock Trends (Sentiment & Technicals)
+Let's check the stock's recent price trends and what other investors are doing.
+### 4.1. The Trend is Your Friend
+- **50-Day & 200-Day Moving Averages:** Analyze the stock's current trend by comparing the 'stock_quote.price' to the 'priceAvg50' and 'priceAvg200' levels. Is it in a "hot" uptrend or a "cold" downtrend?
+### 4.2. Where Does the Price Stand?
+- **52-Week Range:** The stock has traded between $[Value from 'stock_quote.yearLow'] and $[Value from 'stock_quote.yearHigh']. Is the price currently near its yearly low (a potential discount) or its high (strong momentum)?
+
+## 5. Final Conclusion: The Investment Case
+Combine all our findings into a final, clear summary.
+- **The Case for a Bargain:** Summarize the key data points (e.g., low P/E, healthy balance sheet, price below Graham Number, positive analyst grades) that suggest the stock is undervalued.
+- **The Case for Caution:** Summarize the key risks or red flags (e.g., high debt, high valuation vs. peers, bearish trend) that suggest the stock might not be a good deal right now.
+- **Final Takeaway:** End with a clear, final statement. For example: "The stock looks like a potential bargain based on its fundamentals and low debt. However, it appears expensive compared to its industry, and a recent downtrend suggests market caution. A patient approach may be warranted."
+
+**Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.
+`.trim();
 
 const NEWS_SENTIMENT_PROMPT = [
     'Role: You are a financial news analyst AI who is an expert at cutting through the noise and explaining what headlines *really* mean for an everyday investor. Your goal is to assess the mood and key narratives surrounding a company based on recent news.',
@@ -256,167 +260,164 @@ const NEWS_SENTIMENT_PROMPT = [
     '--- END OF EXAMPLE ---'
 ].join('\n');
 
-const BULL_VS_BEAR_PROMPT = [
-    'Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. Use ONLY the provided JSON data to build your arguments.',
-    'Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    '# The Investment Debate: {companyName} ({tickerSymbol})',
-    '',
-    '## The Bull Case (The Bright Side: Reasons to be Optimistic)',
-    'Construct a positive argument for the company. For each point, state the supporting data and then briefly explain *why* it matters to an investor.',
-    'Focus on strengths like:',
-    '- **Strong Growth:** Is revenue or profit consistently increasing? (Use INCOME_STATEMENT data).',
-    '- **High Profitability:** Is the company a good money-maker? (Use ProfitMargin, ROE from OVERVIEW). Explain ROE as a "grade" for how well management uses shareholder money.',
-    '- **Solid Cash Flow:** Is the business generating real cash? (Use operatingCashflow from CASH_FLOW). Explain this as the company\'s "lifeblood".',
-    '- **Potential Bargain:** Does the stock seem cheap relative to its earnings or growth? (Use PERatio, PEGRatio from OVERVIEW).',
-    '- **Wall Street Optimism:** Does the AnalystTargetPrice suggest significant upside from the current price, indicating that market experts are also bullish?',
-    '',
-    '## The Bear Case (The Cautious View: Reasons for Concern)',
-    'Construct a negative argument for the company. For each point, state the supporting data and explain the potential risk.',
-    'Focus on weaknesses like:',
-    '- **Heavy Debt Load:** Does the company owe a lot of money? (Use Debt-to-Equity from BALANCE_SHEET). Explain this like having a large mortgage; it can be risky if times get tough.',
-    '- **Slowing Growth or Profitability:** Are sales or profits shrinking, potentially falling behind competitors? (Use INCOME_STATEMENT data).',
-    '- **Weak Cash Flow:** Is the company burning through cash? (Use CASH_FLOW data).',
-    '- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples from OVERVIEW).',
-    '- **Analyst Skepticism:** Is the AnalystTargetPrice near or below the current price, suggesting experts see limited room for growth?',
-    '',
-    '## The Final Takeaway: What\'s the Core Debate?',
-    'Conclude with a 1-2 sentence summary that frames the central conflict for an investor. For example: "The core debate for {companyName} is whether its strong profitability and growth (the bull case) are enough to outweigh its significant debt load and increasing competition (the bear case)."'
-].join('\n');
+const BULL_VS_BEAR_PROMPT = `
+Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. Use ONLY the provided FMP JSON data to build your arguments.
 
-const MOAT_ANALYSIS_PROMPT = [
-    'Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}\'s competitive advantages.',
-    'Concept: An "economic moat" is a company\'s ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.',
-    'Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat\'s strength.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    '# Economic Moat Analysis: {companyName} ({tickerSymbol})',
-    '',
-    '## 1. What Gives This Company Its Edge? (Sources of the Moat)',
-    'Analyze the data for signs of a durable competitive advantage. Discuss:',
-    '- **Return on Invested Capital (ROIC):** Calculate a simplified ROIC using (EBIT / (totalAssets - totalCurrentLiabilities)). Explain this as the "gold standard" for moat analysis: it shows how much profit the company generates for every dollar of capital invested. A consistently high ROIC (>15%) is a strong sign of a moat.',
-    '- **Pricing Power:** Are the ProfitMargin and OperatingMarginTTM consistently high? Explain this as a sign that the company can charge more for its products without losing customers, often due to a strong brand or unique technology.',
-    '- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company\'s Description. Does it mention a "platform," "network," or "marketplace" that grows more valuable as more people use it? Does it sell "enterprise software" or "integrated systems" that would be difficult for a customer to switch away from?',
-    '- **Shareholder Returns (ROE):** Is the ReturnOnEquityTTM (ROE) high? Explain this as a sign that management is highly effective at turning shareholder money into profits, a hallmark of a well-run company.',
-    '',
-    '## 2. How Strong is the Castle Wall? (Moat Sustainability)',
-    'Assess how sustainable this advantage might be by looking at:',
-    '- **Reinvesting in the Business:** Are capitalExpenditures (from CASH_FLOW) significant? Explain this as the company spending money to strengthen its moat, like building higher castle walls.',
-    '- **Financial Fortress:** Is the balance sheet strong (low Debt-to-Equity)? A company with low debt is better equipped to survive tough times and fight off competitors.',
-    '',
-    '## 3. The Verdict: How Wide is the Moat?',
-    'Based on all the evidence (quantitative and qualitative), provide a concluding assessment. Classify the moat as "Wide," "Narrow," or "None," and explain what this means for a long-term investor.',
-    '- **Wide Moat:** The company has strong, sustainable advantages (like high ROIC and clear network effects) that are very difficult for competitors to copy.',
-    '- **Narrow Moat:** The company has some advantages (like good profitability), but they could be overcome by competitors over time.',
-    '- **No Moat:** The company has no clear, sustainable competitive advantage and is vulnerable to competition.'
-].join('\n');
+Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.
 
-const DIVIDEND_SAFETY_PROMPT = [
-    'Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income.',
-    'Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn\'t threatened by high debt.',
-    'Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    '# Dividend Safety Analysis: {companyName} ({tickerSymbol})',
-    '',
-    '## 1. The Payout: What Are You Earning?',
-    '- **Current Dividend Yield:** [Value from OVERVIEW.DividendYield]%. Explain this as the annual return you get from dividends, like interest from a savings account.',
-    '',
-    '## 2. Can the Company Afford Its Dividend? (Payout Ratios)',
-    'This is the most important test. A company should pay its dividend from the money it actually makes.',
-    '- **Free Cash Flow (FCF) Payout Ratio:** Calculate this using (dividendPayout / (operatingCashflow - capitalExpenditures)). Explain this as the most conservative test: "Is the dividend covered by the true discretionary cash left after running and growing the business?" A low ratio here is an excellent sign of safety.',
-    '- **Earnings Payout Ratio:** (dividendPayout / netIncome). Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% means the company is paying out more than it earns, which is a red flag.',
-    '',
-    '## 3. What is the Track Record? (History & Consistency)',
-    'A company\'s past behavior is a good indicator of its future commitment to the dividend.',
-    '- **Dividend Growth:** Analyze the trend of dividendPayout over the last several years from the CASH_FLOW statements. Has the company consistently increased its dividend payment? Explain that a history of dividend growth is a powerful sign of a healthy, confident business.',
-    '',
-    '## 4. Does the Company Have a Safety Net? (Balance Sheet Health)',
-    'A strong company can protect its dividend even when times get tough.',
-    '- **Debt Load:** How has the Debt-to-Equity ratio (from BALANCE_SHEET) trended? Explain this like a personal mortgage: high or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.',
-    '- **Cash Cushion:** Examine the trend in cashAndShortTermInvestments (from BALANCE_SHEET). Does the company have a healthy cash pile to fall back on? This acts as a buffer to protect the dividend during a downturn.',
-    '',
-    '## 5. The Final Verdict: How Safe Are Your Dividend Checks?',
-    'Conclude with a clear rating and a simple, one-sentence justification.',
-    '- **"Very Safe":** The dividend has a history of growth, is easily covered by free cash flow, and the balance sheet is strong. Like a salary from a very stable job that gives you a raise every year.',
-    '- **"Safe":** The dividend is covered, but may lack a long history of growth or there might be a minor concern (like rising debt) to watch. Like a salary from a good job, but the company is taking on some new projects.',
-    '- **"At Risk":** The payout ratios are high, the dividend isn\'t growing, and/or the balance sheet is weak. The dividend could be cut if business slows down. Like a salary from a job that is facing financial trouble.'
-].join('\n');
+JSON Data:
+{jsonData}
 
-const GROWTH_OUTLOOK_PROMPT = [
-    'Role: You are a forward-looking equity analyst AI. Your goal is to identify the key signs of future growth for {companyName} and explain them in simple terms.',
-    'Concept: Growth outlook analysis tries to answer the question, "Where will this company be in the future?" We look at its history, recent performance, how it invests in itself, and what the market expects.',
-    'Output Format: A concise markdown summary of key growth indicators and a concluding outlook.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    '# Growth Outlook: {companyName} ({tickerSymbol})',
-    '',
-    '## 1. What is the Long-Term Track Record? (Historical Growth)',
-    'Analyze the annual INCOME_STATEMENT data for the last 3-5 years.',
-    '- **Revenue & Earnings Trend:** Has the company consistently grown its totalRevenue and netIncome over the long term? Explain that a proven track record is a strong sign of a durable business.',
-    '',
-    '## 2. Is the Company Growing Right Now? (Recent Momentum)',
-    'Analyze the most recent growth signals from the OVERVIEW data:',
-    '- **Quarterly Growth:** What do the QuarterlyRevenueGrowthYOY and QuarterlyEarningsGrowthYOY figures tell us? Explain this as a recent "report card" on the company\'s performance.',
-    '',
-    '## 3. Are You Paying a Fair Price for Growth? (PEG Ratio)',
-    'It\'s important not to overpay for growth. Analyze the valuation of the company\'s growth:',
-    '- **PEG Ratio:** [Value from OVERVIEW.PEGRatio]. Explain this as a key metric that balances the stock\'s P/E ratio with its growth rate. A PEG ratio under 1.0 is often considered a sign that the stock is reasonably priced for its growth.',
-    '',
-    '## 4. Planting Seeds for Future Trees (Reinvestment)',
-    'A company must invest today to grow tomorrow. Examine the CASH_FLOW statement for signs of this:',
-    '- **Capital Expenditures:** What is the trend in capitalExpenditures? Explain this as the company spending money on new projects, equipment, or technology to fuel future growth.',
-    '',
-    '## 5. What Does the Market Expect? (Future Outlook)',
-    'Interpret the market\'s view on the company\'s growth prospects from the OVERVIEW data:',
-    '- **Earnings Expectations (Forward P/E):** Compare the ForwardPE to the current PERatio. If the Forward P/E is lower, it suggests that analysts expect earnings to grow over the next year.',
-    '- **Wall Street\'s Target:** How does the AnalystTargetPrice compare to the current stock price? This gives us a hint about how much growth professional analysts are forecasting.',
-    '',
-    '## 6. Final Outlook: What is the Growth Story?',
-    'Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?'
-].join('\n');
+# The Investment Debate: {companyName} ({tickerSymbol})
 
-const RISK_ASSESSMENT_PROMPT = [
-    'Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply.',
-    'Concept: Risk assessment is about looking for potential problems that could hurt a company or its stock price. We will check the company\'s financial health, its stock price valuation, and its business operations for any warning signs.',
-    'Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.',
-    '',
-    'JSON Data:',
-    '{jsonData}',
-    '',
-    '# Uncovering the Risks: {companyName} ({tickerSymbol})',
-    '',
-    '## 1. Financial Risks (Is the Foundation Solid?)',
-    'These are risks related to the company\'s balance sheet and cash flow.',
-    '- **Debt Load (Leverage):** Is the Debt-to-Equity ratio high? Explain this risk like having a large mortgage; it can become a heavy burden, especially if business slows down.',
-    '- **Paying Short-Term Bills (Liquidity):** Is the Current Ratio low (below 1.5)? This could suggest the company might have trouble paying its bills over the next year without selling long-term assets.',
-    '- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is operatingCashflow significantly lower than netIncome? This can be a red flag that the company\'s reported profits aren\'t turning into actual cash.',
-    '- **Dividend Sustainability:** Is the dividendPayout greater than netIncome? This is a major warning sign that the dividend is being funded by debt or cash reserves, not profits, and could be at risk of a cut.',
-    '',
-    '## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)',
-    'These are risks related to the stock\'s price and behavior in the market.',
-    '- **Negative Market Sentiment (Short Interest):** Is the ShortPercentOutstanding high (e.g., >10%)? Explain that this means a significant number of investors are betting that the stock price will fall.',
-    '- **Volatility (The "Drama" Level):** Is the Beta (from OVERVIEW) greater than 1? This means the stock tends to have bigger price swings (both up and down) than the overall market.',
-    '- **Priced for Perfection? (Valuation Risk):** Is the PERatio or PriceToSalesRatioTTM exceptionally high? Explain that a stock price is built on high expectations and could fall sharply if the company delivers even slightly disappointing news.',
-    '',
-    '## 3. Business Risks (Are There Cracks in the Operations?)',
-    'These are risks related to the day-to-day health of the business.',
-    '- **Recession Sensitivity (Economic Cycle Risk):** Based on the company\'s Sector, is it "Cyclical" (like automotive or travel) or "Defensive" (like utilities or consumer staples)? Cyclical companies are often hit harder during economic downturns.',
-    '- **Losing Steam? (Growth Deceleration):** Is the QuarterlyRevenueGrowthYOY negative or showing a sharp slowdown? This is a key warning sign that the business is facing headwinds.',
-    '- **Shrinking Profits? (Margin Compression):** Are profitability margins (ProfitMargin, OperatingMarginTTM) trending downwards? This means it\'s getting harder for the company to make a profit on what it sells.',
-    '',
-    '## 4. The Bottom Line: What Are the Biggest Worries?',
-    'Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.'
-].join('\n');
+## The Bull Case (The Bright Side: Reasons to be Optimistic)
+Construct a positive argument for the company. For each point, state the supporting data and then briefly explain *why* it matters to an investor.
+Focus on strengths like:
+- **Strong Growth:** Is 'revenue' or 'netIncome' consistently increasing? (Use 'income_statement' data).
+- **High Profitability:** Is the company a good money-maker? (Use 'returnOnEquity' from 'key_metrics'). Explain ROE as a "grade" for how well management uses shareholder money.
+- **Solid Cash Flow:** Is the business generating real cash? (Use 'operatingCashFlow' from 'cash_flow_statement'). Explain this as the company's "lifeblood".
+- **Potential Bargain:** Does the stock seem cheap relative to its earnings? (Use 'peRatio' from 'key_metrics').
+- **Wall Street Optimism:** Do the 'stock_grade_news' entries show recent "Buy" ratings or upgrades, indicating that market experts are also bullish?
+
+## The Bear Case (The Cautious View: Reasons for Concern)
+Construct a negative argument for the company. For each point, state the supporting data and explain the potential risk.
+Focus on weaknesses like:
+- **Heavy Debt Load:** Does the company owe a lot of money? (Use 'debtToEquity' from 'key_metrics'). Explain this like having a large mortgage; it can be risky if times get tough.
+- **Slowing Growth or Profitability:** Are sales or profits shrinking, potentially falling behind competitors? (Use 'income_statement' data).
+- **Weak Cash Flow:** Is the company burning through cash? (Use 'cash_flow_statement' data).
+- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples like 'priceToSalesRatio' or 'evToSales' from 'key_metrics').
+- **Analyst Skepticism:** Do the 'stock_grade_news' entries show "Sell" ratings or downgrades?
+
+## The Final Takeaway: What's the Core Debate?
+Conclude with a 1-2 sentence summary that frames the central conflict for an investor. For example: "The core debate for {companyName} is whether its strong profitability and growth (the bull case) are enough to outweigh its significant debt load and increasing competition (the bear case)."
+`.trim();
+
+const MOAT_ANALYSIS_PROMPT = `
+Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using FMP data.
+Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.
+Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
+
+JSON Data:
+{jsonData}
+
+# Economic Moat Analysis: {companyName} ({tickerSymbol})
+
+## 1. What Gives This Company Its Edge? (Sources of the Moat)
+Analyze the data for signs of a durable competitive advantage. Discuss:
+- **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital']. Explain this as the "gold standard" for moat analysis: it shows how much profit the company generates for every dollar of capital invested. A consistently high ROIC (>15%) is a strong sign of a moat.
+- **Pricing Power:** Are the 'netProfitMargin' and 'operatingIncome' (from 'income_statement') consistently high? Explain this as a sign that the company can charge more for its products without losing customers, often due to a strong brand or unique technology.
+- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company's 'description' from 'company_profile'. Does it mention a "platform," "network," or "marketplace" that grows more valuable as more people use it? Does it sell "enterprise software" or "integrated systems" that would be difficult for a customer to switch away from?
+- **Shareholder Returns (ROE):** Is the 'returnOnEquity' from 'key_metrics' high? Explain this as a sign that management is highly effective at turning shareholder money into profits, a hallmark of a well-run company.
+
+## 2. How Strong is the Castle Wall? (Moat Sustainability)
+Assess how sustainable this advantage might be by looking at:
+- **Reinvesting in the Business:** Are 'capitalExpenditure' (from 'cash_flow_statement') significant? Explain this as the company spending money to strengthen its moat, like building higher castle walls.
+- **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity' from 'key_metrics')? A company with low debt is better equipped to survive tough times and fight off competitors.
+
+## 3. The Verdict: How Wide is the Moat?
+Based on all the evidence (quantitative and qualitative), provide a concluding assessment. Classify the moat as "Wide," "Narrow," or "None," and explain what this means for a long-term investor.
+- **Wide Moat:** The company has strong, sustainable advantages (like high ROIC and clear network effects) that are very difficult for competitors to copy.
+- **Narrow Moat:** The company has some advantages (like good profitability), but they could be overcome by competitors over time.
+- **No Moat:** The company has no clear, sustainable competitive advantage and is vulnerable to competition.
+`.trim();
+
+const DIVIDEND_SAFETY_PROMPT = `
+Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income, using FMP data.
+Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn't threatened by high debt.
+Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.
+
+JSON Data:
+{jsonData}
+
+# Dividend Safety Analysis: {companyName} ({tickerSymbol})
+
+## 1. The Payout: What Are You Earning?
+- **Current Dividend Yield:** [Value from 'key_metrics.dividendYield']%. Explain this as the annual return you get from dividends, like interest from a savings account.
+
+## 2. Can the Company Afford Its Dividend? (Payout Ratios)
+This is the most important test. A company should pay its dividend from the money it actually makes.
+- **Free Cash Flow (FCF) Payout Ratio:** Calculate this using ('cash_flow_statement.dividendsPaid' / 'cash_flow_statement.freeCashFlow'). Explain this as the most conservative test: "Is the dividend covered by the true discretionary cash left after running and growing the business?" A low ratio here is an excellent sign of safety.
+- **Earnings Payout Ratio:** ('cash_flow_statement.dividendsPaid' / 'income_statement.netIncome'). Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% means the company is paying out more than it earns, which is a red flag.
+
+## 3. What is the Track Record? (History & Consistency)
+A company's past behavior is a good indicator of its future commitment to the dividend.
+- **Dividend Growth:** Analyze the trend of 'dividendsPaid' over the last several years from the 'cash_flow_statement' array. Has the company consistently increased its dividend payment? Explain that a history of dividend growth is a powerful sign of a healthy, confident business.
+
+## 4. Does the Company Have a Safety Net? (Balance Sheet Health)
+A strong company can protect its dividend even when times get tough.
+- **Debt Load:** How has the 'debtToEquity' ratio (from 'key_metrics') trended? Explain this like a personal mortgage: high or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.
+- **Cash Cushion:** Examine the trend in 'cashAndCashEquivalents' (from 'balance_sheet_statement'). Does the company have a healthy cash pile to fall back on? This acts as a buffer to protect the dividend during a downturn.
+
+## 5. The Final Verdict: How Safe Are Your Dividend Checks?
+Conclude with a clear rating and a simple, one-sentence justification.
+- **"Very Safe":** The dividend has a history of growth, is easily covered by free cash flow, and the balance sheet is strong. Like a salary from a very stable job that gives you a raise every year.
+- **"Safe":** The dividend is covered, but may lack a long history of growth or there might be a minor concern (like rising debt) to watch. Like a salary from a good job, but the company is taking on some new projects.
+- **"At Risk":** The payout ratios are high, the dividend isn't growing, and/or the balance sheet is weak. The dividend could be cut if business slows down. Like a salary from a job that is facing financial trouble.
+`.trim();
+
+const GROWTH_OUTLOOK_PROMPT = `
+Role: You are a forward-looking equity analyst AI. Your goal is to identify the key signs of future growth for {companyName} and explain them in simple terms, using FMP data.
+Concept: Growth outlook analysis tries to answer the question, "Where will this company be in the future?" We look at its history, recent performance, how it invests in itself, and what the market expects.
+Output Format: A concise markdown summary of key growth indicators and a concluding outlook.
+
+JSON Data:
+{jsonData}
+
+# Growth Outlook: {companyName} ({tickerSymbol})
+
+## 1. What is the Long-Term Track Record? (Historical Growth)
+Analyze the annual 'income_statement' data for the last 3-5 years.
+- **Revenue & Earnings Trend:** Has the company consistently grown its 'revenue' and 'netIncome' over the long term? Explain that a proven track record is a strong sign of a durable business.
+
+## 2. Are You Paying a Fair Price for Growth? (Valuation)
+It's important not to overpay for growth. Analyze the valuation of the company's growth:
+- **P/E Ratio:** [Value from 'key_metrics.peRatio']. A high P/E can indicate that the market expects high future growth.
+- **EV to Sales Ratio:** [Value from 'key_metrics.evToSales']. This can be useful for growth companies that are not yet profitable.
+
+## 3. Planting Seeds for Future Trees (Reinvestment)
+A company must invest today to grow tomorrow. Examine the data for signs of this:
+- **R&D as a Percentage of Revenue:** [Value from 'key_metrics.researchAndDevelopementToRevenue']. A high value suggests a strong commitment to innovation.
+- **Capex as a Percentage of Revenue:** [Value from 'key_metrics.capexToRevenue']. This shows how much the company is investing in physical assets to fuel future growth.
+
+## 4. What Does the Market Expect? (Future Outlook)
+Interpret the market's view on the company's growth prospects:
+- **Analyst Grades:** Review the 'stock_grade_news' array. Do recent analyst actions ("Buy", "Hold", "Sell") suggest optimism or pessimism about the company's growth?
+
+## 5. Final Outlook: What is the Growth Story?
+Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?
+`.trim();
+
+const RISK_ASSESSMENT_PROMPT = `
+Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply, using FMP data.
+Concept: Risk assessment is about looking for potential problems that could hurt a company or its stock price. We will check the company's financial health, its stock price valuation, and its business operations for any warning signs.
+Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.
+
+JSON Data:
+{jsonData}
+
+# Uncovering the Risks: {companyName} ({tickerSymbol})
+
+## 1. Financial Risks (Is the Foundation Solid?)
+These are risks related to the company's balance sheet and cash flow.
+- **Debt Load (Leverage):** Is the 'debtToEquity' ratio from 'key_metrics' high? Explain this risk like having a large mortgage; it can become a heavy burden, especially if business slows down.
+- **Paying Short-Term Bills (Liquidity):** Is the 'currentRatio' from 'key_metrics' low (below 1.5)? This could suggest the company might have trouble paying its bills over the next year without selling long-term assets.
+- **"Real" Cash vs. "Paper" Profit (Earnings Quality):** Is 'operatingCashFlow' from 'cash_flow_statement' significantly lower than 'netIncome' from 'income_statement'? This can be a red flag that the company's reported profits aren't turning into actual cash.
+- **Dividend Sustainability:** Is the 'dividendsPaid' from 'cash_flow_statement' greater than 'netIncome' from 'income_statement'? This is a major warning sign that the dividend is being funded by debt or cash reserves, not profits, and could be at risk of a cut.
+
+## 2. Market & Stock Price Risks (Is the Stock Itself Risky?)
+These are risks related to the stock's price and behavior in the market.
+- **Volatility (The "Drama" Level):** Is the 'beta' from 'company_profile' greater than 1? This means the stock tends to have bigger price swings (both up and down) than the overall market.
+- **Priced for Perfection? (Valuation Risk):** Are the 'peRatio' or 'priceToSalesRatio' from 'key_metrics' exceptionally high? Explain that a stock price is built on high expectations and could fall sharply if the company delivers even slightly disappointing news.
+- **Analyst Pessimism:** Do the 'stock_grade_news' entries show "Sell" ratings or downgrades? This indicates that some experts are betting against the stock.
+
+## 3. Business Risks (Are There Cracks in the Operations?)
+These are risks related to the day-to-day health of the business.
+- **Recession Sensitivity (Economic Cycle Risk):** Based on the company's 'sector' from 'company_profile', is it "Cyclical" (like Consumer Cyclical or Industrials) or "Defensive" (like Utilities or Consumer Defensive)? Cyclical companies are often hit harder during economic downturns.
+- **Shrinking Profits? (Margin Compression):** Are profitability margins like 'netProfitMargin' from 'key_metrics' trending downwards over the past few years? This means it's getting harder for the company to make a profit on what it sells.
+
+## 4. The Bottom Line: What Are the Biggest Worries?
+Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
+`.trim();
 
 const CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
@@ -1214,7 +1215,7 @@ async function callGeminiApiWithTools(contents) {
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT (v7.4.0) ---
 
-function _renderGroupedStockList(container, stocksWithData, listType) {
+async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
     if (stocksWithData.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
@@ -1222,7 +1223,7 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
     }
 
     const groupedBySector = stocksWithData.reduce((acc, stock) => {
-        const sector = get(stock, 'cachedData.OVERVIEW.Sector', 'Unknown');
+        const sector = get(stock, 'fmpData.company_profile.sector', 'Unknown');
         if (!acc[sector]) acc[sector] = [];
         acc[sector].push(stock);
         return acc;
@@ -1234,7 +1235,7 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
     sortedSectors.forEach(sector => {
         const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
         html += `
-            <details class="sector-group">
+            <details class="sector-group" open>
                 <summary class="sector-header">
                     <span>${sanitizeText(sector)}</span>
                     <span class="sector-toggle-icon"></span>
@@ -1243,22 +1244,25 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
                     <ul class="divide-y divide-gray-200">`;
         
         stocks.forEach(stock => {
-            const cached = stock.cachedData;
-            const quote = get(cached, 'GLOBAL_QUOTE.Global Quote', {});
+            const fmp = stock.fmpData;
+            const quote = fmp.stock_quote || {};
+            const profile = fmp.company_profile || {};
+            const metrics = fmp.key_metrics || {};
+            const income = fmp.income_statement || {};
             
-            const priceStr = get(quote, '05. price');
-            const changeStr = get(quote, '10. change percent');
-
-            const priceNum = parseFloat(priceStr);
-            const changeNum = parseFloat(changeStr);
+            const priceNum = get(quote, 'price');
+            const changeNum = get(quote, 'changePercentage');
 
             const displayPrice = !isNaN(priceNum) ? `$${priceNum.toFixed(2)}` : 'N/A';
             const displayChange = !isNaN(changeNum) ? `${changeNum.toFixed(2)}%` : 'N/A';
             const changeColorClass = !isNaN(changeNum) && changeNum >= 0 ? 'price-gain' : 'price-loss';
             
-            const peRatio = get(cached, 'OVERVIEW.PERatio', 'N/A');
-            const marketCap = formatLargeNumber(get(cached, 'OVERVIEW.MarketCapitalization', 'N/A'));
-            const refreshedAt = cached.cachedAt ? cached.cachedAt.toDate().toLocaleString() : 'N/A';
+            const netIncome = get(income, 'netIncome', 0);
+            const marketCap = get(profile, 'marketCap', 0);
+            const peRatio = (marketCap && netIncome) ? (marketCap / netIncome).toFixed(2) : 'N/A';
+            
+            const displayMarketCap = formatLargeNumber(marketCap);
+            const refreshedAt = fmp.cachedAt ? fmp.cachedAt.toDate().toLocaleString() : 'N/A';
 
             html += `
                 <li class="dashboard-list-item-detailed">
@@ -1270,7 +1274,7 @@ function _renderGroupedStockList(container, stocksWithData, listType) {
                         <div><span class="metric-label">Price</span> ${displayPrice}</div>
                         <div class="${changeColorClass}"><span class="metric-label">Change</span> ${displayChange}</div>
                         <div><span class="metric-label">P/E</span> ${peRatio}</div>
-                        <div><span class="metric-label">Mkt Cap</span> ${marketCap}</div>
+                        <div><span class="metric-label">Mkt Cap</span> ${displayMarketCap}</div>
                     </div>
                     <div class="stock-actions">
                          <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
@@ -1295,15 +1299,15 @@ async function renderDashboard() {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
         portfolioCache = querySnapshot.docs.map(doc => doc.data());
 
-        const stockDataPromises = portfolioCache.map(stock => getStockDataFromCache(stock.ticker));
+        const stockDataPromises = portfolioCache.map(stock => getFmpStockData(stock.ticker));
         const results = await Promise.allSettled(stockDataPromises);
 
         const stocksWithData = portfolioCache.map((stock, index) => {
-            if (results[index].status === 'fulfilled') {
-                return { ...stock, cachedData: results[index].value };
+            if (results[index].status === 'fulfilled' && results[index].value) {
+                return { ...stock, fmpData: results[index].value };
             }
-            return { ...stock, cachedData: null }; // Mark as having no cached data
-        }).filter(stock => stock.cachedData); // Only include stocks with data
+            return { ...stock, fmpData: null }; // Mark as having no data
+        }).filter(stock => stock.fmpData); // Only include stocks with data
 
         const portfolioStocks = stocksWithData.filter(s => s.status === 'Portfolio');
         const watchlistStocks = stocksWithData.filter(s => s.status === 'Watchlist');
@@ -1377,12 +1381,12 @@ async function handleSaveStock(e) {
         // Save the stock to the portfolio list
         await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
 
-        // Check if the detailed data is cached. If not, fetch and cache it now.
-        const cacheDocRef = doc(db, CONSTANTS.DB_COLLECTION_CACHE, newTicker);
-        const cacheDocSnap = await getDoc(cacheDocRef);
-        if (!cacheDocSnap.exists()) {
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching data for ${newTicker}...`;
-            await fetchAndCacheStockData(newTicker);
+        // Check if the FMP data is cached. If not, fetch and cache it now.
+        const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
+        const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
+        if (fmpSnapshot.empty) {
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching FMP data for ${newTicker}...`;
+            await handleRefreshFmpData(newTicker);
         }
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
@@ -1469,37 +1473,10 @@ async function handleRefreshData(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Refreshing Alpha Vantage data for ${symbol}...`;
     try {
-        const refreshedData = await fetchAndCacheStockData(symbol);
+        await fetchAndCacheStockData(symbol);
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Rendering UI...`;
         
-        const portfolioInfo = portfolioCache.find(s => s.ticker === symbol);
-        const status = portfolioInfo ? portfolioInfo.status : null;
-        
-        // We need to re-fetch the FMP timestamp to keep the card consistent
-        let fmpTimestamp = null;
-        const fmpEndpointsRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
-        const q = query(fmpEndpointsRef, limit(1));
-        const fmpQuerySnapshot = await getDocs(q);
-        if (!fmpQuerySnapshot.empty) {
-            const firstDoc = fmpQuerySnapshot.docs[0].data();
-            fmpTimestamp = firstDoc.cachedAt || null;
-        }
-
-        const newCardHtml = renderOverviewCard(refreshedData, symbol, status, fmpTimestamp);
-
-        const oldCard = document.getElementById(`card-${symbol}`);
-        if(oldCard) {
-             const tempDiv = document.createElement('div');
-             tempDiv.innerHTML = newCardHtml;
-             oldCard.replaceWith(tempDiv.firstElementChild);
-             
-             const timeSeries = refreshedData.TIME_SERIES_DAILY ? refreshedData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
-             const quoteData = refreshedData.GLOBAL_QUOTE ? refreshedData.GLOBAL_QUOTE['Global Quote'] : {};
-             const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
-             renderSparkline(`sparkline-${symbol}`, timeSeries, change);
-        } else { 
-            await displayStockCard(symbol);
-        }
+        await displayStockCard(symbol);
         await renderDashboard();
     } catch (error) {
         console.error("Error refreshing stock data:", error);
@@ -1531,16 +1508,19 @@ async function handleResearchSubmit(e) {
         }
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
-        const overviewData = await callApi(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${alphaVantageApiKey}`);
         
-        if (!overviewData.Symbol) {
+        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${fmpApiKey}`;
+        const profileData = await callApi(profileUrl);
+
+        if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
             throw new Error(`Could not fetch data for ${symbol}. It may be an invalid ticker.`);
         }
+        const overviewData = profileData[0];
 
         const newStock = {
-            ticker: overviewData.Symbol,
-            companyName: overviewData.Name,
-            exchange: overviewData.Exchange,
+            ticker: overviewData.symbol,
+            companyName: overviewData.companyName,
+            exchange: overviewData.exchange,
             isEditMode: false
         };
         
@@ -1565,28 +1545,31 @@ async function displayStockCard(ticker) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading card for ${ticker}...`;
     
     try {
-        const stockData = await getAndTransformFmpDataForAnalysis(ticker);
+        const stockData = await getFmpStockData(ticker);
+        if (!stockData) {
+            throw new Error(`Could not load required FMP data for ${ticker}. Please ensure data is cached.`);
+        }
 
         const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
         const status = portfolioInfo ? portfolioInfo.status : null;
         
-        let fmpTimestamp = null;
-        const fmpEndpointsRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, ticker, 'endpoints');
-        const q = query(fmpEndpointsRef, limit(1));
-        const fmpQuerySnapshot = await getDocs(q);
-        if (!fmpQuerySnapshot.empty) {
-            const firstDoc = fmpQuerySnapshot.docs[0].data();
-            fmpTimestamp = firstDoc.cachedAt || null;
+        const newCardHtml = renderOverviewCard(stockData, ticker, status);
+
+        const container = document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT);
+        const oldCard = document.getElementById(`card-${ticker}`);
+        if(oldCard) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newCardHtml;
+            oldCard.replaceWith(tempDiv.firstElementChild);
+        } else {
+            container.insertAdjacentHTML('beforeend', newCardHtml);
         }
 
-        const newCardHtml = renderOverviewCard(stockData, ticker, status, fmpTimestamp);
-
-        document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).insertAdjacentHTML('beforeend', newCardHtml);
-        
-        const timeSeries = stockData.TIME_SERIES_DAILY ? stockData.TIME_SERIES_DAILY['Time Series (Daily)'] : null;
-        const quoteData = stockData.GLOBAL_QUOTE ? stockData.GLOBAL_QUOTE['Global Quote'] : {};
-        const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
-        renderSparkline(`sparkline-${ticker}`, timeSeries, change);
+        // Sparkline rendering would need a historical data source from FMP.
+        // This part is commented out as the FMP historical endpoint wasn't specified.
+        // const timeSeries = ... ; 
+        // const change = get(stockData, 'stock_quote.change', 0);
+        // renderSparkline(`sparkline-${ticker}`, timeSeries, change);
 
     } catch(error) {
         console.error(`Error displaying card for ${ticker}:`, error);
@@ -1671,8 +1654,8 @@ async function handleFetchNews(symbol) {
     button.textContent = 'Analyzing...';
 
     try {
-        const stockData = await getStockDataFromCache(symbol);
-        const companyName = get(stockData, 'OVERVIEW.Name', symbol);
+        const stockData = await getFmpStockData(symbol);
+        const companyName = get(stockData, 'company_profile.companyName', symbol);
         const query = encodeURIComponent(`${companyName} (${symbol}) stock market news`);
         const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${query}&sort=date&dateRestrict=m[1]`;
         
@@ -1705,8 +1688,8 @@ async function handleFetchNews(symbol) {
 
             const sentiments = JSON.parse(jsonString);
             
-            if (Array.isArray(sentiments) && sentiments.length === articlesForPrompt.length) {
-                const articlesWithSentiment = sentiments.map((sentiment, index) => ({
+            if (Array.isArray(sentiments) && sentiments.length > 0) {
+                 const articlesWithSentiment = sentiments.map((sentiment, index) => ({
                     ...sentiment,
                     title: recentArticles[index].title,
                     link: recentArticles[index].link
@@ -1968,14 +1951,17 @@ function renderSectorButtons() {
     }).join('');
 }
 
-function renderOverviewCard(data, symbol, status, fmpTimestamp) {
-    const overviewData = data.OVERVIEW;
-    if (!overviewData || !overviewData.Symbol) return '';
+function renderOverviewCard(data, symbol, status) {
+    const profile = get(data, 'company_profile', {});
+    const quote = get(data, 'stock_quote', {});
+    const metrics = get(data, 'key_metrics', {});
+    const income = get(data, 'income_statement', {});
 
-    const quoteData = data.GLOBAL_QUOTE ? data.GLOBAL_QUOTE['Global Quote'] : {};
-    const price = quoteData && quoteData['05. price'] ? parseFloat(quoteData['05. price']).toFixed(2) : 'N/A';
-    const change = quoteData && quoteData['09. change'] ? parseFloat(quoteData['09. change']) : 0;
-    const changePercent = quoteData && quoteData['10. change percent'] ? parseFloat(quoteData['10. change percent'].replace('%','')).toFixed(2) : 0;
+    if (!profile.symbol) return '';
+
+    const price = get(quote, 'price', 0);
+    const change = get(quote, 'change', 0);
+    const changePercent = get(quote, 'changePercentage', 0);
     const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
     const changeSign = change >= 0 ? '+' : '';
 
@@ -1985,25 +1971,27 @@ function renderOverviewCard(data, symbol, status, fmpTimestamp) {
     } else if (status === 'Watchlist') {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
     }
+
+    const marketCap = formatLargeNumber(get(profile, 'marketCap'));
+    const netIncome = get(income, 'netIncome', 0);
+    const peRatio = (marketCap && netIncome) ? (profile.marketCap / netIncome).toFixed(2) : 'N/A';
     
-    const sma50 = overviewData['50DayMovingAverage'] && overviewData['50DayMovingAverage'] !== "None" ? parseFloat(overviewData['50DayMovingAverage']).toFixed(2) : "N/A";
-    const marketCap = formatLargeNumber(overviewData.MarketCapitalization);
-    const peRatio = overviewData.PERatio !== "None" ? overviewData.PERatio : "N/A";
-    const sma200 = overviewData['200DayMovingAverage'] && overviewData['200DayMovingAverage'] !== "None" ? `$${parseFloat(overviewData['200DayMovingAverage']).toFixed(2)}` : "N/A";
-    
-    const avTimestampString = data.cachedAt ? `Alpha Vantage Data Stored On: ${data.cachedAt.toDate().toLocaleString()}` : '';
-    const fmpTimestampString = fmpTimestamp ? `FMP Data Stored On: ${fmpTimestamp.toDate().toLocaleDateString()}` : '';
+    const sma50 = get(quote, 'priceAvg50', 'N/A');
+    const sma200 = get(quote, 'priceAvg200', 'N/A');
+
+    const avTimestampString = data.alphaVantageCachedAt ? `Alpha Vantage Data Stored On: ${data.alphaVantageCachedAt.toDate().toLocaleString()}` : '';
+    const fmpTimestampString = data.cachedAt ? `FMP Data Stored On: ${data.cachedAt.toDate().toLocaleDateString()}` : '';
 
     return `
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(overviewData.Name)} (${sanitizeText(overviewData.Symbol)}) ${statusBadge}</h2>
-                    <p class="text-gray-500">${sanitizeText(overviewData.Exchange)} | ${sanitizeText(overviewData.Sector)}</p>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(profile.companyName)} (${sanitizeText(profile.symbol)}) ${statusBadge}</h2>
+                    <p class="text-gray-500">${sanitizeText(profile.exchange)} | ${sanitizeText(profile.sector)}</p>
                 </div>
                 <div class="text-right flex-shrink-0">
-                    <p class="text-2xl font-bold">${price}</p>
-                    <p class="text-sm font-semibold ${changeColorClass}">${changeSign}${change.toFixed(2)} (${changeSign}${changePercent}%)</p>
+                    <p class="text-2xl font-bold">$${price.toFixed(2)}</p>
+                    <p class="text-sm font-semibold ${changeColorClass}">${changeSign}${change.toFixed(2)} (${changeSign}${changePercent.toFixed(2)}%)</p>
                 </div>
             </div>
             
@@ -2011,13 +1999,13 @@ function renderOverviewCard(data, symbol, status, fmpTimestamp) {
                 <canvas id="sparkline-${symbol}"></canvas>
             </div>
 
-            <p class="mt-4 text-sm text-gray-600">${sanitizeText(overviewData.Description)}</p>
+            <p class="mt-4 text-sm text-gray-600">${sanitizeText(profile.description)}</p>
             
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
                 <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
-                <div><p class="text-sm text-gray-500">50-Day Avg</p><p class="text-lg font-semibold">$${sanitizeText(sma50)}</p></div>
-                <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">${sanitizeText(sma200)}</p></div>
+                <div><p class="text-sm text-gray-500">50-Day MA</p><p class="text-lg font-semibold">$${sma50.toFixed(2)}</p></div>
+                <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">$${sma200.toFixed(2)}</p></div>
             </div>
 
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
@@ -2291,19 +2279,6 @@ function handleDeleteFmpEndpoint(id) {
 // --- EVENT LISTENER SETUP ---
 
 function setupGlobalEventListeners() {
-    document.body.addEventListener('click', (e) => {
-        const accordionToggle = e.target.closest('#financial-analysis-data-accordion button, #undervalued-analysis-data-accordion button, #custom-analysis-data-accordion button');
-        if (accordionToggle) {
-            e.preventDefault();
-            const content = accordionToggle.nextElementSibling;
-            const icon = accordionToggle.querySelector('svg');
-            if (content && icon) {
-                content.classList.toggle('hidden');
-                icon.classList.toggle('rotate-180');
-            }
-        }
-    });
-
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
         const target = e.target.closest('button, summary');
         if (!target) return;
@@ -2730,13 +2705,11 @@ function handleSectorSelection(sectorName) {
     const modalTitle = document.getElementById('custom-analysis-modal-title');
     const selectorContainer = document.getElementById('custom-analysis-selector-container');
     const contentArea = document.getElementById('custom-analysis-content');
-    const accordion = document.getElementById('custom-analysis-data-accordion');
 
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
     
     selectorContainer.innerHTML = '';
-    accordion.classList.add('hidden');
 
     const creativeAnalysis = creativePromptMap[sectorName];
     let creativeButtonHtml = '';
@@ -2857,108 +2830,40 @@ async function getStockDataFromCache(symbol, collection = CONSTANTS.DB_COLLECTIO
     return data;
 }
 
-async function getAndTransformFmpDataForAnalysis(symbol) {
-    // 1. Fetch all FMP endpoint definitions to get their names
-    const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
-    const endpointNames = {};
-    endpointsSnapshot.forEach(doc => {
-        endpointNames[doc.id] = doc.data().name || 'Unknown';
-    });
-
-    // 2. Fetch all cached FMP data for the symbol
+async function getFmpStockData(symbol) {
     const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
     const fmpCacheSnapshot = await getDocs(fmpCacheRef);
 
     if (fmpCacheSnapshot.empty) {
-        throw new Error(`No FMP data has been cached for ${symbol} yet. Use the "Refresh FMP" button first.`);
+        console.warn(`No FMP data found for ${symbol}.`);
+        return null;
     }
 
-    // 3. Process and combine the data
-    const rawFmpData = {};
-    let latestCacheTimestamp = null;
-    fmpCacheSnapshot.docs.forEach(doc => {
-        const endpointName = endpointNames[doc.id];
-        const endpointData = doc.data();
-        if (endpointName) {
-            rawFmpData[endpointName] = endpointData.data;
-            if (!latestCacheTimestamp || endpointData.cachedAt.toDate() > latestCacheTimestamp) {
-                latestCacheTimestamp = endpointData.cachedAt.toDate();
+    const allData = { cachedAt: null };
+    let latestTimestamp = null;
+
+    fmpCacheSnapshot.forEach(docSnap => {
+        const docData = docSnap.data();
+        const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
+        allData[endpointName] = docData.data[0]; // Assuming data is always an array with one object
+
+        if (docData.cachedAt) {
+            if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
+                latestTimestamp = docData.cachedAt;
             }
         }
     });
-    
-    // 4. Transform the combined data into the Alpha Vantage-like structure
-    const transformedData = {
-        OVERVIEW: {},
-        GLOBAL_QUOTE: { 'Global Quote': {} },
-        INCOME_STATEMENT: [],
-        BALANCE_SHEET: [],
-        CASH_FLOW: [],
-        TIME_SERIES_DAILY: { 'Time Series (Daily)': {} },
-        cachedAt: Timestamp.fromDate(latestCacheTimestamp || new Date())
-    };
 
-    // --- Map Profile, Quote, and Key Metrics to OVERVIEW and GLOBAL_QUOTE ---
-    const profile = (rawFmpData['Company Profile'] || [])[0] || {};
-    const quote = (rawFmpData['Quote'] || [])[0] || {};
-    const keyMetrics = (rawFmpData['Key Metrics TTM'] || [])[0] || {};
+    allData.cachedAt = latestTimestamp;
+    
+    // Add alpha vantage data for sparkline if it exists
+    const avData = await getStockDataFromCache(symbol);
+    if(avData) {
+        allData.time_series_daily = get(avData, 'TIME_SERIES_DAILY.Time Series (Daily)');
+        allData.alphaVantageCachedAt = get(avData, 'cachedAt');
+    }
 
-    transformedData.OVERVIEW = {
-        Symbol: profile.symbol || symbol,
-        Name: profile.companyName || 'N/A',
-        Description: profile.description || 'N/A',
-        Exchange: profile.exchangeShortName || 'N/A',
-        Sector: profile.sector || 'N/A',
-        Industry: profile.industry || 'N/A',
-        MarketCapitalization: profile.mktCap || 0,
-        Beta: profile.beta || 'N/A',
-        '52WeekHigh': profile.range ? profile.range.split('-')[1].trim() : (quote.yearHigh || 'N/A'),
-        '52WeekLow': profile.range ? profile.range.split('-')[0].trim() : (quote.yearLow || 'N/A'),
-        '200DayMovingAverage': quote.priceAvg200 || 'N/A',
-        '50DayMovingAverage': quote.priceAvg50 || 'N/A',
-        AnalystTargetPrice: profile.lastDiv, // This is a placeholder; FMP has this in a separate, often paid, endpoint.
-        PERatio: keyMetrics.peRatioTTM || 'N/A',
-        PriceToSalesRatioTTM: keyMetrics.priceToSalesRatioTTM || 'N/A',
-        PriceToBookRatio: keyMetrics.priceToBookRatioTTM || 'N/A',
-        DividendYield: keyMetrics.dividendYieldTTM || 'N/A',
-        ReturnOnEquityTTM: keyMetrics.roeTTM || 'N/A',
-        PEGRatio: keyMetrics.pegRatioTTM || 'N/A',
-        ForwardPE: 'N/A', 
-        ProfitMargin: keyMetrics.netProfitMarginTTM || 'N/A',
-        OperatingMarginTTM: keyMetrics.operatingMarginTTM || 'N/A',
-        ReturnOnAssetsTTM: keyMetrics.roaTTM || 'N/A',
-        QuarterlyRevenueGrowthYOY: keyMetrics.revenueGrowth,
-        QuarterlyEarningsGrowthYOY: keyMetrics.netIncomeGrowth,
-    };
-
-    transformedData.GLOBAL_QUOTE['Global Quote'] = {
-        '05. price': quote.price || 'N/A',
-        '09. change': quote.change || 0,
-        '10. change percent': `${quote.changesPercentage || 0}%`,
-    };
-    
-    // --- Map Financial Statements ---
-    if (rawFmpData['Income Statement Annual']) {
-        transformedData.INCOME_STATEMENT = rawFmpData['Income Statement Annual'];
-    }
-    if (rawFmpData['Balance Sheet Annual']) {
-        transformedData.BALANCE_SHEET = rawFmpData['Balance Sheet Annual'];
-    }
-    if (rawFmpData['Cash Flow Annual']) {
-        transformedData.CASH_FLOW = rawFmpData['Cash Flow Annual'];
-    }
-    
-    // --- Map Historical Data for Sparkline ---
-    if (rawFmpData['Historical Daily']) {
-        const historicalData = (rawFmpData['Historical Daily'].historical || rawFmpData['Historical Daily']) || [];
-        historicalData.slice(0, 100).forEach(day => { // Limit to 100 for performance
-            transformedData.TIME_SERIES_DAILY['Time Series (Daily)'][day.date] = {
-                '4. close': day.close
-            };
-        });
-    }
-    
-    return transformedData;
+    return allData;
 }
 
 
@@ -2982,18 +2887,11 @@ async function handleViewFullData(symbol) {
 async function handleFinancialAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
-    const accordion = document.getElementById('financial-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-        
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
 
         const prompt = FINANCIAL_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
@@ -3007,7 +2905,6 @@ async function handleFinancialAnalysis(symbol) {
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3016,18 +2913,12 @@ async function handleFinancialAnalysis(symbol) {
 async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
-    const accordion = document.getElementById('undervalued-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
 
         const prompt = UNDERVALUED_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
@@ -3041,7 +2932,6 @@ async function handleUndervaluedAnalysis(symbol) {
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3050,18 +2940,11 @@ async function handleUndervaluedAnalysis(symbol) {
 async function handleBullBearAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Bull vs. Bear case for ${symbol}...`;
-    const accordion = document.getElementById('custom-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-    
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-        
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = BULL_VS_BEAR_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3072,7 +2955,6 @@ async function handleBullBearAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3081,18 +2963,11 @@ async function handleBullBearAnalysis(symbol) {
 async function handleMoatAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Moat analysis for ${symbol}...`;
-    const accordion = document.getElementById('custom-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-        
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3103,7 +2978,6 @@ async function handleMoatAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3112,18 +2986,11 @@ async function handleMoatAnalysis(symbol) {
 async function handleDividendSafetyAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Dividend Safety analysis for ${symbol}...`;
-    const accordion = document.getElementById('custom-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-    
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-        
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = DIVIDEND_SAFETY_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3134,7 +3001,6 @@ async function handleDividendSafetyAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3143,18 +3009,11 @@ async function handleDividendSafetyAnalysis(symbol) {
 async function handleGrowthOutlookAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Growth Outlook analysis for ${symbol}...`;
-    const accordion = document.getElementById('custom-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-    
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = GROWTH_OUTLOOK_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3165,7 +3024,6 @@ async function handleGrowthOutlookAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3174,18 +3032,11 @@ async function handleGrowthOutlookAnalysis(symbol) {
 async function handleRiskAssessmentAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Risk Assessment for ${symbol}...`;
-    const accordion = document.getElementById('custom-analysis-data-accordion');
-    const preTag = accordion?.querySelector('pre');
-    
     try {
-        const data = await getAndTransformFmpDataForAnalysis(symbol);
-        if (!data) throw new Error(`No FMP data found for ${symbol}.`);
-        
-        preTag.textContent = JSON.stringify(data, null, 2);
-        accordion.classList.remove('hidden');
-        
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
@@ -3196,7 +3047,6 @@ async function handleRiskAssessmentAnalysis(symbol) {
         openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        if (accordion) accordion.classList.add('hidden');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -3206,10 +3056,10 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Capital Allocators analysis for ${symbol}...`;
     try {
-        const data = await getStockDataFromCache(symbol);
-        if (!data) throw new Error(`No cached data found for ${symbol}.`);
-        const companyName = get(data, 'OVERVIEW.Name', 'the company');
-        const tickerSymbol = get(data, 'OVERVIEW.Symbol', symbol);
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.symbol', symbol);
         const prompt = CAPITAL_ALLOCATORS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol);
