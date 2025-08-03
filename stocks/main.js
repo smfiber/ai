@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.0"; 
+const APP_VERSION = "9.1.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1713,10 +1713,10 @@ async function displayMarketCalendar() {
     if (shouldFetchNewData) {
         try {
             const today = new Date();
-            const nextMonth = new Date();
-            nextMonth.setMonth(today.getMonth() + 1);
+            const nextWeek = new Date();
+            nextWeek.setDate(today.getDate() + 7); // Fetch one week of data
             const from = today.toISOString().split('T')[0];
-            const to = nextMonth.toISOString().split('T')[0];
+            const to = nextWeek.toISOString().split('T')[0];
 
             const [earningsData, ipoData] = await Promise.all([
                 callApi(`https://financialmodelingprep.com/api/v3/earning_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`),
