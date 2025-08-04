@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.4.1"; 
+const APP_VERSION = "9.5.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -2332,35 +2332,74 @@ function handleSectorSelection(sectorName) {
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
     
-    selectorContainer.innerHTML = '';
+    const analysisTypes = [
+        {
+            category: 'Data-Driven Analysis',
+            name: 'Market Trends',
+            promptName: 'MarketTrends',
+            description: 'Uses an AI agent to search recent news, identify top-performing companies in the sector, and generate a data-driven market summary.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+        },
+        {
+            category: 'Analysis',
+            name: creativePromptMap[sectorName]?.label || 'Playbook',
+            promptName: sectorName.replace(/\s/g, ''),
+            description: "Generates an in-depth analysis of a single, well-known company in the sector, focusing on its management's skill in capital allocation, styled like a professional investor letter.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
+        },
+        {
+            category: 'Analysis',
+            name: 'Disruptor',
+            promptName: 'DisruptorAnalysis',
+            description: "Identifies a high-growth, innovative company in the sector and analyzes its potential to disrupt established industry leaders, styled like a venture capital report.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+        },
+        {
+            category: 'Analysis',
+            name: 'Macro Trend',
+            promptName: 'MacroPlaybook',
+            description: "Identifies a powerful, multi-year macro trend (e.g., electrification) and analyzes a best-in-class company in the sector that is positioned to benefit from it.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
+        }
+    ];
 
-    const creativeAnalysis = creativePromptMap[sectorName];
-    let creativeButtonHtml = '';
-    if (creativeAnalysis) {
-        creativeButtonHtml = `
-            <div class="text-center">
-                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Analysis</span>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="${sectorName.replace(/\s/g, '')}">${creativeAnalysis.label}</button>
-                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="DisruptorAnalysis">Disruptor</button>
-                    <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MacroPlaybook">Macro Trend</button>
-                </div>
-            </div>
-        `;
+    const groupedByType = analysisTypes.reduce((acc, type) => {
+        if (!creativePromptMap[sectorName] && type.promptName === sectorName.replace(/\s/g, '')) {
+            return acc; // Skip the playbook button if no creative prompt exists
+        }
+        if (!acc[type.category]) {
+            acc[type.category] = [];
+        }
+        acc[type.category].push(type);
+        return acc;
+    }, {});
+
+    let html = '<div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">';
+    for (const category in groupedByType) {
+        html += `<div class="text-center">
+            <span class="block text-xs font-bold text-gray-500 uppercase mb-2">${category}</span>
+            <div class="flex flex-wrap justify-center gap-4">`;
+        
+        groupedByType[category].forEach(type => {
+            html += `
+                <button 
+                    class="flex flex-col items-center justify-center p-4 text-center bg-white rounded-lg shadow-md border hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1 w-40 h-40"
+                    data-sector="${sectorName}" 
+                    data-prompt-name="${type.promptName}"
+                    title="${type.description}">
+                    <div class="w-12 h-12 mb-2 text-indigo-600">
+                        ${type.svgIcon}
+                    </div>
+                    <span class="font-semibold text-gray-800">${type.name}</span>
+                </button>
+            `;
+        });
+        
+        html += `</div></div>`;
     }
+    html += '</div>';
 
-    let buttonsHtml = `
-        <div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">
-            <div class="text-center">
-                <span class="block text-xs font-bold text-gray-500 uppercase mb-2">Data-Driven Analysis</span>
-                <button class="sector-analysis-btn" data-sector="${sectorName}" data-prompt-name="MarketTrends">Market Trends</button>
-            </div>
-            ${creativeButtonHtml}
-        </div>
-    `;
-    
-    selectorContainer.innerHTML = buttonsHtml.replace(/<button class="sector-analysis-btn"/g, '<button class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm"');
-    
+    selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 }
 
