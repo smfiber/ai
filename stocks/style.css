@@ -215,14 +215,16 @@ body.modal-open {
  */
 #financial-analysis-content.prose h2,
 #undervalued-analysis-content.prose h2,
-#custom-analysis-content.prose h2 {
+#custom-analysis-content.prose h2,
+#ai-article-container.prose h2 {
     margin-top: 1.75em;
     margin-bottom: 1em;
 }
 
 #financial-analysis-content.prose h3,
 #undervalued-analysis-content.prose h3,
-#custom-analysis-content.prose h3 {
+#custom-analysis-content.prose h3,
+#ai-article-container.prose h3 {
     margin-top: 1.5em;
     margin-bottom: 0.5em;
 }
@@ -232,21 +234,25 @@ body.modal-open {
 #financial-analysis-content.prose ul,
 #undervalued-analysis-content.prose ul,
 #custom-analysis-content.prose p,
-#custom-analysis-content.prose ul {
+#custom-analysis-content.prose ul,
+#ai-article-container.prose p,
+#ai-article-container.prose ul {
     margin-bottom: 1em;
 }
 
 /* Enhanced list styling for better modal display */
 #financial-analysis-content.prose ul,
 #undervalued-analysis-content.prose ul,
-#custom-analysis-content.prose ul {
+#custom-analysis-content.prose ul,
+#ai-article-container.prose ul {
     padding-left: 1.5em; /* Add indentation */
     list-style-type: disc; /* Ensure bullets are visible */
 }
 
 #financial-analysis-content.prose ul li,
 #undervalued-analysis-content.prose ul li,
-#custom-analysis-content.prose ul li {
+#custom-analysis-content.prose ul li,
+#ai-article-container.prose ul li {
     margin-bottom: 0.5em; /* Space out list items */
 }
 
