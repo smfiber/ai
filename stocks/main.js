@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.0"; 
+const APP_VERSION = "9.5.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1164,6 +1164,18 @@ async function openRawDataViewer(ticker) {
             `<button data-symbol="${ticker}" class="${btn.class} text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
         ).join('');
         
+        // Add company description below buttons
+        const description = get(fmpData, 'company_profile.0.description', null);
+        if (description) {
+            const descriptionContainer = document.createElement('div');
+            descriptionContainer.className = 'mt-6 border-t pt-4';
+            descriptionContainer.innerHTML = `
+                <h3 class="text-lg font-bold text-gray-700 mb-2">Company Description</h3>
+                <p class="text-sm text-gray-600">${sanitizeText(description)}</p>
+            `;
+            aiButtonsContainer.insertAdjacentElement('afterend', descriptionContainer);
+        }
+
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
