@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.1"; 
+const APP_VERSION = "9.5.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1119,12 +1119,14 @@ async function openRawDataViewer(ticker) {
     const mainAccordionContent = document.getElementById('raw-data-accordion-content');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
+    const descriptionContainer = document.getElementById('company-description-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     mainAccordionContent.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
+    descriptionContainer.innerHTML = '';
 
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -1167,13 +1169,11 @@ async function openRawDataViewer(ticker) {
         // Add company description below buttons
         const description = get(fmpData, 'company_profile.0.description', null);
         if (description) {
-            const descriptionContainer = document.createElement('div');
             descriptionContainer.className = 'mt-6 border-t pt-4';
             descriptionContainer.innerHTML = `
                 <h3 class="text-lg font-bold text-gray-700 mb-2">Company Description</h3>
                 <p class="text-sm text-gray-600">${sanitizeText(description)}</p>
             `;
-            aiButtonsContainer.insertAdjacentElement('afterend', descriptionContainer);
         }
 
     } catch (error) {
@@ -1443,18 +1443,16 @@ async function displayMarketCalendar() {
     if (shouldFetchNewData) {
         try {
             const today = new Date();
-            const nextWeek = new Date();
-            nextWeek.setDate(today.getDate() + 7); // Fetch one week of data
             const from = today.toISOString().split('T')[0];
-            const to = nextWeek.toISOString().split('T')[0];
+            const to = from; // Fetch only one day of data
 
             const [earningsData, ipoData] = await Promise.all([
                 callApi(`https://financialmodelingprep.com/api/v3/earning_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`),
                 callApi(`https://financialmodelingprep.com/api/v3/ipo_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`)
             ]);
 
-            calendarEvents.earnings = earningsData || [];
-            calendarEvents.ipos = ipoData || [];
+            calendarEvents.earnings = (earningsData || []).filter(e => e.exchange && !e.exchange.includes('OTC'));
+            calendarEvents.ipos = (ipoData || []).filter(i => i.exchange && !i.exchange.includes('OTC'));
 
             const dataToCache = { 
                 earnings: calendarEvents.earnings, 
