@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.3.0"; 
+const APP_VERSION = "9.3.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -470,6 +470,18 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 `;
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
+const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const UTILITIES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const REAL_ESTATE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const MATERIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+
 
 const creativePromptMap = {
     'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
