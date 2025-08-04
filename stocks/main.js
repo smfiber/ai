@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.4.0"; 
+const APP_VERSION = "9.4.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -923,7 +923,7 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
                             <button class="dashboard-item-refresh bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Refresh</button>
                             <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2 text-right" title="Last Refreshed">Refreshed: ${refreshedAt}</p>
+                        <p class="text-xs text-gray-400 mt-2 text-right whitespace-nowrap" title="Last Refreshed">Refreshed: ${refreshedAt}</p>
                     </div>
                 </li>`;
         });
