@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.5"; 
+const APP_VERSION = "9.1.7"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -334,7 +334,7 @@ A company's past behavior is a good indicator of its future commitment to the di
 ## 4. Does the Company Have a Safety Net? (Balance Sheet Health)
 A strong company can protect its dividend even when times get tough.
 - **Debt Load:** How has the 'debtToEquity' ratio (from 'key_metrics') trended? Explain this like a personal mortgage: high or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.
-- **Cash Cushion:** Examine the trend in 'cashAndCashEquivalents' (from 'balance_sheet_statement'). Does the company have a healthy cash pile to fall back on? This acts as a buffer to protect the dividend during a downturn.
+- **Cash Cushion:** Examine the trend in 'cashAndCashEquivalents' from 'balance_sheet_statement'). Does the company have a healthy cash pile to fall back on? This acts as a buffer to protect the dividend during a downturn.
 
 ## 5. The Final Verdict: How Safe Are Your Dividend Checks?
 Conclude with a clear rating and a simple, one-sentence justification.
@@ -1453,6 +1453,40 @@ async function handleResearchSubmit(e) {
     }
 }
 
+async function openRawDataViewer(ticker) {
+    const modalId = 'rawDataViewerModal';
+    openModal(modalId);
+    const contentContainer = document.getElementById('raw-data-viewer-content');
+    const titleEl = document.getElementById('raw-data-viewer-modal-title');
+    titleEl.textContent = `Loading Raw Data for ${ticker}...`;
+    contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
+
+    try {
+        const fmpData = await getFmpStockData(ticker);
+        if (!fmpData) {
+            throw new Error('No cached FMP data found for this stock.');
+        }
+
+        titleEl.textContent = `All Cached FMP Data for ${ticker}`;
+        let html = '';
+        const sortedKeys = Object.keys(fmpData).filter(key => key !== 'cachedAt').sort();
+
+        for (const key of sortedKeys) {
+            html += `
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 bg-gray-100 p-2 rounded-t-lg border-b">${sanitizeText(key)}</h3>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-4 rounded-b-lg">${sanitizeText(JSON.stringify(fmpData[key], null, 2))}</pre>
+                </div>
+            `;
+        }
+        contentContainer.innerHTML = html;
+    } catch (error) {
+        console.error('Error opening raw data viewer:', error);
+        titleEl.textContent = `Error Loading Data for ${ticker}`;
+        contentContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+    }
+}
+
 async function displayStockCard(ticker) {
     if (document.getElementById(`card-${ticker}`)) {
         document.getElementById(`card-${ticker}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2097,7 +2131,7 @@ function setupGlobalEventListeners() {
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
             } else {
-                displayStockCard(ticker);
+                openRawDataViewer(ticker);
             }
         }
 
@@ -2212,6 +2246,8 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
         { modal: CONSTANTS.MODAL_VIEW_FMP_DATA, button: 'close-view-fmp-data-modal', bg: 'close-view-fmp-data-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
+        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
+        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' }
     ];
 
     modalsToClose.forEach(item => {
