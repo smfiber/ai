@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.3.1"; 
+const APP_VERSION = "9.4.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -909,39 +909,21 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
         
         stocks.forEach(stock => {
             const fmp = stock.fmpData;
-            const quote = get(fmp, 'stock_quote.0', {});
-            const profile = get(fmp, 'company_profile.0', {});
-            const income = get(fmp, 'income_statement.0', {});
-            
-            const priceNum = get(quote, 'price');
-            const changeNum = get(quote, 'changesPercentage');
-
-            const displayPrice = !isNaN(priceNum) ? `$${priceNum.toFixed(2)}` : 'N/A';
-            const displayChange = !isNaN(changeNum) ? `${changeNum.toFixed(2)}%` : 'N/A';
-            const changeColorClass = !isNaN(changeNum) && changeNum >= 0 ? 'price-gain' : 'price-loss';
-            
-            const netIncome = get(income, 'netIncome', 0);
-            const marketCap = get(profile, 'mktCap', 0);
-            const peRatio = (marketCap && netIncome && netIncome > 0) ? (marketCap / netIncome).toFixed(2) : 'N/A';
-            
-            const displayMarketCap = formatLargeNumber(marketCap);
             const refreshedAt = fmp.cachedAt ? fmp.cachedAt.toDate().toLocaleString() : 'N/A';
 
             html += `
                 <li class="dashboard-list-item-detailed">
                     <div class="stock-main-info">
-                        <button class="font-bold text-indigo-700 hover:underline" data-ticker="${sanitizeText(stock.ticker)}">${sanitizeText(stock.companyName)}</button>
+                        <p class="font-bold text-indigo-700">${sanitizeText(stock.companyName)}</p>
                         <p class="text-sm text-gray-600">${sanitizeText(stock.ticker)}</p>
                     </div>
-                    <div class="stock-metrics">
-                        <div><span class="metric-label">Price</span> ${displayPrice}</div>
-                        <div class="${changeColorClass}"><span class="metric-label">Change</span> ${displayChange}</div>
-                        <div><span class="metric-label">P/E</span> ${peRatio}</div>
-                        <div><span class="metric-label">Mkt Cap</span> ${displayMarketCap}</div>
-                    </div>
                     <div class="stock-actions">
-                         <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
-                         <p class="text-xs text-gray-400 mt-1" title="Last Refreshed">${refreshedAt}</p>
+                        <div class="flex items-center justify-end gap-2">
+                            <button class="dashboard-item-view bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">View</button>
+                            <button class="dashboard-item-refresh bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-1 px-3 rounded-full" data-ticker="${sanitizeText(stock.ticker)}">Refresh</button>
+                            <button class="dashboard-item-edit" data-ticker="${sanitizeText(stock.ticker)}">Edit</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 text-right" title="Last Refreshed">Refreshed: ${refreshedAt}</p>
                     </div>
                 </li>`;
         });
@@ -1913,8 +1895,10 @@ function setupGlobalEventListeners() {
                 if (stockData) {
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
-            } else {
+            } else if (target.classList.contains('dashboard-item-view')) {
                 openRawDataViewer(ticker);
+            } else if (target.classList.contains('dashboard-item-refresh')) {
+                handleRefreshFmpData(ticker);
             }
         }
 
