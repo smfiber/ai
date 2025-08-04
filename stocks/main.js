@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.1.7"; 
+const APP_VERSION = "9.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -804,7 +804,7 @@ The Supply, CAPEX, and Geopolitical Headwinds: What is the outlook for bringing 
 
 2. The Investment Angle:
 
-The Cost Curve & Profitability Analysis: This is the core of commodity investing. Where do the key players sit on the global cost curve for their main products? Analyze their production costs (e.g., "All-in Sustaining Costs" for miners) and operating margins to determine their resilience during periods of low commodity prices.
+The Cost Curve & Profitability Analysis: This is the core of a commodity investing. Where do the key players sit on the global cost curve for their main products? Analyze their production costs (e.g., "All-in Sustaining Costs" for miners) and operating margins to determine their resilience during periods of low commodity prices.
 
 Market Thesis: Formulate a clear investment thesis. For exposure to this trend, should investors favor the diversified, lower-risk giants; the high-beta, pure-play producers; or the more stable, value-added specialty materials companies that are less tied to raw commodity prices?
 
@@ -1456,10 +1456,15 @@ async function handleResearchSubmit(e) {
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
-    const contentContainer = document.getElementById('raw-data-viewer-content');
+    const mainAccordionContent = document.getElementById('raw-data-accordion-content');
+    const aiButtonsContainer = document.getElementById('ai-buttons-container');
+    const aiArticleContainer = document.getElementById('ai-article-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
-    titleEl.textContent = `Loading Raw Data for ${ticker}...`;
-    contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
+    
+    titleEl.textContent = `Analyzing ${ticker}...`;
+    mainAccordionContent.innerHTML = '<div class="loader mx-auto"></div>';
+    aiButtonsContainer.innerHTML = '';
+    aiArticleContainer.innerHTML = '';
 
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -1467,23 +1472,42 @@ async function openRawDataViewer(ticker) {
             throw new Error('No cached FMP data found for this stock.');
         }
 
-        titleEl.textContent = `All Cached FMP Data for ${ticker}`;
-        let html = '';
-        const sortedKeys = Object.keys(fmpData).filter(key => key !== 'cachedAt').sort();
+        titleEl.textContent = `Analysis for ${ticker}`;
+        
+        // Build nested accordions for raw data
+        let accordionHtml = '';
+        const sortedKeys = Object.keys(fmpData).filter(key => key !== 'cachedAt' && fmpData[key]).sort();
 
         for (const key of sortedKeys) {
-            html += `
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-800 bg-gray-100 p-2 rounded-t-lg border-b">${sanitizeText(key)}</h3>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-4 rounded-b-lg">${sanitizeText(JSON.stringify(fmpData[key], null, 2))}</pre>
-                </div>
+            accordionHtml += `
+                <details class="mb-2 bg-white rounded-lg border">
+                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${sanitizeText(key)}</summary>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(JSON.stringify(fmpData[key], null, 2))}</pre>
+                </details>
             `;
         }
-        contentContainer.innerHTML = html;
+        mainAccordionContent.innerHTML = accordionHtml;
+
+        // Build AI buttons
+        const buttons = [
+            { class: 'financial-analysis-button', text: 'Financial Analysis', bg: 'bg-teal-500 hover:bg-teal-600' },
+            { class: 'undervalued-analysis-button', text: 'Undervalued Analysis', bg: 'bg-amber-500 hover:bg-amber-600' },
+            { class: 'bull-bear-analysis-button', text: 'Bull vs. Bear', bg: 'bg-purple-500 hover:bg-purple-600' },
+            { class: 'moat-analysis-button', text: 'Moat Analysis', bg: 'bg-cyan-500 hover:bg-cyan-600' },
+            { class: 'dividend-safety-button', text: 'Dividend Safety', bg: 'bg-sky-500 hover:bg-sky-600' },
+            { class: 'growth-outlook-button', text: 'Growth Outlook', bg: 'bg-lime-500 hover:bg-lime-600' },
+            { class: 'risk-assessment-button', text: 'Risk Assessment', bg: 'bg-rose-500 hover:bg-rose-600' },
+            { class: 'capital-allocators-button', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' }
+        ];
+        
+        aiButtonsContainer.innerHTML = buttons.map(btn => 
+            `<button data-symbol="${ticker}" class="${btn.class} text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
+        ).join('');
+        
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        contentContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        mainAccordionContent.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
 
@@ -1846,17 +1870,7 @@ function renderOverviewCard(data, symbol, status) {
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
                 <button data-symbol="${symbol}" class="refresh-fmp-button text-sm bg-cyan-100 text-cyan-700 hover:bg-cyan-200 font-semibold py-2 px-4 rounded-lg">Refresh FMP</button>
                 <button data-symbol="${symbol}" class="view-fmp-data-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">View FMP Data</button>
-            </div>
-            <div class="mt-4 border-t pt-4 flex flex-wrap gap-2 justify-center">
                 <button data-symbol="${symbol}" class="fetch-news-button text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Fetch News</button>
-                <button data-symbol="${symbol}" class="undervalued-analysis-button text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg">Undervalued Analysis</button>
-                <button data-symbol="${symbol}" class="financial-analysis-button text-sm bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">Financial Analysis</button>
-                <button data-symbol="${symbol}" class="bull-bear-analysis-button text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg">Bull vs. Bear</button>
-                <button data-symbol="${symbol}" class="moat-analysis-button text-sm bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg">Moat Analysis</button>
-                <button data-symbol="${symbol}" class="dividend-safety-button text-sm bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg">Dividend Safety</button>
-                <button data-symbol="${symbol}" class="growth-outlook-button text-sm bg-lime-500 hover:bg-lime-600 text-white font-semibold py-2 px-4 rounded-lg">Growth Outlook</button>
-                <button data-symbol="${symbol}" class="risk-assessment-button text-sm bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-lg">Risk Assessment</button>
-                <button data-symbol="${symbol}" class="capital-allocators-button text-sm bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg">Capital Allocators</button>
             </div>
             <div class="text-right text-xs text-gray-400 mt-4">
                 <div>${fmpTimestampString}</div>
@@ -2148,15 +2162,7 @@ function setupGlobalEventListeners() {
         const symbol = target.dataset.symbol || target.dataset.ticker;
         if (!symbol) return;
 
-        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
-        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
         if (target.classList.contains('fetch-news-button')) handleFetchNews(symbol);
-        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
-        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
-        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
-        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
-        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
-        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
         if (target.classList.contains('refresh-fmp-button')) handleRefreshFmpData(symbol);
         if (target.classList.contains('view-fmp-data-button')) handleViewFmpData(symbol);
     });
@@ -2283,6 +2289,31 @@ function setupEventListeners() {
         const icon = document.getElementById('calendar-toggle-icon');
         content.classList.toggle('hidden');
         icon.classList.toggle('rotate-180');
+    });
+
+    document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+    
+        if (target.id === 'raw-data-accordion-toggle') {
+            const content = document.getElementById('raw-data-accordion-content');
+            const icon = document.getElementById('raw-data-toggle-icon');
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+            return;
+        }
+    
+        const symbol = target.dataset.symbol;
+        if (!symbol) return;
+    
+        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
+        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
+        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
+        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
+        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
+        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
+        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
+        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
     });
 
     setupGlobalEventListeners();
@@ -2694,9 +2725,10 @@ async function handleFinancialAnalysis(symbol) {
             .replace('{jsonData}', JSON.stringify(data, null, 2));
 
         const report = await callGeminiApi(prompt);
-        document.getElementById(CONSTANTS.ELEMENT_FINANCIAL_ANALYSIS_CONTENT).innerHTML = marked.parse(report);
-        document.getElementById('financial-analysis-modal-title').textContent = `Financial Analysis for ${symbol}`;
-        openModal(CONSTANTS.MODAL_FINANCIAL_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
@@ -2721,9 +2753,10 @@ async function handleUndervaluedAnalysis(symbol) {
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         
         const report = await callGeminiApi(prompt);
-        document.getElementById('undervalued-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('undervalued-analysis-modal-title').textContent = `Undervalued Analysis for ${symbol}`;
-        openModal(CONSTANTS.MODAL_UNDERVALUED_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
 
     } catch (error) {
         displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
@@ -2745,9 +2778,10 @@ async function handleBullBearAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Bull vs. Bear | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
@@ -2768,9 +2802,10 @@ async function handleMoatAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Moat Analysis | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
@@ -2791,9 +2826,10 @@ async function handleDividendSafetyAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Dividend Safety | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
@@ -2814,9 +2850,10 @@ async function handleGrowthOutlookAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Growth Outlook | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
@@ -2837,9 +2874,10 @@ async function handleRiskAssessmentAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Risk Assessment | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
@@ -2859,9 +2897,10 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol);
         const report = await callGeminiApi(prompt);
-        document.getElementById('custom-analysis-content').innerHTML = marked.parse(report);
-        document.getElementById('custom-analysis-modal-title').textContent = `Capital Allocators | ${symbol}`;
-        openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            articleContainer.innerHTML = marked.parse(report);
+        }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
     } finally {
