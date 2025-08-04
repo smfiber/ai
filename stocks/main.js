@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.3"; 
+const APP_VERSION = "9.5.5"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -1119,14 +1119,14 @@ async function openRawDataViewer(ticker) {
     const mainAccordionContent = document.getElementById('raw-data-accordion-content');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
-    const descriptionContainer = document.getElementById('company-description-container');
+    const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     mainAccordionContent.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
-    descriptionContainer.innerHTML = '';
+    profileDisplayContainer.innerHTML = '';
 
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -1166,15 +1166,36 @@ async function openRawDataViewer(ticker) {
             `<button data-symbol="${ticker}" class="${btn.class} text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
         ).join('');
         
-        // Add company description below buttons
-        const description = get(fmpData, 'company_profile.0.description', null);
-        if (description) {
-            descriptionContainer.className = 'mt-6 border-t pt-4';
-            descriptionContainer.innerHTML = `
-                <h3 class="text-lg font-bold text-gray-700 mb-2">Company Description</h3>
-                <p class="text-sm text-gray-600">${sanitizeText(description)}</p>
-            `;
+        // Render the new company profile section
+        const imageUrl = get(fmpData, 'company_profile.0.image', '');
+        const description = get(fmpData, 'company_profile.0.description', 'No description available.');
+        const exchange = get(fmpData, 'sec_company_full_profile.0.exchange', 'N/A');
+        const sector = get(fmpData, 'company_profile.0.sector', 'N/A');
+        const filingsUrl = get(fmpData, 'sec_company_full_profile.0.secFilingsUrl', '');
+
+        let profileHtml = '<div class="mt-6 border-t pt-4">';
+        if (imageUrl) {
+            profileHtml += `
+                <div class="flex flex-col md:flex-row gap-6 items-start">
+                    <img src="${sanitizeText(imageUrl)}" alt="Company Logo" class="w-24 h-24 rounded-md object-contain border p-1 bg-white flex-shrink-0" />
+                    <div>`;
+        } else {
+            profileHtml += `<div>`;
         }
+
+        profileHtml += `<p class="text-sm text-gray-700 mb-4">${sanitizeText(description)}</p>`;
+        
+        profileHtml += `<div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-4 border-t pt-3">`;
+        profileHtml += `<div><p class="font-semibold text-gray-500">Exchange</p><p class="text-gray-800">${sanitizeText(exchange)}</p></div>`;
+        profileHtml += `<div><p class="font-semibold text-gray-500">Sector</p><p class="text-gray-800">${sanitizeText(sector)}</p></div>`;
+
+        if (filingsUrl) {
+             profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${sanitizeText(filingsUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View on SEC.gov</a></div>`;
+        }
+        
+        profileHtml += `</div></div></div>`;
+        profileDisplayContainer.innerHTML = profileHtml;
+
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
