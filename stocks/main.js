@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.5"; 
+const APP_VERSION = "9.5.6"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -474,7 +474,7 @@ const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCators_PROMPT;
 const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
@@ -1167,10 +1167,10 @@ async function openRawDataViewer(ticker) {
         ).join('');
         
         // Render the new company profile section
-        const imageUrl = get(fmpData, 'company_profile.0.image', '');
-        const description = get(fmpData, 'company_profile.0.description', 'No description available.');
+        const imageUrl = get(fmpData, 'company_profile_data.0.image', '');
+        const description = get(fmpData, 'company_profile_data.0.description', 'No description available.');
         const exchange = get(fmpData, 'sec_company_full_profile.0.exchange', 'N/A');
-        const sector = get(fmpData, 'company_profile.0.sector', 'N/A');
+        const sector = get(fmpData, 'company_profile_data.0.sector', 'N/A');
         const filingsUrl = get(fmpData, 'sec_company_full_profile.0.secFilingsUrl', '');
 
         let profileHtml = '<div class="mt-6 border-t pt-4">';
@@ -1190,7 +1190,7 @@ async function openRawDataViewer(ticker) {
         profileHtml += `<div><p class="font-semibold text-gray-500">Sector</p><p class="text-gray-800">${sanitizeText(sector)}</p></div>`;
 
         if (filingsUrl) {
-             profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${sanitizeText(filingsUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">View on SEC.gov</a></div>`;
+             profileHtml += `<div class="col-span-2"><p class="font-semibold text-gray-500">SEC Filings</p><a href="${sanitizeText(filingsUrl)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">${sanitizeText(filingsUrl)}</a></div>`;
         }
         
         profileHtml += `</div></div></div>`;
