@@ -147,26 +147,10 @@ body.modal-open {
 }
 .dashboard-list-item-detailed {
     display: grid;
-    grid-template-columns: 2fr 3fr 1fr;
+    grid-template-columns: 2fr 1fr;
     gap: 1rem;
     align-items: center;
     padding: 1rem 0.5rem;
-}
-.stock-main-info button {
-    display: block;
-    text-align: left;
-}
-.stock-metrics {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    text-align: right;
-    font-size: 0.875rem; /* text-sm */
-}
-.metric-label {
-    display: block;
-    font-size: 0.75rem; /* text-xs */
-    color: #6b7280; /* text-gray-500 */
 }
 .stock-actions {
     display: flex;
