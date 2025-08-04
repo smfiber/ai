@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.6"; 
+const APP_VERSION = "9.5.7"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -474,7 +474,7 @@ const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCators_PROMPT;
+const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
