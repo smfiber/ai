@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.2.0"; 
+const APP_VERSION = "9.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -19,6 +19,7 @@ const CONSTANTS = {
     MODAL_MANAGE_STOCK: 'manageStockModal',
     MODAL_VIEW_FMP_DATA: 'viewFmpDataModal',
     MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
+    MODAL_MANAGE_BROAD_ENDPOINTS: 'manageBroadEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
@@ -46,6 +47,7 @@ const CONSTANTS = {
     DB_COLLECTION_CALENDAR: 'calendar_data',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
+    DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
 };
 
 const SECTOR_ICONS = {
@@ -2129,6 +2131,97 @@ function handleDeleteFmpEndpoint(id) {
     });
 }
 
+// --- BROAD API ENDPOINT MANAGEMENT ---
+
+async function openManageBroadEndpointsModal() {
+    await renderBroadEndpointsList();
+    openModal(CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS);
+}
+
+async function renderBroadEndpointsList() {
+    const container = document.getElementById('broad-endpoints-list-container');
+    container.innerHTML = 'Loading endpoints...';
+    try {
+        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS));
+        if (querySnapshot.empty) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
+            return;
+        }
+        const endpoints = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        container.innerHTML = endpoints.map(ep => `
+            <div class="p-3 bg-white border rounded-lg flex justify-between items-center">
+                <div>
+                    <p class="font-semibold text-gray-700">${sanitizeText(ep.name)} <span class="text-xs font-normal text-gray-500">(Used: ${ep.usageCount || 0})</span></p>
+                    <p class="text-xs text-gray-500 font-mono">${sanitizeText(ep.url_template)}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="edit-broad-endpoint-btn text-sm font-medium text-indigo-600 hover:text-indigo-800" data-id="${ep.id}" data-name="${sanitizeText(ep.name)}" data-url="${sanitizeText(ep.url_template)}">Edit</button>
+                    <button class="delete-broad-endpoint-btn text-sm font-medium text-red-600 hover:text-red-800" data-id="${ep.id}">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error rendering Broad API endpoints:', error);
+        container.innerHTML = '<p class="text-red-500">Could not load endpoints.</p>';
+    }
+}
+
+function handleEditBroadEndpoint(id, name, url) {
+    document.getElementById('broad-endpoint-id').value = id;
+    document.getElementById('broad-endpoint-name').value = name;
+    document.getElementById('broad-endpoint-url').value = url;
+    document.getElementById('cancel-broad-endpoint-edit').classList.remove('hidden');
+    document.querySelector('#manage-broad-endpoint-form button[type="submit"]').textContent = "Update Endpoint";
+}
+
+function cancelBroadEndpointEdit() {
+    document.getElementById('manage-broad-endpoint-form').reset();
+    document.getElementById('broad-endpoint-id').value = '';
+    document.getElementById('cancel-broad-endpoint-edit').classList.add('hidden');
+    document.querySelector('#manage-broad-endpoint-form button[type="submit"]').textContent = "Save Endpoint";
+}
+
+async function handleSaveBroadEndpoint(e) {
+    e.preventDefault();
+    const id = document.getElementById('broad-endpoint-id').value;
+    const name = document.getElementById('broad-endpoint-name').value.trim();
+    const url_template = document.getElementById('broad-endpoint-url').value.trim();
+
+    if (!name || !url_template) {
+        displayMessageInModal('Endpoint Name and URL Template are required.', 'warning');
+        return;
+    }
+
+    const data = { name, url_template };
+    
+    try {
+        if (id) {
+            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id), data, { merge: true });
+        } else {
+            const docId = name.toLowerCase().replace(/\s+/g, '_');
+            data.usageCount = 0;
+            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, docId), data);
+        }
+        cancelBroadEndpointEdit();
+        await renderBroadEndpointsList();
+    } catch (error) {
+        console.error('Error saving Broad API endpoint:', error);
+        displayMessageInModal(`Could not save endpoint: ${error.message}`, 'error');
+    }
+}
+
+function handleDeleteBroadEndpoint(id) {
+    openConfirmationModal('Delete Endpoint?', 'Are you sure you want to delete this endpoint? This cannot be undone.', async () => {
+        try {
+            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id));
+            await renderBroadEndpointsList();
+        } catch (error) {
+            console.error('Error deleting Broad API endpoint:', error);
+            displayMessageInModal(`Could not delete endpoint: ${error.message}`, 'error');
+        }
+    });
+}
+
 
 // --- EVENT LISTENER SETUP ---
 
@@ -2230,6 +2323,9 @@ function setupEventListeners() {
     document.getElementById('manage-fmp-endpoint-form')?.addEventListener('submit', handleSaveFmpEndpoint);
     document.getElementById('cancel-fmp-endpoint-edit')?.addEventListener('click', cancelFmpEndpointEdit);
 
+    document.getElementById('manage-broad-endpoint-form')?.addEventListener('submit', handleSaveBroadEndpoint);
+    document.getElementById('cancel-broad-endpoint-edit')?.addEventListener('click', cancelBroadEndpointEdit);
+
     document.querySelectorAll('.save-to-drive-button').forEach(button => {
         button.addEventListener('click', (e) => {
             const modalId = e.target.dataset.modalId;
@@ -2242,6 +2338,7 @@ function setupEventListeners() {
 
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
+    document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
 
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
@@ -2252,6 +2349,7 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
         { modal: CONSTANTS.MODAL_VIEW_FMP_DATA, button: 'close-view-fmp-data-modal', bg: 'close-view-fmp-data-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
+        { modal: CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS, button: 'close-manage-broad-endpoints-modal', bg: 'close-manage-broad-endpoints-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' }
     ];
@@ -2314,6 +2412,18 @@ function setupEventListeners() {
         if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
         if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
+    });
+
+    document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const id = target.dataset.id;
+        if (target.classList.contains('edit-broad-endpoint-btn')) {
+            handleEditBroadEndpoint(id, target.dataset.name, target.dataset.url);
+        } else if (target.classList.contains('delete-broad-endpoint-btn')) {
+            handleDeleteBroadEndpoint(id);
+        }
     });
 
     setupGlobalEventListeners();
