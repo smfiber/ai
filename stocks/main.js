@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "10.0.0"; 
+const APP_VERSION = "10.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -981,22 +981,22 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
         return;
     }
 
-    const groupedBySector = stocksWithData.reduce((acc, stock) => {
-        const sector = get(stock, 'fmpData.company_profile.0.sector', 'Unknown');
-        if (!acc[sector]) acc[sector] = [];
-        acc[sector].push(stock);
+    const groupedByExchange = stocksWithData.reduce((acc, stock) => {
+        const exchange = stock.exchange || 'Unknown';
+        if (!acc[exchange]) acc[exchange] = [];
+        acc[exchange].push(stock);
         return acc;
     }, {});
 
-    const sortedSectors = Object.keys(groupedBySector).sort();
+    const sortedExchanges = Object.keys(groupedByExchange).sort();
 
     let html = '';
-    sortedSectors.forEach(sector => {
-        const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
+    sortedExchanges.forEach(exchange => {
+        const stocks = groupedByExchange[exchange].sort((a, b) => a.companyName.localeCompare(b.companyName));
         html += `
             <details class="sector-group" open>
                 <summary class="sector-header">
-                    <span>${sanitizeText(sector)}</span>
+                    <span>${sanitizeText(exchange)}</span>
                     <span class="sector-toggle-icon"></span>
                 </summary>
                 <div class="sector-content">
