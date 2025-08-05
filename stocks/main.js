@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.8.0"; 
+const APP_VERSION = "9.8.2"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -12,11 +12,8 @@ const CONSTANTS = {
     MODAL_LOADING: 'loadingStateModal',
     MODAL_MESSAGE: 'messageModal',
     MODAL_CONFIRMATION: 'confirmationModal',
-    MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
-    MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
     MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
     MODAL_INDUSTRY_ANALYSIS: 'industryAnalysisModal',
-    MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
     MODAL_VIEW_FMP_DATA: 'viewFmpDataModal',
     MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
@@ -558,7 +555,7 @@ For each of the top companies you identified:
 --- END OF REPORT ---
 
 List of companies in the industry:
-[${industryStocks}]
+[\${industryStocks}]
 
 News Articles JSON Data:
 {newsArticlesJson}
@@ -2147,8 +2144,6 @@ function setupEventListeners() {
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
 
     const modalsToClose = [
-        { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
-        { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
