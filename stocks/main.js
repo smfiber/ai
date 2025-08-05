@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.7.0"; 
+const APP_VERSION = "9.8.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -530,6 +530,39 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
 `;
 
+const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
+Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic industry based on a provided list of companies and recent news articles.
+
+Task:
+You will be given a list of companies in the {industryName} industry and a list of recent news articles that may or may not be relevant to them.
+Your task is to generate a comprehensive markdown report by following these steps:
+
+1.  **Analyze and Synthesize:** Read all news articles and identify the most noteworthy trends, events, and narratives affecting the companies in the provided list.
+2.  **Rank Companies:** From your analysis, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports, major partnerships > product updates) and positive sentiment of the news.
+3.  **Generate Report:** Structure your output as a single, professional markdown report.
+
+Output Format:
+The report must start with an overall summary, followed by a deeper dive into the top companies you identified. For each catalyst you mention, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data JSON.
+
+--- START OF REPORT ---
+## AI-Powered Market Analysis: {industryName} Industry
+### Overall Industry Outlook & Key Themes
+Provide a 2-3 sentence summary of the overall outlook for the {industryName} industry based on the collective news. Identify the most significant themes present (e.g., M&A activity, supply chain pressures, regulatory changes).
+
+### Deeper Dive: Top Companies in the News
+For each of the top companies you identified:
+1.  Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)"). You will have to find the company name associated with the ticker from the news articles.
+2.  **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably based on the news.
+3.  **Positive Catalysts:** Create a bulleted list of the specific positive events or catalysts from the news. Remember to append the source placeholder for each point.
+
+--- END OF REPORT ---
+
+List of companies in the industry:
+[${industryStocks}]
+
+News Articles JSON Data:
+{newsArticlesJson}
+`;
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
@@ -2724,117 +2757,49 @@ async function findStocksByIndustry({ industryName }) {
 async function handleIndustryMarketTrendsAnalysis(industryName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Initiating AI analysis for the ${industryName} industry...`;
-    
     const contentArea = document.getElementById('industry-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis...</div>`;
-
-    const tools = {
-        functionDeclarations: [
-            {
-                name: "findStocksByIndustry",
-                description: "Finds a list of stock tickers for a given industry name.",
-                parameters: {
-                    type: "object",
-                    properties: { industryName: { type: "string", description: "The industry to search for." } },
-                    required: ["industryName"],
-                },
-            },
-            {
-                name: "searchSectorNews",
-                description: "Fetches a list of recent general stock market news articles. This can be used to analyze trends for a list of stocks.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        sectorName: { type: "string", description: "The financial industry or sector being analyzed." },
-                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols to focus on." }
-                    },
-                    required: ["sectorName", "sectorStocks"],
-                },
-            },
-            {
-                name: "synthesizeAndRankCompanies",
-                description: "Filters a general news list to find articles relevant to a specific list of stocks, then analyzes them to rank the top 3-5 most favorably mentioned companies.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        newsArticles: { type: "array", description: "An array of general news article objects.", items: { type: "object" } },
-                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols for the target industry." }
-                    },
-                    required: ["newsArticles", "sectorStocks"],
-                },
-            },
-            {
-                name: "generateDeepDiveReport",
-                description: "Generates a final, user-facing markdown report summarizing the analysis of top companies in an industry.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        companyAnalysis: { type: "object", description: "The JSON object containing the ranked list of top companies and their analysis." },
-                        sectorName: { type: "string", description: "The name of the industry being analyzed." },
-                    },
-                    required: ["companyAnalysis", "sectorName"],
-                },
-            },
-        ],
-    };
-
-    const toolFunctions = {
-        'findStocksByIndustry': findStocksByIndustry,
-        'searchSectorNews': searchSectorNews,
-        'synthesizeAndRankCompanies': synthesizeAndRankCompanies,
-        'generateDeepDiveReport': generateDeepDiveReport,
-    };
 
     try {
-        const conversationHistory = [{
-            role: "user",
-            parts: [{ text: `Generate a deep-dive analysis report for the "${industryName}" industry. Start by finding the stocks in this industry.` }],
-        }];
-        
-        let originalArticles = [];
+        loadingMessage.textContent = `Finding companies in the ${industryName} industry...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
 
-        for (let i = 0; i < 5; i++) {
-            const contents = { contents: conversationHistory, tools: [tools] };
-            const responseContent = await callGeminiApiWithTools(contents);
-            const responseParts = responseContent.parts;
-            conversationHistory.push({ role: 'model', parts: responseParts });
-
-            const toolCalls = responseParts.filter(part => part.functionCall).map(part => part.functionCall);
-
-            if (toolCalls.length === 0) {
-                loadingMessage.textContent = 'Finalizing report...';
-                const finalReportText = responseParts.map(part => part.text || '').join('\n');
-                contentArea.innerHTML = marked.parse(finalReportText);
-                break;
-            }
-
-            loadingMessage.textContent = `AI is running tools: ${toolCalls.map(tc => tc.name).join(', ')}...`;
-            const toolExecutionPromises = toolCalls.map(toolCall => {
-                const func = toolFunctions[toolCall.name];
-                if (!func) throw new Error(`Unknown tool: ${toolCall.name}`);
-                
-                if (toolCall.name === 'generateDeepDiveReport') {
-                    toolCall.args.originalArticles = originalArticles;
-                }
-                
-                return func(toolCall.args);
-            });
-            
-            const toolResults = await Promise.all(toolExecutionPromises);
-
-            const newsSearchResult = toolResults.find((res, idx) => toolCalls[idx].name === 'searchSectorNews');
-            if (newsSearchResult && newsSearchResult.articles) {
-                originalArticles = newsSearchResult.articles;
-            }
-
-            conversationHistory.push({
-                role: 'user',
-                parts: toolResults.map((result, i) => ({
-                    functionResponse: { name: toolCalls[i].name, response: result }
-                }))
-            });
+        const stocksResult = await findStocksByIndustry({ industryName });
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(`Could not find any companies for the ${industryName} industry.`);
         }
+        const industryStocks = stocksResult.stocks;
+
+        loadingMessage.textContent = `Searching news for up to ${industryStocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName: industryName, sectorStocks: industryStocks });
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(`Could not find any recent news for the ${industryName} industry.`);
+        }
+        const validArticles = newsResult.articles;
+
+        loadingMessage.textContent = `AI is analyzing news and generating the report...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+
+        const prompt = ONE_SHOT_INDUSTRY_TREND_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace('${industryStocks}', industryStocks.join(', '))
+            .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
+
+        let finalReport = await callGeminiApi(prompt);
+
+        finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            const article = validArticles.find(a => a.articleIndex === index);
+            if (article) {
+                const sourceParts = article.source.split('.');
+                const sourceName = sourceParts.length > 1 ? sourceParts[sourceParts.length - 2] : article.source;
+                return `[(Source: ${sourceName}, ${article.publicationDate})](${article.link})`;
+            }
+            return match;
+        });
+
+        contentArea.innerHTML = marked.parse(finalReport);
+
     } catch (error) {
         console.error("Error during AI agent industry analysis:", error);
         displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
@@ -2843,6 +2808,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
 
 async function handleIndustryPlaybookAnalysis(industryName) {
     openModal(CONSTANTS.MODAL_LOADING);
