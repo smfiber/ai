@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.9.0"; 
+const APP_VERSION = "10.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -2922,7 +2922,8 @@ async function handleFinancialAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
 
     } catch (error) {
@@ -2950,7 +2951,8 @@ async function handleUndervaluedAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
 
     } catch (error) {
@@ -2975,7 +2977,8 @@ async function handleBullBearAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -2999,7 +3002,8 @@ async function handleMoatAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -3023,7 +3027,8 @@ async function handleDividendSafetyAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -3047,7 +3052,8 @@ async function handleGrowthOutlookAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -3071,7 +3077,8 @@ async function handleRiskAssessmentAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -3094,7 +3101,8 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
         const report = await callGeminiApi(prompt);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
-            articleContainer.innerHTML = marked.parse(report);
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
@@ -3139,7 +3147,6 @@ async function handleSaveToDrive(modalId) {
     let contentToSave = '';
     let fileName = '';
 
-    const titleText = modal.querySelector('h2').textContent;
     const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container');
 
     if (!contentContainer || !contentContainer.innerHTML.trim()) {
@@ -3148,15 +3155,32 @@ async function handleSaveToDrive(modalId) {
     }
     contentToSave = contentContainer.innerHTML;
     
-    const titleParts = titleText.split('|').map(s => s.trim());
-    let baseName = titleParts[0];
-    let symbolOrSector = titleParts.length > 1 ? titleParts[1] : '';
+    const modalTitleText = modal.querySelector('h2').textContent;
+    const reportH1 = contentContainer.querySelector('h1');
+    const reportTitleText = reportH1 ? reportH1.textContent : '';
 
-    if (symbolOrSector) {
-        fileName = `${symbolOrSector.replace(/\s/g, '_')}_${baseName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
+    let symbolOrContext = '';
+    let reportTypeName = '';
+
+    if (modalId === 'rawDataViewerModal' && reportTitleText) {
+        symbolOrContext = modalTitleText.replace('Analysis for', '').trim();
+        reportTypeName = reportTitleText.split(':')[0].trim();
     } else {
-        fileName = `${baseName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
+        const titleParts = modalTitleText.split('|').map(s => s.trim());
+        reportTypeName = titleParts[0];
+        symbolOrContext = titleParts.length > 1 ? titleParts[1] : '';
     }
+
+    const cleanSymbol = symbolOrContext.replace(/\s+/g, '_');
+    const cleanReportType = reportTypeName.replace(/\s+/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    if (cleanSymbol && cleanReportType) {
+        fileName = `${cleanSymbol}_${cleanReportType}_${dateStr}.md`;
+    } else {
+        fileName = `${(cleanReportType || cleanSymbol).replace(/ /g, '_') || 'AI_Analysis'}_${dateStr}.md`;
+    }
+
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving to Google Drive...`;
