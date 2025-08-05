@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "10.1.0"; 
+const APP_VERSION = "10.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -19,6 +19,7 @@ const CONSTANTS = {
     MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
     MODAL_MANAGE_BROAD_ENDPOINTS: 'manageBroadEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
+    MODAL_STOCK_LIST: 'stockListModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
@@ -736,7 +737,7 @@ async function initializeAppContent() {
     document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('market-calendar-accordion').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
-    await renderDashboard();
+    await fetchAndCachePortfolioData();
     displayMarketCalendar();
     renderSectorButtons();
     displayIndustryScreener();
@@ -981,22 +982,22 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
         return;
     }
 
-    const groupedByExchange = stocksWithData.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Unknown';
-        if (!acc[exchange]) acc[exchange] = [];
-        acc[exchange].push(stock);
+    const groupedBySector = stocksWithData.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) acc[sector] = [];
+        acc[sector].push(stock);
         return acc;
     }, {});
 
-    const sortedExchanges = Object.keys(groupedByExchange).sort();
+    const sortedSectors = Object.keys(groupedBySector).sort();
 
     let html = '';
-    sortedExchanges.forEach(exchange => {
-        const stocks = groupedByExchange[exchange].sort((a, b) => a.companyName.localeCompare(b.companyName));
+    sortedSectors.forEach(sector => {
+        const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
         html += `
             <details class="sector-group" open>
                 <summary class="sector-header">
-                    <span>${sanitizeText(exchange)}</span>
+                    <span>${sanitizeText(sector)}</span>
                     <span class="sector-toggle-icon"></span>
                 </summary>
                 <div class="sector-content">
@@ -1028,41 +1029,67 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = html;
 }
 
-async function renderDashboard() {
+async function fetchAndCachePortfolioData() {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard data...";
     
-    const portfolioContainer = document.getElementById('portfolio-snapshot-container');
-    const watchlistContainer = document.getElementById('watchlist-container');
-
     try {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        portfolioCache = querySnapshot.docs.map(doc => doc.data());
+        portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const stockDataPromises = portfolioCache.map(stock => getFmpStockData(stock.ticker));
-        const results = await Promise.allSettled(stockDataPromises);
-
-        const stocksWithData = portfolioCache.map((stock, index) => {
-            if (results[index].status === 'fulfilled' && results[index].value) {
-                return { ...stock, fmpData: results[index].value };
-            }
-            return { ...stock, fmpData: null }; // Mark as having no data
-        }).filter(stock => stock.fmpData); // Only include stocks with data
-
-        const portfolioStocks = stocksWithData.filter(s => s.status === 'Portfolio');
-        const watchlistStocks = stocksWithData.filter(s => s.status === 'Watchlist');
-
-        _renderGroupedStockList(portfolioContainer, portfolioStocks, 'portfolio');
-        _renderGroupedStockList(watchlistContainer, watchlistStocks, 'watchlist');
+        const portfolioStocks = portfolioCache.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = portfolioCache.filter(s => s.status === 'Watchlist');
 
         document.getElementById('portfolio-count').textContent = portfolioStocks.length;
         document.getElementById('watchlist-count').textContent = watchlistStocks.length;
 
     } catch (error) {
-        console.error("Error loading dashboard:", error);
-        displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
-        portfolioContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load portfolio data.</p>`;
-        watchlistContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load watchlist data.</p>`;
+        console.error("Error loading dashboard data:", error);
+        displayMessageInModal(`Failed to load dashboard data: ${error.message}`, 'error');
+        document.getElementById('portfolio-count').textContent = 'E';
+        document.getElementById('watchlist-count').textContent = 'E';
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function openStockListModal(listType) {
+    const modalId = CONSTANTS.MODAL_STOCK_LIST;
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading ${listType}...`;
+
+    const title = modal.querySelector('#stock-list-modal-title');
+    const container = modal.querySelector('#stock-list-modal-content');
+    title.textContent = listType === 'Portfolio' ? 'My Portfolio' : 'My Watchlist';
+    container.innerHTML = '';
+
+    try {
+        const stocksToFetch = portfolioCache.filter(s => s.status === listType);
+        if (stocksToFetch.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
+            openModal(modalId);
+            closeModal(CONSTANTS.MODAL_LOADING);
+            return;
+        }
+
+        const stockDataPromises = stocksToFetch.map(stock => getFmpStockData(stock.ticker));
+        const results = await Promise.allSettled(stockDataPromises);
+
+        const stocksWithData = stocksToFetch.map((stock, index) => {
+            if (results[index].status === 'fulfilled' && results[index].value) {
+                return { ...stock, fmpData: results[index].value };
+            }
+            return { ...stock, fmpData: null };
+        }).filter(stock => stock.fmpData);
+
+        await _renderGroupedStockList(container, stocksWithData, listType);
+        openModal(modalId);
+    } catch (error) {
+        console.error(`Error loading ${listType} modal:`, error);
+        displayMessageInModal(`Failed to load ${listType}: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1079,6 +1106,8 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-name').value = stockData.companyName;
         document.getElementById('manage-stock-exchange').value = stockData.exchange;
         document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
+        document.getElementById('manage-stock-sector').value = stockData.sector || '';
+        document.getElementById('manage-stock-industry').value = stockData.industry || '';
     } else {
         document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
         document.getElementById('manage-stock-original-ticker').value = '';
@@ -1086,6 +1115,8 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-name').value = stockData.companyName || '';
         document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
         document.getElementById('manage-stock-status').value = 'Watchlist';
+        document.getElementById('manage-stock-sector').value = stockData.sector || '';
+        document.getElementById('manage-stock-industry').value = stockData.industry || '';
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
@@ -1105,6 +1136,8 @@ async function handleSaveStock(e) {
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
         status: document.getElementById('manage-stock-status').value.trim(),
+        sector: document.getElementById('manage-stock-sector').value.trim(),
+        industry: document.getElementById('manage-stock-industry').value.trim(),
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1125,7 +1158,7 @@ async function handleSaveStock(e) {
         }
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
-        await renderDashboard();
+        await fetchAndCachePortfolioData();
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -1143,7 +1176,7 @@ async function handleDeleteStock(ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
-                await renderDashboard();
+                await fetchAndCachePortfolioData();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
                 }
@@ -1194,6 +1227,8 @@ async function handleResearchSubmit(e) {
             ticker: overviewData.symbol,
             companyName: overviewData.companyName,
             exchange: overviewData.exchange,
+            sector: overviewData.sector,
+            industry: overviewData.industry,
             isEditMode: false
         };
         
@@ -1674,20 +1709,22 @@ function renderPortfolioManagerList() {
         return;
     }
 
-    const groupedByExchange = portfolioCache.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Unknown';
-        if (!acc[exchange]) {
-            acc[exchange] = [];
+    const groupedBySector = portfolioCache.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) {
+            acc[sector] = [];
         }
-        acc[exchange].push(stock);
+        acc[sector].push(stock);
         return acc;
     }, {});
 
     let html = '';
-    for (const exchange in groupedByExchange) {
-        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
+    const sortedSectors = Object.keys(groupedBySector).sort();
+    
+    for (const sector of sortedSectors) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
         html += '<ul class="divide-y divide-gray-200">';
-        groupedByExchange[exchange].forEach(stock => {
+        groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
             const statusBadge = stock.status === 'Portfolio'
                 ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
                 : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
@@ -1769,8 +1806,7 @@ async function handleRefreshFmpData(symbol) {
         
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
         
-        await displayStockCard(symbol);
-        await renderDashboard();
+        await fetchAndCachePortfolioData();
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -2011,9 +2047,38 @@ function handleDeleteBroadEndpoint(id) {
 
 function setupGlobalEventListeners() {
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
-        const target = e.target.closest('button, summary');
+        const refreshButton = e.target.closest('.dashboard-refresh-button');
+        if (refreshButton) {
+            fetchAndCachePortfolioData();
+            return;
+        }
+        
+        const portfolioButton = e.target.closest('#open-portfolio-modal-button');
+        if (portfolioButton) {
+            openStockListModal('Portfolio');
+            return;
+        }
+
+        const watchlistButton = e.target.closest('#open-watchlist-modal-button');
+        if (watchlistButton) {
+            openStockListModal('Watchlist');
+            return;
+        }
+    });
+
+    document.getElementById(CONSTANTS.MODAL_STOCK_LIST).addEventListener('click', (e) => {
+        const target = e.target.closest('button');
         if (!target) return;
 
+        if (target.id === 'expand-all-button') {
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = true);
+            return;
+        }
+        if (target.id === 'collapse-all-button') {
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = false);
+            return;
+        }
+        
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
@@ -2026,11 +2091,6 @@ function setupGlobalEventListeners() {
             } else if (target.classList.contains('dashboard-item-refresh')) {
                 handleRefreshFmpData(ticker);
             }
-        }
-
-        const refreshButton = e.target.closest('.dashboard-refresh-button');
-        if (refreshButton) {
-            renderDashboard();
         }
     });
 
@@ -2153,7 +2213,8 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS, button: 'close-manage-broad-endpoints-modal', bg: 'close-manage-broad-endpoints-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
-        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' }
+        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
+        { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
