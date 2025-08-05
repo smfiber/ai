@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.5.7"; 
+const APP_VERSION = "9.6.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -15,6 +15,7 @@ const CONSTANTS = {
     MODAL_FINANCIAL_ANALYSIS: 'financialAnalysisModal',
     MODAL_UNDERVALUED_ANALYSIS: 'undervaluedAnalysisModal',
     MODAL_CUSTOM_ANALYSIS: 'customAnalysisModal',
+    MODAL_INDUSTRY_ANALYSIS: 'industryAnalysisModal',
     MODAL_PORTFOLIO: 'portfolioModal',
     MODAL_MANAGE_STOCK: 'manageStockModal',
     MODAL_VIEW_FMP_DATA: 'viewFmpDataModal',
@@ -513,6 +514,7 @@ let driveFolderId = null; // Cache for Drive folder
 let portfolioCache = [];
 let calendarEvents = { earnings: [], ipos: [] };
 let calendarCurrentDate = new Date();
+let availableIndustries = [];
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -640,11 +642,13 @@ async function initializeAppContent() {
     document.getElementById('dashboard-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('sector-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
+    document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('market-calendar-accordion').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await renderDashboard();
     displayMarketCalendar();
     renderSectorButtons();
+    displayIndustryScreener();
 }
 
 async function initializeFirebase() {
@@ -1957,13 +1961,30 @@ function setupGlobalEventListeners() {
             const sector = target.dataset.sector;
             const promptName = target.dataset.promptName;
             if (promptName === 'MarketTrends') {
-                handleSectorAnalysisWithAIAgent(sector);
+                handleMarketTrendsAnalysis(sector, 'sector');
             } else if (promptName === 'DisruptorAnalysis') {
                 handleDisruptorAnalysis(sector);
             } else if (promptName === 'MacroPlaybook') {
                 handleMacroPlaybookAnalysis(sector);
             } else {
                 handleCreativeSectorAnalysis(sector, promptName);
+            }
+        }
+    });
+
+    document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button[data-prompt-name]');
+        if (target) {
+            const industry = target.dataset.industry;
+            const promptName = target.dataset.promptName;
+            if (promptName === 'MarketTrends') {
+                handleMarketTrendsAnalysis(industry, 'industry');
+            } else if (promptName === 'DisruptorAnalysis') {
+                handleDisruptorAnalysis(industry);
+            } else if (promptName === 'MacroPlaybook') {
+                handleMacroPlaybookAnalysis(industry);
+            } else {
+                handleCreativeSectorAnalysis(industry, promptName);
             }
         }
     });
@@ -2035,6 +2056,7 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_FINANCIAL_ANALYSIS, button: 'close-financial-analysis-modal', bg: 'close-financial-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_UNDERVALUED_ANALYSIS, button: 'close-undervalued-analysis-modal', bg: 'close-undervalued-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
+        { modal: CONSTANTS.MODAL_INDUSTRY_ANALYSIS, button: 'close-industry-analysis-modal', bg: 'close-industry-analysis-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_STOCK, bg: 'close-manage-stock-modal-bg'},
         { modal: CONSTANTS.MODAL_CONFIRMATION, button: 'cancel-button'},
         { modal: CONSTANTS.MODAL_PORTFOLIO_MANAGER, button: 'close-portfolio-manager-modal', bg: 'close-portfolio-manager-modal-bg' },
@@ -2060,6 +2082,13 @@ function setupEventListeners() {
         const target = e.target.closest('button');
         if (target && target.dataset.sector) {
             handleSectorSelection(target.dataset.sector);
+        }
+    });
+
+    document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (target && target.dataset.industry) {
+            handleIndustrySelection(target.dataset.industry);
         }
     });
 
@@ -2188,7 +2217,6 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
 
         ---
         ## AI-Powered Market Analysis: ${sectorName} Sector
-
         ### Overall Sector Outlook & Key Themes
         Provide a 2-3 sentence summary of the overall outlook for the ${sectorName} sector based on the collective news represented in the ranked companies. Identify the most significant themes present.
 
@@ -2215,13 +2243,13 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
     return { report: finalReport };
 }
 
-async function handleSectorAnalysisWithAIAgent(sectorName) {
+async function handleMarketTrendsAnalysis(contextName, contextType) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Initiating AI analysis for the ${sectorName} sector...`;
+    loadingMessage.textContent = `Initiating AI analysis for the ${contextName} ${contextType}...`;
     
     const contentArea = document.getElementById('custom-analysis-content');
-    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis for the ${sectorName} sector...</div>`;
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis for the ${contextName} ${contextType}...</div>`;
 
     const tools = {
         functionDeclarations: [
@@ -2271,24 +2299,24 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
     };
 
     try {
-        loadingMessage.textContent = `Identifying stocks in the ${sectorName} sector...`;
+        loadingMessage.textContent = `Identifying stocks in the ${contextName} ${contextType}...`;
         const portfolioSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
         const portfolio = portfolioSnapshot.docs.map(doc => doc.data());
         
         const fmpDataPromises = portfolio.map(stock => getFmpStockData(stock.ticker).then(data => ({...stock, fmpData: data })));
         const stocksWithFmpData = await Promise.all(fmpDataPromises);
 
-        const sectorStocks = stocksWithFmpData
-            .filter(stock => get(stock, 'fmpData.company_profile.0.sector') === sectorName)
+        const contextStocks = stocksWithFmpData
+            .filter(stock => get(stock, `fmpData.company_profile.0.${contextType}`) === contextName)
             .map(stock => stock.ticker);
 
-        if (sectorStocks.length === 0) {
-            throw new Error(`You have no stocks from the ${sectorName} sector in your portfolio or watchlist to analyze.`);
+        if (contextStocks.length === 0) {
+            throw new Error(`You have no stocks from the ${contextName} ${contextType} in your portfolio or watchlist to analyze.`);
         }
 
         const conversationHistory = [{
             role: "user",
-            parts: [{ text: `Generate a deep-dive analysis report for the ${sectorName} sector. The stocks in this sector are ${sectorStocks.join(', ')}. Start by searching for relevant news.` }],
+            parts: [{ text: `Generate a deep-dive analysis report for the ${contextName} ${contextType}. The stocks in this ${contextType} are ${contextStocks.join(', ')}. Start by searching for relevant news.` }],
         }];
         
         let originalArticles = [];
@@ -2322,9 +2350,9 @@ async function handleSectorAnalysisWithAIAgent(sectorName) {
                 if (toolCall.name === 'generateDeepDiveReport') {
                     toolCall.args.originalArticles = originalArticles;
                 } else if (toolCall.name === 'searchSectorNews') {
-                    toolCall.args.sectorStocks = sectorStocks;
+                    toolCall.args.sectorStocks = contextStocks;
                 } else if (toolCall.name === 'synthesizeAndRankCompanies') {
-                    toolCall.args.sectorStocks = sectorStocks;
+                    toolCall.args.sectorStocks = contextStocks;
                 }
                 
                 return func(toolCall.args);
@@ -2434,10 +2462,10 @@ function handleSectorSelection(sectorName) {
     openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 }
 
-async function handleCreativeSectorAnalysis(sectorName, promptNameKey) {
-    const promptData = creativePromptMap[sectorName];
+async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
+    const promptData = creativePromptMap[contextName];
     if (!promptData) {
-        displayMessageInModal(`No creative analysis prompt found for sector: ${sectorName}`, 'error');
+        displayMessageInModal(`No creative analysis prompt found for: ${contextName}`, 'error');
         return;
     }
     
@@ -2452,7 +2480,7 @@ async function handleCreativeSectorAnalysis(sectorName, promptNameKey) {
         const report = await callGeminiApi(promptData.prompt);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
-        console.error(`Error generating creative analysis for ${sectorName}:`, error);
+        console.error(`Error generating creative analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
@@ -2460,7 +2488,7 @@ async function handleCreativeSectorAnalysis(sectorName, promptNameKey) {
     }
 }
 
-async function handleDisruptorAnalysis(sectorName) {
+async function handleDisruptorAnalysis(contextName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Generating AI article: "Disruptor Analysis"...`;
@@ -2469,11 +2497,11 @@ async function handleDisruptorAnalysis(sectorName) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
-        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, sectorName);
+        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, contextName);
         const report = await callGeminiApi(prompt);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
-        console.error(`Error generating disruptor analysis for ${sectorName}:`, error);
+        console.error(`Error generating disruptor analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
@@ -2481,7 +2509,7 @@ async function handleDisruptorAnalysis(sectorName) {
     }
 }
 
-async function handleMacroPlaybookAnalysis(sectorName) {
+async function handleMacroPlaybookAnalysis(contextName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     loadingMessage.textContent = `Generating AI article: "Macro Playbook"...`;
@@ -2492,12 +2520,12 @@ async function handleMacroPlaybookAnalysis(sectorName) {
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
         const prompt = MACRO_PLAYBOOK_PROMPT
-            .replace(/\[SECTOR NAME\]/g, sectorName)
+            .replace(/\[SECTOR NAME\]/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await callGeminiApi(prompt);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
-        console.error(`Error generating macro playbook analysis for ${sectorName}:`, error);
+        console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
         contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
     } finally {
@@ -2505,6 +2533,106 @@ async function handleMacroPlaybookAnalysis(sectorName) {
     }
 }
 
+async function displayIndustryScreener() {
+    try {
+        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${fmpApiKey}`;
+        const industryData = await callApi(url);
+        if (Array.isArray(industryData)) {
+            availableIndustries = industryData.map(item => item.industry).sort();
+            renderIndustryButtons();
+        }
+    } catch (error) {
+        console.error("Error fetching available industries:", error);
+        const container = document.getElementById('industry-buttons-container');
+        if (container) {
+            container.innerHTML = `<p class="text-red-500 col-span-full">Could not load industry data.</p>`;
+        }
+    }
+}
+
+function renderIndustryButtons() {
+    const container = document.getElementById('industry-buttons-container');
+    if (!container) return;
+
+    const genericIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`; // Using Industrials icon as generic
+
+    container.innerHTML = availableIndustries.map(industry => `
+        <button class="flex flex-col items-center justify-center p-4 text-center bg-teal-100 text-teal-800 hover:bg-teal-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-industry="${sanitizeText(industry)}">
+            ${genericIcon}
+            <span class="mt-2 font-semibold text-sm">${sanitizeText(industry)}</span>
+        </button>
+    `).join('');
+}
+
+
+function handleIndustrySelection(industryName) {
+    const modalTitle = document.getElementById('industry-analysis-modal-title');
+    const selectorContainer = document.getElementById('industry-analysis-selector-container');
+    const contentArea = document.getElementById('industry-analysis-content');
+
+    modalTitle.textContent = `Industry Deep Dive | ${industryName}`;
+    contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    
+    const analysisTypes = [
+        {
+            category: 'Data-Driven Analysis',
+            name: 'Market Trends',
+            promptName: 'MarketTrends',
+            description: 'Uses an AI agent to search recent news, identify top-performing companies in the industry, and generate a data-driven market summary.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+        },
+        {
+            category: 'Analysis',
+            name: 'Disruptor',
+            promptName: 'DisruptorAnalysis',
+            description: "Identifies a high-growth, innovative company in the industry and analyzes its potential to disrupt established industry leaders, styled like a venture capital report.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+        },
+        {
+            category: 'Analysis',
+            name: 'Macro Trend',
+            promptName: 'MacroPlaybook',
+            description: "Identifies a powerful, multi-year macro trend (e.g., electrification) and analyzes a best-in-class company in the industry that is positioned to benefit from it.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
+        }
+    ];
+
+    const groupedByType = analysisTypes.reduce((acc, type) => {
+        if (!acc[type.category]) {
+            acc[type.category] = [];
+        }
+        acc[type.category].push(type);
+        return acc;
+    }, {});
+
+    let html = '<div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">';
+    for (const category in groupedByType) {
+        html += `<div class="text-center">
+            <span class="block text-xs font-bold text-gray-500 uppercase mb-2">${category}</span>
+            <div class="flex flex-wrap justify-center gap-4">`;
+        
+        groupedByType[category].forEach(type => {
+            html += `
+                <button 
+                    class="flex flex-col items-center justify-center p-4 text-center bg-white rounded-lg shadow-md border hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1 w-40 h-40"
+                    data-industry="${industryName}" 
+                    data-prompt-name="${type.promptName}"
+                    title="${type.description}">
+                    <div class="w-12 h-12 mb-2 text-indigo-600">
+                        ${type.svgIcon}
+                    </div>
+                    <span class="font-semibold text-gray-800">${type.name}</span>
+                </button>
+            `;
+        });
+        
+        html += `</div></div>`;
+    }
+    html += '</div>';
+
+    selectorContainer.innerHTML = html;
+    openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+}
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
