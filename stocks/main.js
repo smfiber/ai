@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.6.0"; 
+const APP_VERSION = "9.7.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -426,10 +426,56 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
+const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
+	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
+	Your task is to analyze one CEO/management team from the {industryName} industry known for their skill in capital allocation.
+	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
+	1. The CEO's Philosophy:
+		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
+	2. The Track Record: Analyzing the Decisions
+		○ Analyze their capital allocation decisions over the last 5-10 years across three key areas:
+			§ Reinvestment in the Business: Have their internal investments (R&D, new factories) generated high returns on capital?
+			§ Acquisitions (M&A): Has their track record of buying other companies been successful and created value, or have they overpaid?
+			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
+	3. The Scorecard & Investment Thesis:
+		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
+`;
+
 const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 For the [SECTOR NAME] sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Sub-Industry] Market"
+Your analysis must be structured as follows:
+1. Introduction: The Challenger Appears
+
+Briefly introduce the company and its bold, simple mission. What industry is it targeting, and what fundamental problem is it solving?
+2. The Old Guard and The Opening
+
+Who are the established, legacy competitors (the "Goliaths")? Briefly describe the "old way" of doing things in this market and explain what inefficiency, technological gap, or customer dissatisfaction created the opening for a disruptor.
+3. The Disruptor's Edge: The 'How'
+
+This is the core of the analysis. What is this company's unique advantage or "unfair" edge? Focus on one or two of the following:
+Technological Moat: Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
+Business Model Innovation: Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
+Go-to-Market Strategy: Are they acquiring customers in a novel, cheaper, or more efficient way than the incumbents?
+4. 'Hitting Their Stride': The Proof
+
+Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully? (e.g., exponential revenue growth, accelerating customer adoption, major strategic partnerships, achieving positive cash flow, etc.).
+5. The Path to Dominance: The Future
+
+What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles (e.g., competition waking up, regulatory threats, execution risk) that could derail their ascent?
+6. Investment Thesis Summary
+
+Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
+
+The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
+`;
+
+const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
+Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+For the [INDUSTRY NAME] industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Industry] Market"
 Your analysis must be structured as follows:
 1. Introduction: The Challenger Appears
 
@@ -469,6 +515,21 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 	5. Conclusion: Investing in a Megatrend
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
 `;
+
+const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
+Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
+	1. The Wave (The Macro Trend):
+		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
+	2. The 'Surfboard' (The Company):
+		- Within the [INDUSTRY NAME] industry, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
+	3. Quantifying the Tail-Wind:
+		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
+	4. Thesis Risks (When the Wave Breaks):
+		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
+	5. Conclusion: Investing in a Megatrend
+		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+`;
+
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
@@ -1978,13 +2039,13 @@ function setupGlobalEventListeners() {
             const industry = target.dataset.industry;
             const promptName = target.dataset.promptName;
             if (promptName === 'MarketTrends') {
-                handleMarketTrendsAnalysis(industry, 'industry');
+                handleIndustryMarketTrendsAnalysis(industry);
             } else if (promptName === 'DisruptorAnalysis') {
-                handleDisruptorAnalysis(industry);
+                handleIndustryDisruptorAnalysis(industry);
             } else if (promptName === 'MacroPlaybook') {
-                handleMacroPlaybookAnalysis(industry);
-            } else {
-                handleCreativeSectorAnalysis(industry, promptName);
+                handleIndustryMacroPlaybookAnalysis(industry);
+            } else if (promptName === 'PlaybookAnalysis') {
+                handleIndustryPlaybookAnalysis(industry);
             }
         }
     });
@@ -2583,6 +2644,13 @@ function handleIndustrySelection(industryName) {
         },
         {
             category: 'Analysis',
+            name: 'Playbook',
+            promptName: 'PlaybookAnalysis',
+            description: "Generates an in-depth analysis of a single, well-known company in the industry, focusing on its management's skill in capital allocation, styled like a professional investor letter.",
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
+        },
+        {
+            category: 'Analysis',
             name: 'Disruptor',
             promptName: 'DisruptorAnalysis',
             description: "Identifies a high-growth, innovative company in the industry and analyzes its potential to disrupt established industry leaders, styled like a venture capital report.",
@@ -2633,6 +2701,218 @@ function handleIndustrySelection(industryName) {
     selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
 }
+
+// --- NEW INDUSTRY DEEP DIVE WORKFLOW ---
+async function findStocksByIndustry({ industryName }) {
+    if (!fmpApiKey) {
+        throw new Error("FMP API Key is required for this feature.");
+    }
+    const url = `https://financialmodelingprep.com/api/v3/stock-screener?industry=${encodeURIComponent(industryName)}&limit=50&apikey=${fmpApiKey}`;
+    
+    try {
+        const stocks = await callApi(url);
+        if (!stocks || stocks.length === 0) {
+            return { error: "No stocks found", detail: `Could not find any stocks for the ${industryName} industry.` };
+        }
+        return { stocks: stocks.map(s => s.symbol) };
+    } catch (error) {
+        console.error("Error fetching stocks by industry:", error);
+        return { error: "API call failed", detail: error.message };
+    }
+}
+
+async function handleIndustryMarketTrendsAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Initiating AI analysis for the ${industryName} industry...`;
+    
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Initiating AI analysis...</div>`;
+
+    const tools = {
+        functionDeclarations: [
+            {
+                name: "findStocksByIndustry",
+                description: "Finds a list of stock tickers for a given industry name.",
+                parameters: {
+                    type: "object",
+                    properties: { industryName: { type: "string", description: "The industry to search for." } },
+                    required: ["industryName"],
+                },
+            },
+            {
+                name: "searchSectorNews",
+                description: "Fetches a list of recent general stock market news articles. This can be used to analyze trends for a list of stocks.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        sectorName: { type: "string", description: "The financial industry or sector being analyzed." },
+                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols to focus on." }
+                    },
+                    required: ["sectorName", "sectorStocks"],
+                },
+            },
+            {
+                name: "synthesizeAndRankCompanies",
+                description: "Filters a general news list to find articles relevant to a specific list of stocks, then analyzes them to rank the top 3-5 most favorably mentioned companies.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        newsArticles: { type: "array", description: "An array of general news article objects.", items: { type: "object" } },
+                        sectorStocks: { type: "array", items: { type: "string" }, description: "A list of ticker symbols for the target industry." }
+                    },
+                    required: ["newsArticles", "sectorStocks"],
+                },
+            },
+            {
+                name: "generateDeepDiveReport",
+                description: "Generates a final, user-facing markdown report summarizing the analysis of top companies in an industry.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        companyAnalysis: { type: "object", description: "The JSON object containing the ranked list of top companies and their analysis." },
+                        sectorName: { type: "string", description: "The name of the industry being analyzed." },
+                    },
+                    required: ["companyAnalysis", "sectorName"],
+                },
+            },
+        ],
+    };
+
+    const toolFunctions = {
+        'findStocksByIndustry': findStocksByIndustry,
+        'searchSectorNews': searchSectorNews,
+        'synthesizeAndRankCompanies': synthesizeAndRankCompanies,
+        'generateDeepDiveReport': generateDeepDiveReport,
+    };
+
+    try {
+        const conversationHistory = [{
+            role: "user",
+            parts: [{ text: `Generate a deep-dive analysis report for the "${industryName}" industry. Start by finding the stocks in this industry.` }],
+        }];
+        
+        let originalArticles = [];
+
+        for (let i = 0; i < 5; i++) {
+            const contents = { contents: conversationHistory, tools: [tools] };
+            const responseContent = await callGeminiApiWithTools(contents);
+            const responseParts = responseContent.parts;
+            conversationHistory.push({ role: 'model', parts: responseParts });
+
+            const toolCalls = responseParts.filter(part => part.functionCall).map(part => part.functionCall);
+
+            if (toolCalls.length === 0) {
+                loadingMessage.textContent = 'Finalizing report...';
+                const finalReportText = responseParts.map(part => part.text || '').join('\n');
+                contentArea.innerHTML = marked.parse(finalReportText);
+                break;
+            }
+
+            loadingMessage.textContent = `AI is running tools: ${toolCalls.map(tc => tc.name).join(', ')}...`;
+            const toolExecutionPromises = toolCalls.map(toolCall => {
+                const func = toolFunctions[toolCall.name];
+                if (!func) throw new Error(`Unknown tool: ${toolCall.name}`);
+                
+                if (toolCall.name === 'generateDeepDiveReport') {
+                    toolCall.args.originalArticles = originalArticles;
+                }
+                
+                return func(toolCall.args);
+            });
+            
+            const toolResults = await Promise.all(toolExecutionPromises);
+
+            const newsSearchResult = toolResults.find((res, idx) => toolCalls[idx].name === 'searchSectorNews');
+            if (newsSearchResult && newsSearchResult.articles) {
+                originalArticles = newsSearchResult.articles;
+            }
+
+            conversationHistory.push({
+                role: 'user',
+                parts: toolResults.map((result, i) => ({
+                    functionResponse: { name: toolCalls[i].name, response: result }
+                }))
+            });
+        }
+    } catch (error) {
+        console.error("Error during AI agent industry analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryPlaybookAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "Playbook"...`;
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Playbook"...</div>`;
+
+    try {
+        const prompt = INDUSTRY_CAPITAL_ALLOCATORS_PROMPT
+            .replace(/{industryName}/g, industryName)
+            .replace(/{companyName}/g, 'a Key Company'); 
+
+        const report = await callGeminiApi(prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating creative analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryDisruptorAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "Disruptor Analysis"...`;
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
+
+    try {
+        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/\[INDUSTRY NAME\]/g, industryName);
+        const report = await callGeminiApi(prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating disruptor analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleIndustryMacroPlaybookAnalysis(industryName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Generating AI article: "Macro Playbook"...`;
+
+    const contentArea = document.getElementById('industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
+
+    try {
+        const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
+        const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
+            .replace(/\[INDUSTRY NAME\]/g, industryName)
+            .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
+        const report = await callGeminiApi(prompt);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
