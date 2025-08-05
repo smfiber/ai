@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "9.8.2"; 
+const APP_VERSION = "9.9.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -3140,8 +3140,13 @@ async function handleSaveToDrive(modalId) {
     let fileName = '';
 
     const titleText = modal.querySelector('h2').textContent;
-    const proseContainer = modal.querySelector('.prose, pre');
-    contentToSave = proseContainer.innerHTML;
+    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container');
+
+    if (!contentContainer || !contentContainer.innerHTML.trim()) {
+        displayMessageInModal('There is no content to save.', 'warning');
+        return;
+    }
+    contentToSave = contentContainer.innerHTML;
     
     const titleParts = titleText.split('|').map(s => s.trim());
     let baseName = titleParts[0];
