@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.8"; // [FIXED] Ensured all action buttons render correctly after topic selection.
+const APP_VERSION = "1.5.9"; // [FIXED] Ensured all action buttons render correctly after topic selection.
 
 // --- Global State ---
 let db;
@@ -2324,17 +2324,17 @@ function addPostGenerationButtons(container, topicId, categoryId) {
     });
     buttonBar.appendChild(copyBtn);
 
-    // Button 3: Structured Guide
+    // Button 3: Explore In-Depth
     const structuredBtn = document.createElement('button');
     structuredBtn.className = 'btn-secondary text-sm explore-button';
-    structuredBtn.textContent = 'Structured Guide';
+    structuredBtn.textContent = 'Explore In-Depth';
     structuredBtn.dataset.topicId = topicId;
     structuredBtn.dataset.categoryId = categoryId;
     buttonBar.appendChild(structuredBtn);
 
     // Button 4: Explanatory Article
     const explanatoryBtn = document.createElement('button');
-    explanatoryBtn.className = 'btn-primary text-sm explanatory-article-button';
+    explanatoryBtn.className = 'btn-secondary text-sm explanatory-article-button';
     explanatoryBtn.textContent = 'Explanatory Article';
     explanatoryBtn.dataset.topicId = topicId;
     explanatoryBtn.dataset.categoryId = categoryId;
