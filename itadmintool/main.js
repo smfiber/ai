@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signO
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, Timestamp, doc, setDoc, deleteDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "1.5.7"; // [FIXED] Corrected an error in the Explanatory Article feature caused by the previous refactoring.
+const APP_VERSION = "1.5.8"; // [FIXED] Ensured all action buttons render correctly after topic selection.
 
 // --- Global State ---
 let db;
@@ -2293,27 +2293,56 @@ function convertMarkdownToHtml(text) {
     return tempDiv.innerHTML;
 }
 
+/**
+ * [FIXED] This function has been updated to create buttons using explicit DOM manipulation 
+ * instead of innerHTML to prevent potential browser parsing issues that might hide a button.
+ */
 function addPostGenerationButtons(container, topicId, categoryId) {
     let buttonBar = container.querySelector('.button-bar');
-    if (buttonBar) buttonBar.remove();
+    if (buttonBar) {
+        buttonBar.remove();
+    }
     buttonBar = document.createElement('div');
     buttonBar.className = 'button-bar flex flex-wrap gap-2 mt-4 pt-4 border-t';
     buttonBar.style.borderColor = 'var(--color-card-border)';
-    
-    buttonBar.innerHTML = `
-        <button class="btn-secondary text-sm refine-button">Refine with AI</button>
-        <button class="btn-secondary text-sm copy-button">Copy Text</button>
-        <button class="btn-secondary text-sm explore-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Structured Guide</button>
-        <button class="btn-primary text-sm explanatory-article-button" data-topic-id="${topicId}" data-category-id="${categoryId}">Explanatory Article</button>
-    `;
-    
-    buttonBar.querySelector('.copy-button').addEventListener('click', e => {
+
+    // Button 1: Refine with AI
+    const refineBtn = document.createElement('button');
+    refineBtn.className = 'btn-secondary text-sm refine-button';
+    refineBtn.textContent = 'Refine with AI';
+    buttonBar.appendChild(refineBtn);
+
+    // Button 2: Copy Text
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-secondary text-sm copy-button';
+    copyBtn.textContent = 'Copy Text';
+    copyBtn.addEventListener('click', e => {
         const contentToCopy = e.target.closest('.details-container, #gemini-result-container');
-        if(contentToCopy) copyElementTextToClipboard(contentToCopy, e.target);
+        if (contentToCopy) {
+            copyElementTextToClipboard(contentToCopy, e.target);
+        }
     });
+    buttonBar.appendChild(copyBtn);
+
+    // Button 3: Structured Guide
+    const structuredBtn = document.createElement('button');
+    structuredBtn.className = 'btn-secondary text-sm explore-button';
+    structuredBtn.textContent = 'Structured Guide';
+    structuredBtn.dataset.topicId = topicId;
+    structuredBtn.dataset.categoryId = categoryId;
+    buttonBar.appendChild(structuredBtn);
+
+    // Button 4: Explanatory Article
+    const explanatoryBtn = document.createElement('button');
+    explanatoryBtn.className = 'btn-primary text-sm explanatory-article-button';
+    explanatoryBtn.textContent = 'Explanatory Article';
+    explanatoryBtn.dataset.topicId = topicId;
+    explanatoryBtn.dataset.categoryId = categoryId;
+    buttonBar.appendChild(explanatoryBtn);
 
     container.appendChild(buttonBar);
 }
+
 
 // [MODIFIED] Implemented full AI logic and updated rendering for Explanatory Article Request
 async function handleExplanatoryArticleRequest(topicId, categoryId) {
