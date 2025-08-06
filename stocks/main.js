@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "11.0.0"; 
+const APP_VERSION = "11.1.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -977,6 +977,42 @@ async function callGeminiApiWithTools(contents) {
 
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API with tools.");
+}
+
+/**
+ * New helper function to implement the "Focus, Flow, and Flair" process.
+ * It takes an initial prompt and iteratively refines the AI's output.
+ * @param {string} initialPrompt - The first prompt to send to the AI.
+ * @param {HTMLElement|null} loadingMessageElement - The DOM element for updating loading status.
+ * @returns {Promise<string>} The final, polished article.
+ */
+async function generatePolishedArticle(initialPrompt, loadingMessageElement = null) {
+    const updateLoadingMessage = (msg) => {
+        if (loadingMessageElement) {
+            loadingMessageElement.textContent = msg;
+        }
+    };
+
+    // Step 1: Draft
+    updateLoadingMessage("AI is drafting the article...");
+    const draft = await callGeminiApi(initialPrompt);
+
+    // Step 2: Focus Check
+    updateLoadingMessage("Refining focus...");
+    const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${initialPrompt}\n\nDRAFT:\n${draft}`;
+    const focusedDraft = await callGeminiApi(focusPrompt);
+
+    // Step 3: Flow Check
+    updateLoadingMessage("Improving flow...");
+    const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
+    const flowedDraft = await callGeminiApi(flowPrompt);
+
+    // Step 4: Flair Check
+    updateLoadingMessage("Adding final flair...");
+    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
+    const finalArticle = await callGeminiApi(flairPrompt);
+
+    return finalArticle;
 }
 
 
@@ -2384,7 +2420,7 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
         3. **Positive Catalysts:** Create a bulleted list of the specific positive events mentioned in the news. Use the 'rankingJustification' to construct these points and append the source placeholder for verifiability.
     `;
     
-    let finalReport = await callGeminiApi(prompt);
+    let finalReport = await generatePolishedArticle(prompt);
 
     finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
         const index = parseInt(indexStr, 10);
@@ -2628,13 +2664,12 @@ async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
     
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "${promptData.label}"...`;
     
     const contentArea = document.getElementById('custom-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "${promptData.label}"...</div>`;
 
     try {
-        const report = await callGeminiApi(promptData.prompt);
+        const report = await generatePolishedArticle(promptData.prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating creative analysis for ${contextName}:`, error);
@@ -2648,14 +2683,13 @@ async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
 async function handleDisruptorAnalysis(contextName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "Disruptor Analysis"...`;
 
     const contentArea = document.getElementById('custom-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
         const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, contextName);
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${contextName}:`, error);
@@ -2669,7 +2703,6 @@ async function handleDisruptorAnalysis(contextName) {
 async function handleMacroPlaybookAnalysis(contextName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "Macro Playbook"...`;
 
     const contentArea = document.getElementById('custom-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
@@ -2679,7 +2712,7 @@ async function handleMacroPlaybookAnalysis(contextName) {
         const prompt = MACRO_PLAYBOOK_PROMPT
             .replace(/\[SECTOR NAME\]/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
@@ -2848,7 +2881,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
             .replace('${industryStocks}', industryStocks.join(', '))
             .replace('{newsArticlesJson}', JSON.stringify(validArticles, null, 2));
 
-        let finalReport = await callGeminiApi(prompt);
+        let finalReport = await generatePolishedArticle(prompt, loadingMessage);
 
         finalReport = finalReport.replace(/\[Source: (?:Article )?(\d+)\]/g, (match, indexStr) => {
             const index = parseInt(indexStr, 10);
@@ -2876,7 +2909,6 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
 async function handleIndustryPlaybookAnalysis(industryName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "Playbook"...`;
 
     const contentArea = document.getElementById('industry-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Playbook"...</div>`;
@@ -2886,7 +2918,7 @@ async function handleIndustryPlaybookAnalysis(industryName) {
             .replace(/{industryName}/g, industryName)
             .replace(/{companyName}/g, 'a Key Company'); 
 
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating creative analysis for ${industryName}:`, error);
@@ -2900,14 +2932,13 @@ async function handleIndustryPlaybookAnalysis(industryName) {
 async function handleIndustryDisruptorAnalysis(industryName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "Disruptor Analysis"...`;
 
     const contentArea = document.getElementById('industry-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
         const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/\[INDUSTRY NAME\]/g, industryName);
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${industryName}:`, error);
@@ -2921,7 +2952,6 @@ async function handleIndustryDisruptorAnalysis(industryName) {
 async function handleIndustryMacroPlaybookAnalysis(industryName) {
     openModal(CONSTANTS.MODAL_LOADING);
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    loadingMessage.textContent = `Generating AI article: "Macro Playbook"...`;
 
     const contentArea = document.getElementById('industry-analysis-content');
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Macro Playbook"...</div>`;
@@ -2931,7 +2961,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
         const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
             .replace(/\[INDUSTRY NAME\]/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
@@ -2975,7 +3005,7 @@ async function getFmpStockData(symbol) {
 
 async function handleFinancialAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating AI financial analysis for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -2987,7 +3017,7 @@ async function handleFinancialAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
 
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3003,7 +3033,7 @@ async function handleFinancialAnalysis(symbol) {
 
 async function handleUndervaluedAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Performing AI valuation for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3016,7 +3046,7 @@ async function handleUndervaluedAnalysis(symbol) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
         
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3032,7 +3062,7 @@ async function handleUndervaluedAnalysis(symbol) {
 
 async function handleBullBearAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Bull vs. Bear case for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3042,7 +3072,7 @@ async function handleBullBearAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3057,7 +3087,7 @@ async function handleBullBearAnalysis(symbol) {
 
 async function handleMoatAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Moat analysis for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3067,7 +3097,7 @@ async function handleMoatAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3082,7 +3112,7 @@ async function handleMoatAnalysis(symbol) {
 
 async function handleDividendSafetyAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Dividend Safety analysis for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3092,7 +3122,7 @@ async function handleDividendSafetyAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3107,7 +3137,7 @@ async function handleDividendSafetyAnalysis(symbol) {
 
 async function handleGrowthOutlookAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Growth Outlook analysis for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3117,7 +3147,7 @@ async function handleGrowthOutlookAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3132,7 +3162,7 @@ async function handleGrowthOutlookAnalysis(symbol) {
 
 async function handleRiskAssessmentAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Risk Assessment for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3142,7 +3172,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
@@ -3157,7 +3187,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
 
 async function handleCapitalAllocatorsAnalysis(symbol) {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Generating Capital Allocators analysis for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
@@ -3166,7 +3196,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
         const prompt = CAPITAL_ALLOCATORS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol);
-        const report = await callGeminiApi(prompt);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
