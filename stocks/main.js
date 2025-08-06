@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "10.2.0"; 
+const APP_VERSION = "11.0.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -421,6 +421,7 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
 	3. The Scorecard & Investment Thesis:
 		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
@@ -437,12 +438,13 @@ const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
 	3. The Scorecard & Investment Thesis:
 		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
 const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
-For the [SECTOR NAME] sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+For the {sectorName} sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Sub-Industry] Market"
 Your analysis must be structured as follows:
 1. Introduction: The Challenger Appears
@@ -467,12 +469,13 @@ What is the long-term bull case? Analyze the Total Addressable Market (TAM) they
 
 Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
 
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
 const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
-For the [INDUSTRY NAME] industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+For the {industryName} industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Industry] Market"
 Your analysis must be structured as follows:
 1. Introduction: The Challenger Appears
@@ -497,6 +500,7 @@ What is the long-term bull case? Analyze the Total Addressable Market (TAM) they
 
 Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
 
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
@@ -505,13 +509,14 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 	1. The Wave (The Macro Trend):
 		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
 	2. The 'Surfboard' (The Company):
-		- Within the [SECTOR NAME] sector, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
+		- Within the {sectorName} sector, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
 	3. Quantifying the Tail-Wind:
 		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
 	4. Thesis Risks (When the Wave Breaks):
 		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
 	5. Conclusion: Investing in a Megatrend
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
@@ -519,13 +524,14 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 	1. The Wave (The Macro Trend):
 		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
 	2. The 'Surfboard' (The Company):
-		- Within the [INDUSTRY NAME] industry, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
+		- Within the {industryName} industry, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
 	3. Quantifying the Tail-Wind:
 		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
 	4. Thesis Risks (When the Wave Breaks):
 		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
 	5. Conclusion: Investing in a Megatrend
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
@@ -541,6 +547,7 @@ Your task is to generate a comprehensive markdown report by following these step
 
 Output Format:
 The report must start with an overall summary, followed by a deeper dive into the top companies you identified. For each catalyst you mention, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data JSON.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
 ## AI-Powered Market Analysis: {industryName} Industry
