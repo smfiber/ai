@@ -19,6 +19,7 @@ const CONSTANTS = {
     MODAL_MANAGE_FMP_ENDPOINTS: 'manageFmpEndpointsModal',
     MODAL_MANAGE_BROAD_ENDPOINTS: 'manageBroadEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
+    MODAL_STOCK_LIST: 'stockListModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
@@ -420,7 +421,6 @@ const CAPITAL_ALLOCATORS_PROMPT = `
 			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
 	3. The Scorecard & Investment Thesis:
 		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
@@ -437,7 +437,6 @@ const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
 	3. The Scorecard & Investment Thesis:
 		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
@@ -468,7 +467,6 @@ What is the long-term bull case? Analyze the Total Addressable Market (TAM) they
 
 Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
@@ -499,7 +497,6 @@ What is the long-term bull case? Analyze the Total Addressable Market (TAM) they
 
 Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
 
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
@@ -515,7 +512,6 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
 	5. Conclusion: Investing in a Megatrend
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
@@ -530,7 +526,6 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
 	5. Conclusion: Investing in a Megatrend
 		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
@@ -546,7 +541,6 @@ Your task is to generate a comprehensive markdown report by following these step
 
 Output Format:
 The report must start with an overall summary, followed by a deeper dive into the top companies you identified. For each catalyst you mention, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data JSON.
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
 ## AI-Powered Market Analysis: {industryName} Industry
@@ -653,18 +647,6 @@ function get(obj, path, defaultValue = undefined) {
   return value !== undefined ? value : defaultValue;
 }
 
-function postProcessAiReport(htmlContent) {
-    if (typeof htmlContent !== 'string') return '';
-    const regex = /<stock-ticker>(.*?)<\/stock-ticker>/g;
-    return htmlContent.replace(regex, (match, ticker) => {
-        const sanitizedTicker = sanitizeText(ticker);
-        return `<span class="inline-block bg-gray-200 rounded-md px-2 py-1 align-middle mx-1 my-1 shadow-sm">
-                  <span class="font-mono font-bold text-indigo-700 text-sm">${sanitizedTicker}</span>
-                  <button class="add-stock-from-modal-btn text-xs bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-1 px-2 rounded-full ml-2 transition-transform hover:scale-110" data-ticker="${sanitizedTicker}" title="Add ${sanitizedTicker} to Watchlist/Portfolio">&#43;</button>
-                </span>`;
-    });
-}
-
 // --- MODAL HELPERS ---
 
 function openModal(modalId) {
@@ -755,7 +737,7 @@ async function initializeAppContent() {
     document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('market-calendar-accordion').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
-    await renderDashboard();
+    await fetchAndCachePortfolioData();
     displayMarketCalendar();
     renderSectorButtons();
     displayIndustryScreener();
@@ -993,49 +975,6 @@ async function callGeminiApiWithTools(contents) {
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
-async function handleAddStockFromModal(ticker) {
-    if (!ticker) return;
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${ticker}...`;
-
-    try {
-        const docRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            closeModal(CONSTANTS.MODAL_LOADING);
-            displayMessageInModal(`${ticker} is already in your portfolio or watchlist. You can manage it from the dashboard.`, 'info');
-            return;
-        }
-
-        document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${ticker}...`;
-        
-        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${fmpApiKey}`;
-        const profileData = await callApi(profileUrl);
-
-        if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
-            throw new Error(`Could not fetch data for ${ticker}. It may be an invalid ticker.`);
-        }
-        const overviewData = profileData[0];
-
-        const newStock = {
-            ticker: overviewData.symbol,
-            companyName: overviewData.companyName,
-            exchange: overviewData.exchange,
-            isEditMode: false
-        };
-        
-        openManageStockModal(newStock);
-
-    } catch (error) {
-        console.error(`Error adding stock ${ticker} from modal:`, error);
-        displayMessageInModal(error.message, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
 async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = ''; 
     if (stocksWithData.length === 0) {
@@ -1043,22 +982,22 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
         return;
     }
 
-    const groupedByExchange = stocksWithData.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Unknown';
-        if (!acc[exchange]) acc[exchange] = [];
-        acc[exchange].push(stock);
+    const groupedBySector = stocksWithData.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) acc[sector] = [];
+        acc[sector].push(stock);
         return acc;
     }, {});
 
-    const sortedExchanges = Object.keys(groupedByExchange).sort();
+    const sortedSectors = Object.keys(groupedBySector).sort();
 
     let html = '';
-    sortedExchanges.forEach(exchange => {
-        const stocks = groupedByExchange[exchange].sort((a, b) => a.companyName.localeCompare(b.companyName));
+    sortedSectors.forEach(sector => {
+        const stocks = groupedBySector[sector].sort((a, b) => a.companyName.localeCompare(b.companyName));
         html += `
             <details class="sector-group" open>
                 <summary class="sector-header">
-                    <span>${sanitizeText(exchange)}</span>
+                    <span>${sanitizeText(sector)}</span>
                     <span class="sector-toggle-icon"></span>
                 </summary>
                 <div class="sector-content">
@@ -1090,41 +1029,67 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = html;
 }
 
-async function renderDashboard() {
+async function fetchAndCachePortfolioData() {
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard...";
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard data...";
     
-    const portfolioContainer = document.getElementById('portfolio-snapshot-container');
-    const watchlistContainer = document.getElementById('watchlist-container');
-
     try {
         const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        portfolioCache = querySnapshot.docs.map(doc => doc.data());
+        portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const stockDataPromises = portfolioCache.map(stock => getFmpStockData(stock.ticker));
-        const results = await Promise.allSettled(stockDataPromises);
-
-        const stocksWithData = portfolioCache.map((stock, index) => {
-            if (results[index].status === 'fulfilled' && results[index].value) {
-                return { ...stock, fmpData: results[index].value };
-            }
-            return { ...stock, fmpData: null }; // Mark as having no data
-        }).filter(stock => stock.fmpData); // Only include stocks with data
-
-        const portfolioStocks = stocksWithData.filter(s => s.status === 'Portfolio');
-        const watchlistStocks = stocksWithData.filter(s => s.status === 'Watchlist');
-
-        _renderGroupedStockList(portfolioContainer, portfolioStocks, 'portfolio');
-        _renderGroupedStockList(watchlistContainer, watchlistStocks, 'watchlist');
+        const portfolioStocks = portfolioCache.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = portfolioCache.filter(s => s.status === 'Watchlist');
 
         document.getElementById('portfolio-count').textContent = portfolioStocks.length;
         document.getElementById('watchlist-count').textContent = watchlistStocks.length;
 
     } catch (error) {
-        console.error("Error loading dashboard:", error);
-        displayMessageInModal(`Failed to load dashboard: ${error.message}`, 'error');
-        portfolioContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load portfolio data.</p>`;
-        watchlistContainer.innerHTML = `<p class="text-center text-red-500 p-8">Could not load watchlist data.</p>`;
+        console.error("Error loading dashboard data:", error);
+        displayMessageInModal(`Failed to load dashboard data: ${error.message}`, 'error');
+        document.getElementById('portfolio-count').textContent = 'E';
+        document.getElementById('watchlist-count').textContent = 'E';
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function openStockListModal(listType) {
+    const modalId = CONSTANTS.MODAL_STOCK_LIST;
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Loading ${listType}...`;
+
+    const title = modal.querySelector('#stock-list-modal-title');
+    const container = modal.querySelector('#stock-list-modal-content');
+    title.textContent = listType === 'Portfolio' ? 'My Portfolio' : 'My Watchlist';
+    container.innerHTML = '';
+
+    try {
+        const stocksToFetch = portfolioCache.filter(s => s.status === listType);
+        if (stocksToFetch.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
+            openModal(modalId);
+            closeModal(CONSTANTS.MODAL_LOADING);
+            return;
+        }
+
+        const stockDataPromises = stocksToFetch.map(stock => getFmpStockData(stock.ticker));
+        const results = await Promise.allSettled(stockDataPromises);
+
+        const stocksWithData = stocksToFetch.map((stock, index) => {
+            if (results[index].status === 'fulfilled' && results[index].value) {
+                return { ...stock, fmpData: results[index].value };
+            }
+            return { ...stock, fmpData: null };
+        }).filter(stock => stock.fmpData);
+
+        await _renderGroupedStockList(container, stocksWithData, listType);
+        openModal(modalId);
+    } catch (error) {
+        console.error(`Error loading ${listType} modal:`, error);
+        displayMessageInModal(`Failed to load ${listType}: ${error.message}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
@@ -1141,6 +1106,8 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-name').value = stockData.companyName;
         document.getElementById('manage-stock-exchange').value = stockData.exchange;
         document.getElementById('manage-stock-status').value = stockData.status || 'Watchlist';
+        document.getElementById('manage-stock-sector').value = stockData.sector || '';
+        document.getElementById('manage-stock-industry').value = stockData.industry || '';
     } else {
         document.getElementById('manage-stock-modal-title').textContent = 'Add New Stock';
         document.getElementById('manage-stock-original-ticker').value = '';
@@ -1148,6 +1115,8 @@ async function openManageStockModal(stockData = {}) {
         document.getElementById('manage-stock-name').value = stockData.companyName || '';
         document.getElementById('manage-stock-exchange').value = stockData.exchange || '';
         document.getElementById('manage-stock-status').value = 'Watchlist';
+        document.getElementById('manage-stock-sector').value = stockData.sector || '';
+        document.getElementById('manage-stock-industry').value = stockData.industry || '';
     }
     openModal(CONSTANTS.MODAL_MANAGE_STOCK);
 }
@@ -1167,6 +1136,8 @@ async function handleSaveStock(e) {
         companyName: document.getElementById('manage-stock-name').value.trim(),
         exchange: document.getElementById('manage-stock-exchange').value.trim(),
         status: document.getElementById('manage-stock-status').value.trim(),
+        sector: document.getElementById('manage-stock-sector').value.trim(),
+        industry: document.getElementById('manage-stock-industry').value.trim(),
     };
 
     openModal(CONSTANTS.MODAL_LOADING);
@@ -1187,7 +1158,7 @@ async function handleSaveStock(e) {
         }
 
         closeModal(CONSTANTS.MODAL_MANAGE_STOCK);
-        await renderDashboard();
+        await fetchAndCachePortfolioData();
     } catch(error) {
         console.error("Error saving stock:", error);
         displayMessageInModal(`Could not save stock: ${error.message}`, 'error');
@@ -1205,7 +1176,7 @@ async function handleDeleteStock(ticker) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
                 await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
-                await renderDashboard();
+                await fetchAndCachePortfolioData();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
                 }
@@ -1256,6 +1227,8 @@ async function handleResearchSubmit(e) {
             ticker: overviewData.symbol,
             companyName: overviewData.companyName,
             exchange: overviewData.exchange,
+            sector: overviewData.sector,
+            industry: overviewData.industry,
             isEditMode: false
         };
         
@@ -1736,20 +1709,22 @@ function renderPortfolioManagerList() {
         return;
     }
 
-    const groupedByExchange = portfolioCache.reduce((acc, stock) => {
-        const exchange = stock.exchange || 'Unknown';
-        if (!acc[exchange]) {
-            acc[exchange] = [];
+    const groupedBySector = portfolioCache.reduce((acc, stock) => {
+        const sector = stock.sector || 'Uncategorized';
+        if (!acc[sector]) {
+            acc[sector] = [];
         }
-        acc[exchange].push(stock);
+        acc[sector].push(stock);
         return acc;
     }, {});
 
     let html = '';
-    for (const exchange in groupedByExchange) {
-        html += `<div class="portfolio-exchange-header">${sanitizeText(exchange)}</div>`;
+    const sortedSectors = Object.keys(groupedBySector).sort();
+    
+    for (const sector of sortedSectors) {
+        html += `<div class="portfolio-exchange-header">${sanitizeText(sector)}</div>`;
         html += '<ul class="divide-y divide-gray-200">';
-        groupedByExchange[exchange].forEach(stock => {
+        groupedBySector[sector].sort((a,b) => a.companyName.localeCompare(b.companyName)).forEach(stock => {
             const statusBadge = stock.status === 'Portfolio'
                 ? '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">Portfolio</span>'
                 : '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
@@ -1831,8 +1806,7 @@ async function handleRefreshFmpData(symbol) {
         
         displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
         
-        await displayStockCard(symbol);
-        await renderDashboard();
+        await fetchAndCachePortfolioData();
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -2073,9 +2047,38 @@ function handleDeleteBroadEndpoint(id) {
 
 function setupGlobalEventListeners() {
     document.getElementById('dashboard-section').addEventListener('click', (e) => {
-        const target = e.target.closest('button, summary');
+        const refreshButton = e.target.closest('.dashboard-refresh-button');
+        if (refreshButton) {
+            fetchAndCachePortfolioData();
+            return;
+        }
+        
+        const portfolioButton = e.target.closest('#open-portfolio-modal-button');
+        if (portfolioButton) {
+            openStockListModal('Portfolio');
+            return;
+        }
+
+        const watchlistButton = e.target.closest('#open-watchlist-modal-button');
+        if (watchlistButton) {
+            openStockListModal('Watchlist');
+            return;
+        }
+    });
+
+    document.getElementById(CONSTANTS.MODAL_STOCK_LIST).addEventListener('click', (e) => {
+        const target = e.target.closest('button');
         if (!target) return;
 
+        if (target.id === 'expand-all-button') {
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = true);
+            return;
+        }
+        if (target.id === 'collapse-all-button') {
+            document.querySelectorAll('#stock-list-modal-content .sector-group').forEach(d => d.open = false);
+            return;
+        }
+        
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
@@ -2088,11 +2091,6 @@ function setupGlobalEventListeners() {
             } else if (target.classList.contains('dashboard-item-refresh')) {
                 handleRefreshFmpData(ticker);
             }
-        }
-
-        const refreshButton = e.target.closest('.dashboard-refresh-button');
-        if (refreshButton) {
-            renderDashboard();
         }
     });
 
@@ -2109,13 +2107,6 @@ function setupGlobalEventListeners() {
     });
 
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
-        const addBtn = e.target.closest('.add-stock-from-modal-btn');
-        if (addBtn) {
-            const ticker = addBtn.dataset.ticker;
-            handleAddStockFromModal(ticker);
-            return;
-        }
-
         const target = e.target.closest('button[data-prompt-name]');
         if (target) {
             const sector = target.dataset.sector;
@@ -2133,13 +2124,6 @@ function setupGlobalEventListeners() {
     });
 
     document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
-        const addBtn = e.target.closest('.add-stock-from-modal-btn');
-        if (addBtn) {
-            const ticker = addBtn.dataset.ticker;
-            handleAddStockFromModal(ticker);
-            return;
-        }
-
         const target = e.target.closest('button[data-prompt-name]');
         if (target) {
             const industry = target.dataset.industry;
@@ -2229,7 +2213,8 @@ function setupEventListeners() {
         { modal: CONSTANTS.MODAL_MANAGE_FMP_ENDPOINTS, button: 'close-manage-fmp-endpoints-modal', bg: 'close-manage-fmp-endpoints-modal-bg' },
         { modal: CONSTANTS.MODAL_MANAGE_BROAD_ENDPOINTS, button: 'close-manage-broad-endpoints-modal', bg: 'close-manage-broad-endpoints-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
-        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' }
+        { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
+        { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
@@ -2643,8 +2628,7 @@ async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
 
     try {
         const report = await callGeminiApi(promptData.prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating creative analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -2665,8 +2649,7 @@ async function handleDisruptorAnalysis(contextName) {
     try {
         const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, contextName);
         const report = await callGeminiApi(prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -2690,8 +2673,7 @@ async function handleMacroPlaybookAnalysis(contextName) {
             .replace(/\[SECTOR NAME\]/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await callGeminiApi(prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${contextName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -2872,8 +2854,7 @@ async function handleIndustryMarketTrendsAnalysis(industryName) {
             return match;
         });
 
-        const processedReport = postProcessAiReport(marked.parse(finalReport));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(finalReport);
 
     } catch (error) {
         console.error("Error during AI agent industry analysis:", error);
@@ -2899,8 +2880,7 @@ async function handleIndustryPlaybookAnalysis(industryName) {
             .replace(/{companyName}/g, 'a Key Company'); 
 
         const report = await callGeminiApi(prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating creative analysis for ${industryName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -2921,8 +2901,7 @@ async function handleIndustryDisruptorAnalysis(industryName) {
     try {
         const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/\[INDUSTRY NAME\]/g, industryName);
         const report = await callGeminiApi(prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating disruptor analysis for ${industryName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -2946,8 +2925,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
             .replace(/\[INDUSTRY NAME\]/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await callGeminiApi(prompt);
-        const processedReport = postProcessAiReport(marked.parse(report));
-        contentArea.innerHTML = processedReport;
+        contentArea.innerHTML = marked.parse(report);
     } catch (error) {
         console.error(`Error generating macro playbook analysis for ${industryName}:`, error);
         displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
@@ -3185,8 +3163,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
             const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            const processedReport = postProcessAiReport(marked.parse(report));
-            articleContainer.innerHTML = analysisTitleHtml + processedReport;
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
         }
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
