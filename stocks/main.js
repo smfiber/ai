@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "11.2.0"; 
+const APP_VERSION = "11.3.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -600,6 +600,74 @@ Your analysis must be structured as follows:
 4. The Rebirth Thesis & The Risks:
    - Summarize the bull case for why the company could be a multi-bagger if the turnaround succeeds.
    - Crucially, also outline the major risks and what could cause the "Phoenix" to turn back to ash.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
+const PICK_AND_SHOVEL_PROMPT = `
+Act as an investment analyst specializing in identifying indirect beneficiaries of major economic trends.
+Article Title: "The 'Pick and Shovel' Play: How [Company Name] is Powering the [Trend Name] Gold Rush"
+Your analysis must be structured as follows:
+1. The Gold Rush:
+   - Define the major trend or "gold rush" sweeping through the {contextName} {contextType} (e.g., the build-out of AI data centers, the transition to electric vehicles, the revolution in gene editing).
+2. The "Pick and Shovel" Provider:
+   - Identify a company within the {contextName} {contextType} that doesn't make the end product but provides a critical component, technology, or service to the companies that do.
+3. The Tollbooth Thesis:
+   - Explain why this company's business model acts like a tollbooth on the industry's growth highway. Why does it win regardless of which specific competitor comes out on top?
+4. Quantifying the Tailwind:
+   - How is the "gold rush" showing up in the company's results? Is its revenue growth tied directly to the industry's expansion?
+5. Investment Outlook:
+   - Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme for the long run.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
+const LINCHPIN_ANALYSIS_PROMPT = `
+Act as a business strategist focused on identifying companies with deep, structural competitive advantages.
+Article Title: "The Linchpin: How [Company Name] Dominates the [Industry] Supply Chain"
+Your analysis must be structured as follows:
+1. Mapping the Value Chain:
+   - Briefly describe the key steps required to bring the {contextName} {contextType}'s product or service to market.
+2. The Linchpin Company:
+   - Identify one public company within the {contextName} {contextType} that represents a critical, non-negotiable step in this chain.
+3. The Choke Point Moat:
+   - Analyze the source of its power. Is it due to unique IP, immense economies of scale, or prohibitively high switching costs for its customers?
+4. The Investment Case:
+   - Conclude by explaining why this "linchpin" status translates into predictable, long-term profitability and makes the company a cornerstone of its industry, and therefore a potentially excellent long-term holding.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
+const HIDDEN_VALUE_PROMPT = `
+Act as a value investor and activist analyst, searching for hidden value in complex companies.
+Article Title: "Hidden Value: A Sum-of-the-Parts Investigation of [Company Name]"
+Your analysis must be structured as follows:
+1. The Misunderstood Giant:
+   - Introduce a large, multi-divisional company in the {contextName} {contextType} that may be subject to a "conglomerate discount."
+2. Breaking Down the Empire:
+   - Identify and describe the company's primary business segments. For each, identify its pure-play competitors.
+3. Valuing the Pieces:
+   - For each major segment, apply a reasonable valuation multiple (e.g., Price/Sales or EV/EBITDA) based on its publicly-traded competitors.
+4. The Sum-of-the-Parts (SOTP) Calculation:
+   - Add up the estimated values of all segments and subtract net debt to arrive at a theoretical "unlocked" equity value.
+5. The Value Thesis and Potential Catalysts:
+   - Compare the SOTP value to the current market cap. If there's a significant discount, discuss what future events (e.g., spinoffs) could unlock this value for shareholders.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
+const UNTOUCHABLES_ANALYSIS_PROMPT = `
+Act as a brand strategist and long-term investor, analyzing companies with powerful, "cult-like" brands.
+Article Title: "The Untouchables: Deconstructing [Company Name]'s 'Cult' Brand Moat"
+Your analysis must be structured as follows:
+1. The Icon:
+   - Identify a company in the {contextName} {contextType} famous for its powerful brand and devoted following.
+2. Anatomy of Devotion:
+   - Analyze the sources of this intense customer loyalty (e.g., identity/aspiration, superior design/UX, unwavering trust).
+3. The Financial Fingerprint of a Great Brand:
+   - Find proof of the brand's power in the financials. Look for sustainably high gross margins, low S&M spend as a % of revenue, and high rates of recurring revenue.
+4. The Long-Term Investment Thesis:
+   - Conclude by explaining why this powerful brand is a durable competitive advantage that is extremely difficult for a rival to replicate, leading to predictable long-term profits.
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
@@ -2200,6 +2268,14 @@ function setupGlobalEventListeners() {
                 handleFortressAnalysis(sector, 'sector');
             } else if (promptName === 'PhoenixAnalysis') {
                 handlePhoenixAnalysis(sector, 'sector');
+            } else if (promptName === 'PickAndShovel') {
+                handlePickAndShovelAnalysis(sector, 'sector');
+            } else if (promptName === 'Linchpin') {
+                handleLinchpinAnalysis(sector, 'sector');
+            } else if (promptName === 'HiddenValue') {
+                handleHiddenValueAnalysis(sector, 'sector');
+            } else if (promptName === 'Untouchables') {
+                handleUntouchablesAnalysis(sector, 'sector');
             } else {
                 handleCreativeSectorAnalysis(sector, promptName);
             }
@@ -2223,6 +2299,14 @@ function setupGlobalEventListeners() {
                 handleFortressAnalysis(industry, 'industry');
             } else if (promptName === 'PhoenixAnalysis') {
                 handlePhoenixAnalysis(industry, 'industry');
+            } else if (promptName === 'PickAndShovel') {
+                handlePickAndShovelAnalysis(industry, 'industry');
+            } else if (promptName === 'Linchpin') {
+                handleLinchpinAnalysis(industry, 'industry');
+            } else if (promptName === 'HiddenValue') {
+                handleHiddenValueAnalysis(industry, 'industry');
+            } else if (promptName === 'Untouchables') {
+                handleUntouchablesAnalysis(industry, 'industry');
             }
         }
     });
@@ -2630,85 +2714,70 @@ function handleSectorSelection(sectorName) {
     
     const analysisTypes = [
         {
-            category: 'Data-Driven Analysis',
             name: 'Market Trends',
             promptName: 'MarketTrends',
             description: 'AI agent searches news, finds top companies in your portfolio for this sector, and generates a market summary.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
-            name: creativePromptMap[sectorName]?.label || 'Playbook',
-            promptName: sectorName.replace(/\s/g, ''),
-            description: "Investor-letter style analysis of a key company's management and capital allocation skill.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
-        },
-        {
-            category: 'Thematic Analysis',
-            name: 'Disruptor',
+            name: 'The Disruptor',
             promptName: 'DisruptorAnalysis',
             description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
-            name: 'Macro Trend',
-            promptName: 'MacroPlaybook',
-            description: "Identifies a multi-year macro trend and analyzes a best-in-class company poised to benefit.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
-        },
-        {
-            category: 'Thematic Analysis',
             name: 'The Fortress',
             promptName: 'FortressAnalysis',
             description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
             name: 'The Phoenix',
             promptName: 'PhoenixAnalysis',
             description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+        },
+        {
+            name: 'Pick & Shovel',
+            promptName: 'PickAndShovel',
+            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Linchpin',
+            promptName: 'Linchpin',
+            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
+        },
+        {
+            name: 'Hidden Value',
+            promptName: 'HiddenValue',
+            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
+        },
+        {
+            name: 'The Untouchables',
+            promptName: 'Untouchables',
+            description: 'Deconstructs a "cult" brand moat and analyzes the fanatical customer loyalty that drives it.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
         }
     ];
 
-    const groupedByType = analysisTypes.reduce((acc, type) => {
-        if (!creativePromptMap[sectorName] && type.promptName === sectorName.replace(/\s/g, '')) {
-            return acc; // Skip the playbook button if no creative prompt exists
-        }
-        if (!acc[type.category]) {
-            acc[type.category] = [];
-        }
-        acc[type.category].push(type);
-        return acc;
-    }, {});
-
-    let html = '<div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">';
-    for (const category in groupedByType) {
-        html += `<div class="text-center">
-            <span class="block text-xs font-bold text-gray-500 uppercase mb-2">${category}</span>
+    let html = `
+        <div class="text-center w-full">
+            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
             <div class="flex flex-wrap justify-center gap-4">`;
-        
-        groupedByType[category].forEach(type => {
-            html += `
-                <button 
-                    class="flex flex-col items-center justify-center p-4 text-center bg-white rounded-lg shadow-md border hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1 w-40 h-40"
-                    data-sector="${sectorName}" 
-                    data-prompt-name="${type.promptName}"
-                    title="${type.description}">
-                    <div class="w-12 h-12 mb-2 text-indigo-600">
-                        ${type.svgIcon}
-                    </div>
-                    <span class="font-semibold text-gray-800">${type.name}</span>
-                </button>
-            `;
-        });
-        
-        html += `</div></div>`;
-    }
-    html += '</div>';
 
+    analysisTypes.forEach(type => {
+        html += `
+            <button class="analysis-tile" data-sector="${sectorName}" data-prompt-name="${type.promptName}" title="${type.description}">
+                ${type.svgIcon}
+                <span class="tile-name">${type.name}</span>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
     selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
 }
@@ -2827,6 +2896,95 @@ async function handlePhoenixAnalysis(contextName, contextType) {
     }
 }
 
+async function handlePickAndShovelAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Pick and Shovel Play"...</div>`;
+
+    try {
+        const prompt = PICK_AND_SHOVEL_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Pick and Shovel analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleLinchpinAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Linchpin"...</div>`;
+
+    try {
+        const prompt = LINCHPIN_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Linchpin analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleHiddenValueAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Hidden Value"...</div>`;
+
+    try {
+        const prompt = HIDDEN_VALUE_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Hidden Value analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleUntouchablesAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Untouchables"...</div>`;
+
+    try {
+        const prompt = UNTOUCHABLES_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating Untouchables analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 
 async function displayIndustryScreener() {
     try {
@@ -2870,82 +3028,70 @@ function handleIndustrySelection(industryName) {
     
     const analysisTypes = [
         {
-            category: 'Data-Driven Analysis',
             name: 'Market Trends',
             promptName: 'MarketTrends',
             description: 'AI agent finds companies in this industry, searches news, and generates a market summary.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
-            name: 'Playbook',
-            promptName: 'PlaybookAnalysis',
-            description: "Investor-letter style analysis of a key company's management and capital allocation skill.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
-        },
-        {
-            category: 'Thematic Analysis',
-            name: 'Disruptor',
+            name: 'The Disruptor',
             promptName: 'DisruptorAnalysis',
             description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
-            name: 'Macro Trend',
-            promptName: 'MacroPlaybook',
-            description: "Identifies a multi-year macro trend and analyzes a best-in-class company poised to benefit.",
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
-        },
-        {
-            category: 'Thematic Analysis',
             name: 'The Fortress',
             promptName: 'FortressAnalysis',
             description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
         },
         {
-            category: 'Thematic Analysis',
             name: 'The Phoenix',
             promptName: 'PhoenixAnalysis',
             description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
-            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
+        },
+        {
+            name: 'Pick & Shovel',
+            promptName: 'PickAndShovel',
+            description: 'Identifies essential suppliers that power an entire industry, a lower-risk way to invest in a trend.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            name: 'The Linchpin',
+            promptName: 'Linchpin',
+            description: 'Focuses on companies that control a vital, irreplaceable choke point in an industry’s value chain.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.192 7.027a5.25 5.25 0 017.423 0L21 7.402a5.25 5.25 0 010 7.423l-.385.385a5.25 5.25 0 01-7.423 0L13.192 7.027zm-6.384 0a5.25 5.25 0 017.423 0L15 7.402a5.25 5.25 0 010 7.423l-5.385 5.385a5.25 5.25 0 01-7.423 0L2 19.973a5.25 5.25 0 010-7.423l.385-.385z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6" /></svg>`
+        },
+        {
+            name: 'Hidden Value',
+            promptName: 'HiddenValue',
+            description: 'A sum-of-the-parts investigation to find complex companies the market may be undervaluing.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12v-1.5M3.75 3h16.5v13.5A2.25 2.25 0 0118 18.75h-9.75A2.25 2.25 0 016 16.5v-1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6h1.5m-1.5 3h1.5m-1.5 3h1.5" /></svg>`
+        },
+        {
+            name: 'The Untouchables',
+            promptName: 'Untouchables',
+            description: 'Deconstructs a "cult" brand moat and analyzes the fanatical customer loyalty that drives it.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
         }
     ];
 
-    const groupedByType = analysisTypes.reduce((acc, type) => {
-        if (!acc[type.category]) {
-            acc[type.category] = [];
-        }
-        acc[type.category].push(type);
-        return acc;
-    }, {});
-
-    let html = '<div class="flex flex-col md:flex-row gap-8 justify-center items-start w-full">';
-    for (const category in groupedByType) {
-        html += `<div class="text-center">
-            <span class="block text-xs font-bold text-gray-500 uppercase mb-2">${category}</span>
+    let html = `
+        <div class="text-center w-full">
+            <span class="block text-sm font-bold text-gray-500 uppercase mb-4">AI Analysis</span>
             <div class="flex flex-wrap justify-center gap-4">`;
-        
-        groupedByType[category].forEach(type => {
-            html += `
-                <button 
-                    class="flex flex-col items-center justify-center p-4 text-center bg-white rounded-lg shadow-md border hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1 w-40 h-40"
-                    data-industry="${industryName}" 
-                    data-prompt-name="${type.promptName}"
-                    title="${type.description}">
-                    <div class="w-12 h-12 mb-2 text-indigo-600">
-                        ${type.svgIcon}
-                    </div>
-                    <span class="font-semibold text-gray-800">${type.name}</span>
-                </button>
-            `;
-        });
-        
-        html += `</div></div>`;
-    }
-    html += '</div>';
 
+    analysisTypes.forEach(type => {
+        html += `
+            <button class="analysis-tile" data-industry="${industryName}" data-prompt-name="${type.promptName}" title="${type.description}">
+                ${type.svgIcon}
+                <span class="tile-name">${type.name}</span>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
     selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
 }
@@ -3209,7 +3355,7 @@ async function handleMoatAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
