@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, 
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- App Version ---
-const APP_VERSION = "11.1.0"; 
+const APP_VERSION = "11.2.0"; 
 
 // --- Constants ---
 const CONSTANTS = {
@@ -568,6 +568,42 @@ List of companies in the industry:
 News Articles JSON Data:
 {newsArticlesJson}
 `;
+
+const FORTRESS_ANALYSIS_PROMPT = `
+Act as a conservative, risk-averse investment analyst. Your goal is to identify an "all-weather" business within the {contextName} {contextType} that is built for resilience.
+Article Title: "The Fortress: Why [Company Name] Is Built to Withstand the Economic Storm"
+Your analysis must be structured as follows:
+1. The Economic Storm:
+   - Define a hypothetical adverse economic scenario (e.g., a period of high inflation and low consumer spending).
+2. The Fortress:
+   - Within the {contextName} {contextType}, identify one public company that appears structurally resilient to this storm.
+3. Analyzing the Defenses:
+   - Inelastic Demand: Does the company sell a product or service that customers need, regardless of the economic climate?
+   - Pricing Power: Does its brand or market position allow it to pass on cost increases to customers, protecting its margins?
+   - Impenetrable Balance Sheet: Analyze its debt levels. Does it have a strong cash position to survive a downturn and perhaps even acquire weaker rivals?
+4. The Long-Term Compounding Thesis:
+   - Conclude by summarizing why this company's resilience makes it a prime candidate to not just survive but thrive over a multi-decade timeline, steadily compounding wealth for patient investors.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
+const PHOENIX_ANALYSIS_PROMPT = `
+Act as a special situations analyst looking for high-risk, high-reward opportunities. Your goal is to analyze a potential turnaround story.
+Article Title: "The Phoenix: Analyzing the Potential Turnaround of [Company Name]"
+Your analysis must be structured as follows:
+1. The Fall From Grace:
+   - Identify a company in the {contextName} {contextType} that has stumbled. Briefly describe its past troubles (e.g., lost market share, failed product, crushing debt).
+2. The Catalyst for Change:
+   - Identify the single most important catalyst driving the potential turnaround (e.g., new CEO, strategic pivot, new product).
+3. The "Green Shoots" (Finding the Proof):
+   - Search for early, quantifiable evidence that the turnaround is taking hold. Look for improving profit margins, debt reduction, positive free cash flow, or renewed revenue growth.
+4. The Rebirth Thesis & The Risks:
+   - Summarize the bull case for why the company could be a multi-bagger if the turnaround succeeds.
+   - Crucially, also outline the major risks and what could cause the "Phoenix" to turn back to ash.
+When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
+`;
+
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
@@ -2160,6 +2196,10 @@ function setupGlobalEventListeners() {
                 handleDisruptorAnalysis(sector);
             } else if (promptName === 'MacroPlaybook') {
                 handleMacroPlaybookAnalysis(sector);
+            } else if (promptName === 'FortressAnalysis') {
+                handleFortressAnalysis(sector, 'sector');
+            } else if (promptName === 'PhoenixAnalysis') {
+                handlePhoenixAnalysis(sector, 'sector');
             } else {
                 handleCreativeSectorAnalysis(sector, promptName);
             }
@@ -2179,6 +2219,10 @@ function setupGlobalEventListeners() {
                 handleIndustryMacroPlaybookAnalysis(industry);
             } else if (promptName === 'PlaybookAnalysis') {
                 handleIndustryPlaybookAnalysis(industry);
+            } else if (promptName === 'FortressAnalysis') {
+                handleFortressAnalysis(industry, 'industry');
+            } else if (promptName === 'PhoenixAnalysis') {
+                handlePhoenixAnalysis(industry, 'industry');
             }
         }
     });
@@ -2589,29 +2633,43 @@ function handleSectorSelection(sectorName) {
             category: 'Data-Driven Analysis',
             name: 'Market Trends',
             promptName: 'MarketTrends',
-            description: 'Uses an AI agent to search recent news, identify top-performing companies in the sector, and generate a data-driven market summary.',
+            description: 'AI agent searches news, finds top companies in your portfolio for this sector, and generates a market summary.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: creativePromptMap[sectorName]?.label || 'Playbook',
             promptName: sectorName.replace(/\s/g, ''),
-            description: "Generates an in-depth analysis of a single, well-known company in the sector, focusing on its management's skill in capital allocation, styled like a professional investor letter.",
+            description: "Investor-letter style analysis of a key company's management and capital allocation skill.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: 'Disruptor',
             promptName: 'DisruptorAnalysis',
-            description: "Identifies a high-growth, innovative company in the sector and analyzes its potential to disrupt established industry leaders, styled like a venture capital report.",
+            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: 'Macro Trend',
             promptName: 'MacroPlaybook',
-            description: "Identifies a powerful, multi-year macro trend (e.g., electrification) and analyzes a best-in-class company in the sector that is positioned to benefit from it.",
+            description: "Identifies a multi-year macro trend and analyzes a best-in-class company poised to benefit.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
+        },
+        {
+            category: 'Thematic Analysis',
+            name: 'The Fortress',
+            promptName: 'FortressAnalysis',
+            description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            category: 'Thematic Analysis',
+            name: 'The Phoenix',
+            promptName: 'PhoenixAnalysis',
+            description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
         }
     ];
 
@@ -2723,6 +2781,53 @@ async function handleMacroPlaybookAnalysis(contextName) {
     }
 }
 
+async function handleFortressAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Fortress"...</div>`;
+
+    try {
+        const prompt = FORTRESS_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating fortress analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handlePhoenixAnalysis(contextName, contextType) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    
+    const modalId = contextType === 'sector' ? 'customAnalysisModal' : 'industryAnalysisModal';
+    const contentArea = document.getElementById(modalId).querySelector(contextType === 'sector' ? '#custom-analysis-content' : '#industry-analysis-content');
+    contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "The Phoenix"...</div>`;
+
+    try {
+        const prompt = PHOENIX_ANALYSIS_PROMPT
+            .replace(/{contextName}/g, contextName)
+            .replace(/{contextType}/g, contextType);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        contentArea.innerHTML = marked.parse(report);
+    } catch (error) {
+        console.error(`Error generating phoenix analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not generate AI article: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
 async function displayIndustryScreener() {
     try {
         const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${fmpApiKey}`;
@@ -2768,29 +2873,43 @@ function handleIndustrySelection(industryName) {
             category: 'Data-Driven Analysis',
             name: 'Market Trends',
             promptName: 'MarketTrends',
-            description: 'Uses an AI agent to search recent news, identify top-performing companies in the industry, and generate a data-driven market summary.',
+            description: 'AI agent finds companies in this industry, searches news, and generates a market summary.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: 'Playbook',
             promptName: 'PlaybookAnalysis',
-            description: "Generates an in-depth analysis of a single, well-known company in the industry, focusing on its management's skill in capital allocation, styled like a professional investor letter.",
+            description: "Investor-letter style analysis of a key company's management and capital allocation skill.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: 'Disruptor',
             promptName: 'DisruptorAnalysis',
-            description: "Identifies a high-growth, innovative company in the industry and analyzes its potential to disrupt established industry leaders, styled like a venture capital report.",
+            description: "VC-style report on a high-growth, innovative company with potential to disrupt its industry.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>`
         },
         {
-            category: 'Analysis',
+            category: 'Thematic Analysis',
             name: 'Macro Trend',
             promptName: 'MacroPlaybook',
-            description: "Identifies a powerful, multi-year macro trend (e.g., electrification) and analyzes a best-in-class company in the industry that is positioned to benefit from it.",
+            description: "Identifies a multi-year macro trend and analyzes a best-in-class company poised to benefit.",
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177.177a2.25 2.25 0 00-.177 3.183l1.575 1.575L15.75 21l2.25-2.25l.53-1.06a.956.956 0 011.652-.928l.679.906a1.125 1.125 0 001.906-.172L21 15.75l.612-.153" /></svg>`
+        },
+        {
+            category: 'Thematic Analysis',
+            name: 'The Fortress',
+            promptName: 'FortressAnalysis',
+            description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
+        },
+        {
+            category: 'Thematic Analysis',
+            name: 'The Phoenix',
+            promptName: 'PhoenixAnalysis',
+            description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
+            svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
         }
     ];
 
