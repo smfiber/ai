@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.0.5"; 
+export const APP_VERSION = "12.0.6"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -171,7 +171,7 @@ Identify 2-3 of the most significant financial strengths and what they mean for 
 ### The Bear Case (Potential Weaknesses & Risks)
 Identify 2-3 of the most significant weaknesses or financial red flags from the FMP data. What is the primary "bear" argument against owning this stock?
 ### Final Verdict: The "Moat" and Long-Hold Potential
-Based on purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
+Based on purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a a potential long-term holding.
 `.trim();
 
 export const UNDERVALUED_ANALYSIS_PROMPT = `
