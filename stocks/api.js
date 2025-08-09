@@ -49,7 +49,7 @@ export async function callApi(url, options = {}) {
 export async function callGeminiApi(prompt) {
     if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -72,7 +72,7 @@ export async function callGeminiApi(prompt) {
 export async function callGeminiApiWithTools(contents) {
     if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -331,6 +331,24 @@ export async function findStocksByIndustry({ industryName }) {
         return { stocks: stocks.map(s => s.symbol) };
     } catch (error) {
         console.error("Error fetching stocks by industry:", error);
+        return { error: "API call failed", detail: error.message };
+    }
+}
+
+export async function findStocksBySector({ sectorName }) {
+    if (!state.fmpApiKey) {
+        throw new Error("FMP API Key is required for this feature.");
+    }
+    const url = `https://financialmodelingprep.com/api/v3/stock-screener?sector=${encodeURIComponent(sectorName)}&limit=100&apikey=${state.fmpApiKey}`;
+    
+    try {
+        const stocks = await callApi(url);
+        if (!stocks || stocks.length === 0) {
+            return { error: "No stocks found", detail: `Could not find any stocks for the ${sectorName} sector.` };
+        }
+        return { stocks: stocks.map(s => s.symbol) };
+    } catch (error) {
+        console.error("Error fetching stocks by sector:", error);
         return { error: "API call failed", detail: error.message };
     }
 }
