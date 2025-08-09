@@ -1,5 +1,5 @@
 // --- App Version ---
-const APP_VERSION = "12.0.0"; 
+const APP_VERSION = "12.0.1"; 
 
 // --- Constants ---
 const CONSTANTS = {
