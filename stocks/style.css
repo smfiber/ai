@@ -384,7 +384,8 @@ body.modal-open {
     font-size: 0.75rem; /* text-xs */
     font-weight: 500;
     white-space: normal;
-    width: 200px;
+    width: max-content;
+    max-width: 250px;
     text-align: center;
     opacity: 0;
     visibility: hidden;
