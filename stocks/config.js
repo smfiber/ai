@@ -1,5 +1,26 @@
 // --- App Version ---
-export const APP_VERSION = "12.0.2"; 
+export const APP_VERSION = "12.0.3"; 
+
+// --- Shared State ---
+// This object will hold all the application's shared state.
+export const state = {
+    db: null,
+    auth: null,
+    userId: null,
+    firebaseConfig: null,
+    appIsInitialized: false,
+    fmpApiKey: "",
+    geminiApiKey: "",
+    searchApiKey: "",
+    searchEngineId: "",
+    googleClientId: "",
+    driveTokenClient: null,
+    driveFolderId: null,
+    portfolioCache: [],
+    calendarEvents: { earnings: [], ipos: [] },
+    calendarCurrentDate: new Date(),
+    availableIndustries: []
+};
 
 // --- Constants ---
 export const CONSTANTS = {
