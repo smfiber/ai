@@ -1,4 +1,4 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -1465,6 +1465,59 @@ document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
 
 // --- NEW SECTOR DEEP DIVE WORKFLOW (v7.2.0) ---
 
+async function handleMarketTrendsAnalysis(sectorName) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    const contentArea = document.getElementById('custom-analysis-content');
+
+    try {
+        loadingMessage.textContent = `Finding companies in your portfolio for the ${sectorName} sector...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        
+        const sectorStocks = state.portfolioCache
+            .filter(s => s.sector === sectorName)
+            .map(s => s.ticker);
+
+        if (sectorStocks.length === 0) {
+            throw new Error(`You don't have any stocks from the ${sectorName} sector in your portfolio or watchlist.`);
+        }
+
+        loadingMessage.textContent = `Searching news for up to ${sectorStocks.length} companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const newsResult = await searchSectorNews({ sectorName, sectorStocks });
+
+        if (newsResult.error || !newsResult.articles || newsResult.articles.length === 0) {
+            throw new Error(newsResult.detail || `Could not find any recent news for the ${sectorName} sector.`);
+        }
+        const validArticles = newsResult.articles;
+
+        loadingMessage.textContent = `AI is analyzing news and ranking companies...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const synthesisResult = await synthesizeAndRankCompanies({ newsArticles: validArticles, sectorStocks });
+        
+        if (synthesisResult.error || !synthesisResult.topCompanies || synthesisResult.topCompanies.length === 0) {
+            throw new Error(synthesisResult.detail || "AI could not identify top companies from the news.");
+        }
+
+        loadingMessage.textContent = `AI is generating the final deep dive report...`;
+        contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
+        const reportResult = await generateDeepDiveReport({
+            companyAnalysis: synthesisResult,
+            sectorName: sectorName,
+            originalArticles: validArticles
+        });
+
+        contentArea.innerHTML = marked.parse(reportResult.report);
+
+    } catch (error) {
+        console.error("Error during AI agent sector analysis:", error);
+        displayMessageInModal(`Could not complete AI analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${error.message}</div>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
 function handleSectorSelection(sectorName) {
     const modalTitle = document.getElementById('custom-analysis-modal-title');
     const selectorContainer = document.getElementById('custom-analysis-selector-container');
@@ -2045,7 +2098,7 @@ async function handleBullBearAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = BULL_VS_BEAR_PROMPT
@@ -2070,7 +2123,7 @@ async function handleMoatAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
@@ -2095,7 +2148,7 @@ async function handleDividendSafetyAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = DIVIDEND_SAFETY_PROMPT
@@ -2120,7 +2173,7 @@ async function handleGrowthOutlookAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = GROWTH_OUTLOOK_PROMPT
@@ -2145,7 +2198,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
@@ -2170,7 +2223,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = CAPITAL_ALLOCATORS_PROMPT
