@@ -331,11 +331,11 @@ body.modal-open {
     transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 
-/* --- v11.3.0 --- */
+/* --- v11.3.0 & v12.0.9 --- */
 .analysis-tile {
-    width: 9rem; /* 144px */
-    height: 9rem; /* 144px */
-    padding: 1rem;
+    width: 7.5rem; /* 120px */
+    height: 7.5rem; /* 120px */
+    padding: 0.75rem; /* 12px */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -346,6 +346,7 @@ body.modal-open {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
     border: 1px solid #e5e7eb; /* border-gray-200 */
     transition: all 0.2s ease-in-out;
+    position: relative; /* Required for custom tooltip */
 }
 .analysis-tile:hover {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-xl */
@@ -353,12 +354,47 @@ body.modal-open {
     transform: translateY(-4px);
 }
 .analysis-tile .tile-icon {
-    width: 3rem; /* w-12 */
-    height: 3rem; /* h-12 */
+    width: 2.5rem; /* w-10 */
+    height: 2.5rem; /* h-10 */
     margin-bottom: 0.5rem; /* mb-2 */
     color: #4f46e5; /* text-indigo-600 */
 }
 .analysis-tile .tile-name {
     font-weight: 600; /* font-semibold */
     color: #374151; /* text-gray-700 */
+    font-size: 0.875rem; /* text-sm */
+}
+
+/* --- NEW CUSTOM TOOLTIP (v12.0.9) --- */
+[data-tooltip] {
+    position: relative;
+    cursor: pointer;
+}
+
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background-color: #1f2937; /* bg-gray-800 */
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 500;
+    white-space: normal;
+    width: 200px;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    z-index: 10;
+    pointer-events: none;
+}
+
+[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-12px);
 }
