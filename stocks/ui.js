@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -1481,16 +1481,14 @@ async function handleMarketTrendsAnalysis(sectorName) {
     const contentArea = document.getElementById('custom-analysis-content');
 
     try {
-        loadingMessage.textContent = `Finding companies in your portfolio for the ${sectorName} sector...`;
+        loadingMessage.textContent = `Finding companies for the ${sectorName} sector...`;
         contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
         
-        const sectorStocks = state.portfolioCache
-            .filter(s => s.sector === sectorName)
-            .map(s => s.ticker);
-
-        if (sectorStocks.length === 0) {
-            throw new Error(`You don't have any stocks from the ${sectorName} sector in your portfolio or watchlist.`);
+        const stocksResult = await findStocksBySector({ sectorName });
+        if (stocksResult.error || !stocksResult.stocks || stocksResult.stocks.length === 0) {
+            throw new Error(stocksResult.detail || `Could not find any companies for the ${sectorName} sector.`);
         }
+        const sectorStocks = stocksResult.stocks;
 
         loadingMessage.textContent = `Searching news for up to ${sectorStocks.length} companies...`;
         contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">${loadingMessage.textContent}</div>`;
@@ -1554,13 +1552,13 @@ function handleSectorSelection(sectorName) {
         {
             name: 'The Fortress',
             promptName: 'FortressAnalysis',
-            description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
+            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
         },
         {
             name: 'The Phoenix',
             promptName: 'PhoenixAnalysis',
-            description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
+            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
         },
         {
@@ -1584,7 +1582,7 @@ function handleSectorSelection(sectorName) {
         {
             name: 'The Untouchables',
             promptName: 'Untouchables',
-            description: 'Deconstructs a "cult" brand moat and analyzes the fanatical customer loyalty that drives it.',
+            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
         }
     ];
@@ -1870,13 +1868,13 @@ function handleIndustrySelection(industryName) {
         {
             name: 'The Fortress',
             promptName: 'FortressAnalysis',
-            description: 'Identifies a resilient, "all-weather" business built to withstand economic downturns.',
+            description: 'Identifies a resilient, "all-weather" business with strong pricing power and a rock-solid balance sheet, built to withstand economic downturns.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`
         },
         {
             name: 'The Phoenix',
             promptName: 'PhoenixAnalysis',
-            description: 'Analyzes a potential "fallen angel" company that is showing credible signs of a turnaround.',
+            description: 'Analyzes a "fallen angel" company that has stumbled badly but is now showing credible, quantifiable signs of a fundamental business turnaround.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`
         },
         {
@@ -1900,7 +1898,7 @@ function handleIndustrySelection(industryName) {
         {
             name: 'The Untouchables',
             promptName: 'Untouchables',
-            description: 'Deconstructs a "cult" brand moat and analyzes the fanatical customer loyalty that drives it.',
+            description: 'Deconstructs the "cult" brand moat of a company with fanatical customer loyalty, analyzing how that translates into durable pricing power and long-term profits.',
             svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>`
         }
     ];
@@ -2212,7 +2210,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
@@ -2237,7 +2235,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = CAPITAL_ALLOCATORS_PROMPT
