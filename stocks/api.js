@@ -12,7 +12,7 @@ function isValidHttpUrl(urlString) {
     }
 }
 
-function filterValidNews(articles) {
+export function filterValidNews(articles) {
     if (!Array.isArray(articles)) return [];
     return articles.filter(article => 
         article.title && article.text && isValidHttpUrl(article.url)
