@@ -1,3 +1,5 @@
+import { CONSTANTS, SECTORS, SECTOR_ICONS } from './config.js';
+
 // --- UTILITY & SECURITY HELPERS ---
 
 function formatLargeNumber(value, precision = 2) {
