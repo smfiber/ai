@@ -1237,6 +1237,11 @@ function setupGlobalEventListeners() {
         if (target) {
             const sector = target.dataset.sector;
             const promptName = target.dataset.promptName;
+            const analysisName = target.querySelector('.tile-name')?.textContent || promptName;
+            
+            const modal = document.getElementById('customAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+
             if (promptName === 'MarketTrends') {
                 handleMarketTrendsAnalysis(sector, 'sector');
             } else if (promptName === 'DisruptorAnalysis') {
@@ -1524,12 +1529,14 @@ async function handleMarketTrendsAnalysis(sectorName) {
 }
 
 function handleSectorSelection(sectorName) {
-    const modalTitle = document.getElementById('custom-analysis-modal-title');
-    const selectorContainer = document.getElementById('custom-analysis-selector-container');
-    const contentArea = document.getElementById('custom-analysis-content');
+    const modal = document.getElementById(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    const modalTitle = modal.querySelector('#custom-analysis-modal-title');
+    const selectorContainer = modal.querySelector('#custom-analysis-selector-container');
+    const contentArea = modal.querySelector('#custom-analysis-content');
 
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    modal.dataset.analysisName = 'Sector_Deep_Dive'; // Reset on new selection
     
     const analysisTypes = [
         {
@@ -1589,7 +1596,7 @@ function handleSectorSelection(sectorName) {
 
     analysisTypes.forEach(type => {
         html += `
-            <button class="analysis-tile" data-sector="${sectorName}" data-prompt-name="${type.promptName}" title="${type.description}">
+            <button class="analysis-tile" data-sector="${sectorName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
                 ${type.svgIcon}
                 <span class="tile-name">${type.name}</span>
             </button>
@@ -1905,7 +1912,7 @@ function handleIndustrySelection(industryName) {
 
     analysisTypes.forEach(type => {
         html += `
-            <button class="analysis-tile" data-industry="${industryName}" data-prompt-name="${type.promptName}" title="${type.description}">
+            <button class="analysis-tile" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
                 ${type.svgIcon}
                 <span class="tile-name">${type.name}</span>
             </button>
@@ -2230,7 +2237,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = CAPITAL_ALLOCATORS_PROMPT
