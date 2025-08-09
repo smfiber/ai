@@ -1,8 +1,8 @@
 // --- App Version ---
-const APP_VERSION = "12.0.1"; 
+export const APP_VERSION = "12.0.2"; 
 
 // --- Constants ---
-const CONSTANTS = {
+export const CONSTANTS = {
     // Modals
     MODAL_API_KEY: 'apiKeyModal',
     MODAL_LOADING: 'loadingStateModal',
@@ -45,7 +45,7 @@ const CONSTANTS = {
     DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
 };
 
-const SECTOR_ICONS = {
+export const SECTOR_ICONS = {
     'Technology': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l7-7 7 7M5 12a7 7 0 1114 0M5 12a7 7 0 0014 0" /></svg>`,
     'Health Care': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`,
     'Financials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>`,
@@ -59,13 +59,13 @@ const SECTOR_ICONS = {
     'Materials': `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>`
 };
 
-const SECTORS = [
+export const SECTORS = [
     'Technology', 'Health Care', 'Financials', 'Consumer Discretionary',
     'Communication Services', 'Industrials', 'Consumer Staples',
     'Energy', 'Utilities', 'Real Estate', 'Materials'
 ];
 
-const FINANCIAL_NEWS_SOURCES = [
+export const FINANCIAL_NEWS_SOURCES = [
     'reuters.com', 'bloomberg.com', 'wsj.com', 'ft.com', 'marketwatch.com',
     'cnbc.com', 'finance.yahoo.com', 'seekingalpha.com', 'themotleyfool.com',
     'investors.com', 'barrons.com', 'forbes.com', 'investopedia.com',
@@ -80,7 +80,7 @@ const FINANCIAL_NEWS_SOURCES = [
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
 
-const FINANCIAL_ANALYSIS_PROMPT = `
+export const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts (e.g., comparing debt to a mortgage). Your analysis must be derived exclusively from the provided JSON data from the Financial Modeling Prep (FMP) API.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data and lists. Present financial figures clearly, using 'Billion' or 'Million' where appropriate for readability.
@@ -153,7 +153,7 @@ Identify 2-3 of the most significant weaknesses or financial red flags from the 
 Based on purely on this quantitative analysis, what is the primary story? And what, if anything, in the data suggests the company has a strong competitive advantage (a "moat")? Conclude with a final statement on its profile as a potential long-term holding.
 `.trim();
 
-const UNDERVALUED_ANALYSIS_PROMPT = `
+export const UNDERVALUED_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to conduct a clear, data-driven valuation analysis to determine if a stock is a potential bargain. Use relatable analogies and explain all financial terms simply. Your analysis must be derived exclusively from the provided FMP JSON data.
 
 Output Format: The final report must be in professional markdown format. Use # for the main title, ## for major sections, ### for sub-sections, and bullet points for key data points.
@@ -212,7 +212,7 @@ Combine all our findings into a final, clear summary.
 **Disclaimer:** This AI-generated analysis is for informational and educational purposes only. It is not financial advice. Data may not be real-time.
 `.trim();
 
-const NEWS_SENTIMENT_PROMPT = [
+export const NEWS_SENTIMENT_PROMPT = [
     'Role: You are a financial news analyst AI who is an expert at cutting through the noise and explaining what headlines *really* mean for an everyday investor. Your goal is to assess the mood and key narratives surrounding a company based on recent news.',
     'Task: Analyze the sentiment of the following news articles for {companyName} ({tickerSymbol}). IMPORTANT: Process only the articles that include a publication date. Ignore any articles where this date is missing.',
     'For each valid article, you will perform five actions:',
@@ -245,7 +245,7 @@ const NEWS_SENTIMENT_PROMPT = [
     '--- END OF EXAMPLE ---'
 ].join('\n');
 
-const BULL_VS_BEAR_PROMPT = `
+export const BULL_VS_BEAR_PROMPT = `
 Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. Use ONLY the provided FMP JSON data to build your arguments.
 
 Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.
@@ -277,7 +277,7 @@ Focus on weaknesses like:
 Conclude with a 1-2 sentence summary that frames the central conflict for an investor. For example: "The core debate for {companyName} is whether its strong profitability and growth (the bull case) are enough to outweigh its significant debt load and increasing competition (the bear case)."
 `.trim();
 
-const MOAT_ANALYSIS_PROMPT = `
+export const MOAT_ANALYSIS_PROMPT = `
 Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using FMP data.
 Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
@@ -306,7 +306,7 @@ Based on all the evidence (quantitative and qualitative), provide a concluding a
 - **No Moat:** The company has no clear, sustainable competitive advantage and is vulnerable to competition.
 `.trim();
 
-const DIVIDEND_SAFETY_PROMPT = `
+export const DIVIDEND_SAFETY_PROMPT = `
 Role: You are a conservative income investment analyst AI. Your goal is to explain dividend safety in simple, clear terms for an investor who relies on that income, using FMP data.
 Concept: Dividend safety analysis is all about figuring out how likely a company is to continue paying its dividend. A safe dividend is supported by strong earnings and cash flow and isn't threatened by high debt.
 Output Format: Create a markdown report. Explain each point using simple analogies and conclude with a clear safety rating.
@@ -340,7 +340,7 @@ Conclude with a clear rating and a simple, one-sentence justification.
 - **"At Risk":** The payout ratios are high, the dividend isn't growing, and/or the balance sheet is weak. The dividend could be cut if business slows down. Like a salary from a job that is facing financial trouble.
 `.trim();
 
-const GROWTH_OUTLOOK_PROMPT = `
+export const GROWTH_OUTLOOK_PROMPT = `
 Role: You are a forward-looking equity analyst AI. Your goal is to identify the key signs of future growth for {companyName} and explain them in simple terms, using FMP data.
 Concept: Growth outlook analysis tries to answer the question, "Where will this company be in the future?" We look at its history, recent performance, how it invests in itself, and what the market expects.
 Output Format: A concise markdown summary of key growth indicators and a concluding outlook.
@@ -372,7 +372,7 @@ Interpret the market's view on the company's growth prospects:
 Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?
 `.trim();
 
-const RISK_ASSESSMENT_PROMPT = `
+export const RISK_ASSESSMENT_PROMPT = `
 Role: You are a risk analyst AI. Your job is to act like a cautious inspector, identifying the most significant potential problems or "red flags" for {companyName} and explaining them simply, using FMP data.
 Concept: Risk assessment is about looking for potential problems that could hurt a company or its stock price. We will check the company's financial health, its stock price valuation, and its business operations for any warning signs.
 Output Format: A prioritized, bulleted list in markdown, categorized by risk type. Explain each risk in simple terms.
@@ -404,7 +404,7 @@ These are risks related to the day-to-day health of the business.
 Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
 `.trim();
 
-const CAPITAL_ALLOCATORS_PROMPT = `
+export const CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
 	Your task is to analyze one CEO/management team from the {tickerSymbol} sector known for their skill in capital allocation.
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
@@ -421,7 +421,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
-const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
+export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
 	Your task is to analyze one CEO/management team from the {industryName} industry known for their skill in capital allocation.
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
@@ -438,7 +438,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
-const DISRUPTOR_ANALYSIS_PROMPT = `
+export const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 For the {sectorName} sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Sub-Industry] Market"
@@ -469,7 +469,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
-const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
+export const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 For the {industryName} industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Industry] Market"
@@ -500,7 +500,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
-const MACRO_PLAYBOOK_PROMPT = `
+export const MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
 	1. The Wave (The Macro Trend):
 		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
@@ -515,7 +515,7 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
+export const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
 	1. The Wave (The Macro Trend):
 		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
@@ -530,7 +530,7 @@ Act as a thematic investment strategist for a global macro fund. You are authori
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
-const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
+export const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
 Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic industry based on a provided list of companies and recent news articles.
 
 Task:
@@ -565,7 +565,7 @@ News Articles JSON Data:
 {newsArticlesJson}
 `;
 
-const FORTRESS_ANALYSIS_PROMPT = `
+export const FORTRESS_ANALYSIS_PROMPT = `
 Act as a conservative, risk-averse investment analyst. Your goal is to identify an "all-weather" business within the {contextName} {contextType} that is built for resilience.
 Article Title: "The Fortress: Why [Company Name] Is Built to Withstand the Economic Storm"
 Your analysis must be structured as follows:
@@ -583,7 +583,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
-const PHOENIX_ANALYSIS_PROMPT = `
+export const PHOENIX_ANALYSIS_PROMPT = `
 Act as a special situations analyst looking for high-risk, high-reward opportunities. Your goal is to analyze a potential turnaround story.
 Article Title: "The Phoenix: Analyzing the Potential Turnaround of [Company Name]"
 Your analysis must be structured as follows:
@@ -600,7 +600,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
-const PICK_AND_SHOVEL_PROMPT = `
+export const PICK_AND_SHOVEL_PROMPT = `
 Act as an investment analyst specializing in identifying indirect beneficiaries of major economic trends.
 Article Title: "The 'Pick and Shovel' Play: How [Company Name] is Powering the [Trend Name] Gold Rush"
 Your analysis must be structured as follows:
@@ -618,7 +618,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
-const LINCHPIN_ANALYSIS_PROMPT = `
+export const LINCHPIN_ANALYSIS_PROMPT = `
 Act as a business strategist focused on identifying companies with deep, structural competitive advantages.
 Article Title: "The Linchpin: How [Company Name] Dominates the [Industry] Supply Chain"
 Your analysis must be structured as follows:
@@ -634,7 +634,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
-const HIDDEN_VALUE_PROMPT = `
+export const HIDDEN_VALUE_PROMPT = `
 Act as a value investor and activist analyst, searching for hidden value in complex companies.
 Article Title: "Hidden Value: A Sum-of-the-Parts Investigation of [Company Name]"
 Your analysis must be structured as follows:
@@ -652,7 +652,7 @@ When you mention a stock ticker, you MUST wrap it in a special tag like this: <s
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
-const UNTOUCHABLES_ANALYSIS_PROMPT = `
+export const UNTOUCHABLES_ANALYSIS_PROMPT = `
 Act as a brand strategist and long-term investor, analyzing companies with powerful, "cult-like" brands.
 Article Title: "The Untouchables: Deconstructing [Company Name]'s 'Cult' Brand Moat"
 Your analysis must be structured as follows:
@@ -670,20 +670,20 @@ Crucial Disclaimer: This article is for informational purposes only and should n
 
 
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
-const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const UTILITIES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const REAL_ESTATE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
-const MATERIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const FINANCIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const CONSUMER_DISCRETIONARY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const COMMUNICATION_SERVICES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const INDUSTRIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const CONSUMER_STAPLES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const ENERGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const UTILITIES_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const REAL_ESTATE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
+export const MATERIALS_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 
 
-const creativePromptMap = {
+export const creativePromptMap = {
     'Technology': { prompt: TECHNOLOGY_SECTOR_PROMPT, label: 'Playbook' },
     'Health Care': { prompt: HEALTH_CARE_SECTOR_PROMPT, label: 'Playbook' },
     'Financials': { prompt: FINANCIALS_SECTOR_PROMPT, label: 'Playbook' },
