@@ -2439,32 +2439,47 @@ function setupEventListeners() {
         icon.classList.toggle('rotate-180');
     });
 
-    document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-    
-        if (target.id === 'raw-data-accordion-toggle') {
-            const content = document.getElementById('raw-data-accordion-content');
-            const icon = document.getElementById('raw-data-toggle-icon');
-            content.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-            return;
-        }
-    
-        const symbol = target.dataset.symbol;
-        if (!symbol) return;
-    
-        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
-        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
-        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
-        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
-        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
-        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
-        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
-        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
-    });
+// ADD THIS IN ITS PLACE
+document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
+    const target = e.target.closest('button');
+    if (!target) return;
 
-    document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
+    // New Tab Switching Logic
+    if (target.matches('.tab-button')) {
+        const tabId = target.dataset.tab;
+
+        // Hide all tab content
+        document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        // Deactivate all tab buttons
+        document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+
+        // Show the selected tab content
+        document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+
+        // Activate the clicked tab button
+        target.classList.add('active');
+        return;
+    }
+
+    const symbol = target.dataset.symbol;
+    if (!symbol) return;
+
+    if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
+    if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
+    if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
+    if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
+    if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
+    if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
+    if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
+    if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
+});
+	
+	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
 
