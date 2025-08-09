@@ -117,6 +117,36 @@ body.modal-open {
     transform: rotate(360deg);
 }
 
+/*
+ * =================================================================
+ * NEW TAB STYLES (Redesign)
+ * =================================================================
+ */
+
+.tab-button {
+    padding: 1rem 1.5rem; /* py-4 px-6 */
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    color: #6b7280; /* text-gray-500 */
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    background-color: transparent;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
+.tab-button:hover {
+    color: #1f2937; /* text-gray-800 */
+    background-color: #f9fafb; /* bg-gray-50 */
+}
+
+.tab-button.active {
+    color: var(--color-primary); /* Uses the primary color */
+    border-bottom-color: var(--color-primary);
+}
+
 /* --- New Dashboard List Styles (v7.5.0) --- */
 /* This rule creates a "card" for each sector group */
 .sector-group {
