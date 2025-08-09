@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.0.6"; 
+export const APP_VERSION = "12.0.7"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -690,6 +690,7 @@ Crucial Disclaimer: This article is for informational purposes only and should n
 `;
 
 
+
 // --- NEW NARRATIVE SECTOR PROMPTS (v7.2.0) ---
 export const TECHNOLOGY_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
 export const HEALTH_CARE_SECTOR_PROMPT = CAPITAL_ALLOCATORS_PROMPT;
@@ -717,3 +718,4 @@ export const creativePromptMap = {
     'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
     'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' },
 };
+
