@@ -362,12 +362,3 @@ body.modal-open {
     font-weight: 600; /* font-semibold */
     color: #374151; /* text-gray-700 */
 }
-
-/*
- * =================================================================
- * FIX: Force scrollbar visibility in Analysis Modal (v7.8.1)
- * =================================================================
- */
-#rawDataViewerModal .overflow-y-auto {
-    overflow-y: scroll;
-}
