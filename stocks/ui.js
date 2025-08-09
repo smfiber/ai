@@ -1576,7 +1576,7 @@ async function handleDisruptorAnalysis(contextName) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
-        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/\[SECTOR NAME\]/g, contextName);
+        const prompt = DISRUPTOR_ANALYSIS_PROMPT.replace(/{sectorName}/g, contextName);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
@@ -1598,7 +1598,7 @@ async function handleMacroPlaybookAnalysis(contextName) {
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
         const prompt = MACRO_PLAYBOOK_PROMPT
-            .replace(/\[SECTOR NAME\]/g, contextName)
+            .replace(/{sectorName}/g, contextName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
@@ -1945,7 +1945,7 @@ async function handleIndustryDisruptorAnalysis(industryName) {
     contentArea.innerHTML = `<div class="p-4 text-center text-gray-500">Generating AI article: "Disruptor Analysis"...</div>`;
 
     try {
-        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/\[INDUSTRY NAME\]/g, industryName);
+        const prompt = INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT.replace(/{industryName}/g, industryName);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
     } catch (error) {
@@ -1967,7 +1967,7 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
     try {
         const standardDisclaimer = "This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.";
         const prompt = INDUSTRY_MACRO_PLAYBOOK_PROMPT
-            .replace(/\[INDUSTRY NAME\]/g, industryName)
+            .replace(/{industryName}/g, industryName)
             .replace(/\[Include standard disclaimer\]/g, standardDisclaimer);
         const report = await generatePolishedArticle(prompt, loadingMessage);
         contentArea.innerHTML = marked.parse(report);
