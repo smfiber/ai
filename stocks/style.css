@@ -1,6 +1,6 @@
 /*
  * AI Stock Research Hub Stylesheet
- * Version: 7.8.0
+ * Version: 7.8.1
  * Description: Provides essential, centralized styles that supplement the Tailwind CSS framework.
  * This includes the loading spinner animation, modal visibility rules, and root theme variables.
  */
@@ -361,4 +361,13 @@ body.modal-open {
 .analysis-tile .tile-name {
     font-weight: 600; /* font-semibold */
     color: #374151; /* text-gray-700 */
+}
+
+/*
+ * =================================================================
+ * FIX: Force scrollbar visibility in Analysis Modal (v7.8.1)
+ * =================================================================
+ */
+#rawDataViewerModal .overflow-y-auto {
+    overflow-y: scroll;
 }
