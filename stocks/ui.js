@@ -1,4 +1,6 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state } from './config.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews } from './api.js';
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -24,16 +26,6 @@ function sanitizeText(text) {
     return tempDiv.innerHTML;
 }
 
-function isValidHttpUrl(urlString) {
-    if (typeof urlString !== 'string' || !urlString) return false;
-    try {
-        const url = new URL(urlString);
-        return url.protocol === "http:" || url.protocol === "https:";
-    } catch (_) {
-        return false;
-    }
-}
-
 function get(obj, path, defaultValue = undefined) {
   const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
   return value !== undefined ? value : defaultValue;
@@ -41,7 +33,7 @@ function get(obj, path, defaultValue = undefined) {
 
 // --- MODAL HELPERS ---
 
-function openModal(modalId) {
+export function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
         document.body.classList.add(CONSTANTS.CLASS_BODY_MODAL_OPEN);
@@ -49,7 +41,7 @@ function openModal(modalId) {
     }
 }
 
-function closeModal(modalId) {
+export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if(modal) {
         modal.classList.remove(CONSTANTS.CLASS_MODAL_OPEN);
@@ -59,7 +51,7 @@ function closeModal(modalId) {
     }
 }
 
-function displayMessageInModal(message, type = 'info') {
+export function displayMessageInModal(message, type = 'info') {
     const modalId = CONSTANTS.MODAL_MESSAGE;
     const modal = document.getElementById(modalId);
     const modalContent = modal ? modal.querySelector('.modal-content') : null;
@@ -103,6 +95,69 @@ function openConfirmationModal(title, message, onConfirm) {
         closeModal(modalId);
     });
     openModal(modalId);
+}
+
+// --- FMP API INTEGRATION & MANAGEMENT (MOVED FROM API.JS)---
+async function handleRefreshFmpData(symbol) {
+    if (!state.fmpApiKey) {
+        displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
+        return;
+    }
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all FMP data for ${symbol}...`;
+
+    try {
+        const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        if (endpointsSnapshot.empty) {
+            throw new Error("No FMP endpoints configured. Please add endpoints via the manager.");
+        }
+
+        const endpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let successfulFetches = 0;
+
+        for (const endpoint of endpoints) {
+            if (!endpoint.url_template || !endpoint.name) continue;
+
+            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching FMP Data: ${endpoint.name}...`;
+            
+            const url = endpoint.url_template
+                .replace('${symbol}', symbol)
+                .replace('${fmpApiKey}', state.fmpApiKey);
+            
+            const data = await callApi(url);
+
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                 console.warn(`No data returned from FMP for endpoint: ${endpoint.name}`);
+                 continue;
+            }
+
+            const dataToCache = {
+                cachedAt: Timestamp.now(),
+                data: data
+            };
+
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
+            await setDoc(docRef, dataToCache);
+            
+            const endpointDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, endpoint.id);
+            await updateDoc(endpointDocRef, {
+                usageCount: increment(1)
+            });
+
+            successfulFetches++;
+        }
+        
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
+        
+        await fetchAndCachePortfolioData();
+
+    } catch (error) {
+        console.error("Error fetching FMP data:", error);
+        displayMessageInModal(`Could not fetch FMP data: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
 }
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
@@ -161,16 +216,16 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
     container.innerHTML = html;
 }
 
-async function fetchAndCachePortfolioData() {
+export async function fetchAndCachePortfolioData() {
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Loading dashboard data...";
     
     try {
-        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
-        portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO));
+        state.portfolioCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const portfolioStocks = portfolioCache.filter(s => s.status === 'Portfolio');
-        const watchlistStocks = portfolioCache.filter(s => s.status === 'Watchlist');
+        const portfolioStocks = state.portfolioCache.filter(s => s.status === 'Portfolio');
+        const watchlistStocks = state.portfolioCache.filter(s => s.status === 'Watchlist');
 
         document.getElementById('portfolio-count').textContent = portfolioStocks.length;
         document.getElementById('watchlist-count').textContent = watchlistStocks.length;
@@ -199,7 +254,7 @@ async function openStockListModal(listType) {
     container.innerHTML = '';
 
     try {
-        const stocksToFetch = portfolioCache.filter(s => s.status === listType);
+        const stocksToFetch = state.portfolioCache.filter(s => s.status === listType);
         if (stocksToFetch.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 py-8">No stocks in your ${listType}.</p>`;
             openModal(modalId);
@@ -277,12 +332,12 @@ async function handleSaveStock(e) {
     
     try {
         if (originalTicker && originalTicker !== newTicker) {
-            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
+            await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, originalTicker));
         }
 
-        await setDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
+        await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, newTicker), stockData);
 
-        const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
+        const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, newTicker, 'endpoints');
         const fmpSnapshot = await getDocs(query(fmpCacheRef, limit(1)));
         if (fmpSnapshot.empty) {
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `First time setup: Caching FMP data for ${newTicker}...`;
@@ -307,7 +362,7 @@ async function handleDeleteStock(ticker) {
             openModal(CONSTANTS.MODAL_LOADING);
             document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Deleting ${ticker}...`;
             try {
-                await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
+                await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, ticker));
                 await fetchAndCachePortfolioData();
                 if(document.getElementById(CONSTANTS.MODAL_PORTFOLIO_MANAGER).classList.contains(CONSTANTS.CLASS_MODAL_OPEN)) {
                     renderPortfolioManagerList();
@@ -337,7 +392,7 @@ async function handleResearchSubmit(e) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Checking your lists for ${symbol}...`;
     
     try {
-        const docRef = doc(db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_PORTFOLIO, symbol);
         if ((await getDoc(docRef)).exists()) {
              displayMessageInModal(`${symbol} is already in your portfolio or watchlist. You can edit it from the dashboard.`, 'info');
              tickerInput.value = '';
@@ -347,7 +402,7 @@ async function handleResearchSubmit(e) {
         
         document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching overview for ${symbol}...`;
         
-        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${fmpApiKey}`;
+        const profileUrl = `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${state.fmpApiKey}`;
         const profileData = await callApi(profileUrl);
 
         if (!profileData || profileData.length === 0 || !profileData[0].symbol) {
@@ -490,7 +545,7 @@ async function displayStockCard(ticker) {
             throw new Error(`Could not load required FMP data for ${ticker}. Please ensure data is cached.`);
         }
 
-        const portfolioInfo = portfolioCache.find(s => s.ticker === ticker);
+        const portfolioInfo = state.portfolioCache.find(s => s.ticker === ticker);
         const status = portfolioInfo ? portfolioInfo.status : null;
         
         const newCardHtml = renderOverviewCard(stockData, ticker, status);
@@ -513,13 +568,6 @@ async function displayStockCard(ticker) {
 }
 
 // --- NEWS FEATURE ---
-
-function filterValidNews(articles) {
-    if (!Array.isArray(articles)) return [];
-    return articles.filter(article => 
-        article.title && article.text && isValidHttpUrl(article.url)
-    );
-}
 
 function getSentimentDisplay(sentiment) {
     switch (sentiment) {
@@ -584,7 +632,7 @@ async function handleFetchNews(symbol) {
     try {
         const stockData = await getFmpStockData(symbol);
         const companyName = get(stockData, 'company_profile.0.companyName', symbol);
-        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
         
         const newsData = await callApi(url);
         const validArticles = filterValidNews(newsData);
@@ -642,7 +690,7 @@ function renderDailyCalendarView() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const viewingDate = new Date(calendarCurrentDate);
+    const viewingDate = new Date(state.calendarCurrentDate);
     viewingDate.setHours(0, 0, 0, 0);
 
     let dateLabel = viewingDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -652,8 +700,8 @@ function renderDailyCalendarView() {
 
     dayHeader.textContent = dateLabel;
 
-    const earningsForDay = calendarEvents.earnings.filter(e => new Date(e.date).toDateString() === calendarCurrentDate.toDateString());
-    const iposForDay = calendarEvents.ipos.filter(i => new Date(i.date).toDateString() === calendarCurrentDate.toDateString());
+    const earningsForDay = state.calendarEvents.earnings.filter(e => new Date(e.date).toDateString() === state.calendarCurrentDate.toDateString());
+    const iposForDay = state.calendarEvents.ipos.filter(i => new Date(i.date).toDateString() === state.calendarCurrentDate.toDateString());
 
     eventsContainer.innerHTML = '';
     let html = '';
@@ -704,7 +752,7 @@ function renderDailyCalendarView() {
 }
 
 
-async function displayMarketCalendar() {
+export async function displayMarketCalendar() {
     const eventsContainer = document.getElementById('daily-events-container');
     const dayHeader = document.getElementById('day-header');
 
@@ -712,7 +760,7 @@ async function displayMarketCalendar() {
 
     eventsContainer.innerHTML = `<div class="p-4 text-center text-gray-400">Loading calendar data...</div>`;
 
-    const docRef = doc(db, CONSTANTS.DB_COLLECTION_CALENDAR, 'latest_fmp');
+    const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_CALENDAR, 'latest_fmp');
     let shouldFetchNewData = true;
 
     try {
@@ -723,8 +771,8 @@ async function displayMarketCalendar() {
             const daysSinceCache = (new Date() - cacheDate) / (1000 * 60 * 60 * 24);
             
             if (daysSinceCache < 1) { // FMP data can be refreshed daily
-                calendarEvents.earnings = cachedData.earnings || [];
-                calendarEvents.ipos = cachedData.ipos || [];
+                state.calendarEvents.earnings = cachedData.earnings || [];
+                state.calendarEvents.ipos = cachedData.ipos || [];
                 shouldFetchNewData = false;
             }
         }
@@ -739,16 +787,16 @@ async function displayMarketCalendar() {
             const to = from; // Fetch only one day of data
 
             const [earningsData, ipoData] = await Promise.all([
-                callApi(`https://financialmodelingprep.com/api/v3/earning_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`),
-                callApi(`https://financialmodelingprep.com/api/v3/ipo_calendar?from=${from}&to=${to}&apikey=${fmpApiKey}`)
+                callApi(`https://financialmodelingprep.com/api/v3/earning_calendar?from=${from}&to=${to}&apikey=${state.fmpApiKey}`),
+                callApi(`https://financialmodelingprep.com/api/v3/ipo_calendar?from=${from}&to=${to}&apikey=${state.fmpApiKey}`)
             ]);
 
-            calendarEvents.earnings = (earningsData || []).filter(e => e.exchange && !e.exchange.includes('OTC'));
-            calendarEvents.ipos = (ipoData || []).filter(i => i.exchange && !i.exchange.includes('OTC'));
+            state.calendarEvents.earnings = (earningsData || []).filter(e => e.exchange && !e.exchange.includes('OTC'));
+            state.calendarEvents.ipos = (ipoData || []).filter(i => i.exchange && !i.exchange.includes('OTC'));
 
             const dataToCache = { 
-                earnings: calendarEvents.earnings, 
-                ipos: calendarEvents.ipos, 
+                earnings: state.calendarEvents.earnings, 
+                ipos: state.calendarEvents.ipos, 
                 cachedAt: Timestamp.now() 
             };
             await setDoc(docRef, dataToCache);
@@ -764,7 +812,7 @@ async function displayMarketCalendar() {
     renderDailyCalendarView();
 }
 
-function renderSectorButtons() {
+export function renderSectorButtons() {
     const container = document.getElementById('sector-buttons-container');
     if (!container) return;
     container.innerHTML = SECTORS.map(sector => {
@@ -845,12 +893,12 @@ function renderPortfolioManagerList() {
     const container = document.getElementById('portfolio-manager-list-container');
     if (!container) return;
 
-    if (portfolioCache.length === 0) {
+    if (state.portfolioCache.length === 0) {
         container.innerHTML = `<p class="text-center text-gray-500 p-8">No stocks in your portfolio or watchlist.</p>`;
         return;
     }
 
-    const groupedBySector = portfolioCache.reduce((acc, stock) => {
+    const groupedBySector = state.portfolioCache.reduce((acc, stock) => {
         const sector = stock.sector || 'Uncategorized';
         if (!acc[sector]) {
             acc[sector] = [];
@@ -902,13 +950,13 @@ async function handleViewFmpData(symbol) {
     contentContainer.innerHTML = '';
 
     try {
-        const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
         const endpointNames = {};
         endpointsSnapshot.forEach(doc => {
             endpointNames[doc.id] = doc.data().name || 'Unnamed Endpoint';
         });
 
-        const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+        const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
         const fmpCacheSnapshot = await getDocs(fmpCacheRef);
 
         if (fmpCacheSnapshot.empty) {
@@ -949,7 +997,7 @@ async function renderFmpEndpointsList() {
     const container = document.getElementById('fmp-endpoints-list-container');
     container.innerHTML = 'Loading endpoints...';
     try {
-        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
         if (querySnapshot.empty) {
             container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
             return;
@@ -1003,11 +1051,11 @@ async function handleSaveFmpEndpoint(e) {
     
     try {
         if (id) {
-            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data, { merge: true });
+            await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id), data, { merge: true });
         } else {
             const docId = name.toLowerCase().replace(/\s+/g, '_');
             data.usageCount = 0;
-            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, docId), data);
+            await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, docId), data);
         }
         cancelFmpEndpointEdit();
         await renderFmpEndpointsList();
@@ -1020,7 +1068,7 @@ async function handleSaveFmpEndpoint(e) {
 function handleDeleteFmpEndpoint(id) {
     openConfirmationModal('Delete Endpoint?', 'Are you sure you want to delete this endpoint? This cannot be undone.', async () => {
         try {
-            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id));
+            await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, id));
             await renderFmpEndpointsList();
         } catch (error) {
             console.error('Error deleting FMP endpoint:', error);
@@ -1040,7 +1088,7 @@ async function renderBroadEndpointsList() {
     const container = document.getElementById('broad-endpoints-list-container');
     container.innerHTML = 'Loading endpoints...';
     try {
-        const querySnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS));
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS));
         if (querySnapshot.empty) {
             container.innerHTML = '<p class="text-center text-gray-500 py-4">No endpoints saved.</p>';
             return;
@@ -1094,11 +1142,11 @@ async function handleSaveBroadEndpoint(e) {
     
     try {
         if (id) {
-            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id), data, { merge: true });
+            await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id), data, { merge: true });
         } else {
             const docId = name.toLowerCase().replace(/\s+/g, '_');
             data.usageCount = 0;
-            await setDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, docId), data);
+            await setDoc(doc(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, docId), data);
         }
         cancelBroadEndpointEdit();
         await renderBroadEndpointsList();
@@ -1111,7 +1159,7 @@ async function handleSaveBroadEndpoint(e) {
 function handleDeleteBroadEndpoint(id) {
     openConfirmationModal('Delete Endpoint?', 'Are you sure you want to delete this endpoint? This cannot be undone.', async () => {
         try {
-            await deleteDoc(doc(db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id));
+            await deleteDoc(doc(state.db, CONSTANTS.DB_COLLECTION_BROAD_ENDPOINTS, id));
             await renderBroadEndpointsList();
         } catch (error) {
             console.error('Error deleting Broad API endpoint:', error);
@@ -1160,7 +1208,7 @@ function setupGlobalEventListeners() {
         const ticker = target.dataset.ticker;
         if (ticker) {
             if (target.classList.contains('dashboard-item-edit')) {
-                const stockData = portfolioCache.find(s => s.ticker === ticker);
+                const stockData = state.portfolioCache.find(s => s.ticker === ticker);
                 if (stockData) {
                     openManageStockModal({ ...stockData, isEditMode: true });
                 }
@@ -1249,7 +1297,7 @@ function setupGlobalEventListeners() {
         if (!ticker) return;
 
         if (target.classList.contains('edit-stock-btn')) {
-            const stockData = portfolioCache.find(s => s.ticker === ticker);
+            const stockData = state.portfolioCache.find(s => s.ticker === ticker);
             if (stockData) {
                 openManageStockModal({ ...stockData, isEditMode: true });
             }
@@ -1344,12 +1392,12 @@ export function setupEventListeners() {
     });
 
     document.getElementById('prev-day-button')?.addEventListener('click', () => {
-        calendarCurrentDate.setDate(calendarCurrentDate.getDate() - 1);
+        state.calendarCurrentDate.setDate(state.calendarCurrentDate.getDate() - 1);
         renderDailyCalendarView();
     });
 
     document.getElementById('next-day-button')?.addEventListener('click', () => {
-        calendarCurrentDate.setDate(calendarCurrentDate.getDate() + 1);
+        state.calendarCurrentDate.setDate(state.calendarCurrentDate.getDate() + 1);
         renderDailyCalendarView();
     });
 
@@ -1699,12 +1747,12 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
 
 
 
-async function displayIndustryScreener() {
+export async function displayIndustryScreener() {
     try {
-        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
-            availableIndustries = industryData.map(item => item.industry).sort();
+            state.availableIndustries = industryData.map(item => item.industry).sort();
             renderIndustryButtons();
         }
     } catch (error) {
@@ -1722,7 +1770,7 @@ function renderIndustryButtons() {
 
     const genericIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`; // Using Industrials icon as generic
 
-    container.innerHTML = availableIndustries.map(industry => `
+    container.innerHTML = state.availableIndustries.map(industry => `
         <button class="flex flex-col items-center justify-center p-4 text-center bg-teal-100 text-teal-800 hover:bg-teal-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-industry="${sanitizeText(industry)}">
             ${genericIcon}
             <span class="mt-2 font-semibold text-sm">${sanitizeText(industry)}</span>
@@ -2143,7 +2191,7 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
 
 
 async function handleSaveToDrive(modalId) {
-    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+    if (!state.auth.currentUser || state.auth.currentUser.isAnonymous) {
         displayMessageInModal("Please log in with Google to save files to Drive.", "warning");
         return;
     }
