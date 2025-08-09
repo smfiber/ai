@@ -1,3 +1,5 @@
+import { setupEventListeners } from './ui.js';
+
 // --- Global State ---
 let db;
 let auth;
@@ -200,6 +202,7 @@ function setupAuthUI(user) {
 
 function initializeApplication() {
     setupEventListeners();
+    document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
     const versionDisplay = document.getElementById('app-version-display');
     if(versionDisplay) versionDisplay.textContent = `v${APP_VERSION}`;
     openModal(CONSTANTS.MODAL_API_KEY);
