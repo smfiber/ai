@@ -1,26 +1,10 @@
-import { setupEventListeners } from './ui.js';
-import { CONSTANTS, APP_VERSION } from './config.js';
-
-// --- Global State ---
-let db;
-let auth;
-let userId;
-let firebaseConfig = null;
-let appIsInitialized = false;
-let fmpApiKey = "";
-let geminiApiKey = "";
-let searchApiKey = "";
-let searchEngineId = "";
-let googleClientId = "";
-let driveTokenClient = null;
-let driveFolderId = null; // Cache for Drive folder
-let portfolioCache = [];
-let calendarEvents = { earnings: [], ipos: [] };
-let calendarCurrentDate = new Date();
-let availableIndustries = [];
+import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, displayMarketCalendar, renderSectorButtons, displayIndustryScreener } from './ui.js';
+import { CONSTANTS, APP_VERSION, state } from './config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- CONFIG & INITIALIZATION ---
-
 function safeParseConfig(str) {
     try {
         const startIndex = str.indexOf('{');
@@ -34,8 +18,8 @@ function safeParseConfig(str) {
 }
 
 async function initializeAppContent() {
-    if (appIsInitialized) return;
-    appIsInitialized = true;
+    if (state.appIsInitialized) return;
+    state.appIsInitialized = true;
     
     document.getElementById('dashboard-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     document.getElementById('stock-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
@@ -44,37 +28,37 @@ async function initializeAppContent() {
     document.getElementById('market-calendar-accordion').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await fetchAndCachePortfolioData();
-    displayMarketCalendar();
+    await displayMarketCalendar();
     renderSectorButtons();
-    displayIndustryScreener();
+    await displayIndustryScreener();
 }
 
 async function initializeFirebase() {
-    if (!firebaseConfig) return;
+    if (!state.firebaseConfig) return;
     try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+        const app = initializeApp(state.firebaseConfig);
+        state.db = getFirestore(app);
+        state.auth = getAuth(app);
 
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(state.auth, user => {
             if (user) {
-                userId = user.uid;
-                if (!appIsInitialized) {
+                state.userId = user.uid;
+                if (!state.appIsInitialized) {
                     initializeAppContent();
                 }
             } else {
-                userId = null;
-                if (appIsInitialized) {
+                state.userId = null;
+                if (state.appIsInitialized) {
                     displayMessageInModal("Your session has expired. Please log in again to continue.", "warning");
                 }
-                appIsInitialized = false;
+                state.appIsInitialized = false;
                 document.getElementById(CONSTANTS.CONTAINER_DYNAMIC_CONTENT).innerHTML = '';
             }
             setupAuthUI(user);
         });
         
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
+            await signInWithCustomToken(state.auth, __initial_auth_token);
         }
 
     } catch (error) {
@@ -85,15 +69,15 @@ async function initializeFirebase() {
 
 async function handleApiKeySubmit(e) {
     e.preventDefault();
-    fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
-    geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
-    googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
-    searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
-    searchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
+    state.fmpApiKey = document.getElementById('fmpApiKeyInput').value.trim();
+    state.geminiApiKey = document.getElementById(CONSTANTS.INPUT_GEMINI_KEY).value.trim();
+    state.googleClientId = document.getElementById(CONSTANTS.INPUT_GOOGLE_CLIENT_ID).value.trim();
+    state.searchApiKey = document.getElementById(CONSTANTS.INPUT_WEB_SEARCH_KEY).value.trim();
+    state.searchEngineId = document.getElementById(CONSTANTS.INPUT_SEARCH_ENGINE_ID).value.trim();
     const tempFirebaseConfigText = document.getElementById('firebaseConfigInput').value.trim();
     let tempFirebaseConfig;
 
-    if (!fmpApiKey || !geminiApiKey || !googleClientId || !searchApiKey || !searchEngineId || !tempFirebaseConfigText) {
+    if (!state.fmpApiKey || !state.geminiApiKey || !state.googleClientId || !state.searchApiKey || !state.searchEngineId || !tempFirebaseConfigText) {
         displayMessageInModal("All API Keys, Client ID, and the Firebase Config are required.", "warning");
         return;
     }
@@ -108,7 +92,7 @@ async function handleApiKeySubmit(e) {
         return;
     }
     
-    firebaseConfig = tempFirebaseConfig;
+    state.firebaseConfig = tempFirebaseConfig;
     
     initializeFirebase();
     initializeGoogleSignIn();
@@ -116,12 +100,11 @@ async function handleApiKeySubmit(e) {
 }
 
 // --- AUTHENTICATION & GAPI INITIALIZATION ---
-
 function initializeGoogleSignIn() {
-    if (!googleClientId) return;
+    if (!state.googleClientId) return;
     try {
         google.accounts.id.initialize({
-            client_id: googleClientId,
+            client_id: state.googleClientId,
             callback: handleCredentialResponse,
         });
     } catch (error) {
@@ -135,7 +118,7 @@ async function handleCredentialResponse(response) {
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = "Verifying login...";
     try {
         const credential = GoogleAuthProvider.credential(response.credential);
-        await signInWithCredential(auth, credential);
+        await signInWithCredential(state.auth, credential);
     } catch (error) {
         console.error("Firebase sign-in with Google credential failed:", error);
         displayMessageInModal(`Login failed: ${error.message}`, 'error');
@@ -145,10 +128,10 @@ async function handleCredentialResponse(response) {
 }
 
 function initializeDriveTokenClient() {
-    if (!googleClientId) return;
+    if (!state.googleClientId) return;
     try {
-        driveTokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: googleClientId,
+        state.driveTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: state.googleClientId,
             scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // Callback is handled by the promise in getDriveToken
         });
@@ -158,8 +141,8 @@ function initializeDriveTokenClient() {
 }
 
 function handleLogout() {
-    if (auth) {
-        signOut(auth).catch(error => console.error("Sign out failed:", error));
+    if (state.auth) {
+        signOut(state.auth).catch(error => console.error("Sign out failed:", error));
     }
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.disableAutoSelect();
@@ -176,14 +159,18 @@ function setupAuthUI(user) {
     if (user && !user.isAnonymous) {
         appContainer.classList.remove(CONSTANTS.CLASS_HIDDEN);
         closeModal(CONSTANTS.MODAL_API_KEY);
-        const photoEl = isValidHttpUrl(user.photoURL) 
-            ? `<img src="${sanitizeText(user.photoURL)}" alt="User photo" class="w-8 h-8 rounded-full">`
-            : `<div class="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">${sanitizeText(user.displayName.charAt(0))}</div>`;
+        
+        const photoURL = user.photoURL || '';
+        const displayName = user.displayName || 'User';
+        
+        const photoEl = photoURL 
+            ? `<img src="${photoURL}" alt="User photo" class="w-8 h-8 rounded-full">`
+            : `<div class="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">${displayName.charAt(0)}</div>`;
         
         authStatusEl.innerHTML = `
             <div class="bg-white/20 backdrop-blur-sm rounded-full p-1 flex items-center gap-2 text-white text-sm">
                 ${photoEl}
-                <span class="font-medium pr-2">${sanitizeText(user.displayName)}</span>
+                <span class="font-medium pr-2">${displayName}</span>
                 <button id="logout-button" class="bg-white/20 hover:bg-white/40 text-white font-semibold py-1 px-3 rounded-full" title="Sign Out">Logout</button>
             </div>`;
         document.getElementById('logout-button').addEventListener('click', handleLogout);
@@ -200,7 +187,6 @@ function setupAuthUI(user) {
 }
 
 // --- APP INITIALIZATION TRIGGER ---
-
 function initializeApplication() {
     setupEventListeners();
     document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
