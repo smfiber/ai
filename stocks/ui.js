@@ -1269,8 +1269,7 @@ function setupGlobalEventListeners() {
     });
 }
 
-function setupEventListeners() {
-    document.getElementById(CONSTANTS.FORM_API_KEY)?.addEventListener('submit', handleApiKeySubmit);
+export function setupEventListeners() {
     document.getElementById(CONSTANTS.FORM_STOCK_RESEARCH)?.addEventListener('submit', handleResearchSubmit);
     
     document.getElementById('manage-stock-form')?.addEventListener('submit', handleSaveStock);
@@ -2021,7 +2020,7 @@ async function handleMoatAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = MOAT_ANALYSIS_PROMPT
