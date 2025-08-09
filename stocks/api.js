@@ -1,11 +1,26 @@
-import { CONSTANTS } from './config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { CONSTANTS, state } from './config.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- API CALLS ---
+// --- UTILITY & SECURITY HELPERS (Moved from ui.js) ---
+function isValidHttpUrl(urlString) {
+    if (typeof urlString !== 'string' || !urlString) return false;
+    try {
+        const url = new URL(urlString);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) {
+        return false;
+    }
+}
 
-async function callApi(url, options = {}) {
+function filterValidNews(articles) {
+    if (!Array.isArray(articles)) return [];
+    return articles.filter(article => 
+        article.title && article.text && isValidHttpUrl(article.url)
+    );
+}
+
+// --- API CALLS ---
+export async function callApi(url, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     try {
@@ -13,13 +28,11 @@ async function callApi(url, options = {}) {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            const errorText = await response.text(); // Read the body ONCE as text.
+            const errorText = await response.text();
             let errorBody;
             try {
-                // Now, try to parse the text as JSON.
                 errorBody = JSON.parse(errorText);
             } catch {
-                // If parsing fails, use the raw text.
                 errorBody = errorText;
             }
             const errorMsg = typeof errorBody === 'object' ? (errorBody?.error?.message || errorBody?.Information) : errorBody;
@@ -33,10 +46,10 @@ async function callApi(url, options = {}) {
     }
 }
 
-async function callGeminiApi(prompt) {
-    if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
+export async function callGeminiApi(prompt) {
+    if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
     
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
         method: 'POST',
@@ -45,11 +58,9 @@ async function callGeminiApi(prompt) {
     });
 
     const candidate = data.candidates?.[0];
-
     if (candidate?.content?.parts?.[0]?.text) {
         return candidate.content.parts[0].text;
     }
-    
     if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
         throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
     }
@@ -58,10 +69,10 @@ async function callGeminiApi(prompt) {
     throw new Error("Failed to parse the response from the Gemini API.");
 }
 
-async function callGeminiApiWithTools(contents) {
-    if (!geminiApiKey) throw new Error("Gemini API key is not configured.");
+export async function callGeminiApiWithTools(contents) {
+    if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,41 +80,34 @@ async function callGeminiApiWithTools(contents) {
     });
 
     const candidate = data.candidates?.[0];
-
     if (candidate?.content) {
         return candidate.content;
     }
-
     if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
         throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
     }
-
     console.error("Unexpected Gemini API response structure:", data);
     throw new Error("Failed to parse the response from the Gemini API with tools.");
 }
 
-async function generatePolishedArticle(initialPrompt, loadingMessageElement = null) {
+export async function generatePolishedArticle(initialPrompt, loadingMessageElement = null) {
     const updateLoadingMessage = (msg) => {
         if (loadingMessageElement) {
             loadingMessageElement.textContent = msg;
         }
     };
 
-    // Step 1: Draft
     updateLoadingMessage("AI is drafting the article...");
     const draft = await callGeminiApi(initialPrompt);
 
-    // Step 2: Focus Check
     updateLoadingMessage("Refining focus...");
     const focusPrompt = `Your first pass is to ensure the article is doing exactly what you asked for in the original prompt. Reread the original prompt below, then read your draft. Trim anything that doesn't belong and add anything that's missing. Is the main point clear? Did it miss anything? Did it add fluff? Return only the improved article.\n\nORIGINAL PROMPT:\n${initialPrompt}\n\nDRAFT:\n${draft}`;
     const focusedDraft = await callGeminiApi(focusPrompt);
 
-    // Step 3: Flow Check
     updateLoadingMessage("Improving flow...");
     const flowPrompt = `This pass is all about the reader's experience. Read the article out loud to catch awkward phrasing. Are the transitions smooth? Is the order logical? Are any sentences too long or clumsy? Return only the improved article.\n\nARTICLE:\n${focusedDraft}`;
     const flowedDraft = await callGeminiApi(flowPrompt);
 
-    // Step 4: Flair Check
     updateLoadingMessage("Adding final flair...");
     const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
     const finalArticle = await callGeminiApi(flairPrompt);
@@ -111,71 +115,8 @@ async function generatePolishedArticle(initialPrompt, loadingMessageElement = nu
     return finalArticle;
 }
 
-// --- FMP API INTEGRATION & MANAGEMENT ---
-async function handleRefreshFmpData(symbol) {
-    if (!fmpApiKey) {
-        displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
-        return;
-    }
-
-    openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all FMP data for ${symbol}...`;
-
-    try {
-        const endpointsSnapshot = await getDocs(collection(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
-        if (endpointsSnapshot.empty) {
-            throw new Error("No FMP endpoints configured. Please add endpoints via the manager.");
-        }
-
-        const endpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        let successfulFetches = 0;
-
-        for (const endpoint of endpoints) {
-            if (!endpoint.url_template || !endpoint.name) continue;
-
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching FMP Data: ${endpoint.name}...`;
-            
-            const url = endpoint.url_template
-                .replace('${symbol}', symbol)
-                .replace('${fmpApiKey}', fmpApiKey);
-            
-            const data = await callApi(url);
-
-            if (!data || (Array.isArray(data) && data.length === 0)) {
-                 console.warn(`No data returned from FMP for endpoint: ${endpoint.name}`);
-                 continue;
-            }
-
-            const dataToCache = {
-                cachedAt: Timestamp.now(),
-                data: data
-            };
-
-            const docRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
-            await setDoc(docRef, dataToCache);
-            
-            const endpointDocRef = doc(db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, endpoint.id);
-            await updateDoc(endpointDocRef, {
-                usageCount: increment(1)
-            });
-
-            successfulFetches++;
-        }
-        
-        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
-        
-        await fetchAndCachePortfolioData();
-
-    } catch (error) {
-        console.error("Error fetching FMP data:", error);
-        displayMessageInModal(`Could not fetch FMP data: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function getFmpStockData(symbol) {
-    const fmpCacheRef = collection(db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+export async function getFmpStockData(symbol) {
+    const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
     const fmpCacheSnapshot = await getDocs(fmpCacheRef);
 
     if (fmpCacheSnapshot.empty) {
@@ -203,30 +144,29 @@ async function getFmpStockData(symbol) {
 }
 
 // --- GOOGLE DRIVE FUNCTIONS ---
-
-function getDriveToken() {
+export function getDriveToken() {
     return new Promise((resolve, reject) => {
-        if (!driveTokenClient) {
+        if (!state.driveTokenClient) {
             return reject(new Error("Drive token client not initialized."));
         }
         
         try {
-            driveTokenClient.callback = (tokenResponse) => {
+            state.driveTokenClient.callback = (tokenResponse) => {
                 if (tokenResponse.error) {
                     return reject(new Error(`Error getting drive token: ${tokenResponse.error}`));
                 }
                 resolve(tokenResponse.access_token);
             };
         
-            driveTokenClient.requestAccessToken({ prompt: '' });
+            state.driveTokenClient.requestAccessToken({ prompt: '' });
         } catch (e) {
             reject(e);
         }
     });
 }
 
-async function getOrCreateDriveFolder() {
-    let folderId = driveFolderId;
+export async function getOrCreateDriveFolder() {
+    let folderId = state.driveFolderId;
     if (folderId) return folderId;
 
     const folderName = "Stock Evaluations";
@@ -249,11 +189,11 @@ async function getOrCreateDriveFolder() {
         });
         folderId = createResponse.result.id;
     }
-    driveFolderId = folderId;
+    state.driveFolderId = folderId;
     return folderId;
 }
 
-async function createDriveFile(folderId, fileName, content) {
+export async function createDriveFile(folderId, fileName, content) {
     const boundary = '-------314159265358979323846';
     const delimiter = `\r\n--${boundary}\r\n`;
     const close_delim = `\r\n--${boundary}--`;
@@ -285,12 +225,11 @@ async function createDriveFile(folderId, fileName, content) {
 }
 
 // --- SECTOR ANALYSIS: AI AGENT WORKFLOW ---
-
-async function searchSectorNews({ sectorName, sectorStocks }) {
-    if (!fmpApiKey) {
+export async function searchSectorNews({ sectorName, sectorStocks }) {
+    if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for news search.");
     }
-    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=100&apikey=${fmpApiKey}`;
+    const url = `https://financialmodelingprep.com/api/v3/stock_news?limit=100&apikey=${state.fmpApiKey}`;
     
     const newsData = await callApi(url);
     const validArticles = filterValidNews(newsData || []);
@@ -313,7 +252,7 @@ async function searchSectorNews({ sectorName, sectorStocks }) {
     };
 }
 
-async function synthesizeAndRankCompanies({ newsArticles, sectorStocks }) {
+export async function synthesizeAndRankCompanies({ newsArticles, sectorStocks }) {
     const prompt = `
         Role: You are a quantitative financial analyst AI. Your task is to analyze a general list of financial news articles and identify the most noteworthy companies that belong to a specific sector.
 
@@ -339,7 +278,7 @@ async function synthesizeAndRankCompanies({ newsArticles, sectorStocks }) {
     }
 }
 
-async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArticles }) {
+export async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArticles }) {
     const prompt = `
         Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic sector based on pre-analyzed news data.
 
@@ -378,11 +317,11 @@ async function generateDeepDiveReport({ companyAnalysis, sectorName, originalArt
     return { report: finalReport };
 }
 
-async function findStocksByIndustry({ industryName }) {
-    if (!fmpApiKey) {
+export async function findStocksByIndustry({ industryName }) {
+    if (!state.fmpApiKey) {
         throw new Error("FMP API Key is required for this feature.");
     }
-    const url = `https://financialmodelingprep.com/api/v3/stock-screener?industry=${encodeURIComponent(industryName)}&limit=50&apikey=${fmpApiKey}`;
+    const url = `https://financialmodelingprep.com/api/v3/stock-screener?industry=${encodeURIComponent(industryName)}&limit=50&apikey=${state.fmpApiKey}`;
     
     try {
         const stocks = await callApi(url);
