@@ -1,4 +1,5 @@
 import { setupEventListeners } from './ui.js';
+import { CONSTANTS, APP_VERSION } from './config.js';
 
 // --- Global State ---
 let db;
