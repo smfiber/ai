@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.0.3"; 
+export const APP_VERSION = "12.0.4"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -491,7 +491,7 @@ The tone should be insightful and optimistic about innovation, but grounded in b
 `;
 
 export const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
-Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+Act as a senior analyst for a a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
 For the {industryName} industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Industry] Market"
 Your analysis must be structured as follows:
