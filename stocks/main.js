@@ -1393,17 +1393,26 @@ async function handleResearchSubmit(e) {
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
-    const mainAccordionContent = document.getElementById('raw-data-accordion-content');
+    // Get containers for each tab
+    const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
-    mainAccordionContent.innerHTML = '<div class="loader mx-auto"></div>';
+    // Clear all containers
+    rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
+
+    // Reset to the default tab
+    document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+    document.getElementById('ai-analysis-tab').classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
+
 
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -1425,7 +1434,7 @@ async function openRawDataViewer(ticker) {
                 </details>
             `;
         }
-        mainAccordionContent.innerHTML = accordionHtml;
+        rawDataContainer.innerHTML = accordionHtml;
 
         // Build AI buttons
         const buttons = [
@@ -1477,7 +1486,7 @@ async function openRawDataViewer(ticker) {
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
-        mainAccordionContent.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
 
