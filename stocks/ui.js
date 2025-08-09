@@ -1266,6 +1266,11 @@ function setupGlobalEventListeners() {
         if (target) {
             const industry = target.dataset.industry;
             const promptName = target.dataset.promptName;
+            const analysisName = target.querySelector('.tile-name')?.textContent || promptName;
+            
+            const modal = document.getElementById('industryAnalysisModal');
+            modal.dataset.analysisName = analysisName;
+
             if (promptName === 'MarketTrends') {
                 handleIndustryMarketTrendsAnalysis(industry);
             } else if (promptName === 'DisruptorAnalysis') {
@@ -1833,12 +1838,14 @@ function renderIndustryButtons() {
 
 
 function handleIndustrySelection(industryName) {
-    const modalTitle = document.getElementById('industry-analysis-modal-title');
-    const selectorContainer = document.getElementById('industry-analysis-selector-container');
-    const contentArea = document.getElementById('industry-analysis-content');
+    const modal = document.getElementById(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+    const modalTitle = modal.querySelector('#industry-analysis-modal-title');
+    const selectorContainer = modal.querySelector('#industry-analysis-selector-container');
+    const contentArea = modal.querySelector('#industry-analysis-content');
 
     modalTitle.textContent = `Industry Deep Dive | ${industryName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    modal.dataset.analysisName = 'Industry_Deep_Dive'; // Reset on new selection
     
     const analysisTypes = [
         {
@@ -2198,7 +2205,7 @@ async function handleRiskAssessmentAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = RISK_ASSESSMENT_PROMPT
@@ -2268,14 +2275,16 @@ async function handleSaveToDrive(modalId) {
     const reportTitleText = reportH1 ? reportH1.textContent : '';
 
     let symbolOrContext = '';
-    let reportTypeName = '';
+    let reportTypeName = modal.dataset.analysisName || '';
 
     if (modalId === 'rawDataViewerModal' && reportTitleText) {
         symbolOrContext = modalTitleText.replace('Analysis for', '').trim();
         reportTypeName = reportTitleText.split(':')[0].trim();
     } else {
         const titleParts = modalTitleText.split('|').map(s => s.trim());
-        reportTypeName = titleParts[0];
+        if (!reportTypeName) {
+            reportTypeName = titleParts[0];
+        }
         symbolOrContext = titleParts.length > 1 ? titleParts[1] : '';
     }
 
