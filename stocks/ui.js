@@ -2500,10 +2500,13 @@ async function handleStockRatingAnalysis(symbol, isBackground = false) {
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
             
-        const report = await generatePolishedArticle(prompt, isBackground ? null : loadingMessage);
+        const rawResult = await generatePolishedArticle(prompt, isBackground ? null : loadingMessage);
         const container = document.getElementById('investment-rating-container');
+        
         if (container) {
-            container.innerHTML = marked.parse(report);
+            const jsonMatch = rawResult.match(/```json\n([\s\S]*?)\n```/);
+            const markdownContent = jsonMatch ? rawResult.substring(jsonMatch[0].length).trim() : rawResult;
+            container.innerHTML = marked.parse(markdownContent);
         }
 
     } catch (error) {
