@@ -1647,54 +1647,39 @@ export function setupEventListeners() {
         icon.classList.toggle('rotate-180');
     });
 
-// ADD THIS IN ITS PLACE
-document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
-    const target = e.target.closest('button');
-    if (!target) return;
+    document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
 
-    // New Tab Switching Logic
-    if (target.matches('.tab-button')) {
-        const tabId = target.dataset.tab;
-
-        // Hide all tab content
-        document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(content => {
-            content.classList.add('hidden');
-        });
-
-        // Deactivate all tab buttons
-        document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(button => {
-            button.classList.remove('active');
-        });
-
-        // Show the selected tab content
-        document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-
-        // Activate the clicked tab button
-        target.classList.add('active');
-        
-        // If the charts tab is now active, resize the charts to ensure they render correctly.
-        if (tabId === 'charts') {
-            Object.values(state.charts).forEach(chart => {
-                if (chart && typeof chart.resize === 'function') {
-                    chart.resize();
-                }
-            });
+        if (target.matches('.tab-button')) {
+            const tabId = target.dataset.tab;
+            document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+            target.classList.add('active');
+            
+            if (tabId === 'charts') {
+                Object.values(state.charts).forEach(chart => {
+                    if (chart && typeof chart.resize === 'function') {
+                        chart.resize();
+                    }
+                });
+            }
+            return;
         }
-        return;
-    }
 
-    const symbol = target.dataset.symbol;
-    if (!symbol) return;
+        const symbol = target.dataset.symbol;
+        if (!symbol) return;
 
-    if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
-    if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
-    if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
-    if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
-    if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
-    if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
-    if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
-    if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
-});
+        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
+        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
+        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
+        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
+        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
+        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
+        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
+        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
+    });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
