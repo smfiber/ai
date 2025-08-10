@@ -659,6 +659,7 @@ async function openRawDataViewer(ticker) {
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
+    const investmentRatingContainer = document.getElementById('investment-rating-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
     const chartsContainer = document.getElementById('charts-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
@@ -667,14 +668,15 @@ async function openRawDataViewer(ticker) {
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
+    investmentRatingContainer.innerHTML = '<div class="loader mx-auto"></div>';
     profileDisplayContainer.innerHTML = '';
     chartsContainer.innerHTML = '';
     destroyCharts();
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-    document.getElementById('ai-analysis-tab').classList.remove('hidden');
-    document.querySelector('.tab-button[data-tab="ai-analysis"]').classList.add('active');
+    document.getElementById('investment-rating-tab').classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="investment-rating"]').classList.add('active');
 
     try {
         const fmpData = await getFmpStockData(ticker);
@@ -684,6 +686,9 @@ async function openRawDataViewer(ticker) {
 
         titleEl.textContent = `Analysis for ${ticker}`;
         
+        // Pre-load the investment rating in the background
+        handleStockRatingAnalysis(ticker, true);
+
         // Render Charts Tab
         renderFinancialPerformanceChart(fmpData);
         renderFinancialHealthChart(fmpData);
@@ -1657,6 +1662,7 @@ export function setupEventListeners() {
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+            target.classList.add('active');
             
             if (tabId === 'charts') {
                 Object.values(state.charts).forEach(chart => {
@@ -2478,9 +2484,12 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
     }
 }
 
-async function handleStockRatingAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+async function handleStockRatingAnalysis(symbol, isBackground = false) {
+    if (!isBackground) {
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    }
+    
     try {
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
@@ -2490,16 +2499,23 @@ async function handleStockRatingAnalysis(symbol) {
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
+            
+        const report = await generatePolishedArticle(prompt, isBackground ? null : loadingMessage);
+        const container = document.getElementById('investment-rating-container');
+        if (container) {
+            container.innerHTML = marked.parse(report);
         }
+
     } catch (error) {
         displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+        const container = document.getElementById('investment-rating-container');
+        if (container) {
+            container.innerHTML = `<p class="text-red-500">Failed to generate rating: ${error.message}</p>`;
+        }
     } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
+        if (!isBackground) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
 
