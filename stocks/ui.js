@@ -2,6 +2,19 @@ import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCI
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// --- PROMPT MAPPING ---
+const promptMap = {
+    'FinancialAnalysis': FINANCIAL_ANALYSIS_PROMPT,
+    'UndervaluedAnalysis': UNDERVALUED_ANALYSIS_PROMPT,
+    'BullVsBear': BULL_VS_BEAR_PROMPT,
+    'MoatAnalysis': MOAT_ANALYSIS_PROMPT,
+    'DividendSafety': DIVIDEND_SAFETY_PROMPT,
+    'GrowthOutlook': GROWTH_OUTLOOK_PROMPT,
+    'RiskAssessment': RISK_ASSESSMENT_PROMPT,
+    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT,
+    'StockRating': STOCK_RATING_PROMPT
+};
+
 // --- UTILITY & SECURITY HELPERS ---
 
 function formatLargeNumber(value, precision = 2) {
@@ -1671,23 +1684,18 @@ export function setupEventListeners() {
             }
             return;
         }
+        
+        if (target.matches('.save-to-db-button')) {
+            handleSaveReportToDb();
+            return;
+        }
 
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
         if (target.classList.contains('ai-analysis-button')) {
             const reportType = target.dataset.reportType;
-            let promptTemplate;
-            switch(reportType) {
-                case 'FinancialAnalysis': promptTemplate = FINANCIAL_ANALYSIS_PROMPT; break;
-                case 'UndervaluedAnalysis': promptTemplate = UNDERVALUED_ANALYSIS_PROMPT; break;
-                case 'BullVsBear': promptTemplate = BULL_VS_BEAR_PROMPT; break;
-                case 'MoatAnalysis': promptTemplate = MOAT_ANALYSIS_PROMPT; break;
-                case 'DividendSafety': promptTemplate = DIVIDEND_SAFETY_PROMPT; break;
-                case 'GrowthOutlook': promptTemplate = GROWTH_OUTLOOK_PROMPT; break;
-                case 'RiskAssessment': promptTemplate = RISK_ASSESSMENT_PROMPT; break;
-                case 'CapitalAllocators': promptTemplate = CAPITAL_ALLOCATORS_PROMPT; break;
-            }
+            const promptTemplate = promptMap[reportType];
             if (promptTemplate) {
                 handleAnalysisRequest(symbol, reportType, promptTemplate);
             }
@@ -2375,7 +2383,7 @@ async function handleSaveReportToDb() {
         // Refresh the status to show the new saved version
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const promptTemplate = window.promptMap[reportType]; // We'll need to store prompts globally
+        const promptTemplate = promptMap[reportType]; // We'll need to store prompts globally
         updateReportStatus(document.getElementById(activeTab === 'investment-rating' ? 'report-status-container-rating' : 'report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptTemplate });
 
     } catch (error) {
