@@ -2487,8 +2487,8 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
 async function handleStockRatingAnalysis(symbol, isBackground = false) {
     if (!isBackground) {
         openModal(CONSTANTS.MODAL_LOADING);
-        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     }
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     
     try {
         const data = await getFmpStockData(symbol);
@@ -2506,7 +2506,39 @@ async function handleStockRatingAnalysis(symbol, isBackground = false) {
         if (container) {
             const jsonMatch = rawResult.match(/```json\n([\s\S]*?)\n```/);
             const markdownContent = jsonMatch ? rawResult.substring(jsonMatch[0].length).trim() : rawResult;
-            container.innerHTML = marked.parse(markdownContent);
+            
+            let summaryCardHtml = '';
+            if (jsonMatch && jsonMatch[1]) {
+                try {
+                    const ratingData = JSON.parse(jsonMatch[1]);
+                    const score = ratingData.weightedAverageScore || 0;
+                    const recommendation = ratingData.recommendation || 'N/A';
+                    
+                    const scoreColor = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+                    const recommendationColor = recommendation === 'Buy' ? 'bg-green-100 text-green-800' : recommendation === 'Hold' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+
+                    summaryCardHtml = `
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div class="text-center md:text-left">
+                                    <p class="text-sm font-semibold text-gray-500 uppercase">Overall Score</p>
+                                    <p class="text-5xl font-bold text-gray-800">${score}/100</p>
+                                </div>
+                                <div class="w-full md:w-auto bg-gray-200 rounded-full h-4">
+                                    <div class="${scoreColor} h-4 rounded-full" style="width: ${score}%"></div>
+                                </div>
+                                <div class="text-center md:text-right">
+                                    <p class="text-sm font-semibold text-gray-500 uppercase">Recommendation</p>
+                                    <p class="text-2xl font-bold px-4 py-1 mt-1 rounded-full ${recommendationColor}">${recommendation}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    console.error("Could not parse rating JSON:", e);
+                }
+            }
+            container.innerHTML = summaryCardHtml + marked.parse(markdownContent);
         }
 
     } catch (error) {
