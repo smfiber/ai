@@ -371,6 +371,7 @@
         <div id="raw-data-viewer-content" class="flex-grow flex flex-col overflow-hidden">
             <div class="border-b border-gray-200">
                 <nav id="analysis-tabs" class="flex -mb-px" aria-label="Tabs">
+                    <button class="tab-button" data-tab="investment-rating">Investment Rating</button>
                     <button class="tab-button active" data-tab="ai-analysis">AI Analysis</button>
                     <button class="tab-button" data-tab="company-profile">Company Profile</button>
                     <button class="tab-button" data-tab="charts">Charts</button>
@@ -379,6 +380,11 @@
             </div>
 
             <div class="flex-grow overflow-y-auto">
+                <div id="investment-rating-tab" class="tab-content hidden p-6">
+                    <div id="investment-rating-container" class="prose max-w-none">
+                        </div>
+                </div>
+
                 <div id="ai-analysis-tab" class="tab-content p-6">
                     <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center">
                     </div>
