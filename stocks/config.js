@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.7.0"; 
+export const APP_VERSION = "12.7.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -110,15 +110,39 @@ Your response must have two parts.
 1.  First, provide a clean JSON object with no text before or after it, enclosed in \`\`\`json ... \`\`\`. This object must contain two keys:
     * "weightedAverageScore": A number from 1-100.
     * "recommendation": A string, which must be one of "Buy", "Hold", or "Sell".
-2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format.
+2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format, following the exact structure below.
 
 **Analysis requirements for the markdown section:**
-* **Financial Health Assessment:** Evaluate liquidity (current ratio), solvency (debt-to-equity), and cash position.
-* **Profitability and Growth Analysis:** Analyze revenue growth, gross profit margins, and net income trajectory.
-* **Cash Flow Analysis:** Assess Operating Cash Flow (OCF) and Free Cash Flow (FCF) trends.
-* **Valuation and Market Sentiment:** Briefly touch on valuation metrics (e.g., EV/Sales, P/S) and summarize analyst ratings.
-* **Rating Justification:** Write a concise summary explaining the key factors that determined the 1-100 rating.
-* **Broker Recommendation:** Conclude with a clear recommendation of Buy, Hold, or Sell, justifying it from both a data analyst and professional broker perspective.
+
+# Investment Rating: {companyName} ({tickerSymbol})
+
+## 1. Financial Health
+- **Liquidity (Current Ratio):** [Value] - Brief explanation of what this means for the company.
+- **Solvency (Debt-to-Equity):** [Value] - Brief explanation of what this means for the company.
+- **Cash Position:** [Value] - Brief explanation of the company's cash reserves.
+
+## 2. Profitability & Growth
+- **Revenue Growth:** [Value/Trend] - Brief analysis of revenue trends.
+- **Gross Profit Margins:** [Value] - Brief analysis of margin stability and efficiency.
+- **Net Income Trajectory:** [Value/Trend] - Brief analysis of net income trends.
+
+## 3. Cash Flow
+- **Operating Cash Flow (OCF):** [Value/Trend] - Brief analysis of cash generation from core business.
+- **Free Cash Flow (FCF):** [Value/Trend] - Brief analysis of cash left after capital expenditures.
+
+## 4. Valuation & Market Sentiment
+- **Valuation Multiples (P/E, P/S):** [Values] - Brief comparison to industry or historical averages.
+- **Analyst Consensus:** [Summary] - Summarize the number of buy/hold/sell ratings.
+
+## 5. Rating Justification
+Provide a bulleted list of the factors that determined the 1-100 rating.
+- **Factor 1:** [Point Value] - Justification.
+- **Factor 2:** [Point Value] - Justification.
+- **Factor 3:** [Point Value] - Justification.
+
+## 6. Broker Recommendation: [Buy/Hold/Sell]
+- **Data Analyst Perspective:** A concise summary based purely on the quantitative data points.
+- **Professional Broker Perspective:** A summary that incorporates market sentiment and qualitative factors.
 
 JSON Data:
 {jsonData}
