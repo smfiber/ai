@@ -381,15 +381,14 @@
 
             <div class="flex-grow overflow-y-auto">
                 <div id="investment-rating-tab" class="tab-content hidden p-6">
-                    <div id="investment-rating-container" class="prose max-w-none">
-                        </div>
+                    <div id="report-status-container-rating" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                    <div id="investment-rating-container" class="prose max-w-none"></div>
                 </div>
 
                 <div id="ai-analysis-tab" class="tab-content p-6">
-                    <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center">
-                    </div>
-                    <div id="ai-article-container" class="prose max-w-none">
-                    </div>
+                    <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center"></div>
+                    <div id="report-status-container-ai" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
+                    <div id="ai-article-container" class="prose max-w-none"></div>
                 </div>
 
                 <div id="company-profile-tab" class="tab-content hidden p-6">
@@ -397,18 +396,17 @@
                 </div>
 
                 <div id="charts-tab" class="tab-content hidden p-6 bg-gray-50">
-                    <div id="charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        </div>
+                    <div id="charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8"></div>
                 </div>
 
                 <div id="raw-data-tab" class="tab-content hidden p-6 bg-gray-50">
-                    <div id="raw-data-accordion-container">
-                        </div>
+                    <div id="raw-data-accordion-container"></div>
                 </div>
             </div>
         </div>
         <div class="p-4 bg-gray-50 border-t flex justify-end gap-4">
             <button type="button" id="close-raw-data-viewer-modal-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Close</button>
+            <button data-modal-id="rawDataViewerModal" class="save-to-db-button bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Database</button>
             <button data-modal-id="rawDataViewerModal" class="save-to-drive-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Save to Drive</button>
         </div>
     </div>
