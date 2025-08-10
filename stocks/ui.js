@@ -1671,6 +1671,15 @@ document.getElementById('rawDataViewerModal').addEventListener('click', (e) => {
 
         // Activate the clicked tab button
         target.classList.add('active');
+        
+        // If the charts tab is now active, resize the charts to ensure they render correctly.
+        if (tabId === 'charts') {
+            Object.values(state.charts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                }
+            });
+        }
         return;
     }
 
