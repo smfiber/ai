@@ -1657,7 +1657,6 @@ export function setupEventListeners() {
             document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-            target.classList.add('active');
             
             if (tabId === 'charts') {
                 Object.values(state.charts).forEach(chart => {
@@ -2484,7 +2483,7 @@ async function handleStockRatingAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
         const prompt = STOCK_RATING_PROMPT
