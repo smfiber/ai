@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.3.0"; 
+export const APP_VERSION = "12.4.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -101,6 +101,21 @@ export const FINANCIAL_NEWS_SOURCES = [
     'theguardian.com', 'bbc.com', 'financialpost.com', 'scmp.com',
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
+
+export const STOCK_RATING_PROMPT = `
+"Analyze the provided raw financial data for {companyName} (ticker: {tickerSymbol}) covering the fiscal years 2020 through 2024. The data includes annual balance sheets, cash flow statements, income statements, company profile, key metrics, enterprise value, and analyst ratings.
+Your analysis should include:
+Financial Health Assessment: Evaluate the company's balance sheet, focusing on liquidity (e.g., current ratio), solvency (e.g., debt-to-equity ratio), and cash position over the five-year period.
+Profitability and Growth Analysis: Examine the income statement trends. Analyze year-over-year revenue growth, gross profit margins, and the trajectory of net income. Note any clear trends toward or away from profitability.
+Cash Flow Analysis: Review the cash flow statements to assess the company's ability to generate cash. Specifically, analyze the trends in Operating Cash Flow (OCF) and Free Cash Flow (FCF). Highlight any significant changes or inflection points.
+Valuation and Market Sentiment: Briefly touch on the company's valuation using relevant metrics (e.g., EV/Sales, Price/Sales) and summarize the consensus from historical analyst ratings.
+Develop a Stock Rating (1-100): Create and apply a quantitative rating system based on the analysis. The score should be derived from weighted categories such as Financial Health, Profitability, and Cash Flow. Provide the final score.
+Rating Justification: Write a concise summary explaining the key factors that determined the 1-100 rating.
+Broker Recommendation: Conclude with a clear recommendation of Buy, Hold, or Sell. Justify this recommendation from the dual perspective of a data analyst, interpreting the numbers, and a professional broker, advising on investment strategy based on the data."
+
+JSON Data:
+{jsonData}
+`.trim();
 
 export const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts (e.g., comparing debt to a mortgage). Your analysis must be derived exclusively from the provided JSON data from the Financial Modeling Prep (FMP) API.
