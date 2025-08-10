@@ -1,6 +1,6 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, STOCK_RATING_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
-import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UTILITY & SECURITY HELPERS ---
 
@@ -686,9 +686,6 @@ async function openRawDataViewer(ticker) {
 
         titleEl.textContent = `Analysis for ${ticker}`;
         
-        // Pre-load the investment rating in the background
-        handleStockRatingAnalysis(ticker, true);
-
         // Render Charts Tab
         renderFinancialPerformanceChart(fmpData);
         renderFinancialHealthChart(fmpData);
@@ -712,19 +709,18 @@ async function openRawDataViewer(ticker) {
 
         // Build AI buttons
         const buttons = [
-            { class: 'financial-analysis-button', text: 'Financial Analysis', bg: 'bg-teal-500 hover:bg-teal-600' },
-            { class: 'undervalued-analysis-button', text: 'Undervalued Analysis', bg: 'bg-amber-500 hover:bg-amber-600' },
-            { class: 'bull-bear-analysis-button', text: 'Bull vs. Bear', bg: 'bg-purple-500 hover:bg-purple-600' },
-            { class: 'moat-analysis-button', text: 'Moat Analysis', bg: 'bg-cyan-500 hover:bg-cyan-600' },
-            { class: 'dividend-safety-button', text: 'Dividend Safety', bg: 'bg-sky-500 hover:bg-sky-600' },
-            { class: 'growth-outlook-button', text: 'Growth Outlook', bg: 'bg-lime-500 hover:bg-lime-600' },
-            { class: 'risk-assessment-button', text: 'Risk Assessment', bg: 'bg-rose-500 hover:bg-rose-600' },
-            { class: 'capital-allocators-button', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' },
-            { class: 'stock-rating-button', text: 'Stock Rating', bg: 'bg-indigo-500 hover:bg-indigo-600' }
+            { reportType: 'FinancialAnalysis', text: 'Financial Analysis', bg: 'bg-teal-500 hover:bg-teal-600' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued Analysis', bg: 'bg-amber-500 hover:bg-amber-600' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear', bg: 'bg-purple-500 hover:bg-purple-600' },
+            { reportType: 'MoatAnalysis', text: 'Moat Analysis', bg: 'bg-cyan-500 hover:bg-cyan-600' },
+            { reportType: 'DividendSafety', text: 'Dividend Safety', bg: 'bg-sky-500 hover:bg-sky-600' },
+            { reportType: 'GrowthOutlook', text: 'Growth Outlook', bg: 'bg-lime-500 hover:bg-lime-600' },
+            { reportType: 'RiskAssessment', text: 'Risk Assessment', bg: 'bg-rose-500 hover:bg-rose-600' },
+            { reportType: 'CapitalAllocators', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' }
         ];
         
         aiButtonsContainer.innerHTML = buttons.map(btn => 
-            `<button data-symbol="${ticker}" class="${btn.class} text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
+            `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
         ).join('');
         
         // Render the new company profile section
@@ -757,6 +753,8 @@ async function openRawDataViewer(ticker) {
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
 
+        // Automatically trigger the investment rating analysis
+        handleAnalysisRequest(ticker, 'StockRating', STOCK_RATING_PROMPT);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -1677,15 +1675,23 @@ export function setupEventListeners() {
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
-        if (target.classList.contains('financial-analysis-button')) handleFinancialAnalysis(symbol);
-        if (target.classList.contains('undervalued-analysis-button')) handleUndervaluedAnalysis(symbol);
-        if (target.classList.contains('bull-bear-analysis-button')) handleBullBearAnalysis(symbol);
-        if (target.classList.contains('moat-analysis-button')) handleMoatAnalysis(symbol);
-        if (target.classList.contains('dividend-safety-button')) handleDividendSafetyAnalysis(symbol);
-        if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
-        if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
-        if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
-        if (target.classList.contains('stock-rating-button')) handleStockRatingAnalysis(symbol);
+        if (target.classList.contains('ai-analysis-button')) {
+            const reportType = target.dataset.reportType;
+            let promptTemplate;
+            switch(reportType) {
+                case 'FinancialAnalysis': promptTemplate = FINANCIAL_ANALYSIS_PROMPT; break;
+                case 'UndervaluedAnalysis': promptTemplate = UNDERVALUED_ANALYSIS_PROMPT; break;
+                case 'BullVsBear': promptTemplate = BULL_VS_BEAR_PROMPT; break;
+                case 'MoatAnalysis': promptTemplate = MOAT_ANALYSIS_PROMPT; break;
+                case 'DividendSafety': promptTemplate = DIVIDEND_SAFETY_PROMPT; break;
+                case 'GrowthOutlook': promptTemplate = GROWTH_OUTLOOK_PROMPT; break;
+                case 'RiskAssessment': promptTemplate = RISK_ASSESSMENT_PROMPT; break;
+                case 'CapitalAllocators': promptTemplate = CAPITAL_ALLOCATORS_PROMPT; break;
+            }
+            if (promptTemplate) {
+                handleAnalysisRequest(symbol, reportType, promptTemplate);
+            }
+        }
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
@@ -2278,279 +2284,167 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
-async function handleFinancialAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-
-        const prompt = FINANCIAL_ANALYSIS_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-
-    } catch (error) {
-        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleUndervaluedAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-
-        const prompt = UNDERVALUED_ANALYSIS_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-
-    } catch (error) {
-        displayMessageInModal(`Could not generate AI analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleBullBearAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = BULL_VS_BEAR_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleMoatAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = MOAT_ANALYSIS_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleDividendSafetyAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = DIVIDEND_SAFETY_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleGrowthOutlookAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = GROWTH_OUTLOOK_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleRiskAssessmentAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = RISK_ASSESSMENT_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleCapitalAllocatorsAnalysis(symbol) {
-    openModal(CONSTANTS.MODAL_LOADING);
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-    try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = CAPITAL_ALLOCATORS_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol);
-        const report = await generatePolishedArticle(prompt, loadingMessage);
-        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
-        if (articleContainer) {
-            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
-            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
-        }
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-    } finally {
-        closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
-
-async function handleStockRatingAnalysis(symbol, isBackground = false) {
-    if (!isBackground) {
-        openModal(CONSTANTS.MODAL_LOADING);
-    }
-    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew = false) {
+    const isRating = reportType === 'StockRating';
+    const contentContainer = document.getElementById(isRating ? 'investment-rating-container' : 'ai-article-container');
+    const statusContainer = document.getElementById(isRating ? 'report-status-container-rating' : 'report-status-container-ai');
     
+    contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
+    statusContainer.classList.add('hidden');
+
     try {
-        const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
-        const prompt = STOCK_RATING_PROMPT
-            .replace(/{companyName}/g, companyName)
-            .replace(/{tickerSymbol}/g, tickerSymbol)
-            .replace('{jsonData}', JSON.stringify(data, null, 2));
-            
-        const rawResult = await generatePolishedArticle(prompt, isBackground ? null : loadingMessage);
-        const container = document.getElementById('investment-rating-container');
-        
-        if (container) {
-            const jsonMatch = rawResult.match(/```json\n([\s\S]*?)\n```/);
-            const markdownContent = jsonMatch ? rawResult.substring(jsonMatch[0].length).trim() : rawResult;
-            
-            let summaryCardHtml = '';
-            if (jsonMatch && jsonMatch[1]) {
-                try {
-                    const ratingData = JSON.parse(jsonMatch[1]);
-                    const score = ratingData.weightedAverageScore || 0;
-                    const recommendation = ratingData.recommendation || 'N/A';
-                    
-                    const scoreColor = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-                    const recommendationColor = recommendation === 'Buy' ? 'bg-green-100 text-green-800' : recommendation === 'Hold' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+        const savedReports = await getSavedReports(symbol, reportType);
 
-                    summaryCardHtml = `
-                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <div class="text-center md:text-left">
-                                    <p class="text-sm font-semibold text-gray-500 uppercase">Overall Score</p>
-                                    <p class="text-5xl font-bold text-gray-800">${score}/100</p>
-                                </div>
-                                <div class="w-full md:w-auto bg-gray-200 rounded-full h-4">
-                                    <div class="${scoreColor} h-4 rounded-full" style="width: ${score}%"></div>
-                                </div>
-                                <div class="text-center md:text-right">
-                                    <p class="text-sm font-semibold text-gray-500 uppercase">Recommendation</p>
-                                    <p class="text-2xl font-bold px-4 py-1 mt-1 rounded-full ${recommendationColor}">${recommendation}</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } catch (e) {
-                    console.error("Could not parse rating JSON:", e);
-                }
-            }
-            container.innerHTML = summaryCardHtml + marked.parse(markdownContent);
-        }
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentContainer, latestReport.content);
+            updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
+        } else {
+            openModal(CONSTANTS.MODAL_LOADING);
+            const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+            
+            const data = await getFmpStockData(symbol);
+            if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+            
+            const companyName = get(data, 'company_profile.0.companyName', 'the company');
+            const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
 
-    } catch (error) {
-        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
-        const container = document.getElementById('investment-rating-container');
-        if (container) {
-            container.innerHTML = `<p class="text-red-500">Failed to generate rating: ${error.message}</p>`;
-        }
-    } finally {
-        if (!isBackground) {
+            const prompt = promptTemplate
+                .replace(/{companyName}/g, companyName)
+                .replace(/{tickerSymbol}/g, tickerSymbol)
+                .replace('{jsonData}', JSON.stringify(data, null, 2));
+
+            const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+            displayReport(contentContainer, newReportContent);
+            updateReportStatus(statusContainer, savedReports, null, { symbol, reportType, promptTemplate }); // Show status for newly generated report
             closeModal(CONSTANTS.MODAL_LOADING);
         }
+    } catch (error) {
+        displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    }
+}
+
+
+async function handleSaveReportToDb() {
+    const modal = document.getElementById('rawDataViewerModal');
+    const symbol = modal.querySelector('.ai-analysis-button')?.dataset.symbol || modal.querySelector('.tab-button.active')?.dataset.symbol;
+    const activeTab = modal.querySelector('.tab-button.active').dataset.tab;
+
+    let reportType, contentContainer;
+
+    if (activeTab === 'investment-rating') {
+        reportType = 'StockRating';
+        contentContainer = document.getElementById('investment-rating-container');
+    } else if (activeTab === 'ai-analysis') {
+        // This part is tricky as we don't have a single "active" report type.
+        // We will assume we're saving the content currently visible in ai-article-container.
+        // A better approach might be to store the last loaded/generated reportType in a state variable.
+        // For now, let's disable saving from the generic AI tab if a specific report hasn't been run.
+        const currentContent = document.getElementById('ai-article-container').innerHTML;
+        if (!currentContent || currentContent.includes('loader')) {
+            displayMessageInModal("Please generate an analysis before saving.", "warning");
+            return;
+        }
+        // We need to know which report this is. We'll add this to the status container's dataset.
+        const statusContainer = document.getElementById('report-status-container-ai');
+        reportType = statusContainer.dataset.activeReportType;
+        contentContainer = document.getElementById('ai-article-container');
+    }
+
+    if (!reportType || !contentContainer || !symbol) {
+        displayMessageInModal("Could not determine which report to save. Please select a specific analysis.", "warning");
+        return;
+    }
+
+    const contentToSave = contentContainer.innerHTML;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
+
+    try {
+        const reportData = {
+            ticker: symbol,
+            reportType: reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        // Refresh the status to show the new saved version
+        const savedReports = await getSavedReports(symbol, reportType);
+        const latestReport = savedReports[0];
+        const promptTemplate = window.promptMap[reportType]; // We'll need to store prompts globally
+        updateReportStatus(document.getElementById(activeTab === 'investment-rating' ? 'report-status-container-rating' : 'report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptTemplate });
+
+    } catch (error) {
+        console.error("Error saving report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+
+async function getSavedReports(ticker, reportType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+function displayReport(container, content) {
+    if (content.startsWith('<')) { // If content is HTML
+        container.innerHTML = content;
+    } else { // Assume it's markdown
+        container.innerHTML = marked.parse(content);
+    }
+}
+
+function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
+    statusContainer.classList.remove('hidden');
+    statusContainer.dataset.activeReportType = analysisParams.reportType;
+    let statusHtml = '';
+
+    if (reports.length > 0) {
+        const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
+        const savedDate = activeReport.savedAt.toDate().toLocaleString();
+        
+        statusHtml = `
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-blue-800">Displaying report from: ${savedDate}</span>
+                <select id="version-selector-${analysisParams.reportType}" class="text-sm border-gray-300 rounded-md">
+                    ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
+                </select>
+            </div>
+            <button id="generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
+        `;
+    } else {
+        statusHtml = `
+            <span class="text-sm font-semibold text-green-800">Displaying newly generated report.</span>
+        `;
+    }
+    
+    statusContainer.innerHTML = statusHtml;
+
+    const versionSelector = document.getElementById(`version-selector-${analysisParams.reportType}`);
+    if (versionSelector) {
+        versionSelector.addEventListener('change', (e) => {
+            const selectedReport = reports.find(r => r.id === e.target.value);
+            if (selectedReport) {
+                const contentContainer = statusContainer.nextElementSibling;
+                displayReport(contentContainer, selectedReport.content);
+                updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
+            }
+        });
+    }
+
+    const generateNewBtn = document.getElementById(`generate-new-${analysisParams.reportType}`);
+    if (generateNewBtn) {
+        generateNewBtn.addEventListener('click', () => {
+            handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptTemplate, true);
+        });
     }
 }
 
@@ -2567,7 +2461,7 @@ async function handleSaveToDrive(modalId) {
     let contentToSave = '';
     let fileName = '';
 
-    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container');
+    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container, #investment-rating-container');
 
     if (!contentContainer || !contentContainer.innerHTML.trim()) {
         displayMessageInModal('There is no content to save.', 'warning');
