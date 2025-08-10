@@ -1,4 +1,4 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, STOCK_RATING_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -714,7 +714,8 @@ async function openRawDataViewer(ticker) {
             { class: 'dividend-safety-button', text: 'Dividend Safety', bg: 'bg-sky-500 hover:bg-sky-600' },
             { class: 'growth-outlook-button', text: 'Growth Outlook', bg: 'bg-lime-500 hover:bg-lime-600' },
             { class: 'risk-assessment-button', text: 'Risk Assessment', bg: 'bg-rose-500 hover:bg-rose-600' },
-            { class: 'capital-allocators-button', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' }
+            { class: 'capital-allocators-button', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' },
+            { class: 'stock-rating-button', text: 'Stock Rating', bg: 'bg-indigo-500 hover:bg-indigo-600' }
         ];
         
         aiButtonsContainer.innerHTML = buttons.map(btn => 
@@ -1679,6 +1680,7 @@ export function setupEventListeners() {
         if (target.classList.contains('growth-outlook-button')) handleGrowthOutlookAnalysis(symbol);
         if (target.classList.contains('risk-assessment-button')) handleRiskAssessmentAnalysis(symbol);
         if (target.classList.contains('capital-allocators-button')) handleCapitalAllocatorsAnalysis(symbol);
+        if (target.classList.contains('stock-rating-button')) handleStockRatingAnalysis(symbol);
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
@@ -2304,7 +2306,7 @@ async function handleUndervaluedAnalysis(symbol) {
     const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
     try {
         const data = await getFmpStockData(symbol);
-        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        if (!data) throw new Error(`No cached Fmp data found for ${symbol}.`);
         
         const companyName = get(data, 'company_profile.0.companyName', 'the company');
         const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
@@ -2464,6 +2466,31 @@ async function handleCapitalAllocatorsAnalysis(symbol) {
         const prompt = CAPITAL_ALLOCATORS_PROMPT
             .replace(/{companyName}/g, companyName)
             .replace(/{tickerSymbol}/g, tickerSymbol);
+        const report = await generatePolishedArticle(prompt, loadingMessage);
+        const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
+        if (articleContainer) {
+            const analysisTitleHtml = '<h3 class="text-xl font-bold text-gray-800 mb-2 mt-4 border-t pt-4">AI Analysis Result</h3>';
+            articleContainer.innerHTML = analysisTitleHtml + marked.parse(report);
+        }
+    } catch (error) {
+        displayMessageInModal(`Could not generate analysis: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleStockRatingAnalysis(symbol) {
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    try {
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
+        const prompt = STOCK_RATING_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
         const report = await generatePolishedArticle(prompt, loadingMessage);
         const articleContainer = document.querySelector('#rawDataViewerModal #ai-article-container');
         if (articleContainer) {
