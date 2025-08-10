@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.5.0"; 
+export const APP_VERSION = "12.6.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -103,15 +103,22 @@ export const FINANCIAL_NEWS_SOURCES = [
 ];
 
 export const STOCK_RATING_PROMPT = `
-"Analyze the provided raw financial data for {companyName} (ticker: {tickerSymbol}) covering the fiscal years 2020 through 2024. The data includes annual balance sheets, cash flow statements, income statements, company profile, key metrics, enterprise value, and analyst ratings.
-Your analysis should include:
-Financial Health Assessment: Evaluate the company's balance sheet, focusing on liquidity (e.g., current ratio), solvency (e.g., debt-to-equity ratio), and cash position over the five-year period.
-Profitability and Growth Analysis: Examine the income statement trends. Analyze year-over-year revenue growth, gross profit margins, and the trajectory of net income. Note any clear trends toward or away from profitability.
-Cash Flow Analysis: Review the cash flow statements to assess the company's ability to generate cash. Specifically, analyze the trends in Operating Cash Flow (OCF) and Free Cash Flow (FCF). Highlight any significant changes or inflection points.
-Valuation and Market Sentiment: Briefly touch on the company's valuation using relevant metrics (e.g., EV/Sales, Price/Sales) and summarize the consensus from historical analyst ratings.
-Develop a Stock Rating (1-100): Create and apply a quantitative rating system based on the analysis. The score should be derived from weighted categories such as Financial Health, Profitability, and Cash Flow. Provide the final score.
-Rating Justification: Write a concise summary explaining the key factors that determined the 1-100 rating.
-Broker Recommendation: Conclude with a clear recommendation of Buy, Hold, or Sell. Justify this recommendation from the dual perspective of a data analyst, interpreting the numbers, and a professional broker, advising on investment strategy based on the data."
+Analyze the provided raw financial data for {companyName} (ticker: {tickerSymbol}).
+
+**Output Format:**
+Your response must have two parts.
+1.  First, provide a clean JSON object with no text before or after it, enclosed in \`\`\`json ... \`\`\`. This object must contain two keys:
+    * "weightedAverageScore": A number from 1-100.
+    * "recommendation": A string, which must be one of "Buy", "Hold", or "Sell".
+2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format.
+
+**Analysis requirements for the markdown section:**
+* **Financial Health Assessment:** Evaluate liquidity (current ratio), solvency (debt-to-equity), and cash position.
+* **Profitability and Growth Analysis:** Analyze revenue growth, gross profit margins, and net income trajectory.
+* **Cash Flow Analysis:** Assess Operating Cash Flow (OCF) and Free Cash Flow (FCF) trends.
+* **Valuation and Market Sentiment:** Briefly touch on valuation metrics (e.g., EV/Sales, P/S) and summarize analyst ratings.
+* **Rating Justification:** Write a concise summary explaining the key factors that determined the 1-100 rating.
+* **Broker Recommendation:** Conclude with a clear recommendation of Buy, Hold, or Sell, justifying it from both a data analyst and professional broker perspective.
 
 JSON Data:
 {jsonData}
