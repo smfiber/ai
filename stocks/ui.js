@@ -465,205 +465,90 @@ function createChartContainer(id, title, description) {
     return container;
 }
 
-function renderFinancialPerformanceChart(fmpData) {
-    const incomeData = [...get(fmpData, 'income_statement', [])].reverse();
-    if (incomeData.length === 0) return;
+function renderStockPriceChart(fmpData) {
+    const chartData = get(fmpData, 'stock_chart_light.historical', []);
+    if (chartData.length === 0) return;
 
-    const labels = incomeData.map(d => d.fiscalYear);
-    const revenue = incomeData.map(d => d.revenue);
-    const netIncome = incomeData.map(d => d.netIncome);
+    const reversedData = [...chartData].reverse();
+    const labels = reversedData.map(d => d.date);
+    const prices = reversedData.map(d => d.price);
+    const volumes = reversedData.map(d => d.volume);
 
     const container = createChartContainer(
-        'performanceChart',
-        'Financial Performance',
-        'Tracks total revenue and net income (profit) over the past several fiscal years.'
+        'priceVolumeChart',
+        'Historical Price & Volume',
+        'Tracks the daily closing price and trading volume over time.'
     );
     document.getElementById('charts-container').appendChild(container);
 
-    const ctx = document.getElementById('performanceChart').getContext('2d');
-    state.charts.performance = new Chart(ctx, {
+    const ctx = document.getElementById('priceVolumeChart').getContext('2d');
+    state.charts.priceVolume = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
-                    label: 'Revenue',
-                    data: revenue,
-                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    type: 'line',
+                    label: 'Price',
+                    data: prices,
                     borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'yPrice',
+                    tension: 0.1,
+                    fill: true,
                 },
                 {
-                    label: 'Net Income',
-                    data: netIncome,
-                    backgroundColor: 'rgba(22, 163, 74, 0.5)',
-                    borderColor: 'rgba(22, 163, 74, 1)',
-                    borderWidth: 1
+                    type: 'bar',
+                    label: 'Volume',
+                    data: volumes,
+                    backgroundColor: 'rgba(107, 114, 128, 0.3)',
+                    borderColor: 'rgba(107, 114, 128, 0.5)',
+                    yAxisID: 'yVolume',
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: value => formatLargeNumber(value, 1) }
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'month'
+                    },
+                    ticks: {
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    }
+                },
+                yPrice: {
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Price (USD)'
+                    },
+                    ticks: {
+                        callback: value => `$${value.toFixed(2)}`
+                    }
+                },
+                yVolume: {
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Volume'
+                    },
+                    ticks: {
+                        callback: value => formatLargeNumber(value, 1)
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
                 }
             }
         }
     });
 }
 
-function renderFinancialHealthChart(fmpData) {
-    const balanceSheetData = [...get(fmpData, 'balance_sheet_statement', [])].reverse();
-    if (balanceSheetData.length === 0) return;
-
-    const labels = balanceSheetData.map(d => d.fiscalYear);
-    const assets = balanceSheetData.map(d => d.totalAssets);
-    const liabilities = balanceSheetData.map(d => d.totalLiabilities);
-    const equity = balanceSheetData.map(d => d.totalStockholdersEquity);
-
-    const container = createChartContainer(
-        'healthChart',
-        'Financial Health (Balance Sheet)',
-        'Shows the breakdown of the company\'s assets, liabilities (debt), and equity over time.'
-    );
-    document.getElementById('charts-container').appendChild(container);
-
-    const ctx = document.getElementById('healthChart').getContext('2d');
-    state.charts.health = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Total Assets', data: assets, backgroundColor: 'rgba(34, 197, 94, 0.5)', borderColor: 'rgba(34, 197, 94, 1)', borderWidth: 1 },
-                { label: 'Total Liabilities', data: liabilities, backgroundColor: 'rgba(239, 68, 68, 0.5)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1 },
-                { label: 'Total Equity', data: equity, backgroundColor: 'rgba(14, 165, 233, 0.5)', borderColor: 'rgba(14, 165, 233, 1)', borderWidth: 1 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: value => formatLargeNumber(value, 1) }
-                }
-            }
-        }
-    });
-}
-
-function renderCashFlowChart(fmpData) {
-    const cashFlowData = [...get(fmpData, 'cash_flow_statement', [])].reverse();
-    if (cashFlowData.length === 0) return;
-
-    const labels = cashFlowData.map(d => d.fiscalYear);
-    const ocf = cashFlowData.map(d => d.operatingCashFlow);
-    const capex = cashFlowData.map(d => d.capitalExpenditure);
-    const fcf = cashFlowData.map(d => d.freeCashFlow);
-
-    const container = createChartContainer(
-        'cashFlowChart',
-        'Cash Flow',
-        'Visualizes cash from operations, capital expenditures, and free cash flow.'
-    );
-    document.getElementById('charts-container').appendChild(container);
-    
-    const ctx = document.getElementById('cashFlowChart').getContext('2d');
-    state.charts.cashFlow = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Operating Cash Flow', data: ocf, backgroundColor: 'rgba(16, 185, 129, 0.5)', borderColor: 'rgba(16, 185, 129, 1)', borderWidth: 1 },
-                { label: 'Capital Expenditure', data: capex, backgroundColor: 'rgba(245, 158, 11, 0.5)', borderColor: 'rgba(245, 158, 11, 1)', borderWidth: 1 },
-                { label: 'Free Cash Flow', data: fcf, backgroundColor: 'rgba(99, 102, 241, 0.5)', borderColor: 'rgba(99, 102, 241, 1)', borderWidth: 1 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    ticks: { callback: value => formatLargeNumber(value, 1) }
-                }
-            }
-        }
-    });
-}
-
-function renderProfitabilityMarginsChart(fmpData) {
-    const metricsData = [...get(fmpData, 'key_metrics', [])].reverse();
-    if (metricsData.length === 0) return;
-
-    const labels = metricsData.map(d => d.fiscalPeriod === 'Annual' ? d.date.substring(0, 4) : d.date);
-    const netProfitMargin = metricsData.map(d => d.netProfitMargin * 100);
-    const operatingMargin = metricsData.map(d => d.operatingIncome / get(fmpData, 'income_statement', []).find(i => i.date === d.date)?.revenue * 100 || 0);
-    const grossMargin = metricsData.map(d => d.grossProfitMargin * 100);
-
-    const container = createChartContainer(
-        'marginsChart',
-        'Profitability Margins',
-        'Shows the trend of key profit margins as a percentage of revenue.'
-    );
-    document.getElementById('charts-container').appendChild(container);
-    
-    const ctx = document.getElementById('marginsChart').getContext('2d');
-    state.charts.margins = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Net Profit Margin', data: netProfitMargin, borderColor: 'rgba(22, 163, 74, 1)', fill: false, tension: 0.1 },
-                { label: 'Operating Margin', data: operatingMargin, borderColor: 'rgba(59, 130, 246, 1)', fill: false, tension: 0.1 },
-                { label: 'Gross Margin', data: grossMargin, borderColor: 'rgba(245, 158, 11, 1)', fill: false, tension: 0.1 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    ticks: { callback: value => `${value.toFixed(2)}%` }
-                }
-            }
-        }
-    });
-}
-
-function renderEfficiencyRatiosChart(fmpData) {
-    const metricsData = [...get(fmpData, 'key_metrics', [])].reverse();
-    if (metricsData.length === 0) return;
-
-    const labels = metricsData.map(d => d.fiscalPeriod === 'Annual' ? d.date.substring(0, 4) : d.date);
-    const roe = metricsData.map(d => d.returnOnEquity * 100);
-    const roa = metricsData.map(d => d.returnOnAssets * 100);
-
-    const container = createChartContainer(
-        'efficiencyChart',
-        'Efficiency Ratios',
-        'Measures how effectively management is using its assets and equity to generate profit.'
-    );
-    document.getElementById('charts-container').appendChild(container);
-
-    const ctx = document.getElementById('efficiencyChart').getContext('2d');
-    state.charts.efficiency = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Return on Equity (ROE)', data: roe, borderColor: 'rgba(139, 92, 246, 1)', fill: false, tension: 0.1 },
-                { label: 'Return on Assets (ROA)', data: roa, borderColor: 'rgba(236, 72, 153, 1)', fill: false, tension: 0.1 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    ticks: { callback: value => `${value.toFixed(2)}%` }
-                }
-            }
-        }
-    });
-}
 
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
@@ -699,12 +584,8 @@ async function openRawDataViewer(ticker) {
 
         titleEl.textContent = `Analysis for ${ticker}`;
         
-        // Render Charts Tab
-        renderFinancialPerformanceChart(fmpData);
-        renderFinancialHealthChart(fmpData);
-        renderCashFlowChart(fmpData);
-        renderProfitabilityMarginsChart(fmpData);
-        renderEfficiencyRatiosChart(fmpData);
+        // Render Chart Tab
+        renderStockPriceChart(fmpData);
 
         // Build nested accordions for raw data
         let accordionHtml = '';
