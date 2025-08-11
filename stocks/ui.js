@@ -601,7 +601,7 @@ async function openRawDataViewer(ticker) {
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
-    investmentRatingContainer.innerHTML = '<div class="loader mx-auto"></div>';
+    investmentRatingContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
     chartsContainer.innerHTML = '';
     destroyCharts();
@@ -682,8 +682,8 @@ async function openRawDataViewer(ticker) {
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
 
-        // Automatically trigger the investment rating analysis
-        handleAnalysisRequest(ticker, 'StockRating', STOCK_RATING_PROMPT);
+        // Check for saved investment rating report
+        await handleAnalysisRequest(ticker, 'StockRating', STOCK_RATING_PROMPT);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -2225,8 +2225,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content);
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
-        } else {
-            openModal(CONSTANTS.MODAL_LOADING);
+        } else if (forceNew) {
+             openModal(CONSTANTS.MODAL_LOADING);
             const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
             
             const data = await getFmpStockData(symbol);
@@ -2244,6 +2244,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             displayReport(contentContainer, newReportContent);
             updateReportStatus(statusContainer, savedReports, null, { symbol, reportType, promptTemplate }); // Show status for newly generated report
             closeModal(CONSTANTS.MODAL_LOADING);
+        } else {
+            contentContainer.innerHTML = `<div class="text-center p-8"><button data-symbol="${symbol}" data-report-type="${reportType}" class="generate-rating-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Investment Rating</button></div>`;
         }
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
