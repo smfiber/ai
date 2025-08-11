@@ -2250,7 +2250,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         }
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
-        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     }
 }
 
