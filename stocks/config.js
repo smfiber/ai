@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.8.0"; 
+export const APP_VERSION = "12.8.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -111,7 +111,7 @@ Your response must have two parts.
 1.  First, provide a clean JSON object with no text before or after it, enclosed in \`\`\`json ... \`\`\`. This object must contain two keys:
     * "weightedAverageScore": A number from 1-100.
     * "recommendation": A string, which must be one of "Buy", "Hold", or "Sell".
-2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format, following the exact structure below.
+2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format. **You MUST use markdown for all headings (e.g., #, ##), bold text for labels (e.g., **Liquidity...**), and bullet points (-) for lists. Follow the exact structure below.**
 
 **Analysis requirements for the markdown section:**
 
