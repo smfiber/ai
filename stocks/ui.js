@@ -2219,6 +2219,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
     contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
     statusContainer.classList.add('hidden');
 
+    let newReportContent = null;
+
     try {
         const savedReports = await getSavedReports(symbol, reportType);
 
@@ -2226,7 +2228,10 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content);
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
-        } else if (forceNew || (savedReports.length === 0 && !isRating)) {
+            return; 
+        }
+
+        if (forceNew || (savedReports.length === 0 && !isRating)) {
             openModal(CONSTANTS.MODAL_LOADING);
             const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
             
@@ -2241,16 +2246,19 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
                 .replace(/{tickerSymbol}/g, tickerSymbol)
                 .replace('{jsonData}', JSON.stringify(data, null, 2));
 
-            const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+            newReportContent = await generatePolishedArticle(prompt, loadingMessage);
             displayReport(contentContainer, newReportContent);
             updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
-            closeModal(CONSTANTS.MODAL_LOADING);
         } else {
             contentContainer.innerHTML = `<div class="text-center p-8"><button data-symbol="${symbol}" data-report-type="${reportType}" class="generate-rating-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Investment Rating</button></div>`;
         }
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
-        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+    } finally {
+        if (forceNew || (newReportContent && !isRating)) {
+            closeModal(CONSTANTS.MODAL_LOADING);
+        }
     }
 }
 
