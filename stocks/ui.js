@@ -1611,11 +1611,12 @@ export function setupEventListeners() {
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
-        if (target.classList.contains('ai-analysis-button')) {
+        if (target.matches('.ai-analysis-button') || target.matches('.generate-rating-button')) {
             const reportType = target.dataset.reportType;
             const promptTemplate = promptMap[reportType];
             if (promptTemplate) {
-                handleAnalysisRequest(symbol, reportType, promptTemplate);
+                const forceNew = target.matches('.generate-rating-button');
+                handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew);
             }
         }
     });
@@ -2225,8 +2226,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             const latestReport = savedReports[0];
             displayReport(contentContainer, latestReport.content);
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
-        } else if (forceNew) {
-             openModal(CONSTANTS.MODAL_LOADING);
+        } else if (forceNew || (savedReports.length === 0 && !isRating)) {
+            openModal(CONSTANTS.MODAL_LOADING);
             const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
             
             const data = await getFmpStockData(symbol);
@@ -2242,7 +2243,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
 
             const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
             displayReport(contentContainer, newReportContent);
-            updateReportStatus(statusContainer, savedReports, null, { symbol, reportType, promptTemplate }); // Show status for newly generated report
+            updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
             closeModal(CONSTANTS.MODAL_LOADING);
         } else {
             contentContainer.innerHTML = `<div class="text-center p-8"><button data-symbol="${symbol}" data-report-type="${reportType}" class="generate-rating-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Investment Rating</button></div>`;
@@ -2351,6 +2352,7 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
     } else {
         statusHtml = `
             <span class="text-sm font-semibold text-green-800">Displaying newly generated report.</span>
+            <button id="generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
         `;
     }
     
