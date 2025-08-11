@@ -608,8 +608,8 @@ async function openRawDataViewer(ticker) {
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
-    document.getElementById('investment-rating-tab').classList.remove('hidden');
-    document.querySelector('.tab-button[data-tab="investment-rating"]').classList.add('active');
+    document.getElementById('company-profile-tab').classList.remove('hidden');
+    document.querySelector('.tab-button[data-tab="company-profile"]').classList.add('active');
 
     try {
         const fmpData = await getFmpStockData(ticker);
