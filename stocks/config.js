@@ -19,7 +19,7 @@ export const state = {
     portfolioCache: [],
     calendarEvents: { earnings: [], ipos: [] },
     calendarCurrentDate: new Date(),
-    availableIndustries: [],,
+    availableIndustries: [],
     charts: {}, // To hold chart instances
     sessionLog: [] // To hold prompts and responses for the current session
 };
