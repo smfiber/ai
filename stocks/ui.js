@@ -110,6 +110,41 @@ function openConfirmationModal(title, message, onConfirm) {
     openModal(modalId);
 }
 
+// --- SESSION LOG MODAL ---
+export function openSessionLogModal() {
+    const contentContainer = document.getElementById('session-log-content');
+    if (!contentContainer) return;
+
+    if (state.sessionLog.length === 0) {
+        contentContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No AI interactions have been logged in this session yet.</p>';
+    } else {
+        const logHtml = state.sessionLog.slice().reverse().map(log => {
+            const isPrompt = log.type === 'prompt';
+            const headerBg = isPrompt ? 'bg-indigo-100' : 'bg-emerald-100';
+            const headerText = isPrompt ? 'text-indigo-800' : 'text-emerald-800';
+            const icon = isPrompt 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`;
+
+            return `
+                <div class="border rounded-lg bg-white overflow-hidden">
+                    <div class="p-3 ${headerBg} ${headerText} font-semibold text-sm flex items-center justify-between">
+                        <div class="flex items-center">
+                            ${icon}
+                            <span>${isPrompt ? 'Prompt Sent' : 'AI Response Received'}</span>
+                        </div>
+                        <span class="font-mono text-xs">${log.timestamp.toLocaleTimeString()}</span>
+                    </div>
+                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-4">${sanitizeText(log.content)}</pre>
+                </div>
+            `;
+        }).join('');
+        contentContainer.innerHTML = logHtml;
+    }
+
+    openModal(CONSTANTS.MODAL_SESSION_LOG);
+}
+
 // --- FMP API INTEGRATION & MANAGEMENT (MOVED FROM API.JS)---
 async function handleRefreshFmpData(symbol) {
     if (!state.fmpApiKey) {
@@ -1488,6 +1523,7 @@ export function setupEventListeners() {
     document.getElementById('manage-all-stocks-button')?.addEventListener('click', openPortfolioManagerModal);
     document.getElementById('manage-fmp-endpoints-button')?.addEventListener('click', openManageFmpEndpointsModal);
     document.getElementById('manage-broad-endpoints-button')?.addEventListener('click', openManageBroadEndpointsModal);
+    document.getElementById('session-log-button')?.addEventListener('click', openSessionLogModal);
 
     const modalsToClose = [
         { modal: CONSTANTS.MODAL_CUSTOM_ANALYSIS, button: 'close-custom-analysis-modal', bg: 'close-custom-analysis-modal-bg' },
@@ -1501,6 +1537,7 @@ export function setupEventListeners() {
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal-button', bg: 'close-raw-data-viewer-modal-bg' },
         { modal: 'rawDataViewerModal', button: 'close-raw-data-viewer-modal' },
         { modal: CONSTANTS.MODAL_STOCK_LIST, button: 'close-stock-list-modal', bg: 'close-stock-list-modal-bg' },
+        { modal: CONSTANTS.MODAL_SESSION_LOG, button: 'close-session-log-modal', bg: 'close-session-log-modal-bg' },
     ];
 
     modalsToClose.forEach(item => {
