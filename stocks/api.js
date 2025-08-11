@@ -49,6 +49,8 @@ export async function callApi(url, options = {}) {
 export async function callGeminiApi(prompt) {
     if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
     
+    state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: prompt });
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const body = { contents: [{ parts: [{ "text": prompt }] }] };
     const data = await callApi(url, {
@@ -59,7 +61,9 @@ export async function callGeminiApi(prompt) {
 
     const candidate = data.candidates?.[0];
     if (candidate?.content?.parts?.[0]?.text) {
-        return candidate.content.parts[0].text;
+        const responseText = candidate.content.parts[0].text;
+        state.sessionLog.push({ type: 'response', timestamp: new Date(), content: responseText });
+        return responseText;
     }
     if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
         throw new Error(`The API call was terminated. Reason: ${candidate.finishReason}.`);
@@ -72,6 +76,8 @@ export async function callGeminiApi(prompt) {
 export async function callGeminiApiWithTools(contents) {
     if (!state.geminiApiKey) throw new Error("Gemini API key is not configured.");
 
+    state.sessionLog.push({ type: 'prompt', timestamp: new Date(), content: JSON.stringify(contents, null, 2) });
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`;
     const data = await callApi(url, {
         method: 'POST',
@@ -81,6 +87,7 @@ export async function callGeminiApiWithTools(contents) {
 
     const candidate = data.candidates?.[0];
     if (candidate?.content) {
+        state.sessionLog.push({ type: 'response', timestamp: new Date(), content: JSON.stringify(candidate.content, null, 2) });
         return candidate.content;
     }
     if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
