@@ -399,3 +399,37 @@ body.modal-open {
     visibility: visible;
     transform: translateX(-50%) translateY(-12px);
 }
+
+/* --- NEW OPPORTUNITY DASHBOARD STYLES --- */
+.opportunity-card {
+    background-color: white;
+    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid #e5e7eb; /* border-gray-200 */
+    padding: 1.25rem; /* p-5 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.opportunity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.score-badge {
+    font-weight: 700;
+    font-size: 0.875rem; /* text-sm */
+    padding: 0.5rem 0.75rem;
+    border-radius: 9999px; /* rounded-full */
+    min-width: 80px;
+    text-align: center;
+}
+
+.action-button-sm {
+    color: white;
+    font-weight: 600; /* font-semibold */
+    font-size: 0.75rem; /* text-xs */
+    padding: 0.25rem 0.75rem; /* py-1 px-3 */
+    border-radius: 9999px; /* rounded-full */
+    transition: background-color 0.2s;
+}
