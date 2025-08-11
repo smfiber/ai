@@ -1,4 +1,4 @@
-import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, displayMarketCalendar, renderSectorButtons, displayIndustryScreener } from './ui.js';
+import { setupEventListeners, openModal, closeModal, displayMessageInModal, fetchAndCachePortfolioData, displayMarketCalendar, renderSectorButtons } from './ui.js';
 import { CONSTANTS, APP_VERSION, state } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithCredential, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -30,7 +30,7 @@ async function initializeAppContent() {
     await fetchAndCachePortfolioData();
     await displayMarketCalendar();
     renderSectorButtons();
-    await displayIndustryScreener();
+    // await displayIndustryScreener();
 }
 
 async function initializeFirebase() {
