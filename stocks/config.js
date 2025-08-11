@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.8.2"; 
+export const APP_VERSION = "12.9.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -19,8 +19,9 @@ export const state = {
     portfolioCache: [],
     calendarEvents: { earnings: [], ipos: [] },
     calendarCurrentDate: new Date(),
-    availableIndustries: [],
-    charts: {} // To hold chart instances
+    availableIndustries: [],,
+    charts: {}, // To hold chart instances
+    sessionLog: [] // To hold prompts and responses for the current session
 };
 
 // --- Constants ---
@@ -38,6 +39,7 @@ export const CONSTANTS = {
     MODAL_MANAGE_BROAD_ENDPOINTS: 'manageBroadEndpointsModal',
     MODAL_PORTFOLIO_MANAGER: 'portfolioManagerModal',
     MODAL_STOCK_LIST: 'stockListModal',
+    MODAL_SESSION_LOG: 'sessionLogModal',
     // Forms & Inputs
     FORM_API_KEY: 'apiKeyForm',
     FORM_STOCK_RESEARCH: 'stock-research-form',
