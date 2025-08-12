@@ -119,15 +119,15 @@
                 <div class="space-y-8">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800 mb-4">NASDAQ Price Target News</h2>
-                        <div id="nasdaq-news-container" class="space-y-4"></div>
+                        <div id="nasdaq-news-container" class="space-y-3"></div>
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800 mb-4">NYSE Price Target News</h2>
-                        <div id="nyse-news-container" class="space-y-4"></div>
+                        <div id="nyse-news-container" class="space-y-3"></div>
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800 mb-4">AMEX Price Target News</h2>
-                        <div id="amex-news-container" class="space-y-4"></div>
+                        <div id="amex-news-container" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
@@ -478,22 +478,50 @@
                     container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange.</p>';
                     return;
                 }
-                const newsHtml = newsData.map(news => `
-                    <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start">
-                             <p class="font-bold text-indigo-600">${formatText(news.symbol)}</p>
-                             <p class="text-xs text-gray-500">${new Date(news.publishedDate).toLocaleDateString()}</p>
+                const newsHtml = newsData.map((news, index) => `
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <button class="news-accordion-button w-full flex justify-between items-center p-4 text-left hover:bg-gray-50">
+                            <span class="font-semibold text-gray-800 flex-1 pr-4">
+                                <span class="font-bold text-indigo-600">${formatText(news.symbol)}:</span>
+                                ${formatText(news.newsTitle)}
+                            </span>
+                            <svg class="news-accordion-icon w-5 h-5 transform transition-transform text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 border-t border-gray-200">
+                                <div class="text-xs text-gray-600 flex flex-wrap gap-x-4 gap-y-2">
+                                    <span><strong>Date:</strong> ${new Date(news.publishedDate).toLocaleDateString()}</span>
+                                    <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
+                                    <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
+                                    <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
+                                    <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                                </div>
+                                <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold mt-3 inline-block">
+                                    Read Full Article &rarr;
+                                </a>
+                            </div>
                         </div>
-                        <h4 class="font-semibold text-gray-800 my-1">${formatText(news.newsTitle)}</h4>
-                        <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
-                            <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
-                            <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
-                            <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
-                        </div>
-                    </a>
+                    </div>
                 `).join('');
+
                 container.innerHTML = newsHtml;
+
+                // Add event listeners to the new accordion buttons
+                container.querySelectorAll('.news-accordion-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const content = button.nextElementSibling;
+                        const icon = button.querySelector('.news-accordion-icon');
+                        const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
+                        
+                        if (isOpen) {
+                            content.style.maxHeight = "0px";
+                            icon.style.transform = "rotate(0deg)";
+                        } else {
+                            content.style.maxHeight = content.scrollHeight + "px";
+                            icon.style.transform = "rotate(180deg)";
+                        }
+                    });
+                });
             }
 
             // --- Run the initialization function ---
