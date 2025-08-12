@@ -121,7 +121,10 @@
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>NASDAQ Price Target News</span>
-                            <svg id="nasdaq-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="flex items-center">
+                                <button id="refresh-nasdaq-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                                <svg id="nasdaq-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </button>
                         <div id="nasdaq-news-accordion-content" class="accordion-content px-5 pb-5">
                             <div id="nasdaq-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
@@ -131,7 +134,10 @@
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="nyse-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>NYSE Price Target News</span>
-                            <svg id="nyse-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="flex items-center">
+                                <button id="refresh-nyse-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                                <svg id="nyse-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </button>
                         <div id="nyse-news-accordion-content" class="accordion-content px-5 pb-5">
                             <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
@@ -141,7 +147,10 @@
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>AMEX Price Target News</span>
-                            <svg id="amex-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="flex items-center">
+                                <button id="refresh-amex-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
+                                <svg id="amex-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </button>
                         <div id="amex-news-accordion-content" class="accordion-content px-5 pb-5">
                             <div id="amex-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
@@ -193,8 +202,12 @@
         </div>
     </div>
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
     <script>
-        // Version 1.7
+        // Version 1.8
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -205,6 +218,9 @@
                 googleClientId: "",
                 firebaseConfig: {}
             };
+            
+            // ADDED: Firebase database reference
+            let db = null;
 
             // --- Utility to pause execution ---
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -297,9 +313,24 @@
             async function startApp() {
                 console.log("Application starting...");
                 setupTabs();
+
+                // ADDED: Initialize Firebase
+                try {
+                    if (appConfig.firebaseConfig && Object.keys(appConfig.firebaseConfig).length > 0) {
+                        firebase.initializeApp(appConfig.firebaseConfig);
+                        db = firebase.database();
+                        console.log("Firebase initialized successfully.");
+                    } else {
+                        console.warn("Firebase config is missing.");
+                    }
+                } catch (e) {
+                    console.error("Firebase initialization failed:", e);
+                    alert("Could not initialize Firebase. Please check your configuration.");
+                }
+
                 const exchanges = ['nasdaq', 'nyse', 'amex'];
                 for (const exchange of exchanges) {
-                    console.log(`Fetching data for ${exchange.toUpperCase()}...`);
+                    console.log(`Initializing components for ${exchange.toUpperCase()}...`);
                     await initExchangeData(exchange);
                     console.log(`Completed ${exchange.toUpperCase()}.`);
                 }
@@ -307,7 +338,7 @@
             }
 
             // --- 7. Data Initialization for Each Exchange ---
-            function initExchangeData(exchange) {
+            async function initExchangeData(exchange) {
                 const exchangeUpperCase = exchange.toUpperCase();
                 // Screener accordion elements
                 const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
@@ -322,15 +353,34 @@
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
                 const newsContainer = document.getElementById(`${exchange}-news-container`);
                 const summaryContainer = document.getElementById(`${exchange}-summary-container`);
+                // ADDED: Refresh button
+                const refreshButton = document.getElementById(`refresh-${exchange}-news`);
 
                 setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
                 setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
-                return fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer, newsContainer, summaryContainer);
+
+                // Fetch screener data (lightweight call)
+                const screenerData = await fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+                
+                // MODIFIED: Load news from Firebase first
+                const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, summaryContainer);
+                if (!loadedFromCache) {
+                    // If no cache, fetch fresh news
+                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
+                }
+
+                // ADDED: Event listener for the refresh button
+                refreshButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // prevent accordion from toggling
+                    newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
+                    summaryContainer.innerHTML = `<h3>${exchangeUpperCase} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
+                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
+                });
             }
 
             // --- 8. Accordion Toggle Logic ---
             function setupAccordionToggle(button, content, icon) {
-                if (!button) return; // Guard against missing elements
+                if (!button) return;
                 button.addEventListener('click', () => {
                     const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
                     content.style.maxHeight = isOpen ? "0px" : content.scrollHeight + "px";
@@ -339,17 +389,18 @@
             }
 
             // --- 9. Fetch Stock Screener Data ---
-            async function fetchStockScreener(exchange, tableEl, cardEl, newsEl, summaryEl) {
-                const loadingMsg = `<p class="text-gray-500">Loading data for ${exchange}...</p>`;
-                [tableEl, cardEl, newsEl, summaryEl].forEach(el => { if(el) el.innerHTML = loadingMsg });
+            // MODIFIED: This function now only fetches screener data and returns it.
+            async function fetchStockScreener(exchange, tableEl, cardEl) {
+                const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
+                [tableEl, cardEl].forEach(el => { if(el) el.innerHTML = loadingMsg });
 
                 if (!appConfig.fmpApiKey) {
                     const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
-                    [tableEl, cardEl, newsEl, summaryEl].forEach(el => { if(el) el.innerHTML = errorMsg });
-                    return;
+                    [tableEl, cardEl].forEach(el => { if(el) el.innerHTML = errorMsg });
+                    return [];
                 }
 
-                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${appConfig.fmpApiKey}`;
+                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=100&apikey=${appConfig.fmpApiKey}`; // MODIFIED: Limit to 100 to improve performance
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`API request failed: ${response.status}`);
@@ -357,15 +408,16 @@
                     
                     renderStockTable(data, tableEl);
                     renderStockCards(data, cardEl, exchange);
-                    await fetchAndRenderPriceTargetNews(data, newsEl, summaryEl, exchange);
+                    return data; // Return data for news fetching
                 } catch (error) {
                     console.error(`Error fetching screener data for ${exchange}:`, error);
                     const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
-                    [tableEl, cardEl, newsEl, summaryEl].forEach(el => { if(el) el.innerHTML = errorMsg });
+                    [tableEl, cardEl].forEach(el => { if(el) el.innerHTML = errorMsg });
+                    return [];
                 }
             }
             
-            // --- 10. Fetch and Render Price Target News (Sequentially with Delay) ---
+            // --- 10. Fetch and Render Price Target News ---
             async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange) {
                 if (summaryContainer) {
                     summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
@@ -385,7 +437,7 @@
                 let allNews = [];
                 try {
                     for (const [index, symbol] of symbols.entries()) {
-                        newsContainer.innerHTML = `<p class="text-gray-500">Fetching news for ${symbol} (${index + 1} of ${symbols.length})... Please wait.</p>`;
+                        newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})... Please wait.</p>`;
                         const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
                         const response = await fetch(url);
                         if(response.ok) {
@@ -394,28 +446,29 @@
                                 allNews.push(...newsItems);
                             }
                         } else {
-                             console.warn(`Could not fetch news for ${symbol}: ${response.status}`);
+                            console.warn(`Could not fetch news for ${symbol}: ${response.status}`);
                         }
                         await delay(300); // Wait 300ms before the next call
                     }
 
-                    let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate);
+                    let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate && item.newsURL);
 
-                    const now = new Date();
-                    const currentMonth = now.getMonth();
-                    const currentYear = now.getFullYear();
+                    // MODIFIED: Filter for the last 30 days
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
                     filteredNews = filteredNews.filter(newsItem => {
                         const newsDate = new Date(newsItem.publishedDate);
-                        return newsDate.getMonth() === currentMonth && newsDate.getFullYear() === currentYear;
+                        return newsDate >= thirtyDaysAgo;
                     });
                     
                     filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
 
                     renderNewsCards(filteredNews, newsContainer);
-                    if (summaryContainer) {
-                        await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
-                    }
+                    await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
+                    // ADDED: Save the fresh news to Firebase
+                    await saveNewsToFirebase(exchange, filteredNews);
+
                 } catch (error) {
                     console.error(`Error fetching news for ${exchange}:`, error);
                     const errorMsg = `<p class="text-red-500">Could not load price target news.</p>`;
@@ -425,22 +478,71 @@
                     }
                 }
             }
+            
+            // --- ADDED: Firebase Functions ---
+            async function saveNewsToFirebase(exchange, newsData) {
+                if (!db) {
+                    console.warn("Firebase not initialized, cannot save news.");
+                    return;
+                }
+                try {
+                    await db.ref(`news/${exchange}`).set(newsData);
+                    console.log(`News for ${exchange.toUpperCase()} saved to Firebase.`);
+                } catch (error) {
+                    console.error(`Failed to save news for ${exchange} to Firebase:`, error);
+                }
+            }
+
+            async function loadNewsFromFirebase(exchange, newsContainer, summaryContainer) {
+                if (!db) {
+                    console.warn("Firebase not initialized, cannot load news.");
+                    return false;
+                }
+                try {
+                    const snapshot = await db.ref(`news/${exchange}`).get();
+                    if (snapshot.exists()) {
+                        const newsData = snapshot.val();
+                        console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
+                        renderNewsCards(newsData, newsContainer);
+                        await summarizeNewsWithGemini(newsData, summaryContainer, exchange);
+                        return true;
+                    } else {
+                        console.log(`No cached news found for ${exchange.toUpperCase()} in Firebase.`);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error(`Failed to load news for ${exchange} from Firebase:`, error);
+                    return false;
+                }
+            }
 
             // --- 11. Summarize News with Gemini ---
+            // MODIFIED: Upgraded function to use a better model and provide more context.
             async function summarizeNewsWithGemini(newsData, container, exchange) {
                 if (!appConfig.geminiApiKey) {
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-red-500">Gemini API Key is missing.</p>`;
                     return;
                 }
 
-                const newsTitles = newsData.slice(0, 25).map(n => n.newsTitle).join('\n');
-                if (!newsTitles) {
-                    container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Not enough news to summarize.</p>`;
+                const newsToSummarize = newsData.slice(0, 10); // Use top 10 articles for a focused summary
+
+                if (newsToSummarize.length < 3) { // Need at least a few articles
+                    container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Not enough recent news to summarize.</p>`;
                     return;
                 }
 
-                const prompt = `Act as a financial analyst. Provide a brief, 2-3 sentence summary of the key themes and overall sentiment from the following news headlines for the ${exchange} exchange. Ignore any irrelevant headlines.\n\nHEADLINES:\n${newsTitles}`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
+                const articlesText = newsToSummarize.map(n => `- ${n.newsTitle} (Source: ${n.newsURL})`).join('\n');
+                const prompt = `
+                    Act as an expert financial analyst. I will provide you with a list of recent news headlines and their URLs for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
+                    Based on the content likely found at these URLs, provide a concise 3-4 sentence summary of the key themes, overall market sentiment (e.g., bullish, bearish, mixed), and any significant price target updates.
+                    Synthesize the information into a professional, easy-to-read analysis.
+
+                    NEWS ARTICLES:
+                    ${articlesText}
+                `;
+
+                // MODIFIED: Use a more capable model for this task
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${appConfig.geminiApiKey}`;
 
                 try {
                     const response = await fetch(url, {
@@ -464,6 +566,7 @@
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-red-500">Could not generate summary.</p>`;
                 }
             }
+
 
             // --- 12. Rendering Functions ---
             const formatText = (text) => text || 'N/A';
@@ -525,7 +628,7 @@
 
             function renderNewsCards(newsData, container) {
                 if (!newsData || newsData.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange for the current month.</p>';
+                    container.innerHTML = '<p class="text-gray-500 p-4">No recent price target news found for the selected stocks in this exchange for the last 30 days. Click "Refresh News" to fetch the latest.</p>';
                     return;
                 }
                 const newsHtml = newsData.map(news => `
