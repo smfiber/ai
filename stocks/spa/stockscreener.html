@@ -33,16 +33,43 @@
     <div id="appContent" class="p-4 md:p-8">
         <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal SPA Dashboard</h1>
         
-        <!-- Accordion for Stock Screener -->
-        <div id="stockScreenerAccordion" class="bg-white rounded-xl shadow-md max-w-4xl mx-auto">
-            <button id="accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                <span>Stock Screener: NASDAQ (Market Cap > $1B)</span>
-                <!-- Chevron Icon -->
-                <svg id="accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-            <div id="accordion-content" class="accordion-content px-5 pb-5">
-                <div id="screener-data-container" class="mt-4 border-t pt-4">
-                    <p class="text-gray-500">Loading stock data...</p>
+        <div class="max-w-4xl mx-auto space-y-4">
+            <!-- Accordion for NASDAQ Stock Screener -->
+            <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                    <span>Stock Screener: NASDAQ (Market Cap > $1B)</span>
+                    <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
+                    <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4">
+                        <p class="text-gray-500">Loading stock data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion for NYSE Stock Screener -->
+            <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                    <span>Stock Screener: NYSE (Market Cap > $1B)</span>
+                    <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
+                    <div id="nyse-screener-data-container" class="mt-4 border-t pt-4">
+                        <p class="text-gray-500">Loading stock data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion for AMEX Stock Screener -->
+            <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                    <span>Stock Screener: AMEX (Market Cap > $1B)</span>
+                    <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
+                    <div id="amex-screener-data-container" class="mt-4 border-t pt-4">
+                        <p class="text-gray-500">Loading stock data...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -107,10 +134,6 @@
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
             const errorMessage = document.getElementById('api-key-error');
-            const screenerContainer = document.getElementById('screener-data-container');
-            const accordionButton = document.getElementById('accordion-button');
-            const accordionContent = document.getElementById('accordion-content');
-            const accordionIcon = document.getElementById('accordion-icon');
 
             // Input Fields
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
@@ -185,70 +208,71 @@
             // --- 6. Main Application Logic ---
             function startApp() {
                 console.log("Application starting with loaded configuration.");
-                setupAccordion();
-                fetchStockScreener();
+                // Initialize all accordions
+                initAccordion('nasdaq');
+                initAccordion('nyse');
+                initAccordion('amex');
             }
 
-            // --- 7. Accordion Setup ---
-            function setupAccordion() {
-                accordionButton.addEventListener('click', () => {
-                    const isOpen = accordionContent.style.maxHeight;
-                    if (isOpen && isOpen !== "0px") {
-                        accordionContent.style.maxHeight = "0px";
-                        accordionIcon.style.transform = "rotate(0deg)";
+            // --- 7. Accordion Initialization (Combined Setup and Fetch) ---
+            function initAccordion(exchange) {
+                const button = document.getElementById(`${exchange}-accordion-button`);
+                const content = document.getElementById(`${exchange}-accordion-content`);
+                const icon = document.getElementById(`${exchange}-accordion-icon`);
+                const container = document.getElementById(`${exchange}-screener-data-container`);
+                const exchangeUpperCase = exchange.toUpperCase();
+
+                // Set up the click listener for the accordion
+                setupAccordionToggle(button, content, icon);
+                
+                // Fetch the data for this accordion
+                fetchStockScreener(exchangeUpperCase, container);
+            }
+
+            // --- 8. Accordion Toggle Logic ---
+            function setupAccordionToggle(button, content, icon) {
+                button.addEventListener('click', () => {
+                    const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
+                    if (isOpen) {
+                        content.style.maxHeight = "0px";
+                        icon.style.transform = "rotate(0deg)";
                     } else {
-                        // Set max-height to its scroll height to animate open
-                        accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
-                        accordionIcon.style.transform = "rotate(180deg)";
+                        content.style.maxHeight = content.scrollHeight + "px";
+                        icon.style.transform = "rotate(180deg)";
                     }
                 });
             }
 
-            // --- 8. Fetch Stock Screener Data ---
-            async function fetchStockScreener() {
-                // Show loading state
-                screenerContainer.innerHTML = '<p class="text-gray-500">Loading stock data...</p>';
+            // --- 9. Fetch Stock Screener Data (Reusable) ---
+            async function fetchStockScreener(exchange, containerElement) {
+                containerElement.innerHTML = `<p class="text-gray-500">Loading stock data for ${exchange}...</p>`;
                 const apiKey = appConfig.fmpApiKey;
                 if (!apiKey) {
-                    screenerContainer.innerHTML = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
+                    containerElement.innerHTML = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
                     return;
                 }
 
-                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=NASDAQ&limit=1000&apikey=${apiKey}`;
+                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${apiKey}`;
 
                 try {
                     const response = await fetch(url);
                     if (!response.ok) {
-                        throw new Error(`API request failed with status ${response.status}`);
+                        throw new Error(`API request for ${exchange} failed with status ${response.status}`);
                     }
                     const data = await response.json();
-                    renderStockData(data);
+                    renderStockData(data, containerElement);
                 } catch (error) {
-                    console.error("Error fetching stock data:", error);
-                    screenerContainer.innerHTML = `<p class="text-red-500">Error fetching data. Check the console and ensure your FMP API key is correct.</p>`;
+                    console.error(`Error fetching stock data for ${exchange}:`, error);
+                    containerElement.innerHTML = `<p class="text-red-500">Error fetching data for ${exchange}. Check the console and API key.</p>`;
                 }
             }
 
-            // --- 9. Render Stock Data ---
-            function renderStockData(data) {
+            // --- 10. Render Stock Data (Reusable) ---
+            function renderStockData(data, containerElement) {
                 if (!data || data.length === 0) {
-                    screenerContainer.innerHTML = '<p class="text-gray-500">No stock data found for the specified criteria.</p>';
+                    containerElement.innerHTML = '<p class="text-gray-500">No stock data found for the specified criteria.</p>';
                     return;
                 }
-
-                // Create a table to display the data
-                let tableHtml = `
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Name</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                `;
 
                 // Format number to be more readable (e.g., 1.23B)
                 const formatMarketCap = (num) => {
@@ -258,24 +282,28 @@
                     return num.toLocaleString();
                 };
 
-                // Populate table rows
-                data.forEach(stock => {
-                    tableHtml += `
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${stock.symbol}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stock.companyName}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatMarketCap(stock.marketCap)}</td>
-                        </tr>
-                    `;
-                });
+                const tableRows = data.map(stock => `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${stock.symbol}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stock.companyName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatMarketCap(stock.marketCap)}</td>
+                    </tr>
+                `).join('');
 
-                tableHtml += `
-                            </tbody>
+                containerElement.innerHTML = `
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Name</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
                         </table>
                     </div>
                 `;
-
-                screenerContainer.innerHTML = tableHtml;
             }
 
             // --- Run the initialization function ---
