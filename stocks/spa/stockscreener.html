@@ -194,7 +194,7 @@
     </div>
 
     <script>
-        // Version 1.5
+        // Version 1.6
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -405,7 +405,7 @@
                         allNews.push(...batchResults.flat());
 
                         if (i + batchSize < symbols.length) {
-                            await delay(10); // Wait 10ms before the next batch
+                            await delay(1000); // Wait 1 second before the next batch
                         }
                     }
                     
