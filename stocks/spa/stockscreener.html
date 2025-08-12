@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magickal SPA</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -31,9 +33,11 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
+    <!-- Main Application Content -->
     <div id="appContent" class="p-4 md:p-8">
         <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal SPA Dashboard</h1>
         
+        <!-- Tab Navigation -->
         <div class="max-w-6xl mx-auto mb-8">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
@@ -50,7 +54,9 @@
             </div>
         </div>
 
+        <!-- Tab Content Area -->
         <div class="max-w-6xl mx-auto">
+            <!-- AI Analysis Tab -->
             <div id="ai-tab-content" class="tab-content">
                 <div class="space-y-6">
                     <div>
@@ -66,8 +72,10 @@
                 </div>
             </div>
 
+            <!-- Stock Screener Tab -->
             <div id="screener-tab-content" class="tab-content">
                 <div class="space-y-4">
+                    <!-- Accordions for Stock Screener Tables -->
                     <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
                         <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
                             <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
@@ -97,6 +105,7 @@
                     </div>
                 </div>
 
+                <!-- Card View Section -->
                 <div class="mt-12">
                     <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
                     <div id="nasdaq-card-view" class="mb-8"></div>
@@ -105,8 +114,10 @@
                 </div>
             </div>
 
+            <!-- Price Target News Tab -->
             <div id="news-tab-content" class="tab-content">
                 <div class="space-y-4">
+                    <!-- NASDAQ News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>NASDAQ Price Target News</span>
@@ -116,6 +127,7 @@
                             <div id="nasdaq-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
                         </div>
                     </div>
+                    <!-- NYSE News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="nyse-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>NYSE Price Target News</span>
@@ -125,6 +137,7 @@
                             <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
                         </div>
                     </div>
+                    <!-- AMEX News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <button id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
                             <span>AMEX Price Target News</span>
@@ -139,6 +152,7 @@
         </div>
     </div>
 
+    <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
@@ -180,7 +194,7 @@
     </div>
 
     <script>
-        // Version 1.1
+        // Version 1.2
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -191,6 +205,9 @@
                 googleClientId: "",
                 firebaseConfig: {}
             };
+
+            // --- Utility to pause execution ---
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
             // --- 2. DOM Element Selection ---
             const apiKeyModal = document.getElementById('apiKeyModal');
@@ -284,8 +301,10 @@
                 for (const exchange of exchanges) {
                     console.log(`Fetching data for ${exchange.toUpperCase()}...`);
                     await initExchangeData(exchange);
-                    await new Promise(resolve => setTimeout(resolve, 1000)); 
+                    console.log(`Completed ${exchange.toUpperCase()}. Pausing before next exchange.`);
+                    await delay(3000); // Wait 3 seconds before starting the next exchange
                 }
+                console.log("All data loaded.");
             }
 
             // --- 7. Data Initialization for Each Exchange ---
@@ -347,9 +366,8 @@
                 }
             }
             
-            // --- 10. Fetch and Render Price Target News ---
+            // --- 10. Fetch and Render Price Target News (Sequentially) ---
             async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange) {
-                newsContainer.innerHTML = `<p class="text-gray-500">Loading news for ${exchange}...</p>`;
                 if (summaryContainer) {
                     summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
                 }
@@ -365,29 +383,39 @@
                     return;
                 }
 
+                let allNews = [];
                 try {
-                    const newsPromises = symbols.map(symbol => {
+                    for (const [index, symbol] of symbols.entries()) {
+                        newsContainer.innerHTML = `<p class="text-gray-500">Fetching news for ${symbol} (${index + 1} of ${symbols.length})... Please wait.</p>`;
                         const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
-                        return fetch(url).then(res => res.json());
-                    });
-                    const results = await Promise.all(newsPromises);
-                    
-                    let allNews = results.flat().filter(item => item && item.newsTitle && item.publishedDate);
+                        const response = await fetch(url);
+                        if(response.ok) {
+                            const newsItems = await response.json();
+                            if (newsItems && newsItems.length > 0) {
+                                allNews.push(...newsItems);
+                            }
+                        } else {
+                             console.warn(`Could not fetch news for ${symbol}: ${response.status}`);
+                        }
+                        await delay(3000); // Wait 3 seconds before the next call
+                    }
+
+                    let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate);
 
                     const now = new Date();
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
 
-                    allNews = allNews.filter(newsItem => {
+                    filteredNews = filteredNews.filter(newsItem => {
                         const newsDate = new Date(newsItem.publishedDate);
                         return newsDate.getMonth() === currentMonth && newsDate.getFullYear() === currentYear;
                     });
                     
-                    allNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+                    filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
 
-                    renderNewsCards(allNews, newsContainer);
+                    renderNewsCards(filteredNews, newsContainer);
                     if (summaryContainer) {
-                        await summarizeNewsWithGemini(allNews, summaryContainer, exchange);
+                        await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
                     }
                 } catch (error) {
                     console.error(`Error fetching news for ${exchange}:`, error);
@@ -498,7 +526,7 @@
 
             function renderNewsCards(newsData, container) {
                 if (!newsData || newsData.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange.</p>';
+                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange for the current month.</p>';
                     return;
                 }
                 const newsHtml = newsData.map(news => `
