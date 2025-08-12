@@ -47,6 +47,9 @@
                     <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Stock Screener
                     </button>
+                    <button id="news-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Price Target News
+                    </button>
                 </nav>
             </div>
         </div>
@@ -64,42 +67,32 @@
             <!-- Stock Screener Tab -->
             <div id="screener-tab-content" class="tab-content">
                 <div class="space-y-4">
-                    <!-- Accordion for NASDAQ Stock Screener -->
+                    <!-- Accordions for Stock Screener Tables -->
                     <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
                         <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
                             <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
                             <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
-                            <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4">
-                                <p class="text-gray-500">Loading stock data...</p>
-                            </div>
+                            <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4"></div>
                         </div>
                     </div>
-
-                    <!-- Accordion for NYSE Stock Screener -->
                     <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
                         <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
                             <span>Stock Screener Table: NYSE (Market Cap > $1B)</span>
                             <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
-                            <div id="nyse-screener-data-container" class="mt-4 border-t pt-4">
-                                <p class="text-gray-500">Loading stock data...</p>
-                            </div>
+                            <div id="nyse-screener-data-container" class="mt-4 border-t pt-4"></div>
                         </div>
                     </div>
-
-                    <!-- Accordion for AMEX Stock Screener -->
                     <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
                         <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
                             <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
                             <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
-                            <div id="amex-screener-data-container" class="mt-4 border-t pt-4">
-                                <p class="text-gray-500">Loading stock data...</p>
-                            </div>
+                            <div id="amex-screener-data-container" class="mt-4 border-t pt-4"></div>
                         </div>
                     </div>
                 </div>
@@ -112,17 +105,33 @@
                     <div id="amex-card-view" class="mb-8"></div>
                 </div>
             </div>
+
+            <!-- Price Target News Tab -->
+            <div id="news-tab-content" class="tab-content">
+                <div class="space-y-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">NASDAQ Price Target News</h2>
+                        <div id="nasdaq-news-container" class="space-y-4"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">NYSE Price Target News</h2>
+                        <div id="nyse-news-container" class="space-y-4"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">AMEX Price Target News</h2>
+                        <div id="amex-news-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal">
-        <!-- Modal Backdrop -->
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
-        <!-- Modal Content -->
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
-            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+            <p class="text-gray-500 mb-6">Please provide your API keys to get started.</p>
             <form id="apiKeyForm">
                 <div class="space-y-4">
                     <div>
@@ -174,16 +183,12 @@
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
             const errorMessage = document.getElementById('api-key-error');
-
-            // Input Fields
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
             const googleClientIdInput = document.getElementById('googleClientIdInput');
             const webSearchApiKeyInput = document.getElementById('webSearchApiKeyInput');
             const searchEngineIdInput = document.getElementById('searchEngineIdInput');
             const fmpApiKeyInput = document.getElementById('fmpApiKeyInput');
             const firebaseConfigInput = document.getElementById('firebaseConfigInput');
-
-            // Tab Elements
             const tabButtons = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
 
@@ -204,7 +209,6 @@
             apiKeyForm.addEventListener('submit', (event) => {
                 event.preventDefault();
                 errorMessage.textContent = '';
-
                 const formValues = {
                     geminiApiKey: geminiApiKeyInput.value.trim(),
                     googleClientId: googleClientIdInput.value.trim(),
@@ -213,246 +217,218 @@
                     fmpApiKey: fmpApiKeyInput.value.trim(),
                     firebaseConfigString: firebaseConfigInput.value.trim()
                 };
-                
                 if (Object.values(formValues).some(value => value === '')) {
                     errorMessage.textContent = 'All fields are required.';
                     return;
                 }
-
-                let parsedFirebaseConfig;
                 try {
-                    parsedFirebaseConfig = JSON.parse(formValues.firebaseConfigString);
-                } catch (error) {
-                    errorMessage.textContent = 'The Firebase Web App Config is not a valid JSON object.';
-                    return;
-                }
-
-                Object.assign(appConfig, {
-                    geminiApiKey: formValues.geminiApiKey,
-                    googleClientId: formValues.googleClientId,
-                    searchApiKey: formValues.searchApiKey,
-                    searchEngineId: formValues.searchEngineId,
-                    fmpApiKey: formValues.fmpApiKey,
-                    firebaseConfig: parsedFirebaseConfig
-                });
-
-                try {
+                    const parsedFirebaseConfig = JSON.parse(formValues.firebaseConfigString);
+                    Object.assign(appConfig, { ...formValues, firebaseConfig: parsedFirebaseConfig });
                     localStorage.setItem('magickalApiKeys', JSON.stringify(appConfig));
                     hideModal();
                     startApp();
                 } catch (error) {
-                    errorMessage.textContent = 'Could not save keys to local storage.';
+                    errorMessage.textContent = 'Invalid Firebase Config or could not save to storage.';
                 }
             });
 
-            // --- 5. Modal Utility Functions ---
+            // --- 5. Modal & Tab Utility Functions ---
             function showModal() { apiKeyModal.style.display = 'flex'; }
             function hideModal() { apiKeyModal.style.display = 'none'; }
             
-            // --- 6. Main Application Logic ---
-            function startApp() {
-                console.log("Application starting with loaded configuration.");
-                setupTabs();
-                initAccordion('nasdaq');
-                initAccordion('nyse');
-                initAccordion('amex');
-            }
-
-            // --- 7. Tab Setup ---
             function setupTabs() {
-                const aiTabButton = document.getElementById('ai-tab-button');
-                const screenerTabButton = document.getElementById('screener-tab-button');
-                const aiTabContent = document.getElementById('ai-tab-content');
-                const screenerTabContent = document.getElementById('screener-tab-content');
-
-                const setActiveTab = (activeButton, activeContent) => {
-                    // Reset all buttons
-                    tabButtons.forEach(button => {
-                        button.classList.remove('border-indigo-500', 'text-indigo-600');
-                        button.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                    });
-                    // Reset all content
-                    tabContents.forEach(content => {
-                        content.style.display = 'none';
-                    });
-
-                    // Set active button
-                    activeButton.classList.add('border-indigo-500', 'text-indigo-600');
-                    activeButton.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                    
-                    // Set active content
-                    activeContent.style.display = 'block';
+                const tabMap = {
+                    'ai-tab-button': 'ai-tab-content',
+                    'screener-tab-button': 'screener-tab-content',
+                    'news-tab-button': 'news-tab-content'
                 };
 
-                aiTabButton.addEventListener('click', () => setActiveTab(aiTabButton, aiTabContent));
-                screenerTabButton.addEventListener('click', () => setActiveTab(screenerTabButton, screenerTabContent));
+                const setActiveTab = (activeButtonId) => {
+                    tabButtons.forEach(button => {
+                        const is_active = button.id === activeButtonId;
+                        button.classList.toggle('border-indigo-500', is_active);
+                        button.classList.toggle('text-indigo-600', is_active);
+                        button.classList.toggle('border-transparent', !is_active);
+                        button.classList.toggle('text-gray-500', !is_active);
+                    });
+                    Object.values(tabMap).forEach(contentId => {
+                        document.getElementById(contentId).style.display = (tabMap[activeButtonId] === contentId) ? 'block' : 'none';
+                    });
+                };
 
-                // Set initial tab
-                setActiveTab(aiTabButton, aiTabContent);
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => setActiveTab(button.id));
+                });
+                
+                setActiveTab('ai-tab-button'); // Set initial active tab
             }
 
-            // --- 8. Accordion Initialization ---
-            function initAccordion(exchange) {
-                const button = document.getElementById(`${exchange}-accordion-button`);
-                const content = document.getElementById(`${exchange}-accordion-content`);
-                const icon = document.getElementById(`${exchange}-accordion-icon`);
+            // --- 6. Main Application Logic ---
+            function startApp() {
+                console.log("Application starting...");
+                setupTabs();
+                ['nasdaq', 'nyse', 'amex'].forEach(initExchangeData);
+            }
+
+            // --- 7. Data Initialization for Each Exchange ---
+            function initExchangeData(exchange) {
+                const exchangeUpperCase = exchange.toUpperCase();
+                // Accordion elements
+                const accordionButton = document.getElementById(`${exchange}-accordion-button`);
+                const accordionContent = document.getElementById(`${exchange}-accordion-content`);
+                const accordionIcon = document.getElementById(`${exchange}-accordion-icon`);
+                // Container elements
                 const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
-                const exchangeUpperCase = exchange.toUpperCase();
+                const newsContainer = document.getElementById(`${exchange}-news-container`);
 
-                setupAccordionToggle(button, content, icon);
-                fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+                setupAccordionToggle(accordionButton, accordionContent, accordionIcon);
+                fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer, newsContainer);
             }
 
-            // --- 9. Accordion Toggle Logic ---
+            // --- 8. Accordion Toggle Logic ---
             function setupAccordionToggle(button, content, icon) {
                 button.addEventListener('click', () => {
                     const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
-                    if (isOpen) {
-                        content.style.maxHeight = "0px";
-                        icon.style.transform = "rotate(0deg)";
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + "px";
-                        icon.style.transform = "rotate(180deg)";
-                    }
+                    content.style.maxHeight = isOpen ? "0px" : content.scrollHeight + "px";
+                    icon.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
                 });
             }
 
-            // --- 10. Fetch Stock Screener Data ---
-            async function fetchStockScreener(exchange, tableContainerElement, cardContainerElement) {
-                tableContainerElement.innerHTML = `<p class="text-gray-500">Loading stock data for ${exchange}...</p>`;
-                cardContainerElement.innerHTML = `<p class="text-gray-500">Loading card data for ${exchange}...</p>`;
-                const apiKey = appConfig.fmpApiKey;
-                if (!apiKey) {
+            // --- 9. Fetch Stock Screener Data ---
+            async function fetchStockScreener(exchange, tableEl, cardEl, newsEl) {
+                const loadingMsg = `<p class="text-gray-500">Loading data for ${exchange}...</p>`;
+                [tableEl, cardEl, newsEl].forEach(el => el.innerHTML = loadingMsg);
+
+                if (!appConfig.fmpApiKey) {
                     const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
-                    tableContainerElement.innerHTML = errorMsg;
-                    cardContainerElement.innerHTML = errorMsg;
+                    [tableEl, cardEl, newsEl].forEach(el => el.innerHTML = errorMsg);
                     return;
                 }
 
-                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${apiKey}`;
-
+                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=1000&apikey=${appConfig.fmpApiKey}`;
                 try {
                     const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`API request for ${exchange} failed with status ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`API request failed: ${response.status}`);
                     const data = await response.json();
-                    renderStockTable(data, tableContainerElement);
-                    renderStockCards(data, cardContainerElement, exchange);
+                    
+                    renderStockTable(data, tableEl);
+                    renderStockCards(data, cardEl, exchange);
+                    fetchAndRenderPriceTargetNews(data, newsEl, exchange); // Fetch news after screener data is available
                 } catch (error) {
-                    console.error(`Error fetching stock data for ${exchange}:`, error);
-                    const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}. Check the console and API key.</p>`;
-                    tableContainerElement.innerHTML = errorMsg;
-                    cardContainerElement.innerHTML = errorMsg;
+                    console.error(`Error fetching screener data for ${exchange}:`, error);
+                    const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
+                    [tableEl, cardEl, newsEl].forEach(el => el.innerHTML = errorMsg);
                 }
             }
             
-            // --- 11. Shared Helper Functions for Rendering ---
-            const formatPrice = (num) => num ? `$${num.toFixed(2)}` : 'N/A';
-            const formatNumber = (num) => num ? num.toLocaleString() : 'N/A';
-            const formatBeta = (num) => num ? num.toFixed(3) : 'N/A';
+            // --- 10. Fetch and Render Price Target News ---
+            async function fetchAndRenderPriceTargetNews(screenerData, container, exchange) {
+                container.innerHTML = `<p class="text-gray-500">Loading news for ${exchange}...</p>`;
+                // Get symbols from the top 20 stocks for performance reasons
+                const symbols = screenerData.slice(0, 20).map(stock => stock.symbol);
+                if (symbols.length === 0) {
+                    container.innerHTML = `<p class="text-gray-500">No stocks found to fetch news for.</p>`;
+                    return;
+                }
+
+                try {
+                    const newsPromises = symbols.map(symbol => {
+                        const url = `https://financialmodelingprep.com/api/v3/price-target-news?symbol=${symbol}&limit=5&apikey=${appConfig.fmpApiKey}`;
+                        return fetch(url).then(res => res.json());
+                    });
+                    const results = await Promise.all(newsPromises);
+                    const allNews = results.flat().filter(item => item && item.newsTitle); // Flatten and filter out empty results
+                    
+                    // Sort news by date, most recent first
+                    allNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+
+                    renderNewsCards(allNews, container);
+                } catch (error) {
+                    console.error(`Error fetching news for ${exchange}:`, error);
+                    container.innerHTML = `<p class="text-red-500">Could not load price target news.</p>`;
+                }
+            }
+
+            // --- 11. Rendering Functions ---
             const formatText = (text) => text || 'N/A';
             const formatMarketCap = (num) => {
                 if (!num) return 'N/A';
                 if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
                 if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-                if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
                 return num.toLocaleString();
             };
 
-            // --- 12. Render Stock Table ---
-            function renderStockTable(data, containerElement) {
+            function renderStockTable(data, container) {
                 if (!data || data.length === 0) {
-                    containerElement.innerHTML = '<p class="text-gray-500">No stock data found for the specified criteria.</p>';
+                    container.innerHTML = '<p class="text-gray-500">No stock data found.</p>';
                     return;
                 }
-
                 const tableRows = data.map(stock => `
                     <tr>
                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-indigo-600">${formatText(stock.symbol)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatPrice(stock.price)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatNumber(stock.volume)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatBeta(stock.beta)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">${formatText(stock.country)}</td>
-                    </tr>
-                `).join('');
-
-                containerElement.innerHTML = `
-                    <div class="overflow-x-auto max-h-96">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
-                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Name</th>
-                                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</th>
-                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
-                                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Beta</th>
-                                    <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
-                        </table>
-                    </div>
-                `;
+                    </tr>`).join('');
+                container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
             }
 
-            // --- 13. Render Stock Cards ---
-            function renderStockCards(data, containerElement, exchange) {
+            function renderStockCards(data, container, exchange) {
                 if (!data || data.length === 0) {
-                    containerElement.innerHTML = ''; // Clear loading message if no data
-                    return;
+                    container.innerHTML = ''; return;
                 }
-
-                // Group data by sector, then by industry
-                const groupedData = data.reduce((acc, stock) => {
+                const grouped = data.reduce((acc, stock) => {
                     const sector = stock.sector || 'Unclassified';
                     const industry = stock.industry || 'Unclassified';
-                    if (!acc[sector]) {
-                        acc[sector] = {};
-                    }
-                    if (!acc[sector][industry]) {
-                        acc[sector][industry] = [];
-                    }
+                    acc[sector] = acc[sector] || {};
+                    acc[sector][industry] = acc[sector][industry] || [];
                     acc[sector][industry].push(stock);
                     return acc;
                 }, {});
 
-                let cardHtml = `<h3 class="text-xl font-bold mb-4 text-gray-700">${exchange.toUpperCase()} Stocks by Sector</h3>`;
-
-                // Generate HTML for each sector and industry
-                for (const sector in groupedData) {
-                    cardHtml += `<div class="mb-6">
-                                    <h4 class="text-lg font-semibold text-indigo-700 p-2 bg-indigo-50 rounded-md">${sector}</h4>`;
-                    for (const industry in groupedData[sector]) {
-                        cardHtml += `<div class="mt-4">
-                                        <h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
-                        
-                        groupedData[sector][industry].forEach(stock => {
-                            cardHtml += `
-                                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col justify-between">
-                                    <div>
+                let html = `<h3 class="text-xl font-bold mb-4 text-gray-700">${exchange.toUpperCase()} Stocks by Sector</h3>`;
+                for (const sector in grouped) {
+                    html += `<div class="mb-6"><h4 class="text-lg font-semibold text-indigo-700 p-2 bg-indigo-50 rounded-md">${sector}</h4>`;
+                    for (const industry in grouped[sector]) {
+                        html += `<div class="mt-4"><h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
+                        grouped[sector][industry].forEach(stock => {
+                            html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                                         <div class="flex justify-between items-baseline mb-1">
                                             <p class="font-bold text-sm text-indigo-600 truncate pr-2">${formatText(stock.symbol)}</p>
                                             <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
                                         </div>
                                         <p class="text-xs text-gray-500">${formatText(stock.companyName)}</p>
-                                    </div>
-                                </div>`;
+                                    </div>`;
                         });
-
-                        cardHtml += `</div></div>`;
+                        html += `</div></div>`;
                     }
-                    cardHtml += `</div>`;
+                    html += `</div>`;
                 }
-                
-                containerElement.innerHTML = cardHtml;
+                container.innerHTML = html;
+            }
+
+            function renderNewsCards(newsData, container) {
+                if (!newsData || newsData.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the top stocks in this exchange.</p>';
+                    return;
+                }
+                const newsHtml = newsData.map(news => `
+                    <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                             <p class="font-bold text-indigo-600">${formatText(news.symbol)}</p>
+                             <p class="text-xs text-gray-500">${new Date(news.publishedDate).toLocaleDateString()}</p>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 my-1">${formatText(news.newsTitle)}</h4>
+                        <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
+                            <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
+                            <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
+                            <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                        </div>
+                    </a>
+                `).join('');
+                container.innerHTML = newsHtml;
             }
 
             // --- Run the initialization function ---
