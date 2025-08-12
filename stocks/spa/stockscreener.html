@@ -164,7 +164,7 @@
     </div>
 
     <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal">
+    <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
@@ -204,13 +204,13 @@
         </div>
     </div>
 
-    <!-- ADDED: Floating Action Button for CRUD -->
+    <!-- Floating Action Button for CRUD -->
     <button id="manageSummariesBtn" class="fixed bottom-8 right-8 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-transform transform hover:scale-110 focus:outline-none">
         <i class="fas fa-archive fa-lg"></i>
     </button>
 
-    <!-- ADDED: CRUD Modal for Summaries -->
-    <div id="summaryCrudModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal">
+    <!-- CRUD Modal for Summaries -->
+    <div id="summaryCrudModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="crudModalOverlay"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-3xl m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-6">Manage Saved Summaries</h2>
@@ -242,7 +242,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 2.3
+        // Version 2.4
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -252,7 +252,6 @@
                 searchEngineId: "",
                 googleClientId: "",
                 firebaseConfig: {},
-                // ADDED: State to hold current summaries before saving
                 currentSummaries: {
                     nasdaq: null,
                     nyse: null,
@@ -277,7 +276,6 @@
             const firebaseConfigInput = document.getElementById('firebaseConfigInput');
             const tabButtons = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
-            // ADDED: CRUD Modal elements
             const manageSummariesBtn = document.getElementById('manageSummariesBtn');
             const summaryCrudModal = document.getElementById('summaryCrudModal');
             const crudModalOverlay = document.getElementById('crudModalOverlay');
@@ -357,9 +355,8 @@
             async function startApp() {
                 console.log("Application starting...");
                 setupTabs();
-                setupCrudModalListeners(); // ADDED
+                setupCrudModalListeners();
 
-                // Correctly initialize Firebase with databaseURL
                 try {
                     if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
                         firebase.initializeApp(appConfig.firebaseConfig);
@@ -591,7 +588,6 @@
                     const result = await response.json();
                     const summary = result.candidates[0].content.parts[0].text;
                     
-                    // MODIFIED: Store summary and render with a save button
                     appConfig.currentSummaries[exchange] = summary;
                     container.innerHTML = `
                         <div class="flex justify-between items-start">
@@ -602,7 +598,6 @@
                         </div>
                         <p class="text-gray-600 mt-2">${summary.replace(/\n/g, '<br>')}</p>
                     `;
-                    // Add listener to the newly created save button
                     document.getElementById(`save-${exchange}-summary`).addEventListener('click', () => {
                         saveSummaryToFirebase(exchange);
                     });
@@ -613,7 +608,7 @@
                 }
             }
             
-            // --- ADDED: CRUD Functions for Summaries ---
+            // --- 13. CRUD Functions for Summaries ---
             function setupCrudModalListeners() {
                 manageSummariesBtn.addEventListener('click', async () => {
                     summaryCrudModal.style.display = 'flex';
@@ -736,7 +731,7 @@
             }
 
 
-            // --- 13. Rendering Functions ---
+            // --- 14. Rendering Functions ---
             const formatText = (text) => text || 'N/A';
             const formatMarketCap = (num) => {
                 if (!num) return 'N/A';
