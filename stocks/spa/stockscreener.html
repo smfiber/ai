@@ -314,7 +314,7 @@
                     
                     renderStockTable(data, tableEl);
                     renderStockCards(data, cardEl, exchange);
-                    fetchAndRenderPriceTargetNews(data, newsEl, exchange); // Fetch news after screener data is available
+                    fetchAndRenderPriceTargetNews(data, newsEl, exchange);
                 } catch (error) {
                     console.error(`Error fetching screener data for ${exchange}:`, error);
                     const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
@@ -325,8 +325,18 @@
             // --- 10. Fetch and Render Price Target News ---
             async function fetchAndRenderPriceTargetNews(screenerData, container, exchange) {
                 container.innerHTML = `<p class="text-gray-500">Loading news for ${exchange}...</p>`;
-                // Get symbols from the top 20 stocks for performance reasons
-                const symbols = screenerData.slice(0, 20).map(stock => stock.symbol);
+                
+                let symbols;
+                if (screenerData.length < 50) {
+                    // If there are fewer than 50 stocks, just use all of them
+                    symbols = screenerData.map(stock => stock.symbol);
+                } else {
+                    // Get the 25 largest (first 25) and 25 smallest (last 25)
+                    const largestCaps = screenerData.slice(0, 25);
+                    const smallestCaps = screenerData.slice(-25);
+                    symbols = [...largestCaps, ...smallestCaps].map(stock => stock.symbol);
+                }
+
                 if (symbols.length === 0) {
                     container.innerHTML = `<p class="text-gray-500">No stocks found to fetch news for.</p>`;
                     return;
@@ -338,9 +348,8 @@
                         return fetch(url).then(res => res.json());
                     });
                     const results = await Promise.all(newsPromises);
-                    const allNews = results.flat().filter(item => item && item.newsTitle); // Flatten and filter out empty results
+                    const allNews = results.flat().filter(item => item && item.newsTitle);
                     
-                    // Sort news by date, most recent first
                     allNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
 
                     renderNewsCards(allNews, container);
@@ -410,7 +419,7 @@
 
             function renderNewsCards(newsData, container) {
                 if (!newsData || newsData.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the top stocks in this exchange.</p>';
+                    container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange.</p>';
                     return;
                 }
                 const newsHtml = newsData.map(news => `
