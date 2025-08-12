@@ -242,7 +242,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 2.4
+        // Version 2.6
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -401,7 +401,7 @@
                 
                 const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, summaryContainer);
                 if (!loadedFromCache) {
-                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
+                    await fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
                 }
 
                 refreshButton.addEventListener('click', (e) => {
@@ -470,8 +470,10 @@
                 let allNews = [];
                 for (const [index, symbol] of symbols.entries()) {
                     try {
-                        newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})... Please wait.</p>`;
                         const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                        // MODIFIED: Display the API call on screen
+                        newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
+                        
                         const response = await fetch(url);
 
                         if (response.status === 429) {
