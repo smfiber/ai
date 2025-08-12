@@ -416,14 +416,14 @@
                     return;
                 }
 
-                const newsTitles = newsData.slice(0, 20).map(n => n.newsTitle).join('\n');
+                const newsTitles = newsData.slice(0, 25).map(n => n.newsTitle).join('\n');
                 if (!newsTitles) {
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Not enough news to summarize.</p>`;
                     return;
                 }
 
-                const prompt = `Summarize the following financial news headlines for the ${exchange} exchange in 2-3 sentences, highlighting the main trends or key points:\n\n${newsTitles}`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${appConfig.geminiApiKey}`;
+                const prompt = `Act as a financial analyst. Provide a brief, 2-3 sentence summary of the key themes and overall sentiment from the following news headlines for the ${exchange} exchange. Ignore any irrelevant headlines.\n\nHEADLINES:\n${newsTitles}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${appConfig.geminiApiKey}`;
 
                 try {
                     const response = await fetch(url, {
@@ -431,7 +431,11 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                     });
-                    if (!response.ok) throw new Error(`Gemini API request failed: ${response.status}`);
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error("Gemini API Error:", errorBody);
+                        throw new Error(`Gemini API request failed: ${response.status}`);
+                    }
                     const result = await response.json();
                     const summary = result.candidates[0].content.parts[0].text;
                     container.innerHTML = `
