@@ -116,18 +116,36 @@
 
             <!-- Price Target News Tab -->
             <div id="news-tab-content" class="tab-content">
-                <div class="space-y-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">NASDAQ Price Target News</h2>
-                        <div id="nasdaq-news-container" class="space-y-3"></div>
+                <div class="space-y-4">
+                    <!-- NASDAQ News Accordion -->
+                    <div class="bg-white rounded-xl shadow-md">
+                        <button id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
+                            <span>NASDAQ Price Target News</span>
+                            <svg id="nasdaq-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="nasdaq-news-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="nasdaq-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">NYSE Price Target News</h2>
-                        <div id="nyse-news-container" class="space-y-3"></div>
+                    <!-- NYSE News Accordion -->
+                    <div class="bg-white rounded-xl shadow-md">
+                        <button id="nyse-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
+                            <span>NYSE Price Target News</span>
+                            <svg id="nyse-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="nyse-news-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">AMEX Price Target News</h2>
-                        <div id="amex-news-container" class="space-y-3"></div>
+                    <!-- AMEX News Accordion -->
+                    <div class="bg-white rounded-xl shadow-md">
+                        <button id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
+                            <span>AMEX Price Target News</span>
+                            <svg id="amex-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="amex-news-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="amex-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -276,11 +294,9 @@
                 console.log("Application starting...");
                 setupTabs();
                 const exchanges = ['nasdaq', 'nyse', 'amex'];
-                // Use a for...of loop to process exchanges sequentially with a delay
                 for (const exchange of exchanges) {
                     console.log(`Fetching data for ${exchange.toUpperCase()}...`);
                     await initExchangeData(exchange);
-                    // Add a delay to avoid hitting API rate limits
                     await new Promise(resolve => setTimeout(resolve, 1000)); 
                 }
             }
@@ -288,22 +304,28 @@
             // --- 7. Data Initialization for Each Exchange ---
             function initExchangeData(exchange) {
                 const exchangeUpperCase = exchange.toUpperCase();
-                // Accordion elements
-                const accordionButton = document.getElementById(`${exchange}-accordion-button`);
-                const accordionContent = document.getElementById(`${exchange}-accordion-content`);
-                const accordionIcon = document.getElementById(`${exchange}-accordion-icon`);
+                // Screener accordion elements
+                const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
+                const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
+                const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
+                // News accordion elements
+                const newsAccordionButton = document.getElementById(`${exchange}-news-accordion-button`);
+                const newsAccordionContent = document.getElementById(`${exchange}-news-accordion-content`);
+                const newsAccordionIcon = document.getElementById(`${exchange}-news-accordion-icon`);
                 // Container elements
                 const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
                 const newsContainer = document.getElementById(`${exchange}-news-container`);
                 const summaryContainer = document.getElementById(`${exchange}-summary-container`);
 
-                setupAccordionToggle(accordionButton, accordionContent, accordionIcon);
+                setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
+                setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
                 return fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer, newsContainer, summaryContainer);
             }
 
             // --- 8. Accordion Toggle Logic ---
             function setupAccordionToggle(button, content, icon) {
+                if (!button) return; // Guard against missing elements
                 button.addEventListener('click', () => {
                     const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
                     content.style.maxHeight = isOpen ? "0px" : content.scrollHeight + "px";
@@ -485,50 +507,22 @@
                     container.innerHTML = '<p class="text-gray-500">No recent price target news found for the selected stocks in this exchange.</p>';
                     return;
                 }
-                const newsHtml = newsData.map((news, index) => `
-                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button class="news-accordion-button w-full flex justify-between items-center p-4 text-left hover:bg-gray-50">
-                            <span class="font-semibold text-gray-800 flex-1 pr-4">
-                                <span class="font-bold text-indigo-600">${formatText(news.symbol)}:</span>
-                                ${formatText(news.newsTitle)}
-                            </span>
-                            <svg class="news-accordion-icon w-5 h-5 transform transition-transform text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div class="accordion-content">
-                            <div class="p-4 border-t border-gray-200">
-                                <div class="text-xs text-gray-600 flex flex-wrap gap-x-4 gap-y-2">
-                                    <span><strong>Date:</strong> ${new Date(news.publishedDate).toLocaleDateString()}</span>
-                                    <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
-                                    <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
-                                    <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
-                                    <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
-                                </div>
-                                <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold mt-3 inline-block">
-                                    Read Full Article &rarr;
-                                </a>
-                            </div>
+                const newsHtml = newsData.map(news => `
+                    <a href="${news.newsURL}" target="_blank" rel="noopener noreferrer" class="block bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition-colors">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="font-bold text-indigo-600">${formatText(news.symbol)}</p>
+                            <p class="text-xs text-gray-500">${new Date(news.publishedDate).toLocaleDateString()}</p>
                         </div>
-                    </div>
+                        <h4 class="font-semibold text-gray-800">${formatText(news.newsTitle)}</h4>
+                        <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            <span><strong>Publisher:</strong> ${formatText(news.newsPublisher)}</span>
+                            <span><strong>Analyst:</strong> ${formatText(news.analystName) || 'N/A'} @ ${formatText(news.analystCompany)}</span>
+                            <span><strong>Posted Price:</strong> ${news.priceWhenPosted ? '$'+news.priceWhenPosted.toFixed(2) : 'N/A'}</span>
+                            <span><strong>Target Price:</strong> ${news.priceTarget ? '$'+news.priceTarget.toFixed(2) : 'N/A'}</span>
+                        </div>
+                    </a>
                 `).join('');
-
                 container.innerHTML = newsHtml;
-
-                // Add event listeners to the new accordion buttons
-                container.querySelectorAll('.news-accordion-button').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const content = button.nextElementSibling;
-                        const icon = button.querySelector('.news-accordion-icon');
-                        const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
-                        
-                        if (isOpen) {
-                            content.style.maxHeight = "0px";
-                            icon.style.transform = "rotate(0deg)";
-                        } else {
-                            content.style.maxHeight = content.scrollHeight + "px";
-                            icon.style.transform = "rotate(180deg)";
-                        }
-                    });
-                });
             }
 
             // --- Run the initialization function ---
