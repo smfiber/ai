@@ -194,7 +194,7 @@
     </div>
 
     <script>
-        // Version 1.6
+        // Version 1.7
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -365,7 +365,7 @@
                 }
             }
             
-            // --- 10. Fetch and Render Price Target News (Batched) ---
+            // --- 10. Fetch and Render Price Target News (Sequentially with Delay) ---
             async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange) {
                 if (summaryContainer) {
                     summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
@@ -383,33 +383,23 @@
                 }
 
                 let allNews = [];
-                const batchSize = 10; // Process 10 symbols at a time
-
                 try {
-                    for (let i = 0; i < symbols.length; i += batchSize) {
-                        const batchSymbols = symbols.slice(i, i + batchSize);
-                        newsContainer.innerHTML = `<p class="text-gray-500">Fetching news for ${exchange.toUpperCase()}... (${i + batchSymbols.length} of ${symbols.length})</p>`;
-
-                        const batchPromises = batchSymbols.map(symbol => {
-                            const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
-                            return fetch(url).then(res => {
-                                if (!res.ok) {
-                                    console.warn(`Could not fetch news for ${symbol}: ${res.status}`);
-                                    return []; // Return empty array on error to not break Promise.all
-                                }
-                                return res.json();
-                            });
-                        });
-
-                        const batchResults = await Promise.all(batchPromises);
-                        allNews.push(...batchResults.flat());
-
-                        if (i + batchSize < symbols.length) {
-                            await delay(1000); // Wait 1 second before the next batch
+                    for (const [index, symbol] of symbols.entries()) {
+                        newsContainer.innerHTML = `<p class="text-gray-500">Fetching news for ${symbol} (${index + 1} of ${symbols.length})... Please wait.</p>`;
+                        const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                        const response = await fetch(url);
+                        if(response.ok) {
+                            const newsItems = await response.json();
+                            if (newsItems && newsItems.length > 0) {
+                                allNews.push(...newsItems);
+                            }
+                        } else {
+                             console.warn(`Could not fetch news for ${symbol}: ${response.status}`);
                         }
+                        await delay(300); // Wait 300ms before the next call
                     }
-                    
-                    let filteredNews = allNews.filter(item => item && item.newsTitle && item.publishedDate);
+
+                    let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate);
 
                     const now = new Date();
                     const currentMonth = now.getMonth();
