@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magickal SPA</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Apply the Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style for the modal to be hidden by default */
+        .modal {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Main Application Content -->
+    <!-- This content will be visible after the API keys are provided -->
+    <div id="appContent" class="p-8 text-center">
+        <h1 class="text-4xl font-bold text-indigo-600">Welcome to the Magickal SPA</h1>
+        <p class="mt-4 text-lg text-gray-600">Your application is ready to go!</p>
+        <div class="mt-8 p-6 bg-white rounded-xl shadow-md max-w-2xl mx-auto text-left">
+            <h2 class="font-semibold text-xl mb-4">Loaded Configuration:</h2>
+            <pre id="config-display" class="bg-gray-50 p-4 rounded-lg text-sm overflow-x-auto"></pre>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 modal">
+        <!-- Modal Backdrop -->
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
+        <!-- Modal Content -->
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl font-bold mb-4">API Keys Required</h2>
+            <p class="text-gray-500 mb-6">Please provide your API keys to get started. These are required for the application to function.</p>
+            <form id="apiKeyForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="geminiApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Gemini API Key</label>
+                        <input type="password" id="geminiApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Gemini API Key">
+                    </div>
+                    <div>
+                        <label for="googleClientIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Google Cloud Client ID</label>
+                        <input type="password" id="googleClientIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud Web Client ID">
+                    </div>
+                    <div>
+                        <label for="webSearchApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Web Search API Key (Google)</label>
+                        <input type="password" id="webSearchApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Google Cloud API Key">
+                    </div>
+                    <div>
+                        <label for="searchEngineIdInput" class="block text-sm font-semibold text-gray-800 mb-1">Search Engine ID (cx value)</label>
+                        <input type="text" id="searchEngineIdInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your Custom Search Engine ID">
+                    </div>
+                    <div>
+                        <label for="fmpApiKeyInput" class="block text-sm font-semibold text-gray-800 mb-1">Financial Modeling Prep API Key</label>
+                        <input type="password" id="fmpApiKeyInput" class="border border-gray-300 rounded-lg w-full p-2" placeholder="Enter your FMP API Key">
+                    </div>
+                    <div>
+                        <label for="firebaseConfigInput" class="block text-sm font-semibold text-gray-800 mb-1">Firebase Web App Config</label>
+                        <textarea id="firebaseConfigInput" class="border border-gray-300 rounded-lg w-full p-2 font-mono text-xs" rows="6" placeholder="Paste your Firebase Web App Config Object"></textarea>
+                    </div>
+                </div>
+                <p id="api-key-error" class="text-red-500 text-sm mt-4 h-5"></p>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-colors">Save and Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // --- 1. Global Configuration Object ---
+            // This object will hold all API keys and settings for the application.
+            const appConfig = {
+                fmpApiKey: "",
+                geminiApiKey: "",
+                searchApiKey: "",
+                searchEngineId: "",
+                googleClientId: "",
+                firebaseConfig: {}
+            };
+
+            // --- 2. DOM Element Selection ---
+            // Get references to all necessary HTML elements to interact with them.
+            const apiKeyModal = document.getElementById('apiKeyModal');
+            const apiKeyForm = document.getElementById('apiKeyForm');
+            const errorMessage = document.getElementById('api-key-error');
+            const configDisplay = document.getElementById('config-display');
+
+            // Input Fields
+            const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+            const googleClientIdInput = document.getElementById('googleClientIdInput');
+            const webSearchApiKeyInput = document.getElementById('webSearchApiKeyInput');
+            const searchEngineIdInput = document.getElementById('searchEngineIdInput');
+            const fmpApiKeyInput = document.getElementById('fmpApiKeyInput');
+            const firebaseConfigInput = document.getElementById('firebaseConfigInput');
+
+            // --- 3. Initialization Logic ---
+            // This function runs on page load. It checks for saved keys in localStorage
+            // to avoid asking the user for them on every visit.
+            function initialize() {
+                const savedKeys = localStorage.getItem('magickalApiKeys');
+                if (savedKeys) {
+                    console.log("Found saved API keys in localStorage.");
+                    // If keys exist, parse them and update the global config object.
+                    const parsedKeys = JSON.parse(savedKeys);
+                    Object.assign(appConfig, parsedKeys);
+                    
+                    // Hide the modal and start the main application logic.
+                    hideModal();
+                    startApp();
+                } else {
+                    console.log("No API keys found. Displaying modal.");
+                    // If no keys are found, show the modal to the user.
+                    showModal();
+                }
+            }
+
+            // --- 4. Form Submission Handler ---
+            // This function handles the form submission, validates the input, and saves the keys.
+            apiKeyForm.addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent the default form submission behavior.
+                errorMessage.textContent = ''; // Clear any previous error messages.
+
+                // Gather values from all input fields.
+                const formValues = {
+                    geminiApiKey: geminiApiKeyInput.value.trim(),
+                    googleClientId: googleClientIdInput.value.trim(),
+                    searchApiKey: webSearchApiKeyInput.value.trim(),
+                    searchEngineId: searchEngineIdInput.value.trim(),
+                    fmpApiKey: fmpApiKeyInput.value.trim(),
+                    firebaseConfigString: firebaseConfigInput.value.trim()
+                };
+                
+                // Validate that no field is empty.
+                if (Object.values(formValues).some(value => value === '')) {
+                    errorMessage.textContent = 'All fields are required. Please fill them all out.';
+                    return;
+                }
+
+                // Specifically validate the Firebase config to ensure it's a valid JSON object.
+                let parsedFirebaseConfig;
+                try {
+                    // This attempts to parse the string as JSON.
+                    parsedFirebaseConfig = JSON.parse(formValues.firebaseConfigString);
+                } catch (error) {
+                    errorMessage.textContent = 'The Firebase Web App Config is not a valid JSON object.';
+                    console.error("Firebase Config parsing error:", error);
+                    return;
+                }
+
+                // Update the global config object with the validated values.
+                appConfig.geminiApiKey = formValues.geminiApiKey;
+                appConfig.googleClientId = formValues.googleClientId;
+                appConfig.searchApiKey = formValues.searchApiKey;
+                appConfig.searchEngineId = formValues.searchEngineId;
+                appConfig.fmpApiKey = formValues.fmpApiKey;
+                appConfig.firebaseConfig = parsedFirebaseConfig;
+
+                // Save the entire config object to localStorage for future visits.
+                try {
+                    localStorage.setItem('magickalApiKeys', JSON.stringify(appConfig));
+                    console.log("API keys saved successfully!");
+
+                    // Hide the modal and proceed to the main application.
+                    hideModal();
+                    startApp();
+                } catch (error) {
+                    errorMessage.textContent = 'Could not save keys to local storage. Please ensure it is enabled.';
+                    console.error("Error saving to localStorage:", error);
+                }
+            });
+
+            // --- 5. Modal Utility Functions ---
+            // Helper function to show the modal.
+            function showModal() {
+                apiKeyModal.style.display = 'flex';
+            }
+
+            // Helper function to hide the modal.
+            function hideModal() {
+                apiKeyModal.style.display = 'none';
+            }
+            
+            // --- 6. Main Application Logic ---
+            // This is the entry point for your application's main functionality
+            // once the API keys are successfully loaded.
+            function startApp() {
+                console.log("Application starting with the following configuration:");
+                console.log(appConfig);
+                
+                // Display the loaded config in the UI (excluding sensitive keys for display).
+                const displayConfig = { ...appConfig };
+                displayConfig.geminiApiKey = '********';
+                displayConfig.googleClientId = '********';
+                displayConfig.searchApiKey = '********';
+                displayConfig.fmpApiKey = '********';
+                configDisplay.textContent = JSON.stringify(displayConfig, null, 2);
+
+                // TODO: Add your main SPA initialization code here.
+                // For example: initializeFirebase(appConfig.firebaseConfig), loadUserData(), etc.
+            }
+
+            // --- Run the initialization function when the page loads ---
+            initialize();
+        });
+    </script>
+
+</body>
+</html>
