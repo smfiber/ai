@@ -25,6 +25,10 @@
             overflow: hidden;
             transition: max-height 0.3s ease-out;
         }
+        /* Hide tab content by default */
+        .tab-content {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -33,53 +37,81 @@
     <div id="appContent" class="p-4 md:p-8">
         <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal SPA Dashboard</h1>
         
-        <div class="max-w-6xl mx-auto space-y-4">
-            <!-- Accordion for NASDAQ Stock Screener -->
-            <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                    <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
-                    <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
-                    <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4">
-                        <p class="text-gray-500">Loading stock data...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Accordion for NYSE Stock Screener -->
-            <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                    <span>Stock Screener Table: NYSE (Market Cap > $1B)</span>
-                    <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
-                    <div id="nyse-screener-data-container" class="mt-4 border-t pt-4">
-                        <p class="text-gray-500">Loading stock data...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Accordion for AMEX Stock Screener -->
-            <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                    <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
-                    <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
-                    <div id="amex-screener-data-container" class="mt-4 border-t pt-4">
-                        <p class="text-gray-500">Loading stock data...</p>
-                    </div>
-                </div>
+        <!-- Tab Navigation -->
+        <div class="max-w-6xl mx-auto mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button id="ai-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        AI Analysis
+                    </button>
+                    <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Stock Screener
+                    </button>
+                </nav>
             </div>
         </div>
 
-        <!-- Card View Section -->
-        <div class="max-w-6xl mx-auto mt-12">
-            <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
-            <div id="nasdaq-card-view" class="mb-8"></div>
-            <div id="nyse-card-view" class="mb-8"></div>
-            <div id="amex-card-view" class="mb-8"></div>
+        <!-- Tab Content Area -->
+        <div class="max-w-6xl mx-auto">
+            <!-- AI Analysis Tab -->
+            <div id="ai-tab-content" class="tab-content">
+                <div class="bg-white p-8 rounded-xl shadow-md text-center">
+                    <h2 class="text-2xl font-bold text-gray-800">AI Analysis</h2>
+                    <p class="mt-2 text-gray-500">This section is under construction. AI-powered insights will be available here soon!</p>
+                </div>
+            </div>
+
+            <!-- Stock Screener Tab -->
+            <div id="screener-tab-content" class="tab-content">
+                <div class="space-y-4">
+                    <!-- Accordion for NASDAQ Stock Screener -->
+                    <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                        <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                            <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
+                            <svg id="nasdaq-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="nasdaq-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="nasdaq-screener-data-container" class="mt-4 border-t pt-4">
+                                <p class="text-gray-500">Loading stock data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accordion for NYSE Stock Screener -->
+                    <div id="nyseScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                        <button id="nyse-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                            <span>Stock Screener Table: NYSE (Market Cap > $1B)</span>
+                            <svg id="nyse-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="nyse-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="nyse-screener-data-container" class="mt-4 border-t pt-4">
+                                <p class="text-gray-500">Loading stock data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accordion for AMEX Stock Screener -->
+                    <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
+                        <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                            <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
+                            <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
+                            <div id="amex-screener-data-container" class="mt-4 border-t pt-4">
+                                <p class="text-gray-500">Loading stock data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card View Section -->
+                <div class="mt-12">
+                    <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
+                    <div id="nasdaq-card-view" class="mb-8"></div>
+                    <div id="nyse-card-view" class="mb-8"></div>
+                    <div id="amex-card-view" class="mb-8"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -151,6 +183,10 @@
             const fmpApiKeyInput = document.getElementById('fmpApiKeyInput');
             const firebaseConfigInput = document.getElementById('firebaseConfigInput');
 
+            // Tab Elements
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
             // --- 3. Initialization Logic ---
             function initialize() {
                 const savedKeys = localStorage.getItem('magickalApiKeys');
@@ -216,13 +252,46 @@
             // --- 6. Main Application Logic ---
             function startApp() {
                 console.log("Application starting with loaded configuration.");
-                // Initialize all accordions
+                setupTabs();
                 initAccordion('nasdaq');
                 initAccordion('nyse');
                 initAccordion('amex');
             }
 
-            // --- 7. Accordion Initialization (Combined Setup and Fetch) ---
+            // --- 7. Tab Setup ---
+            function setupTabs() {
+                const aiTabButton = document.getElementById('ai-tab-button');
+                const screenerTabButton = document.getElementById('screener-tab-button');
+                const aiTabContent = document.getElementById('ai-tab-content');
+                const screenerTabContent = document.getElementById('screener-tab-content');
+
+                const setActiveTab = (activeButton, activeContent) => {
+                    // Reset all buttons
+                    tabButtons.forEach(button => {
+                        button.classList.remove('border-indigo-500', 'text-indigo-600');
+                        button.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    });
+                    // Reset all content
+                    tabContents.forEach(content => {
+                        content.style.display = 'none';
+                    });
+
+                    // Set active button
+                    activeButton.classList.add('border-indigo-500', 'text-indigo-600');
+                    activeButton.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    
+                    // Set active content
+                    activeContent.style.display = 'block';
+                };
+
+                aiTabButton.addEventListener('click', () => setActiveTab(aiTabButton, aiTabContent));
+                screenerTabButton.addEventListener('click', () => setActiveTab(screenerTabButton, screenerTabContent));
+
+                // Set initial tab
+                setActiveTab(aiTabButton, aiTabContent);
+            }
+
+            // --- 8. Accordion Initialization ---
             function initAccordion(exchange) {
                 const button = document.getElementById(`${exchange}-accordion-button`);
                 const content = document.getElementById(`${exchange}-accordion-content`);
@@ -231,14 +300,11 @@
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
                 const exchangeUpperCase = exchange.toUpperCase();
 
-                // Set up the click listener for the accordion
                 setupAccordionToggle(button, content, icon);
-                
-                // Fetch the data for this accordion
                 fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
             }
 
-            // --- 8. Accordion Toggle Logic ---
+            // --- 9. Accordion Toggle Logic ---
             function setupAccordionToggle(button, content, icon) {
                 button.addEventListener('click', () => {
                     const isOpen = content.style.maxHeight && content.style.maxHeight !== "0px";
@@ -252,7 +318,7 @@
                 });
             }
 
-            // --- 9. Fetch Stock Screener Data (Reusable) ---
+            // --- 10. Fetch Stock Screener Data ---
             async function fetchStockScreener(exchange, tableContainerElement, cardContainerElement) {
                 tableContainerElement.innerHTML = `<p class="text-gray-500">Loading stock data for ${exchange}...</p>`;
                 cardContainerElement.innerHTML = `<p class="text-gray-500">Loading card data for ${exchange}...</p>`;
@@ -272,7 +338,6 @@
                         throw new Error(`API request for ${exchange} failed with status ${response.status}`);
                     }
                     const data = await response.json();
-                    // Render both the table and the cards
                     renderStockTable(data, tableContainerElement);
                     renderStockCards(data, cardContainerElement, exchange);
                 } catch (error) {
@@ -282,25 +347,26 @@
                     cardContainerElement.innerHTML = errorMsg;
                 }
             }
+            
+            // --- 11. Shared Helper Functions for Rendering ---
+            const formatPrice = (num) => num ? `$${num.toFixed(2)}` : 'N/A';
+            const formatNumber = (num) => num ? num.toLocaleString() : 'N/A';
+            const formatBeta = (num) => num ? num.toFixed(3) : 'N/A';
+            const formatText = (text) => text || 'N/A';
+            const formatMarketCap = (num) => {
+                if (!num) return 'N/A';
+                if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+                if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+                if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+                return num.toLocaleString();
+            };
 
-            // --- 10. Render Stock Table (Previously renderStockData) ---
+            // --- 12. Render Stock Table ---
             function renderStockTable(data, containerElement) {
                 if (!data || data.length === 0) {
                     containerElement.innerHTML = '<p class="text-gray-500">No stock data found for the specified criteria.</p>';
                     return;
                 }
-
-                const formatPrice = (num) => num ? `$${num.toFixed(2)}` : 'N/A';
-                const formatNumber = (num) => num ? num.toLocaleString() : 'N/A';
-                const formatBeta = (num) => num ? num.toFixed(3) : 'N/A';
-                const formatText = (text) => text || 'N/A';
-                const formatMarketCap = (num) => {
-                    if (!num) return 'N/A';
-                    if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
-                    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-                    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-                    return num.toLocaleString();
-                };
 
                 const tableRows = data.map(stock => `
                     <tr>
@@ -336,7 +402,7 @@
                 `;
             }
 
-            // --- 11. Render Stock Cards ---
+            // --- 13. Render Stock Cards ---
             function renderStockCards(data, containerElement, exchange) {
                 if (!data || data.length === 0) {
                     containerElement.innerHTML = ''; // Clear loading message if no data
@@ -364,15 +430,21 @@
                     cardHtml += `<div class="mb-6">
                                     <h4 class="text-lg font-semibold text-indigo-700 p-2 bg-indigo-50 rounded-md">${sector}</h4>`;
                     for (const industry in groupedData[sector]) {
-                        cardHtml += `<div class="mt-3">
-                                        <h5 class="text-md font-medium text-gray-600 mb-2 ml-2">${industry}</h5>
-                                        <div class="flex flex-wrap gap-2">`;
+                        cardHtml += `<div class="mt-4">
+                                        <h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
                         
                         groupedData[sector][industry].forEach(stock => {
-                            cardHtml += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm w-full sm:w-auto sm:min-w-[200px]">
-                                            <p class="font-bold text-sm text-indigo-600">${stock.symbol}</p>
-                                            <p class="text-xs text-gray-500">${stock.companyName}</p>
-                                         </div>`;
+                            cardHtml += `
+                                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-baseline mb-1">
+                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">${formatText(stock.symbol)}</p>
+                                            <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">${formatText(stock.companyName)}</p>
+                                    </div>
+                                </div>`;
                         });
 
                         cardHtml += `</div></div>`;
