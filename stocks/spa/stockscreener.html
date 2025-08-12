@@ -194,7 +194,7 @@
     </div>
 
     <script>
-        // Version 1.3
+        // Version 1.4
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -301,8 +301,7 @@
                 for (const exchange of exchanges) {
                     console.log(`Fetching data for ${exchange.toUpperCase()}...`);
                     await initExchangeData(exchange);
-                    console.log(`Completed ${exchange.toUpperCase()}. Pausing before next exchange.`);
-                    await delay(3000); // Wait 3 seconds before starting the next exchange
+                    console.log(`Completed ${exchange.toUpperCase()}.`);
                 }
                 console.log("All data loaded.");
             }
@@ -366,9 +365,8 @@
                 }
             }
             
-            // --- 10. Fetch and Render Price Target News (Concurrently per Exchange) ---
+            // --- 10. Fetch and Render Price Target News (Batched) ---
             async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange) {
-                newsContainer.innerHTML = `<p class="text-gray-500">Loading news for ${exchange.toUpperCase()}...</p>`;
                 if (summaryContainer) {
                     summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
                 }
@@ -384,35 +382,49 @@
                     return;
                 }
 
+                let allNews = [];
+                const batchSize = 5; // Process 5 symbols at a time
+
                 try {
-                    const newsPromises = symbols.map(symbol => {
-                        const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
-                        return fetch(url).then(res => {
-                            if (!res.ok) {
-                                console.warn(`Could not fetch news for ${symbol}: ${res.status}`);
-                                return []; // Return empty array on error to not break Promise.all
-                            }
-                            return res.json();
+                    for (let i = 0; i < symbols.length; i += batchSize) {
+                        const batchSymbols = symbols.slice(i, i + batchSize);
+                        newsContainer.innerHTML = `<p class="text-gray-500">Fetching news for ${exchange.toUpperCase()}... (${i + batchSymbols.length} of ${symbols.length})</p>`;
+
+                        const batchPromises = batchSymbols.map(symbol => {
+                            const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
+                            return fetch(url).then(res => {
+                                if (!res.ok) {
+                                    console.warn(`Could not fetch news for ${symbol}: ${res.status}`);
+                                    return []; // Return empty array on error to not break Promise.all
+                                }
+                                return res.json();
+                            });
                         });
-                    });
-                    const results = await Promise.all(newsPromises);
+
+                        const batchResults = await Promise.all(batchPromises);
+                        allNews.push(...batchResults.flat());
+
+                        if (i + batchSize < symbols.length) {
+                            await delay(3000); // Wait 3 seconds before the next batch
+                        }
+                    }
                     
-                    let allNews = results.flat().filter(item => item && item.newsTitle && item.publishedDate);
+                    let filteredNews = allNews.filter(item => item && item.newsTitle && item.publishedDate);
 
                     const now = new Date();
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
 
-                    allNews = allNews.filter(newsItem => {
+                    filteredNews = filteredNews.filter(newsItem => {
                         const newsDate = new Date(newsItem.publishedDate);
                         return newsDate.getMonth() === currentMonth && newsDate.getFullYear() === currentYear;
                     });
                     
-                    allNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
+                    filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
 
-                    renderNewsCards(allNews, newsContainer);
+                    renderNewsCards(filteredNews, newsContainer);
                     if (summaryContainer) {
-                        await summarizeNewsWithGemini(allNews, summaryContainer, exchange);
+                        await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
                     }
                 } catch (error) {
                     console.error(`Error fetching news for ${exchange}:`, error);
