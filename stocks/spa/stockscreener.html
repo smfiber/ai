@@ -207,7 +207,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 1.8
+        // Version 1.9
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -219,7 +219,6 @@
                 firebaseConfig: {}
             };
             
-            // ADDED: Firebase database reference
             let db = null;
 
             // --- Utility to pause execution ---
@@ -306,7 +305,7 @@
                     button.addEventListener('click', () => setActiveTab(button.id));
                 });
                 
-                setActiveTab('ai-tab-button'); // Set initial active tab
+                setActiveTab('ai-tab-button');
             }
 
             // --- 6. Main Application Logic ---
@@ -314,14 +313,14 @@
                 console.log("Application starting...");
                 setupTabs();
 
-                // ADDED: Initialize Firebase
+                // MODIFIED: Correctly initialize Firebase with databaseURL
                 try {
-                    if (appConfig.firebaseConfig && Object.keys(appConfig.firebaseConfig).length > 0) {
+                    if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
                         firebase.initializeApp(appConfig.firebaseConfig);
                         db = firebase.database();
                         console.log("Firebase initialized successfully.");
                     } else {
-                        console.warn("Firebase config is missing.");
+                        console.warn("Firebase config is missing or does not contain a databaseURL.");
                     }
                 } catch (e) {
                     console.error("Firebase initialization failed:", e);
@@ -340,38 +339,30 @@
             // --- 7. Data Initialization for Each Exchange ---
             async function initExchangeData(exchange) {
                 const exchangeUpperCase = exchange.toUpperCase();
-                // Screener accordion elements
                 const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
                 const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
                 const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
-                // News accordion elements
                 const newsAccordionButton = document.getElementById(`${exchange}-news-accordion-button`);
                 const newsAccordionContent = document.getElementById(`${exchange}-news-accordion-content`);
                 const newsAccordionIcon = document.getElementById(`${exchange}-news-accordion-icon`);
-                // Container elements
                 const tableContainer = document.getElementById(`${exchange}-screener-data-container`);
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
                 const newsContainer = document.getElementById(`${exchange}-news-container`);
                 const summaryContainer = document.getElementById(`${exchange}-summary-container`);
-                // ADDED: Refresh button
                 const refreshButton = document.getElementById(`refresh-${exchange}-news`);
 
                 setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
                 setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
 
-                // Fetch screener data (lightweight call)
                 const screenerData = await fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
                 
-                // MODIFIED: Load news from Firebase first
                 const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, summaryContainer);
                 if (!loadedFromCache) {
-                    // If no cache, fetch fresh news
                     fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
                 }
 
-                // ADDED: Event listener for the refresh button
                 refreshButton.addEventListener('click', (e) => {
-                    e.stopPropagation(); // prevent accordion from toggling
+                    e.stopPropagation();
                     newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
                     summaryContainer.innerHTML = `<h3>${exchangeUpperCase} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
                     fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
@@ -389,7 +380,6 @@
             }
 
             // --- 9. Fetch Stock Screener Data ---
-            // MODIFIED: This function now only fetches screener data and returns it.
             async function fetchStockScreener(exchange, tableEl, cardEl) {
                 const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
                 [tableEl, cardEl].forEach(el => { if(el) el.innerHTML = loadingMsg });
@@ -400,7 +390,7 @@
                     return [];
                 }
 
-                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=100&apikey=${appConfig.fmpApiKey}`; // MODIFIED: Limit to 100 to improve performance
+                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=${exchange}&limit=100&apikey=${appConfig.fmpApiKey}`;
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`API request failed: ${response.status}`);
@@ -408,7 +398,7 @@
                     
                     renderStockTable(data, tableEl);
                     renderStockCards(data, cardEl, exchange);
-                    return data; // Return data for news fetching
+                    return data;
                 } catch (error) {
                     console.error(`Error fetching screener data for ${exchange}:`, error);
                     const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
@@ -448,12 +438,11 @@
                         } else {
                             console.warn(`Could not fetch news for ${symbol}: ${response.status}`);
                         }
-                        await delay(300); // Wait 300ms before the next call
+                        await delay(300);
                     }
 
                     let filteredNews = allNews.flat().filter(item => item && item.newsTitle && item.publishedDate && item.newsURL);
 
-                    // MODIFIED: Filter for the last 30 days
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -466,7 +455,6 @@
 
                     renderNewsCards(filteredNews, newsContainer);
                     await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
-                    // ADDED: Save the fresh news to Firebase
                     await saveNewsToFirebase(exchange, filteredNews);
 
                 } catch (error) {
@@ -479,7 +467,7 @@
                 }
             }
             
-            // --- ADDED: Firebase Functions ---
+            // --- 11. Firebase Functions ---
             async function saveNewsToFirebase(exchange, newsData) {
                 if (!db) {
                     console.warn("Firebase not initialized, cannot save news.");
@@ -516,17 +504,16 @@
                 }
             }
 
-            // --- 11. Summarize News with Gemini ---
-            // MODIFIED: Upgraded function to use a better model and provide more context.
+            // --- 12. Summarize News with Gemini ---
             async function summarizeNewsWithGemini(newsData, container, exchange) {
                 if (!appConfig.geminiApiKey) {
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-red-500">Gemini API Key is missing.</p>`;
                     return;
                 }
 
-                const newsToSummarize = newsData.slice(0, 10); // Use top 10 articles for a focused summary
+                const newsToSummarize = newsData.slice(0, 10);
 
-                if (newsToSummarize.length < 3) { // Need at least a few articles
+                if (newsToSummarize.length < 3) {
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Not enough recent news to summarize.</p>`;
                     return;
                 }
@@ -541,7 +528,6 @@
                     ${articlesText}
                 `;
 
-                // MODIFIED: Use a more capable model for this task
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${appConfig.geminiApiKey}`;
 
                 try {
@@ -568,7 +554,7 @@
             }
 
 
-            // --- 12. Rendering Functions ---
+            // --- 13. Rendering Functions ---
             const formatText = (text) => text || 'N/A';
             const formatMarketCap = (num) => {
                 if (!num) return 'N/A';
