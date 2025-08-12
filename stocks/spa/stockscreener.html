@@ -19,18 +19,32 @@
         .modal {
             display: none;
         }
+        /* Styles for accordion transition */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <!-- Main Application Content -->
-    <!-- This content will be visible after the API keys are provided -->
-    <div id="appContent" class="p-8 text-center">
-        <h1 class="text-4xl font-bold text-indigo-600">Welcome to the Magickal SPA</h1>
-        <p class="mt-4 text-lg text-gray-600">Your application is ready to go!</p>
-        <div class="mt-8 p-6 bg-white rounded-xl shadow-md max-w-2xl mx-auto text-left">
-            <h2 class="font-semibold text-xl mb-4">Loaded Configuration:</h2>
-            <pre id="config-display" class="bg-gray-50 p-4 rounded-lg text-sm overflow-x-auto"></pre>
+    <div id="appContent" class="p-4 md:p-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal SPA Dashboard</h1>
+        
+        <!-- Accordion for Stock Screener -->
+        <div id="stockScreenerAccordion" class="bg-white rounded-xl shadow-md max-w-4xl mx-auto">
+            <button id="accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
+                <span>Stock Screener: NASDAQ (Market Cap > $1B)</span>
+                <!-- Chevron Icon -->
+                <svg id="accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div id="accordion-content" class="accordion-content px-5 pb-5">
+                <div id="screener-data-container" class="mt-4 border-t pt-4">
+                    <p class="text-gray-500">Loading stock data...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -80,7 +94,6 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
-            // This object will hold all API keys and settings for the application.
             const appConfig = {
                 fmpApiKey: "",
                 geminiApiKey: "",
@@ -91,11 +104,13 @@
             };
 
             // --- 2. DOM Element Selection ---
-            // Get references to all necessary HTML elements to interact with them.
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
             const errorMessage = document.getElementById('api-key-error');
-            const configDisplay = document.getElementById('config-display');
+            const screenerContainer = document.getElementById('screener-data-container');
+            const accordionButton = document.getElementById('accordion-button');
+            const accordionContent = document.getElementById('accordion-content');
+            const accordionIcon = document.getElementById('accordion-icon');
 
             // Input Fields
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
@@ -106,33 +121,23 @@
             const firebaseConfigInput = document.getElementById('firebaseConfigInput');
 
             // --- 3. Initialization Logic ---
-            // This function runs on page load. It checks for saved keys in localStorage
-            // to avoid asking the user for them on every visit.
             function initialize() {
                 const savedKeys = localStorage.getItem('magickalApiKeys');
                 if (savedKeys) {
-                    console.log("Found saved API keys in localStorage.");
-                    // If keys exist, parse them and update the global config object.
                     const parsedKeys = JSON.parse(savedKeys);
                     Object.assign(appConfig, parsedKeys);
-                    
-                    // Hide the modal and start the main application logic.
                     hideModal();
                     startApp();
                 } else {
-                    console.log("No API keys found. Displaying modal.");
-                    // If no keys are found, show the modal to the user.
                     showModal();
                 }
             }
 
             // --- 4. Form Submission Handler ---
-            // This function handles the form submission, validates the input, and saves the keys.
             apiKeyForm.addEventListener('submit', (event) => {
-                event.preventDefault(); // Prevent the default form submission behavior.
-                errorMessage.textContent = ''; // Clear any previous error messages.
+                event.preventDefault();
+                errorMessage.textContent = '';
 
-                // Gather values from all input fields.
                 const formValues = {
                     geminiApiKey: geminiApiKeyInput.value.trim(),
                     googleClientId: googleClientIdInput.value.trim(),
@@ -142,76 +147,138 @@
                     firebaseConfigString: firebaseConfigInput.value.trim()
                 };
                 
-                // Validate that no field is empty.
                 if (Object.values(formValues).some(value => value === '')) {
-                    errorMessage.textContent = 'All fields are required. Please fill them all out.';
+                    errorMessage.textContent = 'All fields are required.';
                     return;
                 }
 
-                // Specifically validate the Firebase config to ensure it's a valid JSON object.
                 let parsedFirebaseConfig;
                 try {
-                    // This attempts to parse the string as JSON.
                     parsedFirebaseConfig = JSON.parse(formValues.firebaseConfigString);
                 } catch (error) {
                     errorMessage.textContent = 'The Firebase Web App Config is not a valid JSON object.';
-                    console.error("Firebase Config parsing error:", error);
                     return;
                 }
 
-                // Update the global config object with the validated values.
-                appConfig.geminiApiKey = formValues.geminiApiKey;
-                appConfig.googleClientId = formValues.googleClientId;
-                appConfig.searchApiKey = formValues.searchApiKey;
-                appConfig.searchEngineId = formValues.searchEngineId;
-                appConfig.fmpApiKey = formValues.fmpApiKey;
-                appConfig.firebaseConfig = parsedFirebaseConfig;
+                Object.assign(appConfig, {
+                    geminiApiKey: formValues.geminiApiKey,
+                    googleClientId: formValues.googleClientId,
+                    searchApiKey: formValues.searchApiKey,
+                    searchEngineId: formValues.searchEngineId,
+                    fmpApiKey: formValues.fmpApiKey,
+                    firebaseConfig: parsedFirebaseConfig
+                });
 
-                // Save the entire config object to localStorage for future visits.
                 try {
                     localStorage.setItem('magickalApiKeys', JSON.stringify(appConfig));
-                    console.log("API keys saved successfully!");
-
-                    // Hide the modal and proceed to the main application.
                     hideModal();
                     startApp();
                 } catch (error) {
-                    errorMessage.textContent = 'Could not save keys to local storage. Please ensure it is enabled.';
-                    console.error("Error saving to localStorage:", error);
+                    errorMessage.textContent = 'Could not save keys to local storage.';
                 }
             });
 
             // --- 5. Modal Utility Functions ---
-            // Helper function to show the modal.
-            function showModal() {
-                apiKeyModal.style.display = 'flex';
-            }
-
-            // Helper function to hide the modal.
-            function hideModal() {
-                apiKeyModal.style.display = 'none';
-            }
+            function showModal() { apiKeyModal.style.display = 'flex'; }
+            function hideModal() { apiKeyModal.style.display = 'none'; }
             
             // --- 6. Main Application Logic ---
-            // This is the entry point for your application's main functionality
-            // once the API keys are successfully loaded.
             function startApp() {
-                console.log("Application starting with the following configuration:");
-                console.log(appConfig);
-                
-                // Display the loaded config in the UI (excluding sensitive keys for display).
-                const displayConfig = { ...appConfig };
-                displayConfig.geminiApiKey = '********';
-                displayConfig.googleClientId = '********';
-                displayConfig.searchApiKey = '********';
-                displayConfig.fmpApiKey = '********';
-                configDisplay.textContent = JSON.stringify(displayConfig, null, 2);
-
-                // TODO: Add your main SPA initialization code here.
-                // For example: initializeFirebase(appConfig.firebaseConfig), loadUserData(), etc.
+                console.log("Application starting with loaded configuration.");
+                setupAccordion();
+                fetchStockScreener();
             }
 
-            // --- Run the initialization function when the page loads ---
+            // --- 7. Accordion Setup ---
+            function setupAccordion() {
+                accordionButton.addEventListener('click', () => {
+                    const isOpen = accordionContent.style.maxHeight;
+                    if (isOpen && isOpen !== "0px") {
+                        accordionContent.style.maxHeight = "0px";
+                        accordionIcon.style.transform = "rotate(0deg)";
+                    } else {
+                        // Set max-height to its scroll height to animate open
+                        accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+                        accordionIcon.style.transform = "rotate(180deg)";
+                    }
+                });
+            }
+
+            // --- 8. Fetch Stock Screener Data ---
+            async function fetchStockScreener() {
+                // Show loading state
+                screenerContainer.innerHTML = '<p class="text-gray-500">Loading stock data...</p>';
+                const apiKey = appConfig.fmpApiKey;
+                if (!apiKey) {
+                    screenerContainer.innerHTML = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
+                    return;
+                }
+
+                const url = `https://financialmodelingprep.com/api/v3/stock-screener?marketCapMoreThan=1000000000&exchange=NASDAQ&limit=1000&apikey=${apiKey}`;
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    renderStockData(data);
+                } catch (error) {
+                    console.error("Error fetching stock data:", error);
+                    screenerContainer.innerHTML = `<p class="text-red-500">Error fetching data. Check the console and ensure your FMP API key is correct.</p>`;
+                }
+            }
+
+            // --- 9. Render Stock Data ---
+            function renderStockData(data) {
+                if (!data || data.length === 0) {
+                    screenerContainer.innerHTML = '<p class="text-gray-500">No stock data found for the specified criteria.</p>';
+                    return;
+                }
+
+                // Create a table to display the data
+                let tableHtml = `
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Name</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                `;
+
+                // Format number to be more readable (e.g., 1.23B)
+                const formatMarketCap = (num) => {
+                    if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+                    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+                    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+                    return num.toLocaleString();
+                };
+
+                // Populate table rows
+                data.forEach(stock => {
+                    tableHtml += `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${stock.symbol}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stock.companyName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatMarketCap(stock.marketCap)}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                screenerContainer.innerHTML = tableHtml;
+            }
+
+            // --- Run the initialization function ---
             initialize();
         });
     </script>
