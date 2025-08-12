@@ -68,9 +68,6 @@
                     <div>
                         <div id="nyse-summary-container" class="bg-white p-6 rounded-xl shadow-md"></div>
                     </div>
-                    <div>
-                        <div id="amex-summary-container" class="bg-white p-6 rounded-xl shadow-md"></div>
-                    </div>
                 </div>
             </div>
 
@@ -96,15 +93,6 @@
                             <div id="nyse-screener-data-container" class="mt-4 border-t pt-4"></div>
                         </div>
                     </div>
-                    <div id="amexScreenerAccordion" class="bg-white rounded-xl shadow-md">
-                        <button id="amex-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
-                            <span>Stock Screener Table: AMEX (Market Cap > $1B)</span>
-                            <svg id="amex-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div id="amex-accordion-content" class="accordion-content px-5 pb-5">
-                            <div id="amex-screener-data-container" class="mt-4 border-t pt-4"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Card View Section -->
@@ -112,7 +100,6 @@
                     <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
                     <div id="nasdaq-card-view" class="mb-8"></div>
                     <div id="nyse-card-view" class="mb-8"></div>
-                    <div id="amex-card-view" class="mb-8"></div>
                 </div>
             </div>
 
@@ -143,19 +130,6 @@
                         </button>
                         <div id="nyse-news-accordion-content" class="accordion-content px-5 pb-5">
                             <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
-                        </div>
-                    </div>
-                    <!-- AMEX News Accordion -->
-                    <div class="bg-white rounded-xl shadow-md">
-                        <button id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none">
-                            <span>AMEX Price Target News</span>
-                            <div class="flex items-center">
-                                <button id="refresh-amex-news" class="text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md px-3 py-1 mr-4">Refresh News</button>
-                                <svg id="amex-news-accordion-icon" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                        </button>
-                        <div id="amex-news-accordion-content" class="accordion-content px-5 pb-5">
-                            <div id="amex-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
                         </div>
                     </div>
                 </div>
@@ -242,7 +216,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 2.6
+        // Version 2.7
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -254,8 +228,7 @@
                 firebaseConfig: {},
                 currentSummaries: {
                     nasdaq: null,
-                    nyse: null,
-                    amex: null
+                    nyse: null
                 }
             };
             
@@ -370,7 +343,7 @@
                     alert("Could not initialize Firebase. Please check your configuration.");
                 }
 
-                const exchanges = ['nasdaq', 'nyse', 'amex'];
+                const exchanges = ['nasdaq', 'nyse'];
                 for (const exchange of exchanges) {
                     console.log(`Initializing components for ${exchange.toUpperCase()}...`);
                     await initExchangeData(exchange);
@@ -471,7 +444,6 @@
                 for (const [index, symbol] of symbols.entries()) {
                     try {
                         const url = `https://financialmodelingprep.com/stable/price-target-news?symbol=${symbol}&page=0&limit=10&apikey=${appConfig.fmpApiKey}`;
-                        // MODIFIED: Display the API call on screen
                         newsContainer.innerHTML = `<p class="text-gray-500 p-4">Fetching news for ${symbol} (${index + 1} of ${symbols.length})...<br><code class="text-xs text-indigo-500">${url}</code></p>`;
                         
                         const response = await fetch(url);
