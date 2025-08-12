@@ -203,11 +203,11 @@
     </div>
 
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 1.9
+        // Version 2.0
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -313,7 +313,7 @@
                 console.log("Application starting...");
                 setupTabs();
 
-                // MODIFIED: Correctly initialize Firebase with databaseURL
+                // Correctly initialize Firebase with databaseURL
                 try {
                     if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
                         firebase.initializeApp(appConfig.firebaseConfig);
