@@ -440,7 +440,7 @@
                 }
 
                 const prompt = `Act as a financial analyst. Provide a brief, 2-3 sentence summary of the key themes and overall sentiment from the following news headlines for the ${exchange} exchange. Ignore any irrelevant headlines.\n\nHEADLINES:\n${newsTitles}`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent?key=${appConfig.geminiApiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
 
                 try {
                     const response = await fetch(url, {
