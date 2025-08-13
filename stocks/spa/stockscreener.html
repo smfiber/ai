@@ -261,7 +261,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 3.0
+        // Version 3.1
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -598,13 +598,14 @@
                     return;
                 }
 
-                const articlesText = newsToSummarize.map(n => `- ${n.newsTitle} (Source: ${n.newsURL})`).join('\n');
+                const articlesText = newsToSummarize.map(n => JSON.stringify(n)).join('\n');
                 const prompt = `
-                    Act as an expert financial analyst. I will provide you with a list of recent news headlines and their URLs for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
-                    Based on the content likely found at these URLs, provide a concise 3-4 sentence summary of the key themes, overall market sentiment (e.g., bullish, bearish, mixed), and any significant price target updates.
+                    Act as an expert financial analyst. I will provide you with a list of recent news articles as JSON objects for the ${exchange.toUpperCase()} stock exchange from the last 30 days.
+                    Each JSON object contains all available data for a single news item.
+                    Based on this data, provide a concise 3-4 sentence summary of the key themes, overall market sentiment (e.g., bullish, bearish, mixed), and any significant price target updates.
                     Synthesize the information into a professional, easy-to-read analysis.
 
-                    NEWS ARTICLES:
+                    NEWS ARTICLES (JSON format):
                     ${articlesText}
                 `;
 
@@ -658,12 +659,12 @@
                     return;
                 }
 
-                const articlesText = newsToAnalyze.map(n => `- Headline: "${n.newsTitle}" for symbol ${n.symbol}. Analyst: ${n.analystName} from ${n.analystCompany}. Price Target: ${n.priceTarget ? '$'+n.priceTarget.toFixed(2) : 'N/A'}.`).join('\n');
+                const articlesText = newsToAnalyze.map(n => JSON.stringify(n)).join('\n');
                 
                 const prompt = `
                     Act as a senior financial analyst providing a detailed market intelligence report for the ${exchange.toUpperCase()} exchange.
-                    You have been given the following key price target updates from the last 30 days.
-                    Instead of just summarizing, perform a deep analysis. Extrapolate from the headlines, analyst actions, and your broad knowledge of market dynamics and these specific companies.
+                    You have been given a list of recent news articles as JSON objects from the last 30 days. Each JSON object contains all available data for that article.
+                    Instead of just summarizing, perform a deep analysis. Use all the fields in the JSON objects (like priceWhenPosted, priceTarget, analystCompany, etc.) and your broad knowledge of market dynamics to inform your report.
 
                     Your analysis must be structured with the following sections:
                     1.  **Executive Summary:** A 2-3 sentence high-level overview of the current situation.
@@ -673,7 +674,7 @@
 
                     Format your response using Markdown for clear headings.
 
-                    NEWS DATA:
+                    NEWS DATA (JSON format):
                     ${articlesText}
                 `;
 
