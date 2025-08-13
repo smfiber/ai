@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.0.3"; 
+export const APP_VERSION = "13.0.2"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -17,10 +17,7 @@ export const state = {
     driveTokenClient: null,
     driveFolderId: null,
     portfolioCache: [],
-    calendarEvents: { earnings: [], ipos: [] },
-    calendarCurrentDate: new Date(),
     availableIndustries: [],
-    charts: {}, // To hold chart instances
     sessionLog: [] // To hold prompts and responses for the current session
 };
 
@@ -63,12 +60,10 @@ export const CONSTANTS = {
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
-    DB_COLLECTION_CALENDAR: 'calendar_data',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
     DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
-    DB_COLLECTION_OPPORTUNITIES: 'daily_opportunities', // NEW
 };
 
 export const SECTOR_ICONS = {
@@ -105,52 +100,6 @@ export const FINANCIAL_NEWS_SOURCES = [
     'theguardian.com', 'bbc.com', 'financialpost.com', 'scmp.com',
     'spglobal.com', 'nytimes.com', 'gurufocus.com', 'streetinsider.com', 'moodys.com'
 ];
-
-export const STOCK_RATING_PROMPT = `
-Analyze the provided raw financial data for {companyName} (ticker: {tickerSymbol}).
-
-**Output Format:**
-Your response must have two parts.
-1.  First, provide a clean JSON object with no text before or after it, enclosed in \`\`\`json ... \`\`\`. This object must contain two keys:
-    * "weightedAverageScore": A number from 1-100.
-    * "recommendation": A string, which must be one of "Buy", "Hold", or "Sell".
-2.  Second, after the JSON block, provide a detailed analysis and justification in professional markdown format. **You MUST use markdown for all headings (e.g., #, ##), bold text for labels (e.g., **Liquidity...**), and bullet points (-) for lists. Follow the exact structure below.**
-
-**Analysis requirements for the markdown section:**
-
-# Investment Rating: {companyName} ({tickerSymbol})
-
-## 1. Financial Health
-- **Liquidity (Current Ratio):** [Value] - Brief explanation of what this means for the company.
-- **Solvency (Debt-to-Equity):** [Value] - Brief explanation of what this means for the company.
-- **Cash Position:** [Value] - Brief explanation of the company's cash reserves.
-
-## 2. Profitability & Growth
-- **Revenue Growth:** [Value/Trend] - Brief analysis of revenue trends.
-- **Gross Profit Margins:** [Value] - Brief analysis of margin stability and efficiency.
-- **Net Income Trajectory:** [Value/Trend] - Brief analysis of net income trends.
-
-## 3. Cash Flow
-- **Operating Cash Flow (OCF):** [Value/Trend] - Brief analysis of cash generation from core business.
-- **Free Cash Flow (FCF):** [Value/Trend] - Brief analysis of cash left after capital expenditures.
-
-## 4. Valuation & Market Sentiment
-- **Valuation Multiples (P/E, P/S):** [Values] - Brief comparison to industry or historical averages.
-- **Analyst Consensus:** [Summary] - Summarize the number of buy/hold/sell ratings.
-
-## 5. Rating Justification
-Provide a bulleted list of the factors that determined the 1-100 rating.
-- **Factor 1:** [Point Value] - Justification.
-- **Factor 2:** [Point Value] - Justification.
-- **Factor 3:** [Point Value] - Justification.
-
-## 6. Broker Recommendation: [Buy/Hold/Sell]
-- **Data Analyst Perspective:** A concise summary based purely on the quantitative data points.
-- **Professional Broker Perspective:** A summary that incorporates market sentiment and qualitative factors.
-
-JSON Data:
-{jsonData}
-`.trim();
 
 export const FINANCIAL_ANALYSIS_PROMPT = `
 Role: You are a financial analyst AI who excels at explaining complex topics to everyday investors. Your purpose is to generate a rigorous, data-driven financial analysis that is also educational, objective, and easy to understand. Use relatable analogies to clarify financial concepts (e.g., comparing debt to a mortgage). Your analysis must be derived exclusively from the provided JSON data from the Financial Modeling Prep (FMP) API.
@@ -767,5 +716,5 @@ export const creativePromptMap = {
     'Energy': { prompt: ENERGY_SECTOR_PROMPT, label: 'Playbook' },
     'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
     'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
-    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
+    'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook'}
 };
