@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "12.9.5"; 
+export const APP_VERSION = "13.0.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -17,8 +17,6 @@ export const state = {
     driveTokenClient: null,
     driveFolderId: null,
     portfolioCache: [],
-    calendarEvents: { earnings: [], ipos: [] },
-    calendarCurrentDate: new Date(),
     availableIndustries: [],
     charts: {}, // To hold chart instances
     sessionLog: [] // To hold prompts and responses for the current session
@@ -63,7 +61,6 @@ export const CONSTANTS = {
     // Database Collections
     DB_COLLECTION_PORTFOLIO: 'portfolio_stocks',
     DB_COLLECTION_SECTOR_ANALYSIS: 'sector_analysis_runs',
-    DB_COLLECTION_CALENDAR: 'calendar_data',
     DB_COLLECTION_FMP_CACHE: 'fmp_cached_data',
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
     DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
