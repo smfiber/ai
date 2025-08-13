@@ -1941,7 +1941,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
     
-    contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
+    contentContainer.innerHTML = ''; // Clear previous content
     statusContainer.classList.add('hidden');
 
     try {
@@ -1976,7 +1976,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
-        if (forceNew) {
+        // Only close the main loading modal if it was opened for a new generation.
+        if (forceNew || (await getSavedReports(symbol, reportType)).length === 0) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
     }
