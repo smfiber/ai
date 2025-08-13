@@ -46,6 +46,9 @@
                     <button id="ai-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         AI Analysis
                     </button>
+                    <button id="deep-dive-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Deep Dive Analysis
+                    </button>
                     <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Stock Screener
                     </button>
@@ -70,6 +73,22 @@
                     </div>
                     <div>
                         <div id="amex-summary-container" class="bg-white p-6 rounded-xl shadow-md"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Dive Analysis Tab -->
+            <div id="deep-dive-tab-content" class="tab-content">
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">In-Depth AI News Analysis</h2>
+                        <div id="nasdaq-deep-dive-container" class="bg-white p-6 rounded-xl shadow-md"></div>
+                    </div>
+                    <div>
+                        <div id="nyse-deep-dive-container" class="bg-white p-6 rounded-xl shadow-md"></div>
+                    </div>
+                    <div>
+                        <div id="amex-deep-dive-container" class="bg-white p-6 rounded-xl shadow-md"></div>
                     </div>
                 </div>
             </div>
@@ -242,7 +261,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 2.9
+        // Version 3.0
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -253,6 +272,11 @@
                 googleClientId: "",
                 firebaseConfig: {},
                 currentSummaries: {
+                    nasdaq: null,
+                    nyse: null,
+                    amex: null
+                },
+                deepDiveSummaries: {
                     nasdaq: null,
                     nyse: null,
                     amex: null
@@ -327,6 +351,7 @@
             function setupTabs() {
                 const tabMap = {
                     'ai-tab-button': 'ai-tab-content',
+                    'deep-dive-tab-button': 'deep-dive-tab-content',
                     'screener-tab-button': 'screener-tab-content',
                     'news-tab-button': 'news-tab-content'
                 };
@@ -392,6 +417,7 @@
                 const cardContainer = document.getElementById(`${exchange}-card-view`);
                 const newsContainer = document.getElementById(`${exchange}-news-container`);
                 const summaryContainer = document.getElementById(`${exchange}-summary-container`);
+                const deepDiveContainer = document.getElementById(`${exchange}-deep-dive-container`);
                 const refreshButton = document.getElementById(`refresh-${exchange}-news`);
 
                 setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
@@ -399,16 +425,17 @@
 
                 const screenerData = await fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
                 
-                const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, summaryContainer);
+                const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, summaryContainer, deepDiveContainer);
                 if (!loadedFromCache) {
-                    await fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
+                    await fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, deepDiveContainer, exchange);
                 }
 
                 refreshButton.addEventListener('click', (e) => {
                     e.stopPropagation();
                     newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
                     summaryContainer.innerHTML = `<h3>${exchangeUpperCase} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
-                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange);
+                    deepDiveContainer.innerHTML = `<h3>${exchangeUpperCase} Deep Dive Analysis</h3><p class="text-gray-500">Loading analysis...</p>`;
+                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, deepDiveContainer, exchange);
                 });
             }
 
@@ -451,9 +478,12 @@
             }
             
             // --- 10. Fetch and Render Price Target News ---
-            async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, exchange) {
+            async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, summaryContainer, deepDiveContainer, exchange) {
                 if (summaryContainer) {
                     summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-gray-500">Loading summary...</p>`;
+                }
+                 if (deepDiveContainer) {
+                    deepDiveContainer.innerHTML = `<h3>${exchange.toUpperCase()} Deep Dive Analysis</h3><p class="text-gray-500">Loading analysis...</p>`;
                 }
                 
                 const symbols = screenerData.map(stock => stock.symbol);
@@ -463,6 +493,9 @@
                     newsContainer.innerHTML = noDataMsg;
                     if (summaryContainer) {
                         summaryContainer.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3>${noDataMsg}`;
+                    }
+                    if (deepDiveContainer) {
+                        deepDiveContainer.innerHTML = `<h3>${exchange.toUpperCase()} Deep Dive Analysis</h3>${noDataMsg}`;
                     }
                     return;
                 }
@@ -509,6 +542,7 @@
 
                 renderNewsCards(filteredNews, newsContainer);
                 await summarizeNewsWithGemini(filteredNews, summaryContainer, exchange);
+                await generateDeepDiveAnalysis(filteredNews, deepDiveContainer, exchange);
                 await saveNewsToFirebase(exchange, filteredNews);
             }
             
@@ -526,7 +560,7 @@
                 }
             }
 
-            async function loadNewsFromFirebase(exchange, newsContainer, summaryContainer) {
+            async function loadNewsFromFirebase(exchange, newsContainer, summaryContainer, deepDiveContainer) {
                 if (!db) {
                     console.warn("Firebase not initialized, cannot load news.");
                     return false;
@@ -538,6 +572,7 @@
                         console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
                         renderNewsCards(newsData, newsContainer);
                         await summarizeNewsWithGemini(newsData, summaryContainer, exchange);
+                        await generateDeepDiveAnalysis(newsData, deepDiveContainer, exchange);
                         return true;
                     } else {
                         console.log(`No cached news found for ${exchange.toUpperCase()} in Firebase.`);
@@ -606,6 +641,75 @@
                 } catch (error) {
                     console.error(`Error summarizing news for ${exchange}:`, error);
                     container.innerHTML = `<h3>${exchange.toUpperCase()} News Summary</h3><p class="text-red-500">Could not generate summary.</p>`;
+                }
+            }
+
+            // --- NEW: Deep Dive Analysis Function ---
+            async function generateDeepDiveAnalysis(newsData, container, exchange) {
+                if (!appConfig.geminiApiKey) {
+                    container.innerHTML = `<h3>${exchange.toUpperCase()} Deep Dive Analysis</h3><p class="text-red-500">Gemini API Key is missing.</p>`;
+                    return;
+                }
+
+                const newsToAnalyze = newsData.slice(0, 5); // Use fewer articles for a more focused deep dive
+
+                if (newsToAnalyze.length < 2) {
+                    container.innerHTML = `<h3>${exchange.toUpperCase()} Deep Dive Analysis</h3><p class="text-gray-500">Not enough recent news for a deep dive analysis.</p>`;
+                    return;
+                }
+
+                const articlesText = newsToAnalyze.map(n => `- Headline: "${n.newsTitle}" for symbol ${n.symbol}. Analyst: ${n.analystName} from ${n.analystCompany}. Price Target: ${n.priceTarget ? '$'+n.priceTarget.toFixed(2) : 'N/A'}.`).join('\n');
+                
+                const prompt = `
+                    Act as a senior financial analyst providing a detailed market intelligence report for the ${exchange.toUpperCase()} exchange.
+                    You have been given the following key price target updates from the last 30 days.
+                    Instead of just summarizing, perform a deep analysis. Extrapolate from the headlines, analyst actions, and your broad knowledge of market dynamics and these specific companies.
+
+                    Your analysis must be structured with the following sections:
+                    1.  **Executive Summary:** A 2-3 sentence high-level overview of the current situation.
+                    2.  **Key Themes & Catalysts:** Identify 2-3 dominant themes emerging from the news. What is driving analyst behavior? (e.g., Sector rotation, specific company performance, macroeconomic factors).
+                    3.  **Potential Market Impact:** Discuss the potential short-term and long-term impact on the involved stocks and the broader sector. Are these isolated events or indicative of a larger trend?
+                    4.  **Contrarian Viewpoints:** Briefly mention any potential risks or alternative interpretations of this news. What could the analysts be wrong about?
+
+                    Format your response using Markdown for clear headings.
+
+                    NEWS DATA:
+                    ${articlesText}
+                `;
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${appConfig.geminiApiKey}`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error("Gemini API Error (Deep Dive):", errorBody);
+                        throw new Error(`Gemini API request failed: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    const analysis = result.candidates[0].content.parts[0].text;
+                    
+                    appConfig.deepDiveSummaries[exchange] = analysis;
+                    // Simple conversion from Markdown to HTML
+                    let formattedAnalysis = analysis
+                        .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>') // Bold
+                        .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')       // Italic
+                        .replace(/### (.*)/g, '<h4 class="text-md font-semibold mt-4 mb-2">$1</h4>') // H3 -> H4
+                        .replace(/## (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')   // H2 -> H3
+                        .replace(/\n/g, '<br>');
+
+                    container.innerHTML = `
+                        <h3 class="text-lg font-bold text-indigo-600 mb-2">${exchange.toUpperCase()} Deep Dive Analysis</h3>
+                        <div class="text-gray-700 mt-2 leading-relaxed">${formattedAnalysis}</div>
+                    `;
+
+                } catch (error) {
+                    console.error(`Error generating deep dive for ${exchange}:`, error);
+                    container.innerHTML = `<h3>${exchange.toUpperCase()} Deep Dive Analysis</h3><p class="text-red-500">Could not generate analysis.</p>`;
                 }
             }
             
