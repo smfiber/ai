@@ -1,4 +1,4 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, STOCK_RATING_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -11,8 +11,7 @@ const promptMap = {
     'DividendSafety': DIVIDEND_SAFETY_PROMPT,
     'GrowthOutlook': GROWTH_OUTLOOK_PROMPT,
     'RiskAssessment': RISK_ASSESSMENT_PROMPT,
-    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT,
-    'StockRating': STOCK_RATING_PROMPT
+    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT
 };
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -478,113 +477,6 @@ async function handleResearchSubmit(e) {
     }
 }
 
-// --- CHARTING FUNCTIONS ---
-
-function destroyCharts() {
-    Object.values(state.charts).forEach(chart => {
-        if (chart instanceof Chart) {
-            chart.destroy();
-        }
-    });
-    state.charts = {};
-}
-
-function createChartContainer(id, title, description) {
-    const container = document.createElement('div');
-    container.className = 'bg-white p-4 rounded-lg shadow border';
-    container.innerHTML = `
-        <h3 class="text-lg font-semibold text-gray-800">${title}</h3>
-        <p class="text-xs text-gray-500 mb-2">${description}</p>
-        <canvas id="${id}"></canvas>
-    `;
-    return container;
-}
-
-function renderStockPriceChart(fmpData) {
-    const chartData = get(fmpData, 'stock_chart_light.historical', []);
-    if (chartData.length === 0) return;
-
-    const reversedData = [...chartData].reverse();
-    const labels = reversedData.map(d => d.date);
-    const prices = reversedData.map(d => d.price);
-    const volumes = reversedData.map(d => d.volume);
-
-    const container = createChartContainer(
-        'priceVolumeChart',
-        'Historical Price & Volume',
-        'Tracks the daily closing price and trading volume over time.'
-    );
-    document.getElementById('charts-container').appendChild(container);
-
-    const ctx = document.getElementById('priceVolumeChart').getContext('2d');
-    state.charts.priceVolume = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    type: 'line',
-                    label: 'Price',
-                    data: prices,
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    yAxisID: 'yPrice',
-                    tension: 0.1,
-                    fill: true,
-                },
-                {
-                    type: 'bar',
-                    label: 'Volume',
-                    data: volumes,
-                    backgroundColor: 'rgba(107, 114, 128, 0.3)',
-                    borderColor: 'rgba(107, 114, 128, 0.5)',
-                    yAxisID: 'yVolume',
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'month'
-                    },
-                    ticks: {
-                        autoSkip: true,
-                        maxTicksLimit: 12
-                    }
-                },
-                yPrice: {
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'Price (USD)'
-                    },
-                    ticks: {
-                        callback: value => `$${value.toFixed(2)}`
-                    }
-                },
-                yVolume: {
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Volume'
-                    },
-                    ticks: {
-                        callback: value => formatLargeNumber(value, 1)
-                    },
-                    grid: {
-                        drawOnChartArea: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-
 async function openRawDataViewer(ticker) {
     const modalId = 'rawDataViewerModal';
     openModal(modalId);
@@ -592,19 +484,14 @@ async function openRawDataViewer(ticker) {
     const rawDataContainer = document.getElementById('raw-data-accordion-container');
     const aiButtonsContainer = document.getElementById('ai-buttons-container');
     const aiArticleContainer = document.getElementById('ai-article-container');
-    const investmentRatingContainer = document.getElementById('investment-rating-container');
     const profileDisplayContainer = document.getElementById('company-profile-display-container');
-    const chartsContainer = document.getElementById('charts-container');
     const titleEl = document.getElementById('raw-data-viewer-modal-title');
     
     titleEl.textContent = `Analyzing ${ticker}...`;
     rawDataContainer.innerHTML = '<div class="loader mx-auto"></div>';
     aiButtonsContainer.innerHTML = '';
     aiArticleContainer.innerHTML = '';
-    investmentRatingContainer.innerHTML = '';
     profileDisplayContainer.innerHTML = '';
-    chartsContainer.innerHTML = '';
-    destroyCharts();
 
     document.querySelectorAll('#rawDataViewerModal .tab-content').forEach(c => c.classList.add('hidden'));
     document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
@@ -618,9 +505,6 @@ async function openRawDataViewer(ticker) {
         }
 
         titleEl.textContent = `Analysis for ${ticker}`;
-        
-        // Render Chart Tab
-        renderStockPriceChart(fmpData);
 
         // Build nested accordions for raw data
         let accordionHtml = '';
@@ -681,9 +565,6 @@ async function openRawDataViewer(ticker) {
         
         profileHtml += `</div></div></div>`;
         profileDisplayContainer.innerHTML = profileHtml;
-
-        // Check for saved investment rating report
-        await handleAnalysisRequest(ticker, 'StockRating', STOCK_RATING_PROMPT);
 
     } catch (error) {
         console.error('Error opening raw data viewer:', error);
@@ -1446,14 +1327,6 @@ export function setupEventListeners() {
             document.querySelectorAll('#rawDataViewerModal .tab-button').forEach(b => b.classList.remove('active'));
             document.getElementById(`${tabId}-tab`).classList.remove('hidden');
             target.classList.add('active');
-            
-            if (tabId === 'charts') {
-                Object.values(state.charts).forEach(chart => {
-                    if (chart && typeof chart.resize === 'function') {
-                        chart.resize();
-                    }
-                });
-            }
             return;
         }
         
@@ -1465,12 +1338,11 @@ export function setupEventListeners() {
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
-        if (target.matches('.ai-analysis-button') || target.matches('.generate-rating-button')) {
+        if (target.matches('.ai-analysis-button')) {
             const reportType = target.dataset.reportType;
             const promptTemplate = promptMap[reportType];
             if (promptTemplate) {
-                const forceNew = target.matches('.generate-rating-button');
-                handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew);
+                handleAnalysisRequest(symbol, reportType, promptTemplate);
             }
         }
     });
@@ -2066,14 +1938,11 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
 // --- AI ANALYSIS REPORT GENERATORS ---
 
 async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew = false) {
-    const isRating = reportType === 'StockRating';
-    const contentContainer = document.getElementById(isRating ? 'investment-rating-container' : 'ai-article-container');
-    const statusContainer = document.getElementById(isRating ? 'report-status-container-rating' : 'report-status-container-ai');
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
     
     contentContainer.innerHTML = '<div class="loader mx-auto"></div>';
     statusContainer.classList.add('hidden');
-
-    let newReportContent = null;
 
     try {
         const savedReports = await getSavedReports(symbol, reportType);
@@ -2085,32 +1954,29 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             return; 
         }
 
-        if (forceNew || (savedReports.length === 0 && !isRating)) {
-            openModal(CONSTANTS.MODAL_LOADING);
-            const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
-            
-            const data = await getFmpStockData(symbol);
-            if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
-            
-            const companyName = get(data, 'company_profile.0.companyName', 'the company');
-            const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
+        openModal(CONSTANTS.MODAL_LOADING);
+        const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+        
+        const data = await getFmpStockData(symbol);
+        if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
+        
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
 
-            const prompt = promptTemplate
-                .replace(/{companyName}/g, companyName)
-                .replace(/{tickerSymbol}/g, tickerSymbol)
-                .replace('{jsonData}', JSON.stringify(data, null, 2));
+        const prompt = promptTemplate
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, tickerSymbol)
+            .replace('{jsonData}', JSON.stringify(data, null, 2));
 
-            newReportContent = await generatePolishedArticle(prompt, loadingMessage);
-            displayReport(contentContainer, newReportContent);
-            updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
-        } else {
-            contentContainer.innerHTML = `<div class="text-center p-8"><button data-symbol="${symbol}" data-report-type="${reportType}" class="generate-rating-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg">Generate Investment Rating</button></div>`;
-        }
+        const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
+        displayReport(contentContainer, newReportContent);
+        updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
+
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
         contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
-        if (forceNew || (newReportContent && !isRating)) {
+        if (forceNew) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
     }
@@ -2124,20 +1990,12 @@ async function handleSaveReportToDb() {
 
     let reportType, contentContainer;
 
-    if (activeTab === 'investment-rating') {
-        reportType = 'StockRating';
-        contentContainer = document.getElementById('investment-rating-container');
-    } else if (activeTab === 'ai-analysis') {
-        // This part is tricky as we don't have a single "active" report type.
-        // We will assume we're saving the content currently visible in ai-article-container.
-        // A better approach might be to store the last loaded/generated reportType in a state variable.
-        // For now, let's disable saving from the generic AI tab if a specific report hasn't been run.
+    if (activeTab === 'ai-analysis') {
         const currentContent = document.getElementById('ai-article-container').innerHTML;
         if (!currentContent || currentContent.includes('loader')) {
             displayMessageInModal("Please generate an analysis before saving.", "warning");
             return;
         }
-        // We need to know which report this is. We'll add this to the status container's dataset.
         const statusContainer = document.getElementById('report-status-container-ai');
         reportType = statusContainer.dataset.activeReportType;
         contentContainer = document.getElementById('ai-article-container');
@@ -2163,11 +2021,10 @@ async function handleSaveReportToDb() {
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
         
-        // Refresh the status to show the new saved version
         const savedReports = await getSavedReports(symbol, reportType);
         const latestReport = savedReports[0];
-        const promptTemplate = promptMap[reportType]; // We'll need to store prompts globally
-        updateReportStatus(document.getElementById(activeTab === 'investment-rating' ? 'report-status-container-rating' : 'report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptTemplate });
+        const promptTemplate = promptMap[reportType];
+        updateReportStatus(document.getElementById('report-status-container-ai'), savedReports, latestReport.id, { symbol, reportType, promptTemplate });
 
     } catch (error) {
         console.error("Error saving report to DB:", error);
@@ -2253,7 +2110,7 @@ async function handleSaveToDrive(modalId) {
     let contentToSave = '';
     let fileName = '';
 
-    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container, #investment-rating-container');
+    const contentContainer = modal.querySelector('#custom-analysis-content, #industry-analysis-content, #view-fmp-data-content, #ai-article-container');
 
     if (!contentContainer || !contentContainer.innerHTML.trim()) {
         displayMessageInModal('There is no content to save.', 'warning');
