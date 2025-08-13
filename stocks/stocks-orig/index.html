@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -350,18 +348,11 @@
                 <nav id="analysis-tabs" class="flex -mb-px" aria-label="Tabs">
                     <button class="tab-button" data-tab="company-profile">Company Profile</button>
                     <button class="tab-button" data-tab="raw-data">Raw Data</button>
-                    <button class="tab-button" data-tab="charts">Charts</button>
                     <button class="tab-button" data-tab="ai-analysis">AI Analysis</button>
-                    <button class="tab-button" data-tab="investment-rating">Investment Rating</button>
                 </nav>
             </div>
 
             <div class="flex-grow overflow-y-auto">
-                <div id="investment-rating-tab" class="tab-content hidden p-6">
-                    <div id="report-status-container-rating" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
-                    <div id="investment-rating-container" class="prose max-w-none"></div>
-                </div>
-
                 <div id="ai-analysis-tab" class="tab-content p-6">
                     <div id="ai-buttons-container" class="border-b pb-4 mb-4 flex flex-wrap gap-2 justify-center"></div>
                     <div id="report-status-container-ai" class="hidden p-3 mb-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-4"></div>
@@ -370,10 +361,6 @@
 
                 <div id="company-profile-tab" class="tab-content hidden p-6">
                     <div id="company-profile-display-container"></div>
-                </div>
-
-                <div id="charts-tab" class="tab-content hidden p-6 bg-gray-50">
-                    <div id="charts-container" class="h-[60vh]"></div>
                 </div>
 
                 <div id="raw-data-tab" class="tab-content hidden p-6 bg-gray-50">
