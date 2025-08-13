@@ -220,8 +220,8 @@
     <!-- CRUD Modal for Summaries -->
     <div id="summaryCrudModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="crudModalOverlay"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-3xl m-4 overflow-y-auto max-h-[90vh]">
-            <h2 class="text-2xl font-bold mb-6">Manage Saved Summaries</h2>
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-4xl m-4 overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl font-bold mb-6">Manage Saved Analyses</h2>
             
             <!-- Container for the list of saved summaries -->
             <div id="savedSummariesList" class="space-y-4">
@@ -230,11 +230,12 @@
 
             <!-- Hidden Edit Form -->
             <div id="editSummaryFormContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg">
-                <h3 class="text-xl font-bold mb-4">Edit Summary</h3>
+                <h3 class="text-xl font-bold mb-4">Edit Analysis</h3>
                 <form id="editSummaryForm">
-                    <input type="hidden" id="editSummaryId">
-                    <input type="hidden" id="editSummaryExchange">
-                    <textarea id="editSummaryText" class="w-full p-2 border border-gray-300 rounded-lg" rows="6"></textarea>
+                    <input type="hidden" id="editAnalysisId">
+                    <input type="hidden" id="editAnalysisExchange">
+                    <input type="hidden" id="editAnalysisType">
+                    <textarea id="editAnalysisText" class="w-full p-2 border border-gray-300 rounded-lg" rows="10"></textarea>
                     <div class="mt-4 flex justify-end space-x-3">
                         <button type="button" id="cancelEditBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancel</button>
                         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Save Changes</button>
@@ -250,7 +251,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.0
+        // Version 4.2
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -260,7 +261,7 @@
                 searchEngineId: "",
                 googleClientId: "",
                 firebaseConfig: {},
-                generativeAnalyses: {} // New structure for AI analyses
+                generativeAnalyses: {} // Holds the latest generated analysis text
             };
             
             let db = null;
@@ -362,7 +363,7 @@
             async function startApp() {
                 console.log("Application starting...");
                 setupTabs();
-                // CRUD modal setup is now part of initExchangeData to ensure it has context
+                setupCrudModalListeners();
                 
                 try {
                     if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
@@ -429,10 +430,11 @@
                 refreshButton.addEventListener('click', (e) => {
                     e.stopPropagation();
                     newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
-                    // Clear old generative analyses
+                    const genAiNav = document.getElementById(`${exchange}-gen-ai-tabs-nav`);
                     const genAiContent = document.getElementById(`${exchange}-gen-ai-tabs-content`);
+                    if(genAiNav) genAiNav.innerHTML = '';
                     if(genAiContent) genAiContent.innerHTML = '';
-                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange);
+                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, true); // Force refresh
                 });
             }
 
@@ -478,7 +480,7 @@
             }
             
             // --- 10. Fetch and Render Price Target News ---
-            async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange) {
+            async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, forceGenAiRefresh = false) {
                 const symbols = screenerData.map(stock => stock.symbol);
 
                 if (symbols.length === 0) {
@@ -527,16 +529,13 @@
                 filteredNews.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate));
 
                 renderNewsCards(filteredNews, newsContainer);
-                await runGenerativeAnalyses(filteredNews, screenerData, exchange);
+                await runGenerativeAnalyses(filteredNews, screenerData, exchange, forceGenAiRefresh);
                 await saveNewsToFirebase(exchange, filteredNews);
             }
             
             // --- 11. Firebase Functions ---
             async function saveNewsToFirebase(exchange, newsData) {
-                if (!db) {
-                    console.warn("Firebase not initialized, cannot save news.");
-                    return;
-                }
+                if (!db) return;
                 try {
                     await db.ref(`news/${exchange}`).set(newsData);
                     console.log(`News for ${exchange.toUpperCase()} saved to Firebase.`);
@@ -546,27 +545,49 @@
             }
 
             async function loadNewsFromFirebase(exchange, newsContainer, screenerData) {
-                if (!db) {
-                    console.warn("Firebase not initialized, cannot load news.");
-                    return false;
-                }
+                if (!db) return false;
                 try {
                     const snapshot = await db.ref(`news/${exchange}`).get();
                     if (snapshot.exists()) {
                         const newsData = snapshot.val();
                         console.log(`Loaded news for ${exchange.toUpperCase()} from Firebase.`);
                         renderNewsCards(newsData, newsContainer);
-                        await runGenerativeAnalyses(newsData, screenerData, exchange);
+                        await runGenerativeAnalyses(newsData, screenerData, exchange, false); // Don't force refresh on initial load
                         return true;
-                    } else {
-                        console.log(`No cached news found for ${exchange.toUpperCase()} in Firebase.`);
-                        return false;
                     }
+                    return false;
                 } catch (error) {
                     console.error(`Failed to load news for ${exchange} from Firebase:`, error);
                     return false;
                 }
             }
+            
+            async function autoSaveAnalysisToFirebase(exchange, analysisId, analysisData) {
+                if (!db) return;
+                try {
+                    // Using set() to overwrite the previous cache for this specific analysis type
+                    await db.ref(`analyses-cache/${exchange}/${analysisId}`).set(analysisData);
+                    console.log(`Auto-saved analysis '${analysisId}' for ${exchange.toUpperCase()}.`);
+                } catch (error) {
+                    console.error(`Failed to auto-save analysis for ${exchange}:`, error);
+                }
+            }
+
+            async function loadAnalysesFromCache(exchange) {
+                if (!db) return null;
+                try {
+                    const snapshot = await db.ref(`analyses-cache/${exchange}`).get();
+                    if (snapshot.exists()) {
+                        console.log(`Loaded analyses from cache for ${exchange.toUpperCase()}.`);
+                        return snapshot.val();
+                    }
+                    return null;
+                } catch (error) {
+                    console.error(`Failed to load analyses from cache for ${exchange}:`, error);
+                    return null;
+                }
+            }
+
 
             // --- 12. Generative AI Analysis ---
             
@@ -739,11 +760,14 @@
                 }
             ];
 
-            async function runGenerativeAnalyses(newsData, screenerData, exchange) {
+            async function runGenerativeAnalyses(newsData, screenerData, exchange, forceRefresh = false) {
                 if (!appConfig.geminiApiKey) {
                     console.error("Gemini API Key is missing. Cannot run generative analyses.");
                     return;
                 }
+
+                appConfig.generativeAnalyses[exchange] = {}; 
+                const cachedAnalyses = forceRefresh ? null : await loadAnalysesFromCache(exchange);
 
                 const navContainer = document.getElementById(`${exchange}-gen-ai-tabs-nav`);
                 const contentContainer = document.getElementById(`${exchange}-gen-ai-tabs-content`);
@@ -758,7 +782,7 @@
 
                 contentContainer.innerHTML = analysisPrompts.map((p, index) => `
                     <div id="${exchange}-${p.id}-content" class="gen-ai-tab-content p-4 border border-t-0 rounded-b-lg ${index === 0 ? 'block' : 'hidden'}">
-                        <p class="text-gray-500">Generating analysis...</p>
+                        <p class="text-gray-500">Loading analysis...</p>
                     </div>
                 `).join('');
 
@@ -769,6 +793,16 @@
 
                 for (const analysis of analysisPrompts) {
                     const container = document.getElementById(`${exchange}-${analysis.id}-content`);
+                    const cached = cachedAnalyses ? cachedAnalyses[analysis.id] : null;
+
+                    if (cached) {
+                        console.log(`Using cached analysis for ${exchange} - ${analysis.title}`);
+                        renderAnalysis(cached.text, container, exchange, analysis.id, analysis.title);
+                        appConfig.generativeAnalyses[exchange][analysis.id] = cached.text; // Store for manual save
+                        continue;
+                    }
+                    
+                    console.log(`Generating analysis for ${exchange} - ${analysis.title}`);
                     let promptText;
 
                     if (analysis.id === 'single-stock-deep-dive') {
@@ -787,12 +821,12 @@
                         promptText = analysis.prompt(exchange, articlesText);
                     }
                     
-                    await generateAnalysis(promptText, container);
+                    await generateAndSaveAnalysis(promptText, container, exchange, analysis.id, analysis.title);
                     await delay(1500); // Delay to avoid rate limiting
                 }
             }
             
-            async function generateAnalysis(prompt, container) {
+            async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle) {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${appConfig.geminiApiKey}`;
                 try {
                     const response = await fetch(url, {
@@ -806,23 +840,54 @@
                         throw new Error(`Gemini API request failed: ${response.status}`);
                     }
                     const result = await response.json();
-                    const analysis = result.candidates[0].content.parts[0].text;
+                    const analysisText = result.candidates[0].content.parts[0].text;
                     
-                    let formattedAnalysis = analysis
-                        .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
-                        .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')
-                        .replace(/### (.*)/g, '<h4 class="text-md font-semibold mt-4 mb-2">$1</h4>')
-                        .replace(/## (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
-                        .replace(/^- (.*)/gm, '<li class="ml-4 list-disc">$1</li>')
-                        .replace(/\n/g, '<br>');
+                    renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle);
                     
-                    container.innerHTML = `<div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">${formattedAnalysis}</div>`;
+                    const analysisData = {
+                        text: analysisText,
+                        title: analysisTitle,
+                        timestamp: new Date().toISOString()
+                    };
+                    await autoSaveAnalysisToFirebase(exchange, analysisId, analysisData);
 
                 } catch (error) {
                     console.error(`Error generating analysis:`, error);
                     container.innerHTML = `<p class="text-red-500">Could not generate analysis. Check console for details.</p>`;
                 }
             }
+            
+            function renderAnalysis(analysisText, container, exchange, analysisId, analysisTitle) {
+                 if (!appConfig.generativeAnalyses[exchange]) {
+                    appConfig.generativeAnalyses[exchange] = {};
+                }
+                appConfig.generativeAnalyses[exchange][analysisId] = analysisText;
+
+                let formattedAnalysis = analysisText
+                    .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
+                    .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')
+                    .replace(/### (.*)/g, '<h4 class="text-md font-semibold mt-4 mb-2">$1</h4>')
+                    .replace(/## (.*)/g, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
+                    .replace(/^- (.*)/gm, '<li class="ml-4 list-disc">$1</li>')
+                    .replace(/\n/g, '<br>');
+                
+                container.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold text-indigo-600">${analysisTitle}</h3>
+                        <button data-exchange="${exchange}" data-analysis-id="${analysisId}" class="save-analysis-btn text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-md px-3 py-1">
+                            <i class="fas fa-save mr-2"></i>Save Manually
+                        </button>
+                    </div>
+                    <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">${formattedAnalysis}</div>
+                `;
+
+                container.querySelector('.save-analysis-btn').addEventListener('click', (e) => {
+                    const ex = e.currentTarget.dataset.exchange;
+                    const id = e.currentTarget.dataset.analysisId;
+                    manualSaveAnalysisToFirebase(ex, id);
+                });
+            }
+
 
             function setupGenerativeTabs(exchange) {
                 const buttons = document.querySelectorAll(`#${exchange}-gen-ai-tabs-nav .gen-ai-tab-button`);
@@ -830,21 +895,17 @@
 
                 buttons.forEach(button => {
                     button.addEventListener('click', () => {
-                        // Deactivate all buttons
                         buttons.forEach(btn => {
                             btn.classList.remove('bg-indigo-50', 'text-indigo-700');
                             btn.classList.add('text-gray-500', 'hover:text-indigo-600', 'hover:bg-indigo-50');
                         });
-                        // Activate clicked button
                         button.classList.add('bg-indigo-50', 'text-indigo-700');
                         button.classList.remove('text-gray-500', 'hover:text-indigo-600', 'hover:bg-indigo-50');
 
-                        // Hide all content
                         contents.forEach(content => {
                             content.style.display = 'none';
                         });
 
-                        // Show corresponding content
                         const targetId = button.id.replace('-tab', '-content');
                         const targetContent = document.getElementById(targetId);
                         if (targetContent) {
@@ -854,9 +915,137 @@
                 });
             }
             
-            // --- 13. CRUD Functions for Summaries (Kept for potential future use, but not currently active) ---
+            // --- 13. CRUD Functions for Analyses ---
             function setupCrudModalListeners() {
-                manageSummariesBtn.addEventListener('click', () => alert("This feature is currently disabled."));
+                manageSummariesBtn.addEventListener('click', async () => {
+                    summaryCrudModal.style.display = 'flex';
+                    await loadAnalysesForCrud();
+                });
+                crudModalOverlay.addEventListener('click', () => {
+                    summaryCrudModal.style.display = 'none';
+                    editSummaryFormContainer.classList.add('hidden');
+                });
+                cancelEditBtn.addEventListener('click', () => {
+                    editSummaryFormContainer.classList.add('hidden');
+                });
+                savedSummariesList.addEventListener('click', (e) => {
+                    const target = e.target.closest('button');
+                    if (!target) return;
+
+                    const analysisId = target.dataset.id;
+                    const exchange = target.dataset.exchange;
+                    const analysisType = target.dataset.type;
+
+                    if (target.classList.contains('edit-btn')) {
+                        handleEditClick(analysisId, exchange, analysisType);
+                    } else if (target.classList.contains('delete-btn')) {
+                        handleDeleteClick(analysisId, exchange, analysisType);
+                    }
+                });
+                editSummaryForm.addEventListener('submit', handleUpdateSubmit);
+            }
+
+            async function manualSaveAnalysisToFirebase(exchange, analysisId) {
+                if (!db) return alert("Firebase not initialized.");
+                const analysisText = appConfig.generativeAnalyses[exchange]?.[analysisId];
+                const analysisTitle = analysisPrompts.find(p => p.id === analysisId)?.title || 'Analysis';
+
+                if (!analysisText) return alert("No analysis text found to save.");
+
+                const analysisData = {
+                    title: analysisTitle,
+                    text: analysisText,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    // Using push() for manual saves to allow multiple snapshots
+                    await db.ref(`manual-analyses/${exchange}/${analysisId}`).push(analysisData);
+                    alert(`${exchange.toUpperCase()} - ${analysisTitle} analysis saved successfully!`);
+                } catch (error) {
+                    console.error("Error saving analysis:", error);
+                    alert("Failed to save analysis.");
+                }
+            }
+            
+            async function loadAnalysesForCrud() {
+                if (!db) return;
+                savedSummariesList.innerHTML = '<p>Loading saved analyses...</p>';
+                try {
+                    const snapshot = await db.ref('manual-analyses').get();
+                    if (!snapshot.exists()) {
+                        savedSummariesList.innerHTML = '<p>No analyses have been manually saved yet.</p>';
+                        return;
+                    }
+                    const allAnalyses = snapshot.val();
+                    let html = '';
+                    for (const exchange in allAnalyses) {
+                        html += `<h3 class="text-xl font-bold mt-6 mb-2 text-gray-700 border-b pb-2">${exchange.toUpperCase()}</h3>`;
+                        const exchangeAnalyses = allAnalyses[exchange];
+                        for (const analysisType in exchangeAnalyses) {
+                            const analyses = exchangeAnalyses[analysisType];
+                             for (const id in analyses) {
+                                const analysis = analyses[id];
+                                html += `
+                                    <div class="bg-gray-50 p-4 rounded-lg border mb-4">
+                                        <p class="font-bold text-indigo-600">${analysis.title}</p>
+                                        <p class="text-sm text-gray-500 mb-2">Saved on: ${new Date(analysis.timestamp).toLocaleString()}</p>
+                                        <p class="text-gray-800">${analysis.text.replace(/\n/g, '<br>')}</p>
+                                        <div class="flex justify-end space-x-2 mt-3">
+                                            <button data-id="${id}" data-exchange="${exchange}" data-type="${analysisType}" class="edit-btn text-sm text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i> Edit</button>
+                                            <button data-id="${id}" data-exchange="${exchange}" data-type="${analysisType}" class="delete-btn text-sm text-red-600 hover:text-red-800"><i class="fas fa-trash"></i> Delete</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }
+                    savedSummariesList.innerHTML = html || '<p>No analyses have been saved yet.</p>';
+                } catch (error) {
+                    console.error("Error loading analyses for CRUD:", error);
+                    savedSummariesList.innerHTML = '<p class="text-red-500">Could not load analyses.</p>';
+                }
+            }
+
+            async function handleEditClick(analysisId, exchange, analysisType) {
+                const snapshot = await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}`).get();
+                if (snapshot.exists()) {
+                    const analysis = snapshot.val();
+                    document.getElementById('editAnalysisId').value = analysisId;
+                    document.getElementById('editAnalysisExchange').value = exchange;
+                    document.getElementById('editAnalysisType').value = analysisType;
+                    document.getElementById('editAnalysisText').value = analysis.text;
+                    editSummaryFormContainer.classList.remove('hidden');
+                }
+            }
+
+            async function handleDeleteClick(analysisId, exchange, analysisType) {
+                if (confirm('Are you sure you want to delete this analysis?')) {
+                    try {
+                        await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}`).remove();
+                        await loadAnalysesForCrud(); // Refresh the list
+                    } catch (error) {
+                        console.error("Error deleting analysis:", error);
+                        alert("Failed to delete analysis.");
+                    }
+                }
+            }
+
+            async function handleUpdateSubmit(e) {
+                e.preventDefault();
+                const analysisId = document.getElementById('editAnalysisId').value;
+                const exchange = document.getElementById('editAnalysisExchange').value;
+                const analysisType = document.getElementById('editAnalysisType').value;
+                const newText = document.getElementById('editAnalysisText').value;
+
+                try {
+                    await db.ref(`manual-analyses/${exchange}/${analysisType}/${analysisId}/text`).set(newText);
+                    editSummaryFormContainer.classList.add('hidden');
+                    await loadAnalysesForCrud(); // Refresh the list
+                } catch (error) {
+                    console.error("Error updating analysis:", error);
+                    alert("Failed to update analysis.");
+                }
             }
 
             // --- 14. Rendering Functions ---
