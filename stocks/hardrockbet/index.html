@@ -6,6 +6,7 @@
     <title>College Football AI Narratives</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏈</text></svg>">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -85,8 +86,8 @@
     <!-- Narrative Modal -->
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl mx-4 relative">
-            <button id="closeNarrativeModal" class="absolute top-2 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
-            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-4">
+            <button id="closeNarrativeModal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold z-10">&times;</button>
+            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-8">
                 <!-- Narrative will be injected here -->
             </div>
         </div>
@@ -120,6 +121,7 @@
     </div>
 
     <script>
+        // Version 1.2
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -204,10 +206,16 @@
                     showLoader(false);
                 }
             }
+            
+            const teamNameAliases = {
+                "San Diego State Aztecs": "San Diego State",
+                "Stony Brook Seawolves": "Stony Brook",
+            };
 
             async function fetchTeamData(teamName) {
                 try {
-                    const searchNames = [teamName, teamName.replace(' State', '')];
+                    const aliasedTeamName = teamNameAliases[teamName] || teamName;
+                    const searchNames = [aliasedTeamName, aliasedTeamName.replace(' State', '')];
                     let teamDetails = null;
 
                     for (const name of searchNames) {
