@@ -52,6 +52,12 @@
             border-radius: 10px;
             border: 2px solid #2d3748; /* gray-800 */
         }
+        /* Accordion Styles */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -125,7 +131,7 @@
     </div>
 
     <script>
-        // Version 1.6
+        // Version 1.7
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -254,13 +260,10 @@
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
 
                 // 2. Get returning production
-                const returningUrl = `https://api.collegefootballdata.com/ppa/returning?year=${previousYear}&team=${encodedTeamName}`;
+                const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
                 const returningData = await fetchData(returningUrl);
-                const returningProduction = {
-                    offense: returningData?.[0]?.ppa,
-                    defense: returningData?.[0]?.ppa,
-                };
-                
+                const returningProduction = returningData?.[0]?.percentPPA;
+
                 // 3. Get composite talent score
                 const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
                 const talentData = await fetchData(talentUrl);
@@ -411,7 +414,7 @@
                 });
             }
             
-            function displayNarrative(narrative, gameDetails) {
+            function displayNarrative(narrative, gameDetails, rawData) {
                 // Format the AI response to include styled headings
                 let formattedNarrative = narrative
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
@@ -427,8 +430,35 @@
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
+                    <div class="mt-8 border-t border-gray-600 pt-4">
+                        <button id="accordion-button" class="w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
+                           <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data
+                        </button>
+                        <div id="accordion-content" class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
+                            <h4 class="font-bold text-md mb-2 text-gray-400">Home Team Data (${rawData.homeData.name})</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.homeData, null, 2)}</pre>
+                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team Data (${rawData.awayData.name})</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.awayData, null, 2)}</pre>
+                        </div>
+                    </div>
                 `;
                 narrativeModal.classList.remove('hidden');
+
+                // Accordion logic
+                const accordionButton = document.getElementById('accordion-button');
+                const accordionContent = document.getElementById('accordion-content');
+                const accordionArrow = accordionButton.querySelector('.accordion-arrow');
+
+                accordionButton.addEventListener('click', () => {
+                    const isExpanded = accordionContent.style.maxHeight;
+                    if (isExpanded && isExpanded !== '0px') {
+                        accordionContent.style.maxHeight = '0px';
+                        accordionArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
+                        accordionArrow.style.transform = 'rotate(90deg)';
+                    }
+                });
             }
 
             function showLoader(isLoading) {
@@ -489,20 +519,18 @@
                             **TEAM ANALYSIS DATA (${new Date().getFullYear() - 1} Season):**
                             -   **${homeData.name}:**
                                 -   **Record:** ${homeData.record}
-                                -   **Returning Production (Offense):** ${homeData.returningProduction.offense || 'N/A'}
-                                -   **Returning Production (Defense):** ${homeData.returningProduction.defense || 'N/A'}
+                                -   **Total Returning Production (%):** ${(homeData.returningProduction * 100).toFixed(1) || 'N/A'}%
                                 -   **Composite Talent Score:** ${homeData.talentScore}
                             -   **${awayData.name}:**
                                 -   **Record:** ${awayData.record}
-                                -   **Returning Production (Offense):** ${awayData.returningProduction.offense || 'N/A'}
-                                -   **Returning Production (Defense):** ${awayData.returningProduction.defense || 'N/A'}
+                                -   **Total Returning Production (%):** ${(awayData.returningProduction * 100).toFixed(1) || 'N/A'}%
                                 -   **Composite Talent Score:** ${awayData.talentScore}
 
                             ---
 
                             **PART 1: Pre-Game Narrative**
                             Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
-                            -   **Synthesize Data:** Weave in the team records, returning production, and talent scores to explain the context of the matchup.
+                            -   **Synthesize Data:** Weave in the team records, returning production percentage, and talent scores to explain the context of the matchup.
                             -   **Integrate News:** Use the news snippets to add color and current events to the narrative.
                             -   **Preseason Focus:** If records are 'N/A', focus on expectations based on talent, returning players, and news.
                             -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
@@ -512,8 +540,8 @@
                             **PART 2: Analyst's Pick**
                             Now, perform a deeper analysis to determine which team is more likely to cover the spread.
                             -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-                                -   **Talent vs. Experience:** How does the talent gap (Composite Talent Score) compare with the returning production? Does one team have more proven experience returning?
-                                -   **Key Matchups:** Based on the returning production data, where are the likely strengths and weaknesses? (e.g., a team with high returning offensive production vs. a team with low returning defensive production).
+                                -   **Talent vs. Experience:** How does the talent gap (Composite Talent Score) compare with the returning production percentage? Does one team have more proven experience returning?
+                                -   **Key Matchups:** Based on the returning production data, where are the likely strengths and weaknesses?
                                 -   **News Insights:** Do the news snippets suggest anything that might contradict the data, like a key injury or a recent change?
                             -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
                             -   **Formatting:** Start this section with the heading: ### Analyst's Pick
@@ -524,7 +552,7 @@
                         const narrativeText = await generateNarrative(prompt);
 
                         // 5. Display the result
-                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime });
+                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, { homeData, awayData });
 
                     } catch (error) {
                         console.error("Narrative generation failed:", error);
