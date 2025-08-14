@@ -94,22 +94,19 @@
 
             // --- Initialization ---
             function init() {
-                oddsApiKey = localStorage.getItem('theOddsApiKey');
-                if (!oddsApiKey) {
-                    apiKeyModal.classList.remove('hidden');
-                } else {
-                    apiKeyModal.classList.add('hidden');
-                    fetchOdds();
-                }
+                // Always prompt for the API key, do not use localStorage.
+                apiKeyModal.classList.remove('hidden');
             }
 
             apiKeyForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const key = apiKeyInput.value.trim();
                 if (key) {
-                    localStorage.setItem('theOddsApiKey', key);
+                    // Store key in a variable for the current session only.
+                    oddsApiKey = key;
                     apiKeyModal.classList.add('hidden');
-                    init();
+                    // Directly fetch odds after getting the key.
+                    fetchOdds();
                 }
             });
 
