@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 1.8
+        // Version 1.9
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -275,6 +275,27 @@
                     returningProduction,
                     talentScore
                 };
+            }
+            
+            async function fetchAdvancedSeasonStats(teamName) {
+                const currentYear = new Date().getFullYear();
+                const encodedTeamName = encodeURIComponent(teamName);
+                const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${currentYear}&team=${encodedTeamName}`;
+                
+                const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
+
+                try {
+                    const response = await fetch(url, { headers });
+                    if (!response.ok) {
+                        console.error(`API Error for ${url}: ${response.status}`);
+                        return null;
+                    }
+                    const data = await response.json();
+                    return data?.[0];
+                } catch (error) {
+                    console.error(`Fetch error for ${url}:`, error);
+                    return null;
+                }
             }
 
 
@@ -478,6 +499,73 @@
                 const spinner = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
                 button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
             }
+            
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats) {
+                const { gameDateTime, spread } = gameDetails;
+                const previousYear = new Date().getFullYear() - 1;
+
+                let inSeasonSection = '';
+                if (homeStats && awayStats) {
+                    inSeasonSection = `
+**IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
+-   **${homeData.name}:**
+    -   **Offensive PPA:** ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
+    -   **Defensive PPA:** ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
+    -   **Offensive Success Rate:** ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+    -   **Defensive Success Rate:** ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+-   **${awayData.name}:**
+    -   **Offensive PPA:** ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
+    -   **Defensive PPA:** ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
+    -   **Offensive Success Rate:** ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+    -   **Defensive Success Rate:** ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+`;
+                }
+
+                return `
+You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+
+**DATA DEFINITIONS:**
+- **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
+- **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
+- **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
+
+**CONTEXTUAL DATA:**
+-   **Game Date & Time:** ${gameDateTime}
+-   **Matchup:** ${awayData.name} at ${homeData.name}
+-   **Current Spread:** ${spread}.
+-   **Recent News Snippets:** ${gameDetails.newsSnippets}
+
+**PRE-SEASON DATA (${previousYear} Season):**
+-   **${homeData.name}:**
+    -   **Record:** ${homeData.record}
+    -   **Composite Talent Score:** ${homeData.talentScore}
+    -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+-   **${awayData.name}:**
+    -   **Record:** ${awayData.record}
+    -   **Composite Talent Score:** ${awayData.talentScore}
+    -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+
+${inSeasonSection}
+---
+
+**PART 1: Pre-Game Narrative**
+Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production) with any available in-season performance data (PPA, success rates).
+-   **Integrate News:** Use the news snippets to add current events to the narrative.
+-   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+
+---
+
+**PART 2: Analyst's Pick**
+Now, perform a deeper analysis to determine which team is more likely to cover the spread.
+-   **Analyze Factors:** Explicitly reference the provided data in your analysis:
+    -   **Pre-Season vs. In-Season:** How does the actual in-season performance compare to the pre-season expectations? Are teams over or under-performing?
+    -   **Key Matchups:** Based on the PPA and success rates, where are the biggest mismatches? (e.g., a high PPA offense vs. a poor PPA defense).
+    -   **News Insights:** Do the news snippets suggest anything that might contradict the data?
+-   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
+-   **Formatting:** Start this section with the heading: ### Analyst's Pick
+`;
+            }
 
             // --- Event Handling ---
             gamesList.addEventListener('click', async (e) => {
@@ -492,78 +580,41 @@
                     clearError();
 
                     try {
-                        // 1. Fetch rich data for both teams
+                        // 1. Fetch pre-season data for both teams
                         updateButtonStatus(button, 'Fetching team data...');
                         const [homeData, awayData] = await Promise.all([
                             fetchTeamData(homeTeam),
                             fetchTeamData(awayTeam)
                         ]);
                         
-                        // 2. Fetch recent news about the matchup
+                        // 2. Conditionally fetch in-season stats
+                        let homeStats = null;
+                        let awayStats = null;
+                        const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
+                        if (new Date() > seasonStartDate) {
+                            updateButtonStatus(button, 'Fetching season stats...');
+                            [homeStats, awayStats] = await Promise.all([
+                                fetchAdvancedSeasonStats(homeData.name),
+                                fetchAdvancedSeasonStats(awayData.name)
+                            ]);
+                        }
+                        
+                        // 3. Fetch recent news about the matchup
                         updateButtonStatus(button, 'Fetching recent news...');
                         const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                         const newsSnippets = await fetchGameNews(newsQuery);
                         
                         const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
 
-                        // 3. Construct the new, enhanced prompt
-                        const prompt = `
-                            You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+                        // 4. Construct the prompt
+                        const gameDetails = { gameDateTime, spread, newsSnippets };
+                        const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats);
 
-                            **DATA DEFINITIONS:**
-                            - **Total Returning Production (%):** The overall percentage of the team's production (PPA) that is returning from the previous season. Higher is better.
-                            - **Passing Production (%):** Percentage of passing game production returning.
-                            - **Receiving Production (%):** Percentage of receiving game production returning.
-                            - **Rushing Production (%):** Percentage of rushing game production returning.
-
-                            **CONTEXTUAL DATA:**
-                            -   **Game Date & Time:** ${gameDateTime}
-                            -   **Matchup:** ${awayData.name} at ${homeData.name}
-                            -   **Current Spread:** ${spread}.
-                            -   **Recent News Snippets:** ${newsSnippets}
-                            
-                            **TEAM ANALYSIS DATA (${new Date().getFullYear() - 1} Season):**
-                            -   **${homeData.name}:**
-                                -   **Record:** ${homeData.record}
-                                -   **Composite Talent Score:** ${homeData.talentScore}
-                                -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Passing Production:** ${(homeData.returningProduction?.percentPassingPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Receiving Production:** ${(homeData.returningProduction?.percentReceivingPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Rushing Production:** ${(homeData.returningProduction?.percentRushingPPA * 100).toFixed(1) || 'N/A'}%
-                            -   **${awayData.name}:**
-                                -   **Record:** ${awayData.record}
-                                -   **Composite Talent Score:** ${awayData.talentScore}
-                                -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Passing Production:** ${(awayData.returningProduction?.percentPassingPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Receiving Production:** ${(awayData.returningProduction?.percentReceivingPPA * 100).toFixed(1) || 'N/A'}%
-                                -   **Returning Rushing Production:** ${(awayData.returningProduction?.percentRushingPPA * 100).toFixed(1) || 'N/A'}%
-
-                            ---
-
-                            **PART 1: Pre-Game Narrative**
-                            Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
-                            -   **Synthesize Data:** Weave in the team records, returning production percentages, and talent scores to explain the context of the matchup.
-                            -   **Integrate News:** Use the news snippets to add color and current events to the narrative.
-                            -   **Preseason Focus:** If records are 'N/A', focus on expectations based on talent, returning players, and news.
-                            -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
-
-                            ---
-
-                            **PART 2: Analyst's Pick**
-                            Now, perform a deeper analysis to determine which team is more likely to cover the spread.
-                            -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-                                -   **Talent vs. Experience:** How does the talent gap (Composite Talent Score) compare with the returning production percentages?
-                                -   **Conceptualize Output:** Based on the detailed returning production data (passing, receiving, rushing), which team seems to have a higher potential output on offense? Where are the likely strengths and weaknesses for each team's offense and the opposing defense?
-                                -   **News Insights:** Do the news snippets suggest anything that might contradict the data, like a key injury or a recent change?
-                            -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
-                            -   **Formatting:** Start this section with the heading: ### Analyst's Pick
-                        `;
-
-                        // 4. Generate the narrative
+                        // 5. Generate the narrative
                         updateButtonStatus(button, 'Generating narrative...');
                         const narrativeText = await generateNarrative(prompt);
 
-                        // 5. Display the result
+                        // 6. Display the result
                         displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, { homeData, awayData });
 
                     } catch (error) {
