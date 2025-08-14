@@ -67,6 +67,10 @@
                     <input type="password" id="oddsApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Odds API Key">
                 </div>
                 <div class="mb-4">
+                    <label for="cfbDataApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">College Football Data API Key:</label>
+                    <input type="password" id="cfbDataApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Your CFB Data API Key">
+                </div>
+                <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">Google Gemini API Key:</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your Gemini API Key">
                 </div>
@@ -121,11 +125,12 @@
     </div>
 
     <script>
-        // Version 1.3
+        // Version 1.5
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
             const oddsApiKeyInput = document.getElementById('oddsApiKeyInput');
+            const cfbDataApiKeyInput = document.getElementById('cfbDataApiKeyInput');
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
             const googleApiKeyInput = document.getElementById('googleApiKeyInput');
             const googleCxInput = document.getElementById('googleCxInput');
@@ -139,8 +144,8 @@
             const errorMessage = document.getElementById('errorMessage');
             const gamesList = document.getElementById('games-list');
             
-            const SPORTSDB_API_KEY = '3'; // Public key for TheSportsDB
             let oddsApiKey = '';
+            let cfbDataApiKey = '';
             let geminiApiKey = '';
             let googleApiKey = '';
             let googleCx = '';
@@ -153,19 +158,21 @@
             apiKeyForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const oddsKey = oddsApiKeyInput.value.trim();
+                const cfbDataKey = cfbDataApiKeyInput.value.trim();
                 const geminiKey = geminiApiKeyInput.value.trim();
                 const googleKey = googleApiKeyInput.value.trim();
                 const cxKey = googleCxInput.value.trim();
                 
-                if (oddsKey && geminiKey && googleKey && cxKey) {
+                if (oddsKey && cfbDataKey && geminiKey && googleKey && cxKey) {
                     oddsApiKey = oddsKey;
+                    cfbDataApiKey = cfbDataKey;
                     geminiApiKey = geminiKey;
                     googleApiKey = googleKey;
                     googleCx = cxKey;
                     apiKeyModal.classList.add('hidden');
                     fetchOdds();
                 } else {
-                    alert('Please provide all four API keys.');
+                    alert('Please provide all five API keys.');
                 }
             });
 
@@ -210,53 +217,63 @@
             const teamNameAliases = {
                 "San Diego State Aztecs": "San Diego State",
                 "Stony Brook Seawolves": "Stony Brook",
+                "UNLV Rebels": "UNLV",
+                "Idaho State Bengals": "Idaho State",
+                "LSU Tigers": "LSU"
             };
 
             async function fetchTeamData(teamName) {
-                try {
-                    const aliasedTeamName = teamNameAliases[teamName] || teamName;
-                    const searchNames = [aliasedTeamName, aliasedTeamName.replace(' State', '')];
-                    let teamDetails = null;
+                const currentYear = new Date().getFullYear();
+                const previousYear = currentYear - 1;
+                const aliasedTeamName = teamNameAliases[teamName] || teamName;
+                
+                const headers = {
+                    'Authorization': `Bearer ${cfbDataApiKey}`
+                };
 
-                    for (const name of searchNames) {
-                        const teamResponse = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_API_KEY}/searchteams.php?t=${encodeURIComponent(name)}`);
-                        const teamData = await teamResponse.json();
-                        if (teamData.teams) {
-                            teamDetails = teamData.teams.find(t => t.strSport === 'American Football' && t.strLeague.includes('NCAA'));
-                            if (teamDetails) break;
+                const fetchData = async (url) => {
+                    try {
+                        const response = await fetch(url, { headers });
+                        if (!response.ok) {
+                            console.error(`API Error for ${url}: ${response.status}`);
+                            return null;
                         }
+                        return await response.json();
+                    } catch (error) {
+                        console.error(`Fetch error for ${url}:`, error);
+                        return null;
                     }
-                    
-                    if (!teamDetails) {
-                        console.warn(`Could not find team details for: ${teamName}`);
-                        return { id: null, name: teamName, record: 'N/A', league: 'N/A', description: 'No detailed data available.' };
-                    }
+                };
 
-                    const eventsResponse = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTSDB_API_KEY}/eventslast.php?id=${teamDetails.idTeam}`);
-                    const eventsData = await eventsResponse.json();
-                    let wins = 0, losses = 0;
+                const encodedTeamName = encodeURIComponent(aliasedTeamName);
 
-                    if (eventsData.results) {
-                        eventsData.results.forEach(game => {
-                            if (game.strWinner === teamDetails.strTeam) wins++;
-                            else losses++;
-                        });
-                    }
-                    
-                    const record = (wins > 0 || losses > 0) ? `${wins}-${losses}` : '0-0';
+                // 1. Get previous season's record
+                const recordsUrl = `https://api.collegefootballdata.com/records?year=${previousYear}&team=${encodedTeamName}`;
+                const recordsData = await fetchData(recordsUrl);
+                const teamRecord = recordsData?.[0];
+                const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
 
-                    return {
-                        id: teamDetails.idTeam,
-                        name: teamDetails.strTeam,
-                        record,
-                        league: teamDetails.strLeague,
-                        description: teamDetails.strDescriptionEN?.split('. ').slice(0, 2).join('. ') + '.' || 'No description available.'
-                    };
-                } catch (error) {
-                    console.error(`Error fetching data for ${teamName}:`, error);
-                    return { id: null, name: teamName, error: 'Could not fetch data.' };
-                }
+                // 2. Get returning production
+                const returningUrl = `https://api.collegefootballdata.com/ppa/returning?year=${currentYear}&team=${encodedTeamName}`;
+                const returningData = await fetchData(returningUrl);
+                const returningProduction = {
+                    offense: returningData?.[0]?.ppa,
+                    defense: returningData?.[0]?.ppa,
+                };
+                
+                // 3. Get composite talent score
+                const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
+                const talentData = await fetchData(talentUrl);
+                const talentScore = talentData?.[0]?.talent || 'N/A';
+
+                return {
+                    name: aliasedTeamName,
+                    record,
+                    returningProduction,
+                    talentScore
+                };
             }
+
 
             async function fetchGameNews(query) {
                 const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}`;
@@ -269,7 +286,6 @@
                     if (!data.items || data.items.length === 0) {
                         return "No recent news found for this matchup.";
                     }
-                    // Return snippets from the top 3 results
                     return data.items.slice(0, 3).map(item => item.snippet).join(' ... ');
                 } catch (error) {
                     console.error('Error fetching game news:', error);
@@ -337,7 +353,7 @@
                     if (!spreadMarket) return acc;
 
                     const homeOutcome = spreadMarket.outcomes.find(o => o.name === homeTeam);
-                    const awayOutcome = spreadMarket.outcomes.find(o => o.name === awayTeam);
+                    const awayOutcome = spreadmarket.outcomes.find(o => o.name === awayTeam);
 
                     if (!homeOutcome || !awayOutcome) return acc;
                     
@@ -427,6 +443,11 @@
             function clearError() {
                 errorDisplay.classList.add('hidden');
             }
+            
+            function updateButtonStatus(button, message) {
+                const spinner = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
+                button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
+            }
 
             // --- Event Handling ---
             gamesList.addEventListener('click', async (e) => {
@@ -438,57 +459,68 @@
                     const commenceTime = button.dataset.commenceTime;
                     
                     button.disabled = true;
-                    button.innerHTML = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
                     clearError();
 
                     try {
                         // 1. Fetch rich data for both teams
+                        updateButtonStatus(button, 'Fetching team data...');
                         const [homeData, awayData] = await Promise.all([
                             fetchTeamData(homeTeam),
                             fetchTeamData(awayTeam)
                         ]);
                         
                         // 2. Fetch recent news about the matchup
+                        updateButtonStatus(button, 'Fetching recent news...');
                         const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                         const newsSnippets = await fetchGameNews(newsQuery);
                         
                         const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
 
-                        // 3. Construct the new, two-part "Analyst Role-Play" prompt
+                        // 3. Construct the new, enhanced prompt
                         const prompt = `
-                            You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game.
+                            You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
 
                             **CONTEXTUAL DATA:**
                             -   **Game Date & Time:** ${gameDateTime}
-                            -   **Matchup:** ${awayData.name} (${awayData.league}) at ${homeData.name} (${homeData.league})
+                            -   **Matchup:** ${awayData.name} at ${homeData.name}
                             -   **Current Spread:** ${spread}.
                             -   **Recent News Snippets:** ${newsSnippets}
-                            -   **${homeData.name} Info:** Last Season's Record is ${homeData.record}.
-                            -   **${awayData.name} Info:** Last Season's Record is ${awayData.record}.
+                            
+                            **TEAM ANALYSIS DATA (${new Date().getFullYear() - 1} Season):**
+                            -   **${homeData.name}:**
+                                -   **Record:** ${homeData.record}
+                                -   **Returning Production (Offense):** ${homeData.returningProduction.offense || 'N/A'}
+                                -   **Returning Production (Defense):** ${homeData.returningProduction.defense || 'N/A'}
+                                -   **Composite Talent Score:** ${homeData.talentScore}
+                            -   **${awayData.name}:**
+                                -   **Record:** ${awayData.record}
+                                -   **Returning Production (Offense):** ${awayData.returningProduction.offense || 'N/A'}
+                                -   **Returning Production (Defense):** ${awayData.returningProduction.defense || 'N/A'}
+                                -   **Composite Talent Score:** ${awayData.talentScore}
 
                             ---
 
                             **PART 1: Pre-Game Narrative**
-                            Using the contextual data, write a compelling, factually accurate pre-game narrative (around 200 words).
-                            -   **Fact Check Records:** If a team's record is '0-0' or 'N/A', the season has NOT started. DO NOT invent a win-loss record.
-                            -   **Preseason Focus:** If it is the preseason, focus on season expectations based on the news and what the point spread implies.
-                            -   **Synthesize News:** Integrate key points from the "Recent News Snippets".
+                            Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
+                            -   **Synthesize Data:** Weave in the team records, returning production, and talent scores to explain the context of the matchup.
+                            -   **Integrate News:** Use the news snippets to add color and current events to the narrative.
+                            -   **Preseason Focus:** If records are 'N/A', focus on expectations based on talent, returning players, and news.
                             -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
 
                             ---
 
                             **PART 2: Analyst's Pick**
                             Now, perform a deeper analysis to determine which team is more likely to cover the spread.
-                            -   **Analyze Factors:** Briefly consider the following:
-                                -   **Program Trajectory:** Do the news snippets suggest a team is improving (e.g., good recruiting, returning starters) or declining (e.g., losing talent, coaching changes)?
-                                -   **Coaching Stability:** Is there a new coach, implying a rebuilding phase, or a veteran coach with a proven system?
-                                -   **Strength of Key Units:** Does the news mention specific strengths or weaknesses (e.g., a dominant offensive line, an inexperienced secondary) that could create a mismatch?
-                                -   **Talent Gap:** How significant is the talent difference based on their conferences (e.g., Power 5 vs. Group of 5)?
-                            -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise reason for your choice based on your synthesis of these factors.
+                            -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
+                                -   **Talent vs. Experience:** How does the talent gap (Composite Talent Score) compare with the returning production? Does one team have more proven experience returning?
+                                -   **Key Matchups:** Based on the returning production data, where are the likely strengths and weaknesses? (e.g., a team with high returning offensive production vs. a team with low returning defensive production).
+                                -   **News Insights:** Do the news snippets suggest anything that might contradict the data, like a key injury or a recent change?
+                            -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
                             -   **Formatting:** Start this section with the heading: ### Analyst's Pick
                         `;
 
                         // 4. Generate the narrative
+                        updateButtonStatus(button, 'Generating narrative...');
                         const narrativeText = await generateNarrative(prompt);
 
                         // 5. Display the result
