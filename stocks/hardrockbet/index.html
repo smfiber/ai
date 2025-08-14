@@ -39,6 +39,18 @@
             border-bottom: 1px solid #4a5568;
             padding-bottom: 0.5rem;
         }
+        /* Custom Scrollbar Styles */
+        #narrativeModalContent::-webkit-scrollbar {
+            width: 8px;
+        }
+        #narrativeModalContent::-webkit-scrollbar-track {
+            background: #2d3748; /* gray-800 */
+        }
+        #narrativeModalContent::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* gray-600 */
+            border-radius: 10px;
+            border: 2px solid #2d3748; /* gray-800 */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -74,7 +86,7 @@
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl mx-4 relative">
             <button id="closeNarrativeModal" class="absolute top-2 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
-            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto">
+            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-4">
                 <!-- Narrative will be injected here -->
             </div>
         </div>
@@ -353,8 +365,11 @@
                     .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
                     .replace(/\n/g, '<br>');
 
+                const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
+                    <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
                     <p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
@@ -440,7 +455,7 @@
                         const narrativeText = await generateNarrative(prompt);
 
                         // 5. Display the result
-                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread });
+                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime });
 
                     } catch (error) {
                         console.error("Narrative generation failed:", error);
