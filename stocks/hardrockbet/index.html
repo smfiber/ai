@@ -125,7 +125,7 @@
     </div>
 
     <script>
-        // Version 1.5
+        // Version 1.6
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -254,7 +254,7 @@
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
 
                 // 2. Get returning production
-                const returningUrl = `https://api.collegefootballdata.com/ppa/returning?year=${currentYear}&team=${encodedTeamName}`;
+                const returningUrl = `https://api.collegefootballdata.com/ppa/returning?year=${previousYear}&team=${encodedTeamName}`;
                 const returningData = await fetchData(returningUrl);
                 const returningProduction = {
                     offense: returningData?.[0]?.ppa,
