@@ -35,26 +35,21 @@
 </head>
 <body class="bg-gray-900 text-white">
 
-    <!-- The Odds API Key Modal -->
-    <div id="oddsApiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <!-- Combined API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md mx-4">
-            <h2 class="text-2xl font-bold mb-4 text-center">Enter The Odds API Key</h2>
-            <p class="text-gray-400 mb-6 text-center">Please provide your API key from <a href="https://the-odds-api.com/" target="_blank" class="text-blue-400 hover:underline">the-odds-api.com</a> to fetch live game spreads.</p>
-            <form id="oddsApiKeyForm">
-                <input type="password" id="oddsApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Odds API Key">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Continue</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Gemini API Key Modal -->
-    <div id="geminiApiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md mx-4">
-            <h2 class="text-2xl font-bold mb-4 text-center">Enter Gemini API Key</h2>
-            <p class="text-gray-400 mb-6 text-center">Now, please provide your API key from Google AI Studio to generate narratives.</p>
-            <form id="geminiApiKeyForm">
-                <input type="password" id="geminiApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Gemini API Key">
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Save and Start</button>
+            <h2 class="text-2xl font-bold mb-4 text-center">Enter API Keys</h2>
+            <p class="text-gray-400 mb-6 text-center">Please provide your API keys to start the application.</p>
+            <form id="apiKeyForm">
+                <div class="mb-4">
+                    <label for="oddsApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">The Odds API Key:</label>
+                    <input type="password" id="oddsApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Odds API Key">
+                </div>
+                <div class="mb-6">
+                    <label for="geminiApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">Google Gemini API Key:</label>
+                    <input type="password" id="geminiApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your Gemini API Key">
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Start Application</button>
             </form>
         </div>
     </div>
@@ -92,12 +87,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const oddsApiKeyModal = document.getElementById('oddsApiKeyModal');
-            const oddsApiKeyForm = document.getElementById('oddsApiKeyForm');
+            const apiKeyModal = document.getElementById('apiKeyModal');
+            const apiKeyForm = document.getElementById('apiKeyForm');
             const oddsApiKeyInput = document.getElementById('oddsApiKeyInput');
-
-            const geminiApiKeyModal = document.getElementById('geminiApiKeyModal');
-            const geminiApiKeyForm = document.getElementById('geminiApiKeyForm');
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
             
             const mainLoader = document.getElementById('mainLoader');
@@ -112,27 +104,22 @@
 
             // --- Initialization ---
             function init() {
-                // Always prompt for the API keys, do not use localStorage.
-                oddsApiKeyModal.classList.remove('hidden');
+                // Always prompt for the API keys.
+                apiKeyModal.classList.remove('hidden');
             }
 
-            oddsApiKeyForm.addEventListener('submit', (e) => {
+            apiKeyForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const key = oddsApiKeyInput.value.trim();
-                if (key) {
-                    oddsApiKey = key;
-                    oddsApiKeyModal.classList.add('hidden');
-                    geminiApiKeyModal.classList.remove('hidden'); // Show next modal
-                }
-            });
-
-            geminiApiKeyForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const key = geminiApiKeyInput.value.trim();
-                if (key) {
-                    geminiApiKey = key;
-                    geminiApiKeyModal.classList.add('hidden');
+                const oddsKey = oddsApiKeyInput.value.trim();
+                const geminiKey = geminiApiKeyInput.value.trim();
+                
+                if (oddsKey && geminiKey) {
+                    oddsApiKey = oddsKey;
+                    geminiApiKey = geminiKey;
+                    apiKeyModal.classList.add('hidden');
                     fetchOdds(); // Start the app
+                } else {
+                    alert('Please provide both API keys.');
                 }
             });
 
@@ -166,6 +153,7 @@
                 } catch (error) {
                     console.error('Error fetching odds:', error);
                     showError(`Failed to fetch odds. Please check your API key or network connection. (Details: ${error.message})`);
+                    apiKeyModal.classList.remove('hidden'); // Show modal again on error
                 } finally {
                     showLoader(false);
                 }
