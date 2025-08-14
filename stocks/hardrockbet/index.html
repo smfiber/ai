@@ -31,6 +31,14 @@
             opacity: 1;
             transform: translateY(0);
         }
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #4a5568;
+            padding-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -339,11 +347,17 @@
             }
             
             function displayNarrative(narrative, gameDetails) {
+                // Format the AI response to include styled headings
+                let formattedNarrative = narrative
+                    .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
+                    .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
+                    .replace(/\n/g, '<br>');
+
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
                     <p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>
                     <div class="prose prose-invert max-w-none text-gray-300">
-                        ${narrative.replace(/\n/g, '<br>')}
+                        ${formattedNarrative}
                     </div>
                 `;
                 narrativeModal.classList.remove('hidden');
@@ -388,15 +402,9 @@
                         
                         const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
 
-                        // 3. Construct the new, highly-contextual prompt
+                        // 3. Construct the new, two-part "Analyst Role-Play" prompt
                         const prompt = `
-                            You are an expert college football analyst writing a pre-game narrative.
-
-                            **CRITICAL INSTRUCTIONS:**
-                            1.  **Fact Check Records:** If a team's record is '0-0' or 'N/A', the season has NOT started. DO NOT invent a win-loss record.
-                            2.  **Prioritize Data:** Base your narrative on the following data in this order: Point Spread, Recent News Snippets, and League Information.
-                            3.  **Preseason Narrative:** If it is the preseason (records are 0-0), focus on season expectations based on the news and what the point spread implies.
-                            4.  **Synthesize News:** Integrate the key points from the "Recent News Snippets" into your narrative to provide timely, relevant context.
+                            You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game.
 
                             **CONTEXTUAL DATA:**
                             -   **Game Date & Time:** ${gameDateTime}
@@ -405,8 +413,27 @@
                             -   **Recent News Snippets:** ${newsSnippets}
                             -   **${homeData.name} Info:** Last Season's Record is ${homeData.record}.
                             -   **${awayData.name} Info:** Last Season's Record is ${awayData.record}.
-                            
-                            Write a compelling, factually accurate pre-game narrative (around 250 words) based ONLY on the data and instructions above.
+
+                            ---
+
+                            **PART 1: Pre-Game Narrative**
+                            Using the contextual data, write a compelling, factually accurate pre-game narrative (around 200 words).
+                            -   **Fact Check Records:** If a team's record is '0-0' or 'N/A', the season has NOT started. DO NOT invent a win-loss record.
+                            -   **Preseason Focus:** If it is the preseason, focus on season expectations based on the news and what the point spread implies.
+                            -   **Synthesize News:** Integrate key points from the "Recent News Snippets".
+                            -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+
+                            ---
+
+                            **PART 2: Analyst's Pick**
+                            Now, perform a deeper analysis to determine which team is more likely to cover the spread.
+                            -   **Analyze Factors:** Briefly consider the following:
+                                -   **Program Trajectory:** Do the news snippets suggest a team is improving (e.g., good recruiting, returning starters) or declining (e.g., losing talent, coaching changes)?
+                                -   **Coaching Stability:** Is there a new coach, implying a rebuilding phase, or a veteran coach with a proven system?
+                                -   **Strength of Key Units:** Does the news mention specific strengths or weaknesses (e.g., a dominant offensive line, an inexperienced secondary) that could create a mismatch?
+                                -   **Talent Gap:** How significant is the talent difference based on their conferences (e.g., Power 5 vs. Group of 5)?
+                            -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise reason for your choice based on your synthesis of these factors.
+                            -   **Formatting:** Start this section with the heading: ### Analyst's Pick
                         `;
 
                         // 4. Generate the narrative
