@@ -54,6 +54,17 @@
         </div>
     </div>
 
+    <!-- Narrative Modal -->
+    <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl mx-4 relative">
+            <button id="closeNarrativeModal" class="absolute top-2 right-4 text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
+            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto">
+                <!-- Narrative will be injected here -->
+            </div>
+        </div>
+    </div>
+
+
     <!-- Main Content -->
     <div id="app" class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-10">
@@ -78,11 +89,6 @@
             <!-- Game cards will be injected here -->
         </div>
 
-        <!-- Narrative View -->
-        <div id="narrative-view" class="mt-12 hidden bg-gray-800 p-6 rounded-lg shadow-lg">
-             <!-- Narrative content will be injected here -->
-        </div>
-
     </div>
 
     <script>
@@ -92,11 +98,14 @@
             const oddsApiKeyInput = document.getElementById('oddsApiKeyInput');
             const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
             
+            const narrativeModal = document.getElementById('narrativeModal');
+            const narrativeModalContent = document.getElementById('narrativeModalContent');
+            const closeNarrativeModal = document.getElementById('closeNarrativeModal');
+
             const mainLoader = document.getElementById('mainLoader');
             const errorDisplay = document.getElementById('errorDisplay');
             const errorMessage = document.getElementById('errorMessage');
             const gamesList = document.getElementById('games-list');
-            const narrativeView = document.getElementById('narrative-view');
             
             const SPORTSDB_API_KEY = '3'; // Public key for TheSportsDB
             let oddsApiKey = '';
@@ -123,6 +132,10 @@
                 }
             });
 
+            closeNarrativeModal.addEventListener('click', () => {
+                narrativeModal.classList.add('hidden');
+            });
+
 
             // --- API Fetching ---
 
@@ -131,7 +144,6 @@
                 showLoader(true);
                 clearError();
                 gamesList.innerHTML = '';
-                narrativeView.classList.add('hidden');
 
                 const sport = 'americanfootball_ncaaf';
                 const regions = 'us';
@@ -307,15 +319,14 @@
             }
             
             function displayNarrative(narrative, gameDetails) {
-                narrativeView.innerHTML = `
+                narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
                     <p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${narrative.replace(/\n/g, '<br>')}
                     </div>
                 `;
-                narrativeView.classList.remove('hidden');
-                narrativeView.scrollIntoView({ behavior: 'smooth' });
+                narrativeModal.classList.remove('hidden');
             }
 
             function showLoader(isLoading) {
@@ -342,7 +353,6 @@
                     // Show loading state on button
                     button.disabled = true;
                     button.innerHTML = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> Generating...`;
-                    narrativeView.classList.add('hidden');
                     clearError();
 
                     try {
@@ -373,7 +383,6 @@
                     } catch (error) {
                         console.error("Narrative generation failed:", error);
                         showError(`Could not generate narrative. ${error.message}`);
-                        narrativeView.classList.add('hidden');
                     } finally {
                         // Restore button state
                         button.disabled = false;
