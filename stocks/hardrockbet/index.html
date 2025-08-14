@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 1.9
+        // Version 2.0
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -228,45 +228,40 @@
                 "LSU Tigers": "LSU"
             };
 
+            async function cfbApiFetch(url) {
+                const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
+                try {
+                    const response = await fetch(url, { headers });
+                    if (!response.ok) {
+                        console.error(`API Error for ${url}: ${response.status}`);
+                        return null;
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Fetch error for ${url}:`, error);
+                    return null;
+                }
+            }
+
             async function fetchTeamData(teamName) {
                 const currentYear = new Date().getFullYear();
                 const previousYear = currentYear - 1;
                 const aliasedTeamName = teamNameAliases[teamName] || teamName;
-                
-                const headers = {
-                    'Authorization': `Bearer ${cfbDataApiKey}`
-                };
-
-                const fetchData = async (url) => {
-                    try {
-                        const response = await fetch(url, { headers });
-                        if (!response.ok) {
-                            console.error(`API Error for ${url}: ${response.status}`);
-                            return null;
-                        }
-                        return await response.json();
-                    } catch (error) {
-                        console.error(`Fetch error for ${url}:`, error);
-                        return null;
-                    }
-                };
-
                 const encodedTeamName = encodeURIComponent(aliasedTeamName);
 
-                // 1. Get previous season's record
                 const recordsUrl = `https://api.collegefootballdata.com/records?year=${previousYear}&team=${encodedTeamName}`;
-                const recordsData = await fetchData(recordsUrl);
+                const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
+                const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
+
+                const [recordsData, returningData, talentData] = await Promise.all([
+                    cfbApiFetch(recordsUrl),
+                    cfbApiFetch(returningUrl),
+                    cfbApiFetch(talentUrl)
+                ]);
+
                 const teamRecord = recordsData?.[0];
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
-
-                // 2. Get returning production
-                const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
-                const returningData = await fetchData(returningUrl);
                 const returningProduction = returningData?.[0];
-
-                // 3. Get composite talent score
-                const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
-                const talentData = await fetchData(talentUrl);
                 const talentScore = talentData?.[0]?.talent || 'N/A';
 
                 return {
@@ -281,21 +276,29 @@
                 const currentYear = new Date().getFullYear();
                 const encodedTeamName = encodeURIComponent(teamName);
                 const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${currentYear}&team=${encodedTeamName}`;
-                
-                const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
+                const data = await cfbApiFetch(url);
+                return data?.[0];
+            }
+            
+            async function fetchHeadToHead(team1, team2) {
+                const currentYear = new Date().getFullYear();
+                const url = `https://api.collegefootballdata.com/games?year=${currentYear-5}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
+                const data = await cfbApiFetch(url);
+                return data || [];
+            }
 
-                try {
-                    const response = await fetch(url, { headers });
-                    if (!response.ok) {
-                        console.error(`API Error for ${url}: ${response.status}`);
-                        return null;
-                    }
-                    const data = await response.json();
-                    return data?.[0];
-                } catch (error) {
-                    console.error(`Fetch error for ${url}:`, error);
-                    return null;
-                }
+            async function fetchSPRatings(team) {
+                const currentYear = new Date().getFullYear();
+                const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
+                const data = await cfbApiFetch(url);
+                return data?.[0];
+            }
+
+            async function fetchInjuries(team) {
+                const currentYear = new Date().getFullYear();
+                const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
+                const data = await cfbApiFetch(url);
+                return data || [];
             }
 
 
@@ -460,6 +463,12 @@
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.homeData, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team Data (${rawData.awayData.name})</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.awayData, null, 2)}</pre>
+                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.headToHead, null, 2)}</pre>
+                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">SP+ Ratings</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre>
+                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre>
                         </div>
                     </div>
                 `;
@@ -500,9 +509,19 @@
                 button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats) {
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries) {
                 const { gameDateTime, spread } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
+
+                const formatInjuries = (injuries) => {
+                    if (!injuries || injuries.length === 0) return 'None reported.';
+                    return injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
+                };
+
+                const formatHeadToHead = (h2h) => {
+                    if (!h2h || h2h.length === 0) return 'No recent meetings.';
+                    return h2h.map(g => `${new Date(g.start_date).getFullYear()}: ${g.home_team} ${g.home_points}-${g.away_points} ${g.away_team}`).join('\n    - ');
+                };
 
                 let inSeasonSection = '';
                 if (homeStats && awayStats) {
@@ -527,6 +546,7 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
 - **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
+- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
 **CONTEXTUAL DATA:**
@@ -534,6 +554,13 @@ You are an expert college football analyst. Your task is to generate a two-part 
 -   **Matchup:** ${awayData.name} at ${homeData.name}
 -   **Current Spread:** ${spread}.
 -   **Recent News Snippets:** ${gameDetails.newsSnippets}
+-   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
+-   **SP+ Ratings (${new Date().getFullYear()}):**
+    -   **${homeData.name}:** ${homeSP?.rating?.toFixed(1) || 'N/A'} (Overall), ${homeSP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${homeSP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+    -   **${awayData.name}:** ${awaySP?.rating?.toFixed(1) || 'N/A'} (Overall), ${awaySP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${awaySP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+-   **Key Injuries:**
+    -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
+    -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
 
 **PRE-SEASON DATA (${previousYear} Season):**
 -   **${homeData.name}:**
@@ -550,8 +577,8 @@ ${inSeasonSection}
 
 **PART 1: Pre-Game Narrative**
 Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
--   **Synthesize Data:** Weave in pre-season expectations (talent, returning production) with any available in-season performance data (PPA, success rates).
--   **Integrate News:** Use the news snippets to add current events to the narrative.
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data (PPA, success rates).
+-   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
 -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
 
 ---
@@ -559,9 +586,9 @@ Using all the data provided, write a compelling, data-driven pre-game narrative 
 **PART 2: Analyst's Pick**
 Now, perform a deeper analysis to determine which team is more likely to cover the spread.
 -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-    -   **Pre-Season vs. In-Season:** How does the actual in-season performance compare to the pre-season expectations? Are teams over or under-performing?
-    -   **Key Matchups:** Based on the PPA and success rates, where are the biggest mismatches? (e.g., a high PPA offense vs. a poor PPA defense).
-    -   **News Insights:** Do the news snippets suggest anything that might contradict the data?
+    -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
+    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
+    -   **Injuries & News:** How might the reported injuries or news impact these matchups?
 -   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
 -   **Formatting:** Start this section with the heading: ### Analyst's Pick
 `;
@@ -580,14 +607,21 @@ Now, perform a deeper analysis to determine which team is more likely to cover t
                     clearError();
 
                     try {
-                        // 1. Fetch pre-season data for both teams
                         updateButtonStatus(button, 'Fetching team data...');
                         const [homeData, awayData] = await Promise.all([
                             fetchTeamData(homeTeam),
                             fetchTeamData(awayTeam)
                         ]);
+
+                        updateButtonStatus(button, 'Fetching extra data...');
+                        const [headToHead, homeSP, awaySP, homeInjuries, awayInjuries] = await Promise.all([
+                            fetchHeadToHead(homeData.name, awayData.name),
+                            fetchSPRatings(homeData.name),
+                            fetchSPRatings(awayData.name),
+                            fetchInjuries(homeData.name),
+                            fetchInjuries(awayData.name)
+                        ]);
                         
-                        // 2. Conditionally fetch in-season stats
                         let homeStats = null;
                         let awayStats = null;
                         const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
@@ -599,23 +633,20 @@ Now, perform a deeper analysis to determine which team is more likely to cover t
                             ]);
                         }
                         
-                        // 3. Fetch recent news about the matchup
                         updateButtonStatus(button, 'Fetching recent news...');
                         const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                         const newsSnippets = await fetchGameNews(newsQuery);
                         
                         const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
 
-                        // 4. Construct the prompt
                         const gameDetails = { gameDateTime, spread, newsSnippets };
-                        const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats);
+                        const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries);
 
-                        // 5. Generate the narrative
                         updateButtonStatus(button, 'Generating narrative...');
                         const narrativeText = await generateNarrative(prompt);
 
-                        // 6. Display the result
-                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, { homeData, awayData });
+                        const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
+                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData);
 
                     } catch (error) {
                         console.error("Narrative generation failed:", error);
