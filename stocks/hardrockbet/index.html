@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.0
+        // Version 2.1
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -528,15 +528,31 @@
                     inSeasonSection = `
 **IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
 -   **${homeData.name}:**
-    -   **Offensive PPA:** ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
-    -   **Defensive PPA:** ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
-    -   **Offensive Success Rate:** ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
-    -   **Defensive Success Rate:** ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+    -   **Offense:**
+        - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+    -   **Defense:**
+        - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
-    -   **Offensive PPA:** ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
-    -   **Defensive PPA:** ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
-    -   **Offensive Success Rate:** ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
-    -   **Defensive Success Rate:** ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+    -   **Offense:**
+        - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+    -   **Defense:**
+        - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 `;
                 }
 
@@ -546,6 +562,11 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
 - **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
+- **Explosiveness:** Measures the average predicted points added on successful plays. Higher is better.
+- **Points Per Opportunity:** Average points scored on drives that cross the opponent's 40-yard line.
+- **Line Yards:** The portion of a rushing play's yardage attributed to the offensive line.
+- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage.
+- **Havoc Rate:** The percentage of plays where the defense records a tackle for loss, forced fumble, or pass breakup.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
