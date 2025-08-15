@@ -479,7 +479,7 @@
                 });
             }
             
-            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis) {
+            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
                 // Format the AI response to include styled headings
                 let formattedNarrative = narrative
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
@@ -493,10 +493,15 @@
                     ? `<p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>`
                     : '<div class="mb-6"></div>'; // Add empty div to maintain spacing
 
+                const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
+                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType} Analysis</span>
+                </div>` : '';
+
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
                     <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
                     ${spreadDisplay}
+                    ${analysisTypeDisplay}
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
@@ -730,7 +735,7 @@ ${analystPickInstructions}
                     const narrativeText = await generateNarrative(prompt);
 
                     const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
-                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis);
+                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, originalButtonContent);
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
