@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.5
+        // Version 2.1
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -262,11 +262,7 @@
                 const teamRecord = recordsData?.[0];
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
                 const returningProduction = returningData?.[0];
-                let talentScore = talentData?.[0]?.talent || null;
-
-                if (talentScore !== null && talentScore < 1) {
-                    talentScore = null;
-                }
+                const talentScore = talentData?.[0]?.talent || 'N/A';
 
                 return {
                     name: aliasedTeamName,
@@ -285,20 +281,16 @@
             }
             
             async function fetchHeadToHead(team1, team2) {
-                const minYear = 2019;
-                const maxYear = 2024;
-                const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}&minYear=${minYear}&maxYear=${maxYear}`;
+                const currentYear = new Date().getFullYear();
+                const url = `https://api.collegefootballdata.com/games?year=${currentYear-5}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
                 const data = await cfbApiFetch(url);
-                return data || { team1Wins: 0, team2Wins: 0, ties: 0, games: [] };
+                return data || [];
             }
 
             async function fetchSPRatings(team) {
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
-                if (data && data.length > 0 && data[0].team === 'nationalAverages') {
-                    return null;
-                }
                 return data?.[0];
             }
 
@@ -311,30 +303,24 @@
 
 
             async function fetchGameNews(query) {
-                const search = async (start) => {
-                    const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}&start=${start}`;
-                    try {
-                        const response = await fetch(apiUrl);
-                        if (!response.ok) throw new Error(`Google Search API error! Status: ${response.status}`);
-                        return await response.json();
-                    } catch (error) {
-                        console.error(`Error fetching game news (start=${start}):`, error);
-                        return null;
+                const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}`;
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`Google Search API error! Status: ${response.status}`);
                     }
-                };
-
-                const [results1, results2] = await Promise.all([search(1), search(11)]);
-                
-                let allItems = [];
-                if (results1 && results1.items) allItems = allItems.concat(results1.items);
-                if (results2 && results2.items) allItems = allItems.concat(results2.items);
-
-                if (allItems.length === 0) return "No recent news found for this matchup.";
-                
-                return allItems.map(item => item.snippet).join(' ... ');
+                    const data = await response.json();
+                    if (!data.items || data.items.length === 0) {
+                        return "No recent news found for this matchup.";
+                    }
+                    return data.items.slice(0, 3).map(item => item.snippet).join(' ... ');
+                } catch (error) {
+                    console.error('Error fetching game news:', error);
+                    return "Could not retrieve recent news.";
+                }
             }
             
-            async function callGeminiAPI(prompt, retries = 3, delay = 1000) {
+            async function generateNarrative(prompt, retries = 3, delay = 1000) {
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
 
                 try {
@@ -346,12 +332,15 @@
                     
                     if (!response.ok) {
                         if (response.status === 403) {
+                             const errorBody = await response.json();
+                             console.error('Gemini API Error Response (403):', errorBody);
                              throw new Error(`AI generation failed with a 403 Forbidden error. Check Gemini API key permissions.`);
                         }
                         if (response.status >= 500 && retries > 0) {
                             await new Promise(res => setTimeout(res, delay));
-                            return callGeminiAPI(prompt, retries - 1, delay * 2);
+                            return generateNarrative(prompt, retries - 1, delay * 2);
                         }
+                        const errorBody = await response.json();
                         throw new Error(`AI generation failed. Status: ${response.status}`);
                     }
 
@@ -362,14 +351,14 @@
                     } else {
                         if(retries > 0) {
                             await new Promise(res => setTimeout(res, delay));
-                            return callGeminiAPI(prompt, retries - 1, delay * 2);
+                            return generateNarrative(prompt, retries - 1, delay * 2);
                         }
                         throw new Error("Could not parse the AI's response.");
                     }
                 } catch (error) {
                     if (error instanceof TypeError && retries > 0) {
                          await new Promise(res => setTimeout(res, delay));
-                         return callGeminiAPI(prompt, retries - 1, delay * 2);
+                         return generateNarrative(prompt, retries - 1, delay * 2);
                     }
                     throw error;
                 }
@@ -450,11 +439,10 @@
             }
             
             function displayNarrative(narrative, gameDetails, rawData) {
+                // Format the AI response to include styled headings
                 let formattedNarrative = narrative
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
-                    .replace(/### Key Matchup Analysis/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Key Matchup Analysis</h3>')
                     .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
-                    .replace(/### Underdog Path to Victory/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Underdog Path to Victory</h3>')
                     .replace(/\n/g, '<br>');
 
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
@@ -486,6 +474,7 @@
                 `;
                 narrativeModal.classList.remove('hidden');
 
+                // Accordion logic
                 const accordionButton = document.getElementById('accordion-button');
                 const accordionContent = document.getElementById('accordion-content');
                 const accordionArrow = accordionButton.querySelector('.accordion-arrow');
@@ -520,11 +509,8 @@
                 button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
             }
             
-            // --- Prompt Builders for Chain of Thought ---
-
-            function buildPrompt1_FactualFoundation(gameDetails, allData) {
-                const { homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries } = allData;
-                const { gameDateTime, spread, newsSnippets } = gameDetails;
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries) {
+                const { gameDateTime, spread } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
                 const formatInjuries = (injuries) => {
@@ -533,81 +519,103 @@
                 };
 
                 const formatHeadToHead = (h2h) => {
-                    if (!h2h || !h2h.games || h2h.games.length === 0) return 'No recent meetings.';
-                    return h2h.games.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
+                    if (!h2h || h2h.length === 0) return 'No recent meetings.';
+                    return h2h.map(g => `${new Date(g.start_date).getFullYear()}: ${g.home_team} ${g.home_points}-${g.away_points} ${g.away_team}`).join('\n    - ');
                 };
 
                 let inSeasonSection = '';
-                if (homeStats || awayStats) {
+                if (homeStats && awayStats) {
                     inSeasonSection = `
 **IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
--   **${homeData.name}:** Offense (PPA: ${homeStats?.offense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(homeStats?.offense?.successRate * 100).toFixed(1) || 'N/A'}%), Defense (PPA: ${homeStats?.defense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(homeStats?.defense?.successRate * 100).toFixed(1) || 'N/A'}%)
--   **${awayData.name}:** Offense (PPA: ${awayStats?.offense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(awayStats?.offense?.successRate * 100).toFixed(1) || 'N/A'}%), Defense (PPA: ${awayStats?.defense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(awayStats?.defense?.successRate * 100).toFixed(1) || 'N/A'}%)
+-   **${homeData.name}:**
+    -   **Offense:**
+        - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+    -   **Defense:**
+        - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+-   **${awayData.name}:**
+    -   **Offense:**
+        - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+    -   **Defense:**
+        - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 `;
                 }
 
                 return `
-You are a data summarization expert. Based ONLY on the data provided, write a neutral, 300-word pre-game narrative. Do not make any predictions about the outcome. Your task is to present the key data points, team strengths/weaknesses, and relevant context (like injuries and news) in a clear, narrative format.
+You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+
+**DATA DEFINITIONS:**
+- **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
+- **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
+- **Explosiveness:** Measures the average predicted points added on successful plays. Higher is better.
+- **Points Per Opportunity:** Average points scored on drives that cross the opponent's 40-yard line.
+- **Line Yards:** The portion of a rushing play's yardage attributed to the offensive line.
+- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage.
+- **Havoc Rate:** The percentage of plays where the defense records a tackle for loss, forced fumble, or pass breakup.
+- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
+- **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
 **CONTEXTUAL DATA:**
--   Matchup: ${awayData.name} at ${homeData.name}
--   Spread: ${spread}
--   Recent News: ${newsSnippets}
--   Head-to-Head (2019-2024): ${formatHeadToHead(headToHead)}
--   SP+ Ratings: ${homeData.name} (${homeSP ? homeSP.rating.toFixed(1) : 'N/A'}), ${awayData.name} (${awaySP ? awaySP.rating.toFixed(1) : 'N/A'})
--   Injuries: ${homeData.name}: ${formatInjuries(homeInjuries)}; ${awayData.name}: ${formatInjuries(awayInjuries)}
+-   **Game Date & Time:** ${gameDateTime}
+-   **Matchup:** ${awayData.name} at ${homeData.name}
+-   **Current Spread:** ${spread}.
+-   **Recent News Snippets:** ${gameDetails.newsSnippets}
+-   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
+-   **SP+ Ratings (${new Date().getFullYear()}):**
+    -   **${homeData.name}:** ${homeSP?.rating?.toFixed(1) || 'N/A'} (Overall), ${homeSP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${homeSP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+    -   **${awayData.name}:** ${awaySP?.rating?.toFixed(1) || 'N/A'} (Overall), ${awaySP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${awaySP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+-   **Key Injuries:**
+    -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
+    -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
 
-**PRE-SEASON DATA (${previousYear}):**
--   ${homeData.name}: Record (${homeData.record}), Talent (${homeData.talentScore || 'N/A'}), Returning Production (${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%)
--   ${awayData.name}: Record (${awayData.record}), Talent (${awayData.talentScore || 'N/A'}), Returning Production (${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%)
+**PRE-SEASON DATA (${previousYear} Season):**
+-   **${homeData.name}:**
+    -   **Record:** ${homeData.record}
+    -   **Composite Talent Score:** ${homeData.talentScore}
+    -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+-   **${awayData.name}:**
+    -   **Record:** ${awayData.record}
+    -   **Composite Talent Score:** ${awayData.talentScore}
+    -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
 
 ${inSeasonSection}
+---
 
-Begin the output with the heading: ### Pre-Game Narrative`;
+**PART 1: Pre-Game Narrative**
+Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data (PPA, success rates).
+-   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
+-   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+
+---
+
+**PART 2: Analyst's Pick**
+Now, perform a deeper analysis to determine which team is more likely to cover the spread.
+-   **Analyze Factors:** Explicitly reference the provided data in your analysis:
+    -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
+    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
+    -   **Injuries & News:** How might the reported injuries or news impact these matchups?
+-   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
+-   **Formatting:** Start this section with the heading: ### Analyst's Pick
+`;
             }
 
-            function buildPrompt2_MatchupAnalysis(narrative1, allData) {
-                const { homeData, awayData, homeStats, awayStats, homeSP, awaySP } = allData;
-                return `
-You are a football strategist. Using the pre-game narrative provided below, analyze the key matchups. Specifically, compare ${homeData.name}'s offensive strengths against ${awayData.name}'s defensive weaknesses, and vice-versa. Reference the PPA, Success Rate, and SP+ unit ratings to determine where the biggest advantages and disadvantages lie. Conclude by stating which team appears to have the overall matchup advantage on paper.
-
-**Pre-Game Narrative:**
-${narrative1}
-
-**Key Stats for Analysis:**
--   **${homeData.name}:** Offense (PPA: ${homeStats?.offense?.ppa?.toFixed(2) || 'N/A'}, SP+ Unit: ${homeSP?.offense?.rating.toFixed(1) || 'N/A'}), Defense (PPA: ${homeStats?.defense?.ppa?.toFixed(2) || 'N/A'}, SP+ Unit: ${homeSP?.defense?.rating.toFixed(1) || 'N/A'})
--   **${awayData.name}:** Offense (PPA: ${awayStats?.offense?.ppa?.toFixed(2) || 'N/A'}, SP+ Unit: ${awaySP?.offense?.rating.toFixed(1) || 'N/A'}), Defense (PPA: ${awayStats?.defense?.ppa?.toFixed(2) || 'N/A'}, SP+ Unit: ${awaySP?.defense?.rating.toFixed(1) || 'N/A'})
-
-Begin the output with the heading: ### Key Matchup Analysis`;
-            }
-
-            function buildPrompt3_PredictWinner(narrative2, allData) {
-                 const { homeSP, awaySP } = allData;
-                return `
-You are an expert game analyst. Based on your matchup analysis below and the overall SP+ ratings, which team is more likely to win the game outright? State your pick clearly. Then, in a separate paragraph, list the top three most critical data points from your analysis that support your conclusion.
-
-**Matchup Analysis:**
-${narrative2}
-
-**Overall SP+ Ratings:**
--   ${allData.homeData.name}: ${homeSP ? homeSP.rating.toFixed(1) : 'N/A'}
--   ${allData.awayData.name}: ${awaySP ? awaySP.rating.toFixed(1) : 'N/A'}
-
-Begin the output with the heading: ### Analyst's Pick`;
-            }
-
-            function buildPrompt4_UnderdogPath(narrative3, underdogName) {
-                return `
-Based on your complete analysis below, describe a plausible scenario for how the underdog, **${underdogName}**, could win this game outright. What specific factors must go their way (e.g., winning the turnover battle, explosive plays, neutralizing a key opponent)? Based on all the data, provide a percentage probability for this upset occurring.
-
-**Full Analysis:**
-${narrative3}
-
-Begin the output with the heading: ### Underdog Path to Victory`;
-            }
-
-
-            // --- Main Event Handler ---
+            // --- Event Handling ---
             gamesList.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('generate-btn')) {
                     const button = e.target;
@@ -620,7 +628,6 @@ Begin the output with the heading: ### Underdog Path to Victory`;
                     clearError();
 
                     try {
-                        // --- 1. Data Gathering ---
                         updateButtonStatus(button, 'Fetching team data...');
                         const [homeData, awayData] = await Promise.all([
                             fetchTeamData(homeTeam),
@@ -636,8 +643,9 @@ Begin the output with the heading: ### Underdog Path to Victory`;
                             fetchInjuries(awayData.name)
                         ]);
                         
-                        let homeStats = null, awayStats = null;
-                        const seasonStartDate = new Date(new Date().getFullYear(), 7, 20);
+                        let homeStats = null;
+                        let awayStats = null;
+                        const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
                         if (new Date() > seasonStartDate) {
                             updateButtonStatus(button, 'Fetching season stats...');
                             [homeStats, awayStats] = await Promise.all([
@@ -651,37 +659,19 @@ Begin the output with the heading: ### Underdog Path to Victory`;
                         const newsSnippets = await fetchGameNews(newsQuery);
                         
                         const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
                         const gameDetails = { gameDateTime, spread, newsSnippets };
-                        const allData = { homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
+                        const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries);
 
-                        // --- 2. Iterative Prompting Chain ---
-                        updateButtonStatus(button, 'Step 1/4: Building Foundation...');
-                        const prompt1 = buildPrompt1_FactualFoundation(gameDetails, allData);
-                        const narrative1 = await callGeminiAPI(prompt1);
+                        updateButtonStatus(button, 'Generating narrative...');
+                        const narrativeText = await generateNarrative(prompt);
 
-                        updateButtonStatus(button, 'Step 2/4: Analyzing Matchups...');
-                        const prompt2 = buildPrompt2_MatchupAnalysis(narrative1, allData);
-                        const narrative2 = await callGeminiAPI(prompt2);
-
-                        updateButtonStatus(button, 'Step 3/4: Making Pick...');
-                        const prompt3 = buildPrompt3_PredictWinner(narrative1 + '\n\n' + narrative2, allData);
-                        const narrative3 = await callGeminiAPI(prompt3);
-
-                        updateButtonStatus(button, 'Step 4/4: Analyzing Underdog...');
-                        const spreadNumber = parseFloat(spread.split(' ').pop());
-                        const spreadTeam = spread.substring(0, spread.lastIndexOf(' '));
-                        const underdogName = spreadNumber > 0 ? spreadTeam : (spreadTeam === homeData.name ? awayData.name : homeData.name);
-                        const prompt4 = buildPrompt4_UnderdogPath(narrative1 + '\n\n' + narrative2 + '\n\n' + narrative3, underdogName);
-                        const narrative4 = await callGeminiAPI(prompt4);
-
-                        // --- 3. Display Final Result ---
-                        const finalNarrative = [narrative1, narrative2, narrative3, narrative4].join('\n\n');
                         const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
-                        displayNarrative(finalNarrative, { homeTeam, awayTeam, spread, commenceTime }, rawData);
+                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData);
 
                     } catch (error) {
-                        console.error("Analysis generation failed:", error);
-                        showError(`Could not generate analysis. ${error.message}`);
+                        console.error("Narrative generation failed:", error);
+                        showError(`Could not generate narrative. ${error.message}`);
                     } finally {
                         button.disabled = false;
                         button.innerHTML = 'Generate';
