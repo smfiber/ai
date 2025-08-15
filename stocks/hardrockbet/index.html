@@ -281,11 +281,26 @@
             }
             
             async function fetchHeadToHead(team1, team2) {
-                const currentYear = new Date().getFullYear();
-                const url = `https://api.collegefootballdata.com/games?year=${currentYear-5}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
-                const data = await cfbApiFetch(url);
-                return data || [];
-            }
+                const currentYear = new Date().getFullYear();
+                const yearsToFetch = [];
+                for (let i = 1; i <= 5; i++) {
+                    yearsToFetch.push(currentYear - i); // Creates an array like [2024, 2023, 2022, 2021, 2020]
+                }
+
+                // Create an array of API call promises, one for each year
+                const promises = yearsToFetch.map(year => {
+                    const url = `https://api.collegefootballdata.com/games?year=${year}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
+                    return cfbApiFetch(url);
+                });
+
+                // Execute all fetches in parallel and wait for them to complete
+                const resultsByYear = await Promise.all(promises);
+
+                // Filter out any failed requests (which return null) and flatten the array of arrays into one list
+                const allGames = resultsByYear.filter(Boolean).flat();
+
+                return allGames || [];
+            }
 
             async function fetchSPRatings(team) {
                 const currentYear = new Date().getFullYear();
