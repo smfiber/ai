@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.3 - Renamed "Generate" to "Odds" and added "Reverse Odds" button
+        // Version 2.4 - Updated fetchHeadToHead to use the /teams/matchup endpoint
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -298,16 +298,11 @@
             }
             
             async function fetchHeadToHead(team1, team2) {
-                const currentYear = new Date().getFullYear();
-                const yearsToFetch = Array.from({length: 5}, (_, i) => currentYear - (i + 1));
-
-                const promises = yearsToFetch.map(year => {
-                    const url = `https://api.collegefootballdata.com/games?year=${year}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
-                    return cfbApiFetch(url);
-                });
-
-                const resultsByYear = await Promise.all(promises);
-                return resultsByYear.filter(Boolean).flat() || [];
+                // CORRECTED: Use the /teams/matchup endpoint for direct H2H data.
+                const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`;
+                const data = await cfbApiFetch(url);
+                // The relevant data is in the 'games' array of the response.
+                return data?.games || [];
             }
 
             async function fetchSPRatings(team) {
@@ -576,8 +571,9 @@
                 };
 
                 const formatHeadToHead = (h2h) => {
+                    // CORRECTED: Handle new data structure from /teams/matchup
                     if (!h2h || h2h.length === 0) return 'No recent meetings.';
-                    return h2h.map(g => `${new Date(g.start_date).getFullYear()}: ${g.home_team} ${g.home_points}-${g.away_points} ${g.away_team}`).join('\n    - ');
+                    return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
 
                 // Conditionally create the spread line and analyst instructions
