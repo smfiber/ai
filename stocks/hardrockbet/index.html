@@ -221,12 +221,164 @@
             }
             
             const teamNameAliases = {
+                // --- Major Conferences ---
+
+                // SEC
+                "Alabama Crimson Tide": "Alabama",
+                "Arkansas Razorbacks": "Arkansas",
+                "Auburn Tigers": "Auburn",
+                "Florida Gators": "Florida",
+                "Georgia Bulldogs": "Georgia",
+                "Kentucky Wildcats": "Kentucky",
+                "LSU Tigers": "LSU",
+                "Mississippi State Bulldogs": "Mississippi State",
+                "Missouri Tigers": "Missouri",
+                "Oklahoma Sooners": "Oklahoma",
+                "Ole Miss Rebels": "Mississippi", // Note: CFB Data API uses "Mississippi" for Ole Miss
+                "South Carolina Gamecocks": "South Carolina",
+                "Tennessee Volunteers": "Tennessee",
+                "Texas A&M Aggies": "Texas A&M",
+                "Texas Longhorns": "Texas",
+                "Vanderbilt Commodores": "Vanderbilt",
+
+                // Big Ten
+                "Illinois Fighting Illini": "Illinois",
+                "Indiana Hoosiers": "Indiana",
+                "Iowa Hawkeyes": "Iowa",
+                "Maryland Terrapins": "Maryland",
+                "Michigan State Spartans": "Michigan State",
+                "Michigan Wolverines": "Michigan",
+                "Minnesota Golden Gophers": "Minnesota",
+                "Nebraska Cornhuskers": "Nebraska",
+                "Northwestern Wildcats": "Northwestern",
+                "Ohio State Buckeyes": "Ohio State",
+                "Oregon Ducks": "Oregon",
+                "Penn State Nittany Lions": "Penn State",
+                "Purdue Boilermakers": "Purdue",
+                "Rutgers Scarlet Knights": "Rutgers",
+                "UCLA Bruins": "UCLA",
+                "USC Trojans": "USC",
+                "Washington Huskies": "Washington",
+                "Wisconsin Badgers": "Wisconsin",
+
+                // Big 12
+                "Arizona State Sun Devils": "Arizona State",
+                "Arizona Wildcats": "Arizona",
+                "Baylor Bears": "Baylor",
+                "BYU Cougars": "BYU",
+                "Cincinnati Bearcats": "Cincinnati",
+                "Colorado Buffaloes": "Colorado",
+                "Houston Cougars": "Houston",
+                "Iowa State Cyclones": "Iowa State",
+                "Kansas Jayhawks": "Kansas",
+                "Kansas State Wildcats": "Kansas State",
+                "Oklahoma State Cowboys": "Oklahoma State",
+                "TCU Horned Frogs": "TCU",
+                "Texas Tech Red Raiders": "Texas Tech",
+                "UCF Knights": "UCF",
+                "Utah Utes": "Utah",
+                "West Virginia Mountaineers": "West Virginia",
+
+                // ACC
+                "Boston College Eagles": "Boston College",
+                "California Golden Bears": "California",
+                "Clemson Tigers": "Clemson",
+                "Duke Blue Devils": "Duke",
+                "Florida State Seminoles": "Florida State",
+                "Georgia Tech Yellow Jackets": "Georgia Tech",
+                "Louisville Cardinals": "Louisville",
+                "Miami Hurricanes": "Miami",
+                "NC State Wolfpack": "NC State",
+                "North Carolina Tar Heels": "North Carolina",
+                "Pittsburgh Panthers": "Pittsburgh",
+                "SMU Mustangs": "SMU",
+                "Stanford Cardinal": "Stanford",
+                "Syracuse Orange": "Syracuse",
+                "Virginia Cavaliers": "Virginia",
+                "Virginia Tech Hokies": "Virginia Tech",
+                "Wake Forest Demon Deacons": "Wake Forest",
+    
+                // --- Group of Five & Independents ---
+
+                // American Athletic
+                "Army Black Knights": "Army",
+                "Charlotte 49ers": "Charlotte",
+                "East Carolina Pirates": "East Carolina",
+                "Florida Atlantic Owls": "Florida Atlantic",
+                "Memphis Tigers": "Memphis",
+                "Navy Midshipmen": "Navy",
+                "North Texas Mean Green": "North Texas",
+                "Rice Owls": "Rice",
+                "South Florida Bulls": "South Florida",
+                "Temple Owls": "Temple",
+                "Tulane Green Wave": "Tulane",
+                "Tulsa Golden Hurricane": "Tulsa",
+                "UAB Blazers": "UAB",
+                "UTSA Roadrunners": "UT San Antonio",
+
+                // Conference USA
+                "FIU Panthers": "Florida International",
+                "Jacksonville State Gamecocks": "Jacksonville State",
+                "Kennesaw State Owls": "Kennesaw State",
+                "Liberty Flames": "Liberty",
+                "Louisiana Tech Bulldogs": "Louisiana Tech",
+                "Middle Tennessee Blue Raiders": "Middle Tennessee",
+                "New Mexico State Aggies": "New Mexico State",
+                "Sam Houston Bearkats": "Sam Houston State",
+                "UTEP Miners": "UTEP",
+                "Western Kentucky Hilltoppers": "Western Kentucky",
+    
+                // MAC
+                "Akron Zips": "Akron",
+                "Ball State Cardinals": "Ball State",
+                "Bowling Green Falcons": "Bowling Green",
+                "Buffalo Bulls": "Buffalo",
+                "Central Michigan Chippewas": "Central Michigan",
+                "Eastern Michigan Eagles": "Eastern Michigan",
+                "Kent State Golden Flashes": "Kent State",
+                "Miami (OH) RedHawks": "Miami (OH)", // Distinguishes from Miami (FL)
+                "Northern Illinois Huskies": "Northern Illinois",
+                "Ohio Bobcats": "Ohio",
+                "Toledo Rockets": "Toledo",
+                "Western Michigan Broncos": "Western Michigan",
+
+                // Mountain West
+                "Air Force Falcons": "Air Force",
+                "Boise State Broncos": "Boise State",
+                "Colorado State Rams": "Colorado State",
+                "Fresno State Bulldogs": "Fresno State",
+                "Hawaii Rainbow Warriors": "Hawai'i",
+                "Nevada Wolf Pack": "Nevada",
+                "New Mexico Lobos": "New Mexico",
                 "San Diego State Aztecs": "San Diego State",
-                "Stony Brook Seawolves": "Stony Brook",
+                "San Jose State Spartans": "San José State",
                 "UNLV Rebels": "UNLV",
-                "Idaho State Bengals": "Idaho State",
-                "LSU Tigers": "LSU"
-            };
+                "Utah State Aggies": "Utah State",
+                "Wyoming Cowboys": "Wyoming",
+                "Oregon State Beavers": "Oregon State", // MWC affiliate
+                "Washington State Cougars": "Washington State", // MWC affiliate
+
+                // Sun Belt
+                "Appalachian State Mountaineers": "Appalachian State",
+                "Arkansas State Red Wolves": "Arkansas State",
+                "Coastal Carolina Chanticleers": "Coastal Carolina",
+                "Georgia Southern Eagles": "Georgia Southern",
+                "Georgia State Panthers": "Georgia State",
+                "James Madison Dukes": "James Madison",
+                "Louisiana Ragin' Cajuns": "Louisiana",
+                "UL Monroe Warhawks": "UL Monroe",
+                "Marshall Thundering Herd": "Marshall",
+                "Old Dominion Monarchs": "Old Dominion",
+                "South Alabama Jaguars": "South Alabama",
+                "Southern Miss Golden Eagles": "Southern Miss",
+                "Texas State Bobcats": "Texas State",
+                "Troy Trojans": "Troy",
+
+                // Independents
+                "Notre Dame Fighting Irish": "Notre Dame",
+                "UConn Huskies": "Connecticut",
+                "UMass Minutemen": "UMass",
+};
 
             async function cfbApiFetch(url) {
                 const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
