@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.1
+        // Version 2.3 - Renamed "Generate" to "Odds" and added "Reverse Odds" button
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -222,163 +222,28 @@
             
             const teamNameAliases = {
                 // --- Major Conferences ---
-
                 // SEC
-                "Alabama Crimson Tide": "Alabama",
-                "Arkansas Razorbacks": "Arkansas",
-                "Auburn Tigers": "Auburn",
-                "Florida Gators": "Florida",
-                "Georgia Bulldogs": "Georgia",
-                "Kentucky Wildcats": "Kentucky",
-                "LSU Tigers": "LSU",
-                "Mississippi State Bulldogs": "Mississippi State",
-                "Missouri Tigers": "Missouri",
-                "Oklahoma Sooners": "Oklahoma",
-                "Ole Miss Rebels": "Mississippi", // Note: CFB Data API uses "Mississippi" for Ole Miss
-                "South Carolina Gamecocks": "South Carolina",
-                "Tennessee Volunteers": "Tennessee",
-                "Texas A&M Aggies": "Texas A&M",
-                "Texas Longhorns": "Texas",
-                "Vanderbilt Commodores": "Vanderbilt",
-
+                "Alabama Crimson Tide": "Alabama", "Arkansas Razorbacks": "Arkansas", "Auburn Tigers": "Auburn", "Florida Gators": "Florida", "Georgia Bulldogs": "Georgia", "Kentucky Wildcats": "Kentucky", "LSU Tigers": "LSU", "Mississippi State Bulldogs": "Mississippi State", "Missouri Tigers": "Missouri", "Oklahoma Sooners": "Oklahoma", "Ole Miss Rebels": "Mississippi", "South Carolina Gamecocks": "South Carolina", "Tennessee Volunteers": "Tennessee", "Texas A&M Aggies": "Texas A&M", "Texas Longhorns": "Texas", "Vanderbilt Commodores": "Vanderbilt",
                 // Big Ten
-                "Illinois Fighting Illini": "Illinois",
-                "Indiana Hoosiers": "Indiana",
-                "Iowa Hawkeyes": "Iowa",
-                "Maryland Terrapins": "Maryland",
-                "Michigan State Spartans": "Michigan State",
-                "Michigan Wolverines": "Michigan",
-                "Minnesota Golden Gophers": "Minnesota",
-                "Nebraska Cornhuskers": "Nebraska",
-                "Northwestern Wildcats": "Northwestern",
-                "Ohio State Buckeyes": "Ohio State",
-                "Oregon Ducks": "Oregon",
-                "Penn State Nittany Lions": "Penn State",
-                "Purdue Boilermakers": "Purdue",
-                "Rutgers Scarlet Knights": "Rutgers",
-                "UCLA Bruins": "UCLA",
-                "USC Trojans": "USC",
-                "Washington Huskies": "Washington",
-                "Wisconsin Badgers": "Wisconsin",
-
+                "Illinois Fighting Illini": "Illinois", "Indiana Hoosiers": "Indiana", "Iowa Hawkeyes": "Iowa", "Maryland Terrapins": "Maryland", "Michigan State Spartans": "Michigan State", "Michigan Wolverines": "Michigan", "Minnesota Golden Gophers": "Minnesota", "Nebraska Cornhuskers": "Nebraska", "Northwestern Wildcats": "Northwestern", "Ohio State Buckeyes": "Ohio State", "Oregon Ducks": "Oregon", "Penn State Nittany Lions": "Penn State", "Purdue Boilermakers": "Purdue", "Rutgers Scarlet Knights": "Rutgers", "UCLA Bruins": "UCLA", "USC Trojans": "USC", "Washington Huskies": "Washington", "Wisconsin Badgers": "Wisconsin",
                 // Big 12
-                "Arizona State Sun Devils": "Arizona State",
-                "Arizona Wildcats": "Arizona",
-                "Baylor Bears": "Baylor",
-                "BYU Cougars": "BYU",
-                "Cincinnati Bearcats": "Cincinnati",
-                "Colorado Buffaloes": "Colorado",
-                "Houston Cougars": "Houston",
-                "Iowa State Cyclones": "Iowa State",
-                "Kansas Jayhawks": "Kansas",
-                "Kansas State Wildcats": "Kansas State",
-                "Oklahoma State Cowboys": "Oklahoma State",
-                "TCU Horned Frogs": "TCU",
-                "Texas Tech Red Raiders": "Texas Tech",
-                "UCF Knights": "UCF",
-                "Utah Utes": "Utah",
-                "West Virginia Mountaineers": "West Virginia",
-
+                "Arizona State Sun Devils": "Arizona State", "Arizona Wildcats": "Arizona", "Baylor Bears": "Baylor", "BYU Cougars": "BYU", "Cincinnati Bearcats": "Cincinnati", "Colorado Buffaloes": "Colorado", "Houston Cougars": "Houston", "Iowa State Cyclones": "Iowa State", "Kansas Jayhawks": "Kansas", "Kansas State Wildcats": "Kansas State", "Oklahoma State Cowboys": "Oklahoma State", "TCU Horned Frogs": "TCU", "Texas Tech Red Raiders": "Texas Tech", "UCF Knights": "UCF", "Utah Utes": "Utah", "West Virginia Mountaineers": "West Virginia",
                 // ACC
-                "Boston College Eagles": "Boston College",
-                "California Golden Bears": "California",
-                "Clemson Tigers": "Clemson",
-                "Duke Blue Devils": "Duke",
-                "Florida State Seminoles": "Florida State",
-                "Georgia Tech Yellow Jackets": "Georgia Tech",
-                "Louisville Cardinals": "Louisville",
-                "Miami Hurricanes": "Miami",
-                "NC State Wolfpack": "NC State",
-                "North Carolina Tar Heels": "North Carolina",
-                "Pittsburgh Panthers": "Pittsburgh",
-                "SMU Mustangs": "SMU",
-                "Stanford Cardinal": "Stanford",
-                "Syracuse Orange": "Syracuse",
-                "Virginia Cavaliers": "Virginia",
-                "Virginia Tech Hokies": "Virginia Tech",
-                "Wake Forest Demon Deacons": "Wake Forest",
-    
+                "Boston College Eagles": "Boston College", "California Golden Bears": "California", "Clemson Tigers": "Clemson", "Duke Blue Devils": "Duke", "Florida State Seminoles": "Florida State", "Georgia Tech Yellow Jackets": "Georgia Tech", "Louisville Cardinals": "Louisville", "Miami Hurricanes": "Miami", "NC State Wolfpack": "NC State", "North Carolina Tar Heels": "North Carolina", "Pittsburgh Panthers": "Pittsburgh", "SMU Mustangs": "SMU", "Stanford Cardinal": "Stanford", "Syracuse Orange": "Syracuse", "Virginia Cavaliers": "Virginia", "Virginia Tech Hokies": "Virginia Tech", "Wake Forest Demon Deacons": "Wake Forest",
                 // --- Group of Five & Independents ---
-
                 // American Athletic
-                "Army Black Knights": "Army",
-                "Charlotte 49ers": "Charlotte",
-                "East Carolina Pirates": "East Carolina",
-                "Florida Atlantic Owls": "Florida Atlantic",
-                "Memphis Tigers": "Memphis",
-                "Navy Midshipmen": "Navy",
-                "North Texas Mean Green": "North Texas",
-                "Rice Owls": "Rice",
-                "South Florida Bulls": "South Florida",
-                "Temple Owls": "Temple",
-                "Tulane Green Wave": "Tulane",
-                "Tulsa Golden Hurricane": "Tulsa",
-                "UAB Blazers": "UAB",
-                "UTSA Roadrunners": "UT San Antonio",
-
+                "Army Black Knights": "Army", "Charlotte 49ers": "Charlotte", "East Carolina Pirates": "East Carolina", "Florida Atlantic Owls": "Florida Atlantic", "Memphis Tigers": "Memphis", "Navy Midshipmen": "Navy", "North Texas Mean Green": "North Texas", "Rice Owls": "Rice", "South Florida Bulls": "South Florida", "Temple Owls": "Temple", "Tulane Green Wave": "Tulane", "Tulsa Golden Hurricane": "Tulsa", "UAB Blazers": "UAB", "UTSA Roadrunners": "UT San Antonio",
                 // Conference USA
-                "FIU Panthers": "Florida International",
-                "Jacksonville State Gamecocks": "Jacksonville State",
-                "Kennesaw State Owls": "Kennesaw State",
-                "Liberty Flames": "Liberty",
-                "Louisiana Tech Bulldogs": "Louisiana Tech",
-                "Middle Tennessee Blue Raiders": "Middle Tennessee",
-                "New Mexico State Aggies": "New Mexico State",
-                "Sam Houston Bearkats": "Sam Houston State",
-                "UTEP Miners": "UTEP",
-                "Western Kentucky Hilltoppers": "Western Kentucky",
-    
+                "FIU Panthers": "Florida International", "Jacksonville State Gamecocks": "Jacksonville State", "Kennesaw State Owls": "Kennesaw State", "Liberty Flames": "Liberty", "Louisiana Tech Bulldogs": "Louisiana Tech", "Middle Tennessee Blue Raiders": "Middle Tennessee", "New Mexico State Aggies": "New Mexico State", "Sam Houston Bearkats": "Sam Houston State", "UTEP Miners": "UTEP", "Western Kentucky Hilltoppers": "Western Kentucky",
                 // MAC
-                "Akron Zips": "Akron",
-                "Ball State Cardinals": "Ball State",
-                "Bowling Green Falcons": "Bowling Green",
-                "Buffalo Bulls": "Buffalo",
-                "Central Michigan Chippewas": "Central Michigan",
-                "Eastern Michigan Eagles": "Eastern Michigan",
-                "Kent State Golden Flashes": "Kent State",
-                "Miami (OH) RedHawks": "Miami (OH)", // Distinguishes from Miami (FL)
-                "Northern Illinois Huskies": "Northern Illinois",
-                "Ohio Bobcats": "Ohio",
-                "Toledo Rockets": "Toledo",
-                "Western Michigan Broncos": "Western Michigan",
-
+                "Akron Zips": "Akron", "Ball State Cardinals": "Ball State", "Bowling Green Falcons": "Bowling Green", "Buffalo Bulls": "Buffalo", "Central Michigan Chippewas": "Central Michigan", "Eastern Michigan Eagles": "Eastern Michigan", "Kent State Golden Flashes": "Kent State", "Miami (OH) RedHawks": "Miami (OH)", "Northern Illinois Huskies": "Northern Illinois", "Ohio Bobcats": "Ohio", "Toledo Rockets": "Toledo", "Western Michigan Broncos": "Western Michigan",
                 // Mountain West
-                "Air Force Falcons": "Air Force",
-                "Boise State Broncos": "Boise State",
-                "Colorado State Rams": "Colorado State",
-                "Fresno State Bulldogs": "Fresno State",
-                "Hawaii Rainbow Warriors": "Hawai'i",
-                "Nevada Wolf Pack": "Nevada",
-                "New Mexico Lobos": "New Mexico",
-                "San Diego State Aztecs": "San Diego State",
-                "San Jose State Spartans": "San José State",
-                "UNLV Rebels": "UNLV",
-                "Utah State Aggies": "Utah State",
-                "Wyoming Cowboys": "Wyoming",
-                "Oregon State Beavers": "Oregon State", // MWC affiliate
-                "Washington State Cougars": "Washington State", // MWC affiliate
-
+                "Air Force Falcons": "Air Force", "Boise State Broncos": "Boise State", "Colorado State Rams": "Colorado State", "Fresno State Bulldogs": "Fresno State", "Hawaii Rainbow Warriors": "Hawai'i", "Nevada Wolf Pack": "Nevada", "New Mexico Lobos": "New Mexico", "San Diego State Aztecs": "San Diego State", "San Jose State Spartans": "San José State", "UNLV Rebels": "UNLV", "Utah State Aggies": "Utah State", "Wyoming Cowboys": "Wyoming", "Oregon State Beavers": "Oregon State", "Washington State Cougars": "Washington State",
                 // Sun Belt
-                "Appalachian State Mountaineers": "Appalachian State",
-                "Arkansas State Red Wolves": "Arkansas State",
-                "Coastal Carolina Chanticleers": "Coastal Carolina",
-                "Georgia Southern Eagles": "Georgia Southern",
-                "Georgia State Panthers": "Georgia State",
-                "James Madison Dukes": "James Madison",
-                "Louisiana Ragin' Cajuns": "Louisiana",
-                "UL Monroe Warhawks": "UL Monroe",
-                "Marshall Thundering Herd": "Marshall",
-                "Old Dominion Monarchs": "Old Dominion",
-                "South Alabama Jaguars": "South Alabama",
-                "Southern Miss Golden Eagles": "Southern Miss",
-                "Texas State Bobcats": "Texas State",
-                "Troy Trojans": "Troy",
-
+                "Appalachian State Mountaineers": "Appalachian State", "Arkansas State Red Wolves": "Arkansas State", "Coastal Carolina Chanticleers": "Coastal Carolina", "Georgia Southern Eagles": "Georgia Southern", "Georgia State Panthers": "Georgia State", "James Madison Dukes": "James Madison", "Louisiana Ragin' Cajuns": "Louisiana", "UL Monroe Warhawks": "UL Monroe", "Marshall Thundering Herd": "Marshall", "Old Dominion Monarchs": "Old Dominion", "South Alabama Jaguars": "South Alabama", "Southern Miss Golden Eagles": "Southern Miss", "Texas State Bobcats": "Texas State", "Troy Trojans": "Troy",
                 // Independents
-                "Notre Dame Fighting Irish": "Notre Dame",
-                "UConn Huskies": "Connecticut",
-                "UMass Minutemen": "UMass",
-};
+                "Notre Dame Fighting Irish": "Notre Dame", "UConn Huskies": "Connecticut", "UMass Minutemen": "UMass",
+            };
 
             async function cfbApiFetch(url) {
                 const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
@@ -433,26 +298,17 @@
             }
             
             async function fetchHeadToHead(team1, team2) {
-                const currentYear = new Date().getFullYear();
-                const yearsToFetch = [];
-                for (let i = 1; i <= 5; i++) {
-                    yearsToFetch.push(currentYear - i); // Creates an array like [2024, 2023, 2022, 2021, 2020]
-                }
+                const currentYear = new Date().getFullYear();
+                const yearsToFetch = Array.from({length: 5}, (_, i) => currentYear - (i + 1));
 
-                // Create an array of API call promises, one for each year
-                const promises = yearsToFetch.map(year => {
-                    const url = `https://api.collegefootballdata.com/games?year=${year}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
-                    return cfbApiFetch(url);
-                });
+                const promises = yearsToFetch.map(year => {
+                    const url = `https://api.collegefootballdata.com/games?year=${year}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
+                    return cfbApiFetch(url);
+                });
 
-                // Execute all fetches in parallel and wait for them to complete
-                const resultsByYear = await Promise.all(promises);
-
-                // Filter out any failed requests (which return null) and flatten the array of arrays into one list
-                const allGames = resultsByYear.filter(Boolean).flat();
-
-                return allGames || [];
-            }
+                const resultsByYear = await Promise.all(promises);
+                return resultsByYear.filter(Boolean).flat() || [];
+            }
 
             async function fetchSPRatings(team) {
                 const currentYear = new Date().getFullYear();
@@ -576,16 +432,34 @@
                                 <p class="font-bold text-lg">${game.away_team} @ ${game.home_team}</p>
                                 <p class="text-sm text-gray-400">${new Date(game.commence_time).toLocaleTimeString('en-US', { timeStyle: 'short' })}</p>
                             </div>
-                            <div class="flex items-center space-x-4 w-full md:w-auto">
+                            <div class="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
                                 <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right min-w-[180px]">${game.spreadDisplay}</p>
-                                <button 
-                                    data-home-team="${game.home_team}" 
-                                    data-away-team="${game.away_team}" 
-                                    data-spread="${game.spreadDisplay}" 
-                                    data-commence-time="${game.commence_time}"
-                                    class="generate-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 w-full md:w-auto">
-                                    Generate
-                                </button>
+                                <div class="flex items-center space-x-2 w-full md:w-auto">
+                                    <button 
+                                        data-home-team="${game.home_team}" 
+                                        data-away-team="${game.away_team}" 
+                                        data-spread="${game.spreadDisplay}" 
+                                        data-commence-time="${game.commence_time}"
+                                        class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300">
+                                        Odds
+                                    </button>
+                                    <button 
+                                        data-home-team="${game.home_team}" 
+                                        data-away-team="${game.away_team}" 
+                                        data-spread="${game.spreadDisplay}" 
+                                        data-commence-time="${game.commence_time}"
+                                        class="generate-reverse-odds-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300">
+                                        Reverse Odds
+                                    </button>
+                                    <button 
+                                        data-home-team="${game.home_team}" 
+                                        data-away-team="${game.away_team}" 
+                                        data-spread="${game.spreadDisplay}" 
+                                        data-commence-time="${game.commence_time}"
+                                        class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300">
+                                        No Spread
+                                    </button>
+                                </div>
                             </div>
                         </li>
                     `).join('');
@@ -605,7 +479,7 @@
                 });
             }
             
-            function displayNarrative(narrative, gameDetails, rawData) {
+            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis) {
                 // Format the AI response to include styled headings
                 let formattedNarrative = narrative
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
@@ -614,10 +488,15 @@
 
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
 
+                // Conditionally show the spread
+                const spreadDisplay = isSpreadAnalysis 
+                    ? `<p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>`
+                    : '<div class="mb-6"></div>'; // Add empty div to maintain spacing
+
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
                     <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
-                    <p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>
+                    ${spreadDisplay}
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
@@ -671,12 +550,18 @@
                 errorDisplay.classList.add('hidden');
             }
             
-            function updateButtonStatus(button, message) {
-                const spinner = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
-                button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
+            function updateButtonStatus(button, message, originalContent) {
+                if (message) {
+                    const spinner = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
+                    button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
+                    button.disabled = true;
+                } else {
+                    button.innerHTML = originalContent;
+                    button.disabled = false;
+                }
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries) {
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis) {
                 const { gameDateTime, spread } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
@@ -690,6 +575,22 @@
                     return h2h.map(g => `${new Date(g.start_date).getFullYear()}: ${g.home_team} ${g.home_points}-${g.away_points} ${g.away_team}`).join('\n    - ');
                 };
 
+                // Conditionally create the spread line and analyst instructions
+                const spreadContextLine = isSpreadAnalysis ? `-   **Current Spread:** ${spread}.` : '';
+                const analystPickInstructions = isSpreadAnalysis
+                    ? `Now, perform a deeper analysis to determine which team is more likely to cover the spread.
+-   **Analyze Factors:** Explicitly reference the provided data in your analysis:
+    -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
+    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
+    -   **Injuries & News:** How might the reported injuries or news impact these matchups?
+-   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.`
+                    : `Now, perform a deeper analysis to determine which team is more likely to win the game outright.
+-   **Analyze Factors:** Explicitly reference the provided data in your analysis:
+    -   **SP+ Ratings:** Which team has the superior overall and unit-specific ratings?
+    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches that could determine the game's outcome?
+    -   **Other Factors:** How do returning production, talent, and injuries impact the likely result?
+-   **State Your Pick:** Clearly state which team you believe will win and provide a concise, data-backed reason for your choice.`;
+
                 let inSeasonSection = '';
                 if (homeStats && awayStats) {
                     inSeasonSection = `
@@ -699,26 +600,18 @@
         - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
         - Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
         - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'}
     -   **Defense:**
         - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
         - Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${homeStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
     -   **Offense:**
         - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
         - Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
         - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'}
     -   **Defense:**
         - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
         - Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${awayStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 `;
                 }
@@ -729,18 +622,13 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
 - **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
-- **Explosiveness:** Measures the average predicted points added on successful plays. Higher is better.
-- **Points Per Opportunity:** Average points scored on drives that cross the opponent's 40-yard line.
-- **Line Yards:** The portion of a rushing play's yardage attributed to the offensive line.
-- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage.
-- **Havoc Rate:** The percentage of plays where the defense records a tackle for loss, forced fumble, or pass breakup.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
 **CONTEXTUAL DATA:**
 -   **Game Date & Time:** ${gameDateTime}
 -   **Matchup:** ${awayData.name} at ${homeData.name}
--   **Current Spread:** ${spread}.
+${spreadContextLine}
 -   **Recent News Snippets:** ${gameDetails.newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()}):**
@@ -765,84 +653,109 @@ ${inSeasonSection}
 
 **PART 1: Pre-Game Narrative**
 Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
--   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data (PPA, success rates).
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
 -   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
 -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
 
 ---
 
 **PART 2: Analyst's Pick**
-Now, perform a deeper analysis to determine which team is more likely to cover the spread.
--   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-    -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
-    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
-    -   **Injuries & News:** How might the reported injuries or news impact these matchups?
--   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
+${analystPickInstructions}
 -   **Formatting:** Start this section with the heading: ### Analyst's Pick
 `;
             }
 
             // --- Event Handling ---
-            gamesList.addEventListener('click', async (e) => {
-                if (e.target.classList.contains('generate-btn')) {
-                    const button = e.target;
-                    const homeTeam = button.dataset.homeTeam;
-                    const awayTeam = button.dataset.awayTeam;
-                    const spread = button.dataset.spread;
-                    const commenceTime = button.dataset.commenceTime;
+            async function handleGenerateClick(button, isSpreadAnalysis, reverseSpread = false) {
+                const originalButtonContent = button.innerHTML;
+                const allButtonsInRow = button.closest('li').querySelectorAll('button');
+
+                allButtonsInRow.forEach(btn => updateButtonStatus(btn, 'Working...', btn.innerHTML));
+                
+                const homeTeam = button.dataset.homeTeam;
+                const awayTeam = button.dataset.awayTeam;
+                let spread = button.dataset.spread;
+                const commenceTime = button.dataset.commenceTime;
+                
+                clearError();
+
+                // Reverse the spread if requested
+                if (reverseSpread) {
+                    const parts = spread.split(' ');
+                    const point = parseFloat(parts.pop());
+                    const teamNameInSpread = parts.join(' ');
+
+                    const newPoint = -point;
+                    const newTeam = teamNameInSpread === homeTeam ? awayTeam : homeTeam;
+                    spread = `${newTeam} ${newPoint > 0 ? '+' : ''}${newPoint}`;
+                }
+
+                try {
+                    updateButtonStatus(button, 'Team Data...', originalButtonContent);
+                    const [homeData, awayData] = await Promise.all([
+                        fetchTeamData(homeTeam),
+                        fetchTeamData(awayTeam)
+                    ]);
+
+                    updateButtonStatus(button, 'Extra Data...', originalButtonContent);
+                    const [headToHead, homeSP, awaySP, homeInjuries, awayInjuries] = await Promise.all([
+                        fetchHeadToHead(homeData.name, awayData.name),
+                        fetchSPRatings(homeData.name),
+                        fetchSPRatings(awayData.name),
+                        fetchInjuries(homeData.name),
+                        fetchInjuries(awayData.name)
+                    ]);
                     
-                    button.disabled = true;
-                    clearError();
-
-                    try {
-                        updateButtonStatus(button, 'Fetching team data...');
-                        const [homeData, awayData] = await Promise.all([
-                            fetchTeamData(homeTeam),
-                            fetchTeamData(awayTeam)
+                    let homeStats = null;
+                    let awayStats = null;
+                    const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
+                    if (new Date() > seasonStartDate) {
+                        updateButtonStatus(button, 'Season Stats...', originalButtonContent);
+                        [homeStats, awayStats] = await Promise.all([
+                            fetchAdvancedSeasonStats(homeData.name),
+                            fetchAdvancedSeasonStats(awayData.name)
                         ]);
-
-                        updateButtonStatus(button, 'Fetching extra data...');
-                        const [headToHead, homeSP, awaySP, homeInjuries, awayInjuries] = await Promise.all([
-                            fetchHeadToHead(homeData.name, awayData.name),
-                            fetchSPRatings(homeData.name),
-                            fetchSPRatings(awayData.name),
-                            fetchInjuries(homeData.name),
-                            fetchInjuries(awayData.name)
-                        ]);
-                        
-                        let homeStats = null;
-                        let awayStats = null;
-                        const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
-                        if (new Date() > seasonStartDate) {
-                            updateButtonStatus(button, 'Fetching season stats...');
-                            [homeStats, awayStats] = await Promise.all([
-                                fetchAdvancedSeasonStats(homeData.name),
-                                fetchAdvancedSeasonStats(awayData.name)
-                            ]);
-                        }
-                        
-                        updateButtonStatus(button, 'Fetching recent news...');
-                        const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
-                        const newsSnippets = await fetchGameNews(newsQuery);
-                        
-                        const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-
-                        const gameDetails = { gameDateTime, spread, newsSnippets };
-                        const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries);
-
-                        updateButtonStatus(button, 'Generating narrative...');
-                        const narrativeText = await generateNarrative(prompt);
-
-                        const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
-                        displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData);
-
-                    } catch (error) {
-                        console.error("Narrative generation failed:", error);
-                        showError(`Could not generate narrative. ${error.message}`);
-                    } finally {
-                        button.disabled = false;
-                        button.innerHTML = 'Generate';
                     }
+                    
+                    updateButtonStatus(button, 'News...', originalButtonContent);
+                    const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
+                    const newsSnippets = await fetchGameNews(newsQuery);
+                    
+                    const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
+                    const gameDetails = { gameDateTime, spread, newsSnippets };
+                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis);
+
+                    updateButtonStatus(button, 'Generating...', originalButtonContent);
+                    const narrativeText = await generateNarrative(prompt);
+
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
+                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis);
+
+                } catch (error) {
+                    console.error("Narrative generation failed:", error);
+                    showError(`Could not generate narrative. ${error.message}`);
+                } finally {
+                     allButtonsInRow.forEach(btn => {
+                        let originalContent = 'No Spread';
+                        if (btn.classList.contains('odds-btn')) originalContent = 'Odds';
+                        if (btn.classList.contains('generate-reverse-odds-btn')) originalContent = 'Reverse Odds';
+                        updateButtonStatus(btn, null, originalContent);
+                    });
+                }
+            }
+
+            gamesList.addEventListener('click', async (e) => {
+                const oddsBtn = e.target.closest('.odds-btn');
+                const noSpreadBtn = e.target.closest('.generate-no-spread-btn');
+                const reverseOddsBtn = e.target.closest('.generate-reverse-odds-btn');
+
+                if (oddsBtn) {
+                    handleGenerateClick(oddsBtn, true, false); // isSpreadAnalysis: true, reverseSpread: false
+                } else if (noSpreadBtn) {
+                    handleGenerateClick(noSpreadBtn, false, false); // isSpreadAnalysis: false, reverseSpread: false
+                } else if (reverseOddsBtn) {
+                    handleGenerateClick(reverseOddsBtn, true, true); // isSpreadAnalysis: true, reverseSpread: true
                 }
             });
 
