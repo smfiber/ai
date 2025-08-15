@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.1
+        // Version 2.2
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -262,7 +262,12 @@
                 const teamRecord = recordsData?.[0];
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
                 const returningProduction = returningData?.[0];
-                const talentScore = talentData?.[0]?.talent || 'N/A';
+                let talentScore = talentData?.[0]?.talent || null;
+
+                // Basic validation for talent score
+                if (talentScore !== null && talentScore < 1) {
+                    talentScore = null; // Discard improbable talent scores
+                }
 
                 return {
                     name: aliasedTeamName,
@@ -282,15 +287,26 @@
             
             async function fetchHeadToHead(team1, team2) {
                 const currentYear = new Date().getFullYear();
-                const url = `https://api.collegefootballdata.com/games?year=${currentYear-5}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
-                const data = await cfbApiFetch(url);
-                return data || [];
+                let allGames = [];
+                for (let i = 0; i < 5; i++) {
+                    const year = currentYear - i;
+                    const url = `https://api.collegefootballdata.com/games?year=${year}&seasonType=both&team=${encodeURIComponent(team1)}&opponent=${encodeURIComponent(team2)}`;
+                    const data = await cfbApiFetch(url);
+                    if (data && data.length > 0) {
+                        allGames = allGames.concat(data);
+                    }
+                }
+                return allGames;
             }
 
             async function fetchSPRatings(team) {
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
+                // Validate against 'nationalAverages'
+                if (data && data.length > 0 && data[0].team === 'nationalAverages') {
+                    return null;
+                }
                 return data?.[0];
             }
 
@@ -313,7 +329,7 @@
                     if (!data.items || data.items.length === 0) {
                         return "No recent news found for this matchup.";
                     }
-                    return data.items.slice(0, 3).map(item => item.snippet).join(' ... ');
+                    return data.items.slice(0, 5).map(item => item.snippet).join(' ... ');
                 } catch (error) {
                     console.error('Error fetching game news:', error);
                     return "Could not retrieve recent news.";
@@ -524,40 +540,40 @@
                 };
 
                 let inSeasonSection = '';
-                if (homeStats && awayStats) {
+                if (homeStats || awayStats) {
                     inSeasonSection = `
 **IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
 -   **${homeData.name}:**
     -   **Offense:**
-        - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+        - PPA: ${homeStats?.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats?.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats?.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${homeStats?.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${homeStats?.offense?.lineYards?.toFixed(2) || 'N/A'}
     -   **Defense:**
-        - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${homeStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - PPA: ${homeStats?.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(homeStats?.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${homeStats?.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(homeStats?.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(homeStats?.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
     -   **Offense:**
-        - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'}
+        - PPA: ${awayStats?.offense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats?.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats?.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Points Per Opportunity: ${awayStats?.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Line Yards: ${awayStats?.offense?.lineYards?.toFixed(2) || 'N/A'}
     -   **Defense:**
-        - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${awayStats.defense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - PPA: ${awayStats?.defense?.ppa?.toFixed(2) || 'N/A'}
+        - Success Rate: ${(awayStats?.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Explosiveness: ${awayStats?.defense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Stuff Rate: ${(awayStats?.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Havoc Rate: ${(awayStats?.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 `;
                 }
 
                 return `
-You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data. If key data points like SP+ or Talent Scores are unavailable for a team (especially FCS teams), explicitly state that the data is not available and rely on the data you do have.
 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
@@ -577,8 +593,8 @@ You are an expert college football analyst. Your task is to generate a two-part 
 -   **Recent News Snippets:** ${gameDetails.newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()}):**
-    -   **${homeData.name}:** ${homeSP?.rating?.toFixed(1) || 'N/A'} (Overall), ${homeSP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${homeSP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
-    -   **${awayData.name}:** ${awaySP?.rating?.toFixed(1) || 'N/A'} (Overall), ${awaySP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${awaySP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+    -   **${homeData.name}:** ${homeSP ? `${homeSP.rating.toFixed(1)} (Overall), ${homeSP.offense.rating.toFixed(1)} (Off), ${homeSP.defense.rating.toFixed(1)} (Def)` : 'N/A'}
+    -   **${awayData.name}:** ${awaySP ? `${awaySP.rating.toFixed(1)} (Overall), ${awaySP.offense.rating.toFixed(1)} (Off), ${awaySP.defense.rating.toFixed(1)} (Def)` : 'N/A'}
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
@@ -586,11 +602,11 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **PRE-SEASON DATA (${previousYear} Season):**
 -   **${homeData.name}:**
     -   **Record:** ${homeData.record}
-    -   **Composite Talent Score:** ${homeData.talentScore}
+    -   **Composite Talent Score:** ${homeData.talentScore || 'N/A'}
     -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
     -   **Record:** ${awayData.record}
-    -   **Composite Talent Score:** ${awayData.talentScore}
+    -   **Composite Talent Score:** ${awayData.talentScore || 'N/A'}
     -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
 
 ${inSeasonSection}
