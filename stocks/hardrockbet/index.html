@@ -33,26 +33,33 @@
             opacity: 1;
             transform: translateY(0);
         }
+        .prose {
+            font-size: 1.125rem;
+            line-height: 1.75;
+        }
         .prose h1, .prose h2, .prose h3, .prose h4 {
             color: #fff;
         }
         .prose p, .prose li, .prose blockquote {
             color: #d1d5db;
+            margin-top: 1.25em;
+            margin-bottom: 1.25em;
         }
         .prose strong {
             color: #fff;
         }
         .prose blockquote {
             border-left-color: #4a5568;
+            padding-left: 1em;
         }
         .prose a {
             color: #60a5fa;
         }
         .prose h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 2em;
+            margin-bottom: 1em;
             border-bottom: 1px solid #4a5568;
             padding-bottom: 0.5rem;
         }
@@ -120,7 +127,7 @@
 
     <!-- Narrative Modal -->
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl mx-4 relative">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-4xl mx-4 relative">
             <button id="closeNarrativeModal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold z-10">&times;</button>
             <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-8 pb-8">
                 <!-- Narrative will be injected here -->
@@ -160,7 +167,7 @@
     </div>
 
     <script>
-        // Version 4.2 - Major UI/UX overhaul.
+        // Version 4.3 - Increased modal width and improved markdown styling for large screens.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
