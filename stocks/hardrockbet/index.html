@@ -76,6 +76,13 @@
             padding-left: 1rem;
             padding-right: 1rem;
         }
+        .accordion-arrow {
+            transition: transform 0.3s ease;
+        }
+        /* Input Focus Glow */
+        .input-glow:focus {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -88,23 +95,23 @@
             <form id="apiKeyForm">
                 <div class="mb-4">
                     <label for="oddsApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">The Odds API Key:</label>
-                    <input type="password" id="oddsApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Odds API Key">
+                    <input type="password" id="oddsApiKeyInput" class="input-glow w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Odds API Key">
                 </div>
                 <div class="mb-4">
                     <label for="cfbDataApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">College Football Data API Key:</label>
-                    <input type="password" id="cfbDataApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Your CFB Data API Key">
+                    <input type="password" id="cfbDataApiKeyInput" class="input-glow w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Your CFB Data API Key">
                 </div>
                 <div class="mb-4">
                     <label for="geminiApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">Google Gemini API Key:</label>
-                    <input type="password" id="geminiApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your Gemini API Key">
+                    <input type="password" id="geminiApiKeyInput" class="input-glow w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your Gemini API Key">
                 </div>
                  <div class="mb-4">
                     <label for="googleApiKeyInput" class="block text-gray-400 text-sm font-bold mb-2">Google Search API Key:</label>
-                    <input type="password" id="googleApiKeyInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Your Google API Key">
+                    <input type="password" id="googleApiKeyInput" class="input-glow w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Your Google API Key">
                 </div>
                 <div class="mb-6">
                     <label for="googleCxInput" class="block text-gray-400 text-sm font-bold mb-2">Google Engine ID (CX):</label>
-                    <input type="password" id="googleCxInput" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Your Google Engine ID">
+                    <input type="password" id="googleCxInput" class="input-glow w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Your Google Engine ID">
                 </div>
                 <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Start Application</button>
             </form>
@@ -118,6 +125,7 @@
             <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-8 pb-8">
                 <!-- Narrative will be injected here -->
             </div>
+             <button id="copyNarrativeBtn" class="absolute bottom-4 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
         </div>
     </div>
 
@@ -141,6 +149,9 @@
             <span id="errorMessage" class="block sm:inline"></span>
         </div>
 
+        <!-- Featured Game -->
+        <div id="featured-game" class="mb-12"></div>
+
         <!-- Games List -->
         <div id="games-list" class="space-y-8">
             <!-- Game date cards will be injected here -->
@@ -149,7 +160,7 @@
     </div>
 
     <script>
-        // Version 4.1 - Integrated marked.js for rich HTML rendering from Markdown.
+        // Version 4.2 - Major UI/UX overhaul.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -162,17 +173,20 @@
             const narrativeModal = document.getElementById('narrativeModal');
             const narrativeModalContent = document.getElementById('narrativeModalContent');
             const closeNarrativeModal = document.getElementById('closeNarrativeModal');
+            const copyNarrativeBtn = document.getElementById('copyNarrativeBtn');
 
             const mainLoader = document.getElementById('mainLoader');
             const errorDisplay = document.getElementById('errorDisplay');
             const errorMessage = document.getElementById('errorMessage');
             const gamesList = document.getElementById('games-list');
+            const featuredGameContainer = document.getElementById('featured-game');
             
             let oddsApiKey = '';
             let cfbDataApiKey = '';
             let geminiApiKey = '';
             let googleApiKey = '';
             let googleCx = '';
+            let currentNarrativeText = '';
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -206,6 +220,15 @@
                 narrativeModal.classList.add('hidden');
             });
 
+            copyNarrativeBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(currentNarrativeText).then(() => {
+                    copyNarrativeBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyNarrativeBtn.textContent = 'Copy Text';
+                    }, 2000);
+                });
+            });
+
 
             // --- API Fetching ---
 
@@ -213,6 +236,7 @@
                 showLoader(true);
                 clearError();
                 gamesList.innerHTML = '';
+                featuredGameContainer.innerHTML = '';
 
                 const sport = 'americanfootball_ncaaf';
                 const regions = 'us';
@@ -230,7 +254,8 @@
                     if (data.length === 0) {
                         throw new Error("No upcoming college football games found.");
                     }
-                    displayGames(data);
+                    const teamData = await fetchAllTeamLogos();
+                    displayGames(data, teamData);
                 } catch (error) {
                     console.error('Error fetching odds:', error);
                     showError(`Failed to fetch odds: ${error.message}`);
@@ -238,6 +263,16 @@
                 } finally {
                     showLoader(false);
                 }
+            }
+            
+            async function fetchAllTeamLogos() {
+                const url = `https://api.collegefootballdata.com/teams/fbs?year=${new Date().getFullYear()}`;
+                const data = await cfbApiFetch(url);
+                if (!data) return {};
+                return data.reduce((acc, team) => {
+                    acc[team.school] = team.logos?.[0] || null;
+                    return acc;
+                }, {});
             }
             
             const teamNameAliases = {
@@ -425,38 +460,45 @@
 
             // --- UI Rendering ---
 
-            function displayGames(games) {
+            function displayGames(games, teamData) {
                 gamesList.innerHTML = '';
                 gamesList.className = 'space-y-8';
 
                 const fbsTeamSet = new Set(Object.keys(teamNameAliases));
-                const fbsOnlyGames = games.filter(game => 
-                    fbsTeamSet.has(game.home_team) && fbsTeamSet.has(game.away_team)
-                );
-
-                const gamesByDate = fbsOnlyGames.reduce((acc, game) => {
+                const allGamesProcessed = games.map(game => {
                     const homeTeam = game.home_team;
                     const awayTeam = game.away_team;
+                    if (!fbsTeamSet.has(homeTeam) || !fbsTeamSet.has(awayTeam)) return null;
+
                     const bookmaker = game.bookmakers.find(b => b.key === 'draftkings' || b.key === 'fanduel') || game.bookmakers[0];
                     const spreadMarket = bookmaker.markets.find(m => m.key === 'spreads');
-                    
-                    if (!spreadMarket) return acc;
+                    if (!spreadMarket) return null;
 
                     const homeOutcome = spreadMarket.outcomes.find(o => o.name === homeTeam);
                     const awayOutcome = spreadMarket.outcomes.find(o => o.name === awayTeam);
-
-                    if (!homeOutcome || !awayOutcome) return acc;
+                    if (!homeOutcome || !awayOutcome) return null;
                     
                     const absoluteSpread = Math.abs(homeOutcome.point);
                     const spreadDisplay = `${homeOutcome.name} ${homeOutcome.point > 0 ? '+' : ''}${homeOutcome.point}`;
                     
+                    return { ...game, absoluteSpread, spreadDisplay };
+                }).filter(Boolean);
+
+
+                if (allGamesProcessed.length > 0) {
+                    const featuredGame = [...allGamesProcessed].sort((a,b) => a.absoluteSpread - b.absoluteSpread)[0];
+                    displayFeaturedGame(featuredGame, teamData);
+                }
+
+
+                const gamesByDate = allGamesProcessed.reduce((acc, game) => {
                     const gameDate = new Date(game.commence_time);
                     const dateKey = gameDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
                     if (!acc[dateKey]) {
                         acc[dateKey] = [];
                     }
-                    acc[dateKey].push({ ...game, absoluteSpread, spreadDisplay });
+                    acc[dateKey].push(game);
                     return acc;
                 }, {});
 
@@ -471,45 +513,29 @@
                     const gamesForDate = gamesByDate[dateKey];
                     gamesForDate.sort((a, b) => b.absoluteSpread - a.absoluteSpread);
 
-                    const gamesHtml = gamesForDate.map(game => `
-                        <li class="flex flex-col md:flex-row justify-between items-start md:items-center p-4 hover:bg-gray-700 transition duration-200">
-                            <div class="mb-2 md:mb-0 flex-grow">
-                                <p class="font-bold text-lg">${game.away_team} @ ${game.home_team}</p>
-                                <p class="text-sm text-gray-400">${new Date(game.commence_time).toLocaleTimeString('en-US', { timeStyle: 'short' })}</p>
+                    const gamesHtml = gamesForDate.map(game => {
+                        const homeLogo = teamData[teamNameAliases[game.home_team]] || '';
+                        const awayLogo = teamData[teamNameAliases[game.away_team]] || '';
+
+                        return `
+                        <li class="flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200 cursor-pointer">
+                            <div class="flex items-center mb-4 md:mb-0 flex-grow">
+                                <img src="${awayLogo}" alt="${game.away_team}" class="w-8 h-8 mr-3 object-contain">
+                                <span class="font-bold text-lg">${game.away_team}</span>
+                                <span class="mx-2 text-gray-400">@</span>
+                                <img src="${homeLogo}" alt="${game.home_team}" class="w-8 h-8 mr-3 object-contain">
+                                <span class="font-bold text-lg">${game.home_team}</span>
                             </div>
-                            <div class="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
-                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right min-w-[180px]">${game.spreadDisplay}</p>
-                                <div class="flex flex-col space-y-2 w-full md:w-auto">
-                                    <button 
-                                        data-home-team="${game.home_team}" 
-                                        data-away-team="${game.away_team}" 
-                                        data-spread="${game.spreadDisplay}" 
-                                        data-commence-time="${game.commence_time}"
-                                        class="ai-prediction-btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 whitespace-nowrap">
-                                        AI Prediction
-                                    </button>
-                                    <div class="flex items-center space-x-2 w-full">
-                                        <button 
-                                            data-home-team="${game.home_team}" 
-                                            data-away-team="${game.away_team}" 
-                                            data-spread="${game.spreadDisplay}" 
-                                            data-commence-time="${game.commence_time}"
-                                            class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap text-sm">
-                                            Spread Analysis
-                                        </button>
-                                        <button 
-                                            data-home-team="${game.home_team}" 
-                                            data-away-team="${game.away_team}" 
-                                            data-spread="${game.spreadDisplay}" 
-                                            data-commence-time="${game.commence_time}"
-                                            class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap text-sm">
-                                            Game Analysis
-                                        </button>
-                                    </div>
+                            <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
+                               <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
+                               <div class="flex w-full md:w-auto space-x-2">
+                                    <button data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="ai-prediction-btn flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">AI Prediction</button>
+                                    <button data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Spread Analysis</button>
+                                    <button data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Game Analysis</button>
                                 </div>
                             </div>
                         </li>
-                    `).join('');
+                    `}).join('');
 
                     const dateCard = document.createElement('div');
                     dateCard.className = 'bg-gray-800 rounded-lg shadow-lg overflow-hidden card-enter';
@@ -525,8 +551,36 @@
                     setTimeout(() => dateCard.classList.add('card-enter-active'), index * 100);
                 });
             }
+
+            function displayFeaturedGame(game, teamData) {
+                const homeLogo = teamData[teamNameAliases[game.home_team]] || '';
+                const awayLogo = teamData[teamNameAliases[game.away_team]] || '';
+                const gameTime = new Date(game.commence_time).toLocaleTimeString('en-US', { timeStyle: 'short' });
+
+                featuredGameContainer.innerHTML = `
+                    <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-2 border-yellow-400">
+                        <h2 class="text-2xl font-bold text-center mb-4 text-yellow-300">Featured Game of the Week</h2>
+                        <div class="flex justify-around items-center text-center">
+                            <div class="flex flex-col items-center">
+                                <img src="${awayLogo}" alt="${game.away_team}" class="w-20 h-20 mb-2 object-contain">
+                                <p class="text-xl font-semibold">${game.away_team}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-4xl font-bold text-gray-400">VS</p>
+                                <p class="text-lg text-blue-400 mt-2">${game.spreadDisplay}</p>
+                                <p class="text-sm text-gray-400">${gameTime}</p>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <img src="${homeLogo}" alt="${game.home_team}" class="w-20 h-20 mb-2 object-contain">
+                                <p class="text-xl font-semibold">${game.home_team}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
             
             function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
+                currentNarrativeText = narrative;
                 const formattedNarrative = marked.parse(narrative);
 
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
