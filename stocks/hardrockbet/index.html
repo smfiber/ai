@@ -56,7 +56,9 @@
         .accordion-content {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out;
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
     </style>
 </head>
@@ -131,7 +133,7 @@
     </div>
 
     <script>
-        // Version 3.2 - Added logic to use previous season's stats for early-season games.
+        // Version 3.4 - Fixed accordion content visibility bug.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -275,7 +277,7 @@
 
                 const recordsUrl = `https://api.collegefootballdata.com/records?year=${previousYear}&team=${encodedTeamName}`;
                 const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
-                const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
+                const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}`;
 
                 const recordsData = await cfbApiFetch(recordsUrl);
                 await sleep(250);
@@ -286,7 +288,9 @@
                 const teamRecord = recordsData?.[0];
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
                 const returningProduction = returningData?.[0];
-                const talentScore = talentData?.[0]?.talent || 'N/A';
+                
+                const teamTalent = talentData?.find(t => t.school === aliasedTeamName);
+                const talentScore = teamTalent?.talent || 'N/A';
 
                 return {
                     name: aliasedTeamName,
@@ -532,7 +536,7 @@
                             <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                                <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View News Articles
                             </button>
-                            <div class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
+                            <div class="accordion-content bg-gray-900 rounded-md">
                                 <ul class="list-none">
                                     ${newsItems}
                                 </ul>
@@ -552,7 +556,7 @@
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data
                         </button>
-                        <div class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
+                        <div class="accordion-content bg-gray-900 rounded-md">
                             <h4 class="font-bold text-md mb-2 text-gray-400">Home Team Data (${rawData.homeData.name})</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team Data (${rawData.awayData.name})</h4>
@@ -578,8 +582,14 @@
 
                         if (isExpanded) {
                             content.style.maxHeight = '0px';
+                            content.style.paddingTop = null;
+                            content.style.paddingBottom = null;
+                            content.style.marginTop = null;
                             arrow.style.transform = 'rotate(0deg)';
                         } else {
+                            content.style.paddingTop = '1rem';
+                            content.style.paddingBottom = '1rem';
+                            content.style.marginTop = '0.5rem';
                             content.style.maxHeight = content.scrollHeight + 'px';
                             arrow.style.transform = 'rotate(90deg)';
                         }
