@@ -90,10 +90,10 @@
         .input-glow:focus {
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
         }
-        .compelling-game {
-            background-color: #1a202c;
-            border-left: 4px solid #f59e0b;
-        }
+        .confidence-low { border-left: 4px solid #3b82f6; } /* blue-500 */
+        .confidence-medium { border-left: 4px solid #22c55e; } /* green-500 */
+        .confidence-high { border-left: 4px solid #f97316; } /* orange-500 */
+        .confidence-very-high { border-left: 4px solid #ef4444; } /* red-500 */
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 4.5 - Added Firebase config prompt and logic to save analysis results to Firestore.
+        // Version 4.7 - Replaced compelling game star with a confidence rating system.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -211,7 +211,7 @@
             let googleApiKey = '';
             let googleCx = '';
             let currentNarrativeText = '';
-            let compellingGames = new Set();
+            let gameRatings = new Map();
             let auth, db, user;
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -240,7 +240,7 @@
                         onAuthStateChanged(auth, async (currentUser) => {
                             user = currentUser;
                             if (user) {
-                                await loadCompellingGames();
+                                await loadGameRatings();
                                 updateUserProfile();
                             } else {
                                 updateUserProfile();
@@ -564,10 +564,11 @@
                     const gamesHtml = gamesForDate.map(game => {
                         const homeLogo = teamData[teamNameAliases[game.home_team]] || '';
                         const awayLogo = teamData[teamNameAliases[game.away_team]] || '';
-                        const isCompelling = compellingGames.has(game.id);
+                        const rating = gameRatings.get(game.id) || '';
+                        const ratingClass = rating ? `confidence-${rating}` : '';
 
                         return `
-                        <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200 cursor-pointer ${isCompelling ? 'compelling-game' : ''}" data-game-id="${game.id}">
+                        <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200 ${ratingClass}" data-game-id="${game.id}">
                             <div class="flex items-center mb-4 md:mb-0 flex-grow">
                                 <img src="${awayLogo}" alt="${game.away_team}" class="w-8 h-8 mr-3 object-contain">
                                 <span class="font-bold text-lg">${game.away_team}</span>
@@ -581,11 +582,14 @@
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="ai-prediction-btn flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">AI Prediction</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Spread Analysis</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Game Analysis</button>
-                                    <button class="compelling-btn p-2 rounded-md ${isCompelling ? 'bg-yellow-500' : 'bg-gray-600'} hover:bg-yellow-600 transition">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                        </svg>
-                                    </button>
+                                    <select class="confidence-rating bg-gray-600 text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" data-game-id="${game.id}">
+                                        <option value="" ${rating === '' ? 'selected' : ''}>Rate Game</option>
+                                        <option value="low" ${rating === 'low' ? 'selected' : ''}>Low</option>
+                                        <option value="medium" ${rating === 'medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="high" ${rating === 'high' ? 'selected' : ''}>High</option>
+                                        <option value="very-high" ${rating === 'very-high' ? 'selected' : ''}>Very High</option>
+                                        <option value="clear">Clear Rating</option>
+                                    </select>
                                 </div>
                             </div>
                         </li>
@@ -864,6 +868,7 @@ You are an expert college football analyst. Your task is to generate a two-part 
 - **Front Seven Havoc:** Percentage of plays where the defensive line or linebackers record a TFL, forced fumble, or pass breakup. Measures disruption at and behind the line of scrimmage.
 - **Avg. Starting Field Position:** The average starting yard line for an offense.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
+- **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
 **CONTEXTUAL DATA:**
@@ -873,8 +878,8 @@ ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()}):**
-    -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def)
-    -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def)
+    -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSP ? homeSP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+    -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySP ? awaySP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
@@ -997,53 +1002,67 @@ ${instructions}
 
                 const gameId = gameItem.dataset.gameId;
 
-                if (e.target.closest('.compelling-btn')) {
+                const aiPredictionBtn = e.target.closest('.ai-prediction-btn');
+                const oddsBtn = e.target.closest('.odds-btn');
+                const noSpreadBtn = e.target.closest('.generate-no-spread-btn');
+
+                if (aiPredictionBtn) {
+                    handleGenerateClick(aiPredictionBtn, 'prediction');
+                } else if (oddsBtn) {
+                    handleGenerateClick(oddsBtn, 'odds');
+                } else if (noSpreadBtn) {
+                    handleGenerateClick(noSpreadBtn, 'no-spread');
+                }
+            });
+
+            gamesList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('confidence-rating')) {
                     if (!user) {
-                        alert("Please log in to mark games as compelling.");
+                        alert("Please log in to rate games.");
+                        e.target.value = '';
                         return;
                     }
-                    toggleCompellingGame(gameId, gameItem);
-                } else {
-                    const aiPredictionBtn = e.target.closest('.ai-prediction-btn');
-                    const oddsBtn = e.target.closest('.odds-btn');
-                    const noSpreadBtn = e.target.closest('.generate-no-spread-btn');
-
-                    if (aiPredictionBtn) {
-                        handleGenerateClick(aiPredictionBtn, 'prediction');
-                    } else if (oddsBtn) {
-                        handleGenerateClick(oddsBtn, 'odds');
-                    } else if (noSpreadBtn) {
-                        handleGenerateClick(noSpreadBtn, 'no-spread');
-                    }
+                    handleRatingChange(e.target);
                 }
             });
 
             // --- Firebase Functions ---
-            async function toggleCompellingGame(gameId, gameItem) {
-                if (compellingGames.has(gameId)) {
-                    compellingGames.delete(gameId);
+            function handleRatingChange(selectElement) {
+                const gameId = selectElement.dataset.gameId;
+                const rating = selectElement.value;
+                const gameItem = selectElement.closest('.game-item');
+
+                // Remove all old confidence classes
+                gameItem.classList.remove('confidence-low', 'confidence-medium', 'confidence-high', 'confidence-very-high');
+
+                if (rating && rating !== 'clear') {
+                    gameRatings.set(gameId, rating);
+                    gameItem.classList.add(`confidence-${rating}`);
                 } else {
-                    compellingGames.add(gameId);
+                    gameRatings.delete(gameId);
                 }
-                await saveCompellingGames();
-                gameItem.classList.toggle('compelling-game');
-                const starBtn = gameItem.querySelector('.compelling-btn');
-                starBtn.classList.toggle('bg-yellow-500', compellingGames.has(gameId));
-                starBtn.classList.toggle('bg-gray-600', !compellingGames.has(gameId));
+
+                saveGameRatings();
             }
 
-            async function saveCompellingGames() {
+            async function saveGameRatings() {
                 if (!user) return;
                 const userDocRef = doc(db, "users", user.uid);
-                await setDoc(userDocRef, { compellingGames: Array.from(compellingGames) });
+                // Convert Map to an Object for Firestore compatibility
+                const ratingsObject = Object.fromEntries(gameRatings);
+                await setDoc(userDocRef, { gameRatings: ratingsObject });
             }
 
-            async function loadCompellingGames() {
+            async function loadGameRatings() {
                 if (!user) return;
                 const userDocRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists()) {
-                    compellingGames = new Set(docSnap.data().compellingGames);
+                if (docSnap.exists() && docSnap.data().gameRatings) {
+                    // Convert Object back to a Map
+                    const ratingsObject = docSnap.data().gameRatings;
+                    gameRatings = new Map(Object.entries(ratingsObject));
+                } else {
+                    gameRatings = new Map();
                 }
             }
 
@@ -1070,7 +1089,7 @@ ${instructions}
                     `;
                     document.getElementById('sign-out-btn').addEventListener('click', () => {
                         signOut(auth);
-                        compellingGames.clear();
+                        gameRatings.clear();
                         fetchOdds();
                     });
                 } else {
