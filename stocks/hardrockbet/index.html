@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 4.7 - Replaced compelling game star with a confidence rating system.
+        // Version 4.8 - Fixed rating persistence and added rating to saved analysis.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -213,6 +213,7 @@
             let currentNarrativeText = '';
             let gameRatings = new Map();
             let auth, db, user;
+            let initialAuthCheckDone = false; // Flag to prevent multiple fetches
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -239,11 +240,17 @@
                         
                         onAuthStateChanged(auth, async (currentUser) => {
                             user = currentUser;
+                            updateUserProfile(); // Update UI for login/logout
                             if (user) {
                                 await loadGameRatings();
-                                updateUserProfile();
                             } else {
-                                updateUserProfile();
+                                gameRatings.clear(); // Clear ratings if user logs out
+                            }
+
+                            // Fetch games only after the first auth check is complete
+                            if (!initialAuthCheckDone) {
+                                fetchOdds();
+                                initialAuthCheckDone = true;
                             }
                         });
 
@@ -253,7 +260,7 @@
                         googleApiKey = googleKey;
                         googleCx = cxKey;
                         apiKeyModal.classList.add('hidden');
-                        fetchOdds();
+                        // fetchOdds() is now called within onAuthStateChanged to ensure ratings are loaded first
 
                     } catch (error) {
                         alert("Invalid Firebase configuration. Please provide a valid JSON object.");
@@ -975,7 +982,8 @@ ${instructions}
                     const narrativeText = await generateNarrative(prompt);
 
                     if (user) {
-                        await saveAnalysis(gameId, analysisType, narrativeText);
+                        const rating = gameRatings.get(gameId) || 'none';
+                        await saveAnalysis(gameId, analysisType, narrativeText, rating);
                     }
 
                     const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, newsArticles };
@@ -1050,7 +1058,7 @@ ${instructions}
                 const userDocRef = doc(db, "users", user.uid);
                 // Convert Map to an Object for Firestore compatibility
                 const ratingsObject = Object.fromEntries(gameRatings);
-                await setDoc(userDocRef, { gameRatings: ratingsObject });
+                await setDoc(userDocRef, { gameRatings: ratingsObject }, { merge: true });
             }
 
             async function loadGameRatings() {
@@ -1066,7 +1074,7 @@ ${instructions}
                 }
             }
 
-            async function saveAnalysis(gameId, analysisType, analysisText) {
+            async function saveAnalysis(gameId, analysisType, analysisText, rating) {
                 if (!user) return;
                 try {
                     await addDoc(collection(db, "game_analyses"), {
@@ -1074,6 +1082,7 @@ ${instructions}
                         gameId: gameId,
                         analysisType: analysisType,
                         analysis: analysisText,
+                        rating: rating,
                         createdAt: new Date()
                     });
                 } catch (error) {
@@ -1088,9 +1097,10 @@ ${instructions}
                         <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition">Sign Out</button>
                     `;
                     document.getElementById('sign-out-btn').addEventListener('click', () => {
-                        signOut(auth);
-                        gameRatings.clear();
-                        fetchOdds();
+                        signOut(auth).then(() => {
+                            // This will trigger onAuthStateChanged, which will clear ratings and re-fetch games for a logged-out state.
+                            initialAuthCheckDone = false; // Reset for re-login
+                        });
                     });
                 } else {
                     userProfileContainer.innerHTML = `
