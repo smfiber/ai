@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 3.0 - Enriched prompt with advanced situational stats. Corrected button status typo.
+        // Version 3.1 - Added filter to show only FBS vs. FBS matchups. Moved Delaware to FBS.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -236,7 +236,7 @@
                 // American Athletic
                 "Army Black Knights": "Army", "Charlotte 49ers": "Charlotte", "East Carolina Pirates": "East Carolina", "Florida Atlantic Owls": "Florida Atlantic", "Memphis Tigers": "Memphis", "Navy Midshipmen": "Navy", "North Texas Mean Green": "North Texas", "Rice Owls": "Rice", "South Florida Bulls": "South Florida", "Temple Owls": "Temple", "Tulane Green Wave": "Tulane", "Tulsa Golden Hurricane": "Tulsa", "UAB Blazers": "UAB", "UTSA Roadrunners": "UT San Antonio",
                 // Conference USA
-                "FIU Panthers": "Florida International", "Jacksonville State Gamecocks": "Jacksonville State", "Kennesaw State Owls": "Kennesaw State", "Liberty Flames": "Liberty", "Louisiana Tech Bulldogs": "Louisiana Tech", "Middle Tennessee Blue Raiders": "Middle Tennessee", "New Mexico State Aggies": "New Mexico State", "Sam Houston Bearkats": "Sam Houston State", "UTEP Miners": "UTEP", "Western Kentucky Hilltoppers": "Western Kentucky",
+                "FIU Panthers": "Florida International", "Jacksonville State Gamecocks": "Jacksonville State", "Kennesaw State Owls": "Kennesaw State", "Liberty Flames": "Liberty", "Louisiana Tech Bulldogs": "Louisiana Tech", "Middle Tennessee Blue Raiders": "Middle Tennessee", "New Mexico State Aggies": "New Mexico State", "Sam Houston Bearkats": "Sam Houston State", "UTEP Miners": "UTEP", "Western Kentucky Hilltoppers": "Western Kentucky", "Delaware Fightin' Blue Hens": "Delaware",
                 // MAC
                 "Akron Zips": "Akron", "Ball State Cardinals": "Ball State", "Bowling Green Falcons": "Bowling Green", "Buffalo Bulls": "Buffalo", "Central Michigan Chippewas": "Central Michigan", "Eastern Michigan Eagles": "Eastern Michigan", "Kent State Golden Flashes": "Kent State", "Miami (OH) RedHawks": "Miami (OH)", "Northern Illinois Huskies": "Northern Illinois", "Ohio Bobcats": "Ohio", "Toledo Rockets": "Toledo", "Western Michigan Broncos": "Western Michigan",
                 // Mountain West
@@ -245,8 +245,11 @@
                 "Appalachian State Mountaineers": "Appalachian State", "Arkansas State Red Wolves": "Arkansas State", "Coastal Carolina Chanticleers": "Coastal Carolina", "Georgia Southern Eagles": "Georgia Southern", "Georgia State Panthers": "Georgia State", "James Madison Dukes": "James Madison", "Louisiana Ragin' Cajuns": "Louisiana", "UL Monroe Warhawks": "UL Monroe", "Marshall Thundering Herd": "Marshall", "Old Dominion Monarchs": "Old Dominion", "South Alabama Jaguars": "South Alabama", "Southern Miss Golden Eagles": "Southern Miss", "Texas State Bobcats": "Texas State", "Troy Trojans": "Troy",
                 // Independents
                 "Notre Dame Fighting Irish": "Notre Dame", "UConn Huskies": "Connecticut", "UMass Minutemen": "UMass",
+            };
+
+            const fcsTeams = {
                 // --- FCS Teams ---
-                "Chattanooga Mocs": "Chattanooga", "Delaware Fightin' Blue Hens": "Delaware", "Eastern Kentucky Colonels": "Eastern Kentucky", "Furman Paladins": "Furman", "Holy Cross Crusaders": "Holy Cross", "Idaho State Bengals": "Idaho State", "Illinois State Redbirds": "Illinois State", "Incarnate Word Cardinals": "Incarnate Word", "Mercer Bears": "Mercer", "Montana Grizzlies": "Montana", "Montana State Bobcats": "Montana State", "North Dakota Fighting Hawks": "North Dakota", "North Dakota State Bison": "North Dakota State", "Northern Iowa Panthers": "Northern Iowa", "Sacramento State Hornets": "Sacramento State", "Samford Bulldogs": "Samford", "South Dakota Coyotes": "South Dakota", "South Dakota State Jackrabbits": "South Dakota State", "Southern Illinois Salukis": "Southern Illinois", "UC Davis Aggies": "UC Davis", "Villanova Wildcats": "Villanova", "Weber State Wildcats": "Weber State", "William & Mary Tribe": "William & Mary",
+                "Chattanooga Mocs": "Chattanooga", "Eastern Kentucky Colonels": "Eastern Kentucky", "Furman Paladins": "Furman", "Holy Cross Crusaders": "Holy Cross", "Idaho State Bengals": "Idaho State", "Illinois State Redbirds": "Illinois State", "Incarnate Word Cardinals": "Incarnate Word", "Mercer Bears": "Mercer", "Montana Grizzlies": "Montana", "Montana State Bobcats": "Montana State", "North Dakota Fighting Hawks": "North Dakota", "North Dakota State Bison": "North Dakota State", "Northern Iowa Panthers": "Northern Iowa", "Sacramento State Hornets": "Sacramento State", "Samford Bulldogs": "Samford", "South Dakota Coyotes": "South Dakota", "South Dakota State Jackrabbits": "South Dakota State", "Southern Illinois Salukis": "Southern Illinois", "UC Davis Aggies": "UC Davis", "Villanova Wildcats": "Villanova", "Weber State Wildcats": "Weber State", "William & Mary Tribe": "William & Mary",
             };
 
             async function cfbApiFetch(url) {
@@ -407,7 +410,12 @@
                 gamesList.innerHTML = '';
                 gamesList.className = 'space-y-8';
 
-                const gamesByDate = games.reduce((acc, game) => {
+                const fbsTeamSet = new Set(Object.keys(teamNameAliases));
+                const fbsOnlyGames = games.filter(game => 
+                    fbsTeamSet.has(game.home_team) && fbsTeamSet.has(game.away_team)
+                );
+
+                const gamesByDate = fbsOnlyGames.reduce((acc, game) => {
                     const homeTeam = game.home_team;
                     const awayTeam = game.away_team;
                     const bookmaker = game.bookmakers.find(b => b.key === 'draftkings' || b.key === 'fanduel') || game.bookmakers[0];
@@ -434,6 +442,11 @@
                 }, {});
 
                 const sortedDates = Object.keys(gamesByDate).sort((a, b) => new Date(a) - new Date(b));
+
+                if (sortedDates.length === 0) {
+                    showError("No upcoming FBS vs. FBS games found with available odds.");
+                    return;
+                }
 
                 sortedDates.forEach((dateKey, index) => {
                     const gamesForDate = gamesByDate[dateKey];
