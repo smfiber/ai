@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.8 - Displays news articles in a separate accordion.
+        // Version 2.9 - Switched to sequential API calls with delays for stability.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -155,6 +155,8 @@
             let geminiApiKey = '';
             let googleApiKey = '';
             let googleCx = '';
+
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
             // --- Initialization ---
             function init() {
@@ -272,11 +274,11 @@
                 const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
                 const talentUrl = `https://api.collegefootballdata.com/talent?year=${previousYear}&team=${encodedTeamName}`;
 
-                const [recordsData, returningData, talentData] = await Promise.all([
-                    cfbApiFetch(recordsUrl),
-                    cfbApiFetch(returningUrl),
-                    cfbApiFetch(talentUrl)
-                ]);
+                const recordsData = await cfbApiFetch(recordsUrl);
+                await sleep(250);
+                const returningData = await cfbApiFetch(returningUrl);
+                await sleep(250);
+                const talentData = await cfbApiFetch(talentUrl);
 
                 const teamRecord = recordsData?.[0];
                 const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
@@ -295,40 +297,33 @@
                 const currentYear = new Date().getFullYear();
                 const encodedTeamName = encodeURIComponent(teamName);
                 const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${currentYear}&team=${encodedTeamName}`;
-                const data = await cfbApiFetch(url);
-                return data?.[0];
+                return await cfbApiFetch(url);
             }
             
             async function fetchHeadToHead(team1, team2) {
-                // CORRECTED: Use the /teams/matchup endpoint for direct H2H data.
                 const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`;
-                const data = await cfbApiFetch(url);
-                // The relevant data is in the 'games' array of the response.
-                return data?.games || [];
+                return await cfbApiFetch(url);
             }
 
             async function fetchSPRatings(team) {
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
-                // Validate that the returned data is for the correct team and not a fallback like 'nationalAverages'
                 if (data && data[0] && data[0].team.toLowerCase() === team.toLowerCase()) {
                     return data[0];
                 }
-                return null; // Return null if no specific data is found
+                return null;
             }
 
             async function fetchInjuries(team) {
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
-                const data = await cfbApiFetch(url);
-                return data || [];
+                return await cfbApiFetch(url);
             }
-
 
             async function fetchGameNews(query) {
                 let allArticles = [];
-                const numPages = 5; // 5 pages * 10 results/page = 50 articles
+                const numPages = 5;
             
                 try {
                     for (let i = 0; i < numPages; i++) {
@@ -352,6 +347,7 @@
                         } else {
                             break;
                         }
+                        await sleep(250); // Pause between news fetches
                     }
                     return allArticles;
                 } catch (error) {
@@ -730,28 +726,38 @@ ${analystPickInstructions}
                 }
 
                 try {
-                    updateButtonStatus(button, 'Team Data...', originalButtonContent);
-                    const [homeData, awayData] = await Promise.all([
-                        fetchTeamData(homeTeam),
-                        fetchTeamData(awayTeam)
-                    ]);
+                    updateButtonStatus(button, 'Home Data...', originalButtonContent);
+                    const homeData = await fetchTeamData(homeTeam);
+                    await sleep(250);
 
-                    updateButtonStatus(button, 'Extra Data...', originalButtonContent);
-                    const [headToHead, homeSP, awaySP, homeInjuries, awayInjuries] = await Promise.all([
-                        fetchHeadToHead(homeData.name, awayData.name),
-                        fetchSPRatings(homeData.name),
-                        fetchSPRatings(awayData.name),
-                        fetchInjuries(homeData.name),
-                        fetchInjuries(awayData.name)
-                    ]);
+                    updateButtonStatus(button, 'Away Data...', originalButtonContent);
+                    const awayData = await fetchTeamData(awayTeam);
+                    await sleep(250);
+
+                    updateButtonStatus(button, 'H2H...', originalButtonContent);
+                    const headToHeadData = await fetchHeadToHead(homeData.name, awayData.name);
+                    const headToHead = headToHeadData?.games || [];
+                    await sleep(250);
+
+                    updateButton.status(button, 'SP+ Ratings...', originalButtonContent);
+                    const homeSP = await fetchSPRatings(homeData.name);
+                    await sleep(250);
+                    const awaySP = await fetchSPRatings(awayData.name);
+                    await sleep(250);
+
+                    updateButtonStatus(button, 'Injuries...', originalButtonContent);
+                    const homeInjuries = await fetchInjuries(homeData.name);
+                    await sleep(250);
+                    const awayInjuries = await fetchInjuries(awayData.name);
+                    await sleep(250);
                     
                     let homeStats = null, awayStats = null;
                     if (new Date() > new Date(new Date().getFullYear(), 7, 20)) {
                         updateButtonStatus(button, 'Season Stats...', originalButtonContent);
-                        [homeStats, awayStats] = await Promise.all([
-                            fetchAdvancedSeasonStats(homeData.name),
-                            fetchAdvancedSeasonStats(awayData.name)
-                        ]);
+                        homeStats = await fetchAdvancedSeasonStats(homeData.name);
+                        await sleep(250);
+                        awayStats = await fetchAdvancedSeasonStats(awayData.name);
+                        await sleep(250);
                     }
                     
                     updateButtonStatus(button, 'News...', originalButtonContent);
