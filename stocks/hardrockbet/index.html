@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.6 - Added FCS aliases and SP+ data validation.
+        // Version 2.7 - Fetches up to 50 news articles and removes word count limit on narrative.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -327,20 +327,40 @@
 
 
             async function fetchGameNews(query) {
-                const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}`;
+                let allSnippets = [];
+                const numPages = 5; // 5 pages * 10 results/page = 50 articles
+            
                 try {
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`Google Search API error! Status: ${response.status}`);
+                    for (let i = 0; i < numPages; i++) {
+                        const start = i * 10 + 1;
+                        const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(query)}&start=${start}`;
+                        
+                        const response = await fetch(apiUrl);
+                        if (!response.ok) {
+                            // Stop fetching if one page fails, but still return what we have.
+                            console.error(`Google Search API error on page ${i+1}! Status: ${response.status}`);
+                            break; 
+                        }
+                        
+                        const data = await response.json();
+                        if (data.items && data.items.length > 0) {
+                            const snippets = data.items.map(item => item.snippet);
+                            allSnippets = allSnippets.concat(snippets);
+                        } else {
+                            // No more results, break the loop early.
+                            break;
+                        }
                     }
-                    const data = await response.json();
-                    if (!data.items || data.items.length === 0) {
+            
+                    if (allSnippets.length === 0) {
                         return "No recent news found for this matchup.";
                     }
-                    return data.items.slice(0, 3).map(item => item.snippet).join(' ... ');
+                    
+                    return allSnippets.join(' ... ');
                 } catch (error) {
                     console.error('Error fetching game news:', error);
-                    return "Could not retrieve recent news.";
+                    // Return what we have gathered so far, or a default message.
+                    return allSnippets.length > 0 ? allSnippets.join(' ... ') : "Could not retrieve recent news.";
                 }
             }
             
@@ -659,7 +679,7 @@ ${inSeasonSection}
 ---
 
 **PART 1: Pre-Game Narrative**
-Using all the data provided, write a compelling, data-driven pre-game narrative (around 200 words).
+Using all the data provided, write a compelling, data-driven pre-game narrative.
 -   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
 -   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
 -   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
