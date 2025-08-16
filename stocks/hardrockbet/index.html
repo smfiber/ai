@@ -133,7 +133,7 @@
     </div>
 
     <script>
-        // Version 3.4 - Fixed accordion content visibility bug.
+        // Version 3.6 - Added AI Prediction button and refined UI.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -463,31 +463,33 @@
                             </div>
                             <div class="flex flex-col md:flex-row items-stretch md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
                                 <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right min-w-[180px]">${game.spreadDisplay}</p>
-                                <div class="flex items-center space-x-2 w-full md:w-auto">
+                                <div class="flex flex-col space-y-2 w-full md:w-auto">
                                     <button 
                                         data-home-team="${game.home_team}" 
                                         data-away-team="${game.away_team}" 
                                         data-spread="${game.spreadDisplay}" 
                                         data-commence-time="${game.commence_time}"
-                                        class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap">
-                                        Odds
+                                        class="ai-prediction-btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 whitespace-nowrap">
+                                        AI Prediction
                                     </button>
-                                    <button 
-                                        data-home-team="${game.home_team}" 
-                                        data-away-team="${game.away_team}" 
-                                        data-spread="${game.spreadDisplay}" 
-                                        data-commence-time="${game.commence_time}"
-                                        class="generate-reverse-odds-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap">
-                                        Reverse Odds
-                                    </button>
-                                    <button 
-                                        data-home-team="${game.home_team}" 
-                                        data-away-team="${game.away_team}" 
-                                        data-spread="${game.spreadDisplay}" 
-                                        data-commence-time="${game.commence_time}"
-                                        class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap">
-                                        No Spread
-                                    </button>
+                                    <div class="flex items-center space-x-2 w-full">
+                                        <button 
+                                            data-home-team="${game.home_team}" 
+                                            data-away-team="${game.away_team}" 
+                                            data-spread="${game.spreadDisplay}" 
+                                            data-commence-time="${game.commence_time}"
+                                            class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap text-sm">
+                                            Spread Analysis
+                                        </button>
+                                        <button 
+                                            data-home-team="${game.home_team}" 
+                                            data-away-team="${game.away_team}" 
+                                            data-spread="${game.spreadDisplay}" 
+                                            data-commence-time="${game.commence_time}"
+                                            class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 whitespace-nowrap text-sm">
+                                            Game Analysis
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </li>
@@ -510,6 +512,8 @@
             
             function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
                 let formattedNarrative = narrative
+                    .replace(/### Game Synopsis/g, '<h3 class="text-xl font-semibold text-white mb-2">Game Synopsis</h3>')
+                    .replace(/### AI-Powered Prediction/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">AI-Powered Prediction</h3>')
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
                     .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
                     .replace(/\n/g, '<br>');
@@ -519,7 +523,7 @@
                     ? `<p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>`
                     : '<div class="mb-6"></div>';
                 const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
-                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType} Analysis</span>
+                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType}</span>
                 </div>` : '';
 
                 let newsAccordionHtml = '';
@@ -621,7 +625,7 @@
                 }
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis, statsYear) {
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear) {
                 const { gameDateTime, spread, newsSnippets } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
@@ -635,20 +639,70 @@
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
 
-                const spreadContextLine = isSpreadAnalysis ? `-   **Current Spread:** ${spread}.` : '';
-                const analystPickInstructions = isSpreadAnalysis
-                    ? `Now, perform a deeper analysis to determine which team is more likely to cover the spread.
+                const spreadContextLine = analysisType !== 'no-spread' ? `-   **Current Spread:** ${spread}.` : '';
+                
+                let instructions;
+                switch(analysisType) {
+                    case 'prediction':
+                        instructions = `
+**PART 1: Game Synopsis**
+Using all the data provided, write a brief, data-driven synopsis of the matchup.
+-   **Synthesize Data:** Briefly touch on the key strengths and weaknesses of each team based on SP+ ratings, advanced stats, and talent.
+-   **Formatting:** Start this section with the heading: ### Game Synopsis
+
+---
+
+**PART 2: AI-Powered Prediction**
+Your primary task is to predict the most likely winner of the game.
+-   **Weigh All Factors:** Synthesize every piece of data provided—SP+ ratings, advanced stats (PPA, Success Rates, Havoc), talent scores, returning production, head-to-head results, and injuries.
+-   **Declare a Winner:** Clearly and definitively state which team is more likely to win the game outright.
+-   **Provide a Confidence Score:** Assign a confidence score to your prediction (e.g., Low, Medium, High, Very High).
+-   **Justify Your Prediction:** Provide a concise, data-backed justification for your pick, highlighting the most influential factors and key matchups that led to your conclusion.
+-   **Formatting:** Start this section with the heading: ### AI-Powered Prediction
+`;
+                        break;
+                    case 'odds':
+                        instructions = `
+**PART 1: Pre-Game Narrative**
+Using all the data provided, write a compelling, data-driven pre-game narrative.
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
+-   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
+-   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+
+---
+
+**PART 2: Analyst's Pick**
+Now, perform a deeper analysis to determine which team is more likely to cover the spread.
 -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
     -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
     -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
     -   **Injuries & News:** How might the reported injuries or news impact these matchups?
--   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.`
-                    : `Now, perform a deeper analysis to determine which team is more likely to win the game outright.
+-   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
+-   **Formatting:** Start this section with the heading: ### Analyst's Pick
+`;
+                        break;
+                    case 'no-spread':
+                        instructions = `
+**PART 1: Pre-Game Narrative**
+Using all the data provided, write a compelling, data-driven pre-game narrative.
+-   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
+-   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
+-   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+
+---
+
+**PART 2: Analyst's Pick**
+Now, perform a deeper analysis to determine which team is more likely to win the game outright.
 -   **Analyze Factors:** Explicitly reference the provided data in your analysis:
     -   **SP+ Ratings:** Which team has the superior overall and unit-specific ratings?
     -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches that could determine the game's outcome?
     -   **Other Factors:** How do returning production, talent, and injuries impact the likely result?
--   **State Your Pick:** Clearly state which team you believe will win and provide a concise, data-backed reason for your choice.`;
+-   **State Your Pick:** Clearly state which team you believe will win and provide a concise, data-backed reason for your choice.
+-   **Formatting:** Start this section with the heading: ### Analyst's Pick
+`;
+                        break;
+                }
+
 
                 let statsSection = '';
                 if (homeStats && awayStats) {
@@ -660,27 +714,32 @@
                     statsSection = `
 ${statsHeader}
 -   **${homeData.name}:**
-    -   **Offense:**
-        - Overall PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${homeStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${homeStats.offense?.passingPPA?.toFixed(2) || 'N/A'}
-        - Overall Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(homeStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Power Success Rate: ${(homeStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-    -   **Defense:**
-        - Overall PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${homeStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${homeStats.defense?.passingPPA?.toFixed(2) || 'N/A'}
-        - Overall Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(homeStats.defense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+    -   **Overall Offense:**
+        - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'} | Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+    -   **Overall Defense:**
+        - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+    -   **Situational Performance:**
+        - Passing Downs Success Rate: ${(homeStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success Rate: ${(homeStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success Rate: ${(homeStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Stuff Rate (Def): ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+    -   **Efficiency & Field Position:**
+        - Points Per Opportunity (Scoring Drives): ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Avg. Starting Field Position: ${homeStats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}
+    -   **Defensive Havoc Breakdown:**
+        - Front Seven Havoc: ${(homeStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(homeStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+
 -   **${awayData.name}:**
-    -   **Offense:**
-        - Overall PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${awayStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${awayStats.offense?.passingPPA?.toFixed(2) || 'N/A'}
-        - Overall Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(awayStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Power Success Rate: ${(awayStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}%
-        - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-    -   **Defense:**
-        - Overall PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${awayStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${awayStats.defense?.passingPPA?.toFixed(2) || 'N/A'}
-        - Overall Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(awayStats.defense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+    -   **Overall Offense:**
+        - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'} | Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+    -   **Overall Defense:**
+        - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+    -   **Situational Performance:**
+        - Passing Downs Success Rate: ${(awayStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success Rate: ${(awayStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success Rate: ${(awayStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Stuff Rate (Def): ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+    -   **Efficiency & Field Position:**
+        - Points Per Opportunity (Scoring Drives): ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Avg. Starting Field Position: ${awayStats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}
+    -   **Defensive Havoc Breakdown:**
+        - Front Seven Havoc: ${(awayStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(awayStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
 `;
                 }
 
@@ -689,9 +748,13 @@ You are an expert college football analyst. Your task is to generate a two-part 
 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
-- **Success Rate:** Percentage of "successful" plays. Higher is better for offense, lower for defense.
+- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense, lower for defense.
+- **Explosiveness:** Measures the magnitude of successful plays.
 - **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.
 - **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.
+- **Havoc Rate:** Percentage of plays where the defense records a TFL, forced fumble, pass breakup, or interception.
+- **Points Per Opportunity (PPO):** Average points scored on drives that cross the opponent's 40-yard line.
+- **Avg. Starting Field Position:** The average starting yard line for an offense.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
@@ -720,23 +783,12 @@ ${spreadContextLine}
 
 ${statsSection}
 ---
-
-**PART 1: Pre-Game Narrative**
-Using all the data provided, write a compelling, data-driven pre-game narrative.
--   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
--   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
--   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
-
----
-
-**PART 2: Analyst's Pick**
-${analystPickInstructions}
--   **Formatting:** Start this section with the heading: ### Analyst's Pick
+${instructions}
 `;
             }
 
             // --- Event Handling ---
-            async function handleGenerateClick(button, isSpreadAnalysis, reverseSpread = false) {
+            async function handleGenerateClick(button, analysisType) {
                 const originalButtonContent = button.innerHTML;
                 const allButtonsInRow = button.closest('li').querySelectorAll('button');
                 allButtonsInRow.forEach(btn => { btn.disabled = true; });
@@ -748,15 +800,6 @@ ${analystPickInstructions}
                 const commenceTime = button.dataset.commenceTime;
                 
                 clearError();
-
-                if (reverseSpread) {
-                    const parts = spread.split(' ');
-                    const point = parseFloat(parts.pop());
-                    const teamNameInSpread = parts.join(' ');
-                    const newPoint = -point;
-                    const newTeam = teamNameInSpread === homeTeam ? awayTeam : homeTeam;
-                    spread = `${newTeam} ${newPoint > 0 ? '+' : ''}${newPoint}`;
-                }
 
                 try {
                     updateButtonStatus(button, 'Home Data...', originalButtonContent);
@@ -812,38 +855,40 @@ ${analystPickInstructions}
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSnippets };
-                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis, statsYear);
+                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear);
 
                     updateButtonStatus(button, 'Generating...', originalButtonContent);
                     const narrativeText = await generateNarrative(prompt);
 
                     const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, newsArticles };
-                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, originalButtonContent);
+                    const isSpreadAnalysis = analysisType === 'odds';
+                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase());
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
                     showError(`Could not generate narrative. ${error.message}`);
                 } finally {
                      allButtonsInRow.forEach(btn => {
-                        let originalContent = 'No Spread';
-                        if (btn.classList.contains('odds-btn')) originalContent = 'Odds';
-                        if (btn.classList.contains('generate-reverse-odds-btn')) originalContent = 'Reverse Odds';
+                        let originalContent = '...';
+                        if (btn.classList.contains('ai-prediction-btn')) originalContent = 'AI Prediction';
+                        if (btn.classList.contains('odds-btn')) originalContent = 'Spread Analysis';
+                        if (btn.classList.contains('generate-no-spread-btn')) originalContent = 'Game Analysis';
                         updateButtonStatus(btn, null, originalContent);
                     });
                 }
             }
 
             gamesList.addEventListener('click', async (e) => {
+                const aiPredictionBtn = e.target.closest('.ai-prediction-btn');
                 const oddsBtn = e.target.closest('.odds-btn');
                 const noSpreadBtn = e.target.closest('.generate-no-spread-btn');
-                const reverseOddsBtn = e.target.closest('.generate-reverse-odds-btn');
 
-                if (oddsBtn) {
-                    handleGenerateClick(oddsBtn, true, false);
+                if (aiPredictionBtn) {
+                    handleGenerateClick(aiPredictionBtn, 'prediction');
+                } else if (oddsBtn) {
+                    handleGenerateClick(oddsBtn, 'odds');
                 } else if (noSpreadBtn) {
-                    handleGenerateClick(noSpreadBtn, false, false);
-                } else if (reverseOddsBtn) {
-                    handleGenerateClick(reverseOddsBtn, true, true);
+                    handleGenerateClick(noSpreadBtn, 'no-spread');
                 }
             });
 
