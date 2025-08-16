@@ -133,7 +133,7 @@
     </div>
 
     <script>
-        // Version 3.7 - Added trench warfare and rushing/passing breakdown stats.
+        // Version 3.8 - Updated prompt instructions for clearer AI reasoning.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -657,7 +657,7 @@ Your primary task is to predict the most likely winner of the game.
 -   **Weigh All Factors:** Synthesize every piece of data provided—SP+ ratings, advanced stats (PPA, Success Rates, Havoc), talent scores, returning production, head-to-head results, and injuries.
 -   **Declare a Winner:** Clearly and definitively state which team is more likely to win the game outright.
 -   **Provide a Confidence Score:** Assign a confidence score to your prediction (e.g., Low, Medium, High, Very High).
--   **Justify Your Prediction:** Provide a concise, data-backed justification for your pick, highlighting the most influential factors and key matchups that led to your conclusion.
+-   **Justify Your Prediction:** Provide a step-by-step justification for your pick, explicitly referencing the key data points (e.g., SP+ ratings, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
 -   **Formatting:** Start this section with the heading: ### AI-Powered Prediction
 `;
                         break;
@@ -677,7 +677,7 @@ Now, perform a deeper analysis to determine which team is more likely to cover t
     -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
     -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
     -   **Injuries & News:** How might the reported injuries or news impact these matchups?
--   **State Your Pick:** Clearly state which team you believe will cover the spread and provide a concise, data-backed reason for your choice.
+-   **State Your Pick:** Clearly state which team you believe will cover the spread. In the following paragraph, provide a step-by-step justification, explicitly referencing the key data points (e.g., SP+ vs. Spread, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
 -   **Formatting:** Start this section with the heading: ### Analyst's Pick
 `;
                         break;
@@ -697,7 +697,7 @@ Now, perform a deeper analysis to determine which team is more likely to win the
     -   **SP+ Ratings:** Which team has the superior overall and unit-specific ratings?
     -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches that could determine the game's outcome?
     -   **Other Factors:** How do returning production, talent, and injuries impact the likely result?
--   **State Your Pick:** Clearly state which team you believe will win and provide a concise, data-backed reason for your choice.
+-   **State Your Pick:** Clearly state which team you believe will win. In the following paragraph, provide a step-by-step justification, explicitly referencing the key data points (e.g., SP+ ratings, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
 -   **Formatting:** Start this section with the heading: ### Analyst's Pick
 `;
                         break;
