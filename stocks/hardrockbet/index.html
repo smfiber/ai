@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>College Football AI Narratives</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏈</text></svg>">
     <style>
@@ -31,6 +32,21 @@
         .card-enter-active {
             opacity: 1;
             transform: translateY(0);
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4 {
+            color: #fff;
+        }
+        .prose p, .prose li, .prose blockquote {
+            color: #d1d5db;
+        }
+        .prose strong {
+            color: #fff;
+        }
+        .prose blockquote {
+            border-left-color: #4a5568;
+        }
+        .prose a {
+            color: #60a5fa;
         }
         .prose h3 {
             font-size: 1.25rem;
@@ -133,7 +149,7 @@
     </div>
 
     <script>
-        // Version 4.0 - Enhanced prompt with Open Field Yards and Front Seven Havoc for deeper analysis.
+        // Version 4.1 - Integrated marked.js for rich HTML rendering from Markdown.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -511,12 +527,7 @@
             }
             
             function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
-                let formattedNarrative = narrative
-                    .replace(/### Game Synopsis/g, '<h3 class="text-xl font-semibold text-white mb-2">Game Synopsis</h3>')
-                    .replace(/### AI-Powered Prediction/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">AI-Powered Prediction</h3>')
-                    .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
-                    .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
-                    .replace(/\n/g, '<br>');
+                const formattedNarrative = marked.parse(narrative);
 
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                 const spreadDisplay = isSpreadAnalysis 
@@ -645,60 +656,35 @@
                 switch(analysisType) {
                     case 'prediction':
                         instructions = `
-**PART 1: Game Synopsis**
-Using all the data provided, write a brief, data-driven synopsis of the matchup.
--   **Synthesize Data:** Briefly touch on the key strengths and weaknesses of each team based on SP+ ratings, advanced stats, and talent.
--   **Formatting:** Start this section with the heading: ### Game Synopsis
+### Game Synopsis
+Using all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses based on SP+ ratings, advanced stats, and talent.
 
 ---
 
-**PART 2: AI-Powered Prediction**
-Your primary task is to predict the most likely winner of the game.
--   **Weigh All Factors:** Synthesize every piece of data provided—SP+ ratings, advanced stats (PPA, Success Rates, Havoc), talent scores, returning production, head-to-head results, and injuries.
--   **Declare a Winner:** Clearly and definitively state which team is more likely to win the game outright.
--   **Provide a Confidence Score:** Assign a confidence score to your prediction (e.g., Low, Medium, High, Very High).
--   **Justify Your Prediction:** Provide a step-by-step justification for your pick, explicitly referencing the key data points (e.g., SP+ ratings, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
--   **Formatting:** Start this section with the heading: ### AI-Powered Prediction
+### AI-Powered Prediction
+Predict the most likely winner of the game. Weigh all factors: SP+ ratings, advanced stats, talent scores, returning production, head-to-head results, and injuries. Declare a clear winner, provide a confidence score (Low, Medium, High, Very High), and justify your prediction with specific data points.
 `;
                         break;
                     case 'odds':
                         instructions = `
-**PART 1: Pre-Game Narrative**
-Using all the data provided, write a compelling, data-driven pre-game narrative.
--   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
--   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
--   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+### Pre-Game Narrative
+Write a compelling, data-driven pre-game narrative. Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data. Integrate news snippets and injury reports for context.
 
 ---
 
-**PART 2: Analyst's Pick**
-Now, perform a deeper analysis to determine which team is more likely to cover the spread.
--   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-    -   **SP+ vs. Spread:** Does the SP+ rating difference suggest the spread is accurate, or is there value on one side?
-    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches?
-    -   **Injuries & News:** How might the reported injuries or news impact these matchups?
--   **State Your Pick:** Clearly state which team you believe will cover the spread. In the following paragraph, provide a step-by-step justification, explicitly referencing the key data points (e.g., SP+ vs. Spread, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
--   **Formatting:** Start this section with the heading: ### Analyst's Pick
+### Analyst's Pick
+Perform a deeper analysis to determine which team is more likely to cover the spread. Analyze factors like SP+ vs. Spread, key statistical mismatches (PPA, success rates), and the impact of injuries/news. Clearly state your pick and provide a step-by-step justification referencing the provided data.
 `;
                         break;
                     case 'no-spread':
                         instructions = `
-**PART 1: Pre-Game Narrative**
-Using all the data provided, write a compelling, data-driven pre-game narrative.
--   **Synthesize Data:** Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data.
--   **Integrate News & Injuries:** Use the news snippets and injury reports to add current events and context to the narrative.
--   **Formatting:** Start this section with the heading: ### Pre-Game Narrative
+### Pre-Game Narrative
+Write a compelling, data-driven pre-game narrative. Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data. Integrate news snippets and injury reports for context.
 
 ---
 
-**PART 2: Analyst's Pick**
-Now, perform a deeper analysis to determine which team is more likely to win the game outright.
--   **Analyze Factors:** Explicitly reference the provided data in your analysis:
-    -   **SP+ Ratings:** Which team has the superior overall and unit-specific ratings?
-    -   **Key Matchups:** Based on the PPA, success rates, and SP+ unit ratings, where are the biggest mismatches that could determine the game's outcome?
-    -   **Other Factors:** How do returning production, talent, and injuries impact the likely result?
--   **State Your Pick:** Clearly state which team you believe will win. In the following paragraph, provide a step-by-step justification, explicitly referencing the key data points (e.g., SP+ ratings, a specific statistical mismatch, and the impact of injuries) that led you to your conclusion.
--   **Formatting:** Start this section with the heading: ### Analyst's Pick
+### Analyst's Pick
+Perform a deeper analysis to determine the likely winner. Analyze factors like SP+ ratings, key statistical mismatches (PPA, success rates), returning production, talent, and injuries. Clearly state your pick and provide a step-by-step justification referencing the provided data.
 `;
                         break;
                 }
@@ -753,6 +739,7 @@ ${statsHeader}
 
                 return `
 You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+**Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.
 **Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
 
 **DATA DEFINITIONS:**
