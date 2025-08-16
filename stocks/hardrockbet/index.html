@@ -133,7 +133,7 @@
     </div>
 
     <script>
-        // Version 3.9 - Fortified prompt to ensure AI uses only provided data.
+        // Version 4.0 - Enhanced prompt with Open Field Yards and Front Seven Havoc for deeper analysis.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -719,12 +719,13 @@ ${statsHeader}
         - Rushing: PPA: ${homeStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.offense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.rushingExplosiveness?.toFixed(2) || 'N/A'}
         - Passing: PPA: ${homeStats.offense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.offense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.passingExplosiveness?.toFixed(2) || 'N/A'}
     -   **Defense Breakdown:**
-        - Overall: PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - Overall: PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
         - Vs. Rush: PPA: ${homeStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Vs. Pass: PPA: ${homeStats.defense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(homeStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-    -   **Trench Warfare:**
-        - Off. Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${homeStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'}
-        - Def. Line Yards Allowed: ${homeStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${homeStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'}
+        - Havoc Breakdown: Front Seven: ${(homeStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(homeStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+    -   **Line of Scrimmage & Explosiveness:**
+        - Off. Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${homeStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${homeStats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
+        - Def. Line Yards Allowed: ${homeStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${homeStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${homeStats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
     -   **Situational & Efficiency:**
         - Passing Downs Success: ${(homeStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(homeStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
         - Power Success: ${(homeStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
@@ -736,12 +737,13 @@ ${statsHeader}
         - Rushing: PPA: ${awayStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.offense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.rushingExplosiveness?.toFixed(2) || 'N/A'}
         - Passing: PPA: ${awayStats.offense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.offense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.passingExplosiveness?.toFixed(2) || 'N/A'}
     -   **Defense Breakdown:**
-        - Overall: PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - Overall: PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
         - Vs. Rush: PPA: ${awayStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Vs. Pass: PPA: ${awayStats.defense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(awayStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-    -   **Trench Warfare:**
-        - Off. Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${awayStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'}
-        - Def. Line Yards Allowed: ${awayStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${awayStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'}
+        - Havoc Breakdown: Front Seven: ${(awayStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(awayStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+    -   **Line of Scrimmage & Explosiveness:**
+        - Off. Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${awayStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${awayStats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
+        - Def. Line Yards Allowed: ${awayStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${awayStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${awayStats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
     -   **Situational & Efficiency:**
         - Passing Downs Success: ${(awayStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(awayStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
         - Power Success: ${(awayStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
@@ -763,6 +765,8 @@ You are an expert college football analyst. Your task is to generate a two-part 
 - **Points Per Opportunity (PPO):** Average points scored on drives that cross the opponent's 40-yard line.
 - **Line Yards:** Avg. rushing yards attributed to the offensive line (0-5 yards past LOS).
 - **Second Level Yards:** Avg. rushing yards gained 5-10 yards past the LOS.
+- **Open Field Yards:** Avg. rushing yards gained 10+ yards past the LOS. Measures an offense's ability to create explosive "home run" plays.
+- **Front Seven Havoc:** Percentage of plays where the defensive line or linebackers record a TFL, forced fumble, or pass breakup. Measures disruption at and behind the line of scrimmage.
 - **Avg. Starting Field Position:** The average starting yard line for an offense.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
