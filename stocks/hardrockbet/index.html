@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.7 - Fetches up to 50 news articles and removes word count limit on narrative.
+        // Version 2.8 - Displays news articles in a separate accordion.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -327,7 +327,7 @@
 
 
             async function fetchGameNews(query) {
-                let allSnippets = [];
+                let allArticles = [];
                 const numPages = 5; // 5 pages * 10 results/page = 50 articles
             
                 try {
@@ -337,30 +337,26 @@
                         
                         const response = await fetch(apiUrl);
                         if (!response.ok) {
-                            // Stop fetching if one page fails, but still return what we have.
                             console.error(`Google Search API error on page ${i+1}! Status: ${response.status}`);
                             break; 
                         }
                         
                         const data = await response.json();
                         if (data.items && data.items.length > 0) {
-                            const snippets = data.items.map(item => item.snippet);
-                            allSnippets = allSnippets.concat(snippets);
+                            const articles = data.items.map(item => ({
+                                title: item.title,
+                                link: item.link,
+                                snippet: item.snippet
+                            }));
+                            allArticles = allArticles.concat(articles);
                         } else {
-                            // No more results, break the loop early.
                             break;
                         }
                     }
-            
-                    if (allSnippets.length === 0) {
-                        return "No recent news found for this matchup.";
-                    }
-                    
-                    return allSnippets.join(' ... ');
+                    return allArticles;
                 } catch (error) {
                     console.error('Error fetching game news:', error);
-                    // Return what we have gathered so far, or a default message.
-                    return allSnippets.length > 0 ? allSnippets.join(' ... ') : "Could not retrieve recent news.";
+                    return [];
                 }
             }
             
@@ -501,22 +497,40 @@
             }
             
             function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
-                // Format the AI response to include styled headings
                 let formattedNarrative = narrative
                     .replace(/### Pre-Game Narrative/g, '<h3 class="text-xl font-semibold text-white mb-2">Pre-Game Narrative</h3>')
                     .replace(/### Analyst's Pick/g, '<h3 class="text-xl font-semibold text-white mt-6 mb-2">Analyst\'s Pick</h3>')
                     .replace(/\n/g, '<br>');
 
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-
-                // Conditionally show the spread
                 const spreadDisplay = isSpreadAnalysis 
                     ? `<p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>`
-                    : '<div class="mb-6"></div>'; // Add empty div to maintain spacing
-
+                    : '<div class="mb-6"></div>';
                 const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
                     <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType} Analysis</span>
                 </div>` : '';
+
+                let newsAccordionHtml = '';
+                if (rawData.newsArticles && rawData.newsArticles.length > 0) {
+                    const newsItems = rawData.newsArticles.map(article => `
+                        <li class="mb-3 pb-3 border-b border-gray-700 last:border-b-0 last:mb-0 last:pb-0">
+                            <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline font-semibold">${article.title}</a>
+                            <p class="text-sm text-gray-400 mt-1">${article.snippet}</p>
+                        </li>
+                    `).join('');
+
+                    newsAccordionHtml = `
+                        <div class="mt-4 border-t border-gray-600 pt-4">
+                            <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
+                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View News Articles
+                            </button>
+                            <div class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
+                                <ul class="list-none">
+                                    ${newsItems}
+                                </ul>
+                            </div>
+                        </div>`;
+                }
 
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
@@ -527,39 +541,41 @@
                         ${formattedNarrative}
                     </div>
                     <div class="mt-8 border-t border-gray-600 pt-4">
-                        <button id="accordion-button" class="w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
+                        <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data
                         </button>
-                        <div id="accordion-content" class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
+                        <div class="accordion-content bg-gray-900 p-4 rounded-md mt-2">
                             <h4 class="font-bold text-md mb-2 text-gray-400">Home Team Data (${rawData.homeData.name})</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.homeData, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team Data (${rawData.awayData.name})</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.awayData, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre>
                              <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">${JSON.stringify(rawData.headToHead, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre>
                              <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">SP+ Ratings</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre>
                              <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre>
                         </div>
                     </div>
+                    ${newsAccordionHtml}
                 `;
                 narrativeModal.classList.remove('hidden');
 
-                // Accordion logic
-                const accordionButton = document.getElementById('accordion-button');
-                const accordionContent = document.getElementById('accordion-content');
-                const accordionArrow = accordionButton.querySelector('.accordion-arrow');
+                // Generic Accordion logic for all toggles
+                document.querySelectorAll('.accordion-toggle').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const content = button.nextElementSibling;
+                        const arrow = button.querySelector('.accordion-arrow');
+                        const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
 
-                accordionButton.addEventListener('click', () => {
-                    const isExpanded = accordionContent.style.maxHeight;
-                    if (isExpanded && isExpanded !== '0px') {
-                        accordionContent.style.maxHeight = '0px';
-                        accordionArrow.style.transform = 'rotate(0deg)';
-                    } else {
-                        accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
-                        accordionArrow.style.transform = 'rotate(90deg)';
-                    }
+                        if (isExpanded) {
+                            content.style.maxHeight = '0px';
+                            arrow.style.transform = 'rotate(0deg)';
+                        } else {
+                            content.style.maxHeight = content.scrollHeight + 'px';
+                            arrow.style.transform = 'rotate(90deg)';
+                        }
+                    });
                 });
             }
 
@@ -588,7 +604,7 @@
             }
             
             function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis) {
-                const { gameDateTime, spread } = gameDetails;
+                const { gameDateTime, spread, newsSnippets } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
                 const formatInjuries = (injuries) => {
@@ -597,12 +613,10 @@
                 };
 
                 const formatHeadToHead = (h2h) => {
-                    // CORRECTED: Handle new data structure from /teams/matchup
                     if (!h2h || h2h.length === 0) return 'No recent meetings.';
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
 
-                // Conditionally create the spread line and analyst instructions
                 const spreadContextLine = isSpreadAnalysis ? `-   **Current Spread:** ${spread}.` : '';
                 const analystPickInstructions = isSpreadAnalysis
                     ? `Now, perform a deeper analysis to determine which team is more likely to cover the spread.
@@ -656,7 +670,7 @@ You are an expert college football analyst. Your task is to generate a two-part 
 -   **Game Date & Time:** ${gameDateTime}
 -   **Matchup:** ${awayData.name} at ${homeData.name}
 ${spreadContextLine}
--   **Recent News Snippets:** ${gameDetails.newsSnippets}
+-   **Recent News Snippets:** ${newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()}):**
     -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def)
@@ -696,13 +710,7 @@ ${analystPickInstructions}
             async function handleGenerateClick(button, isSpreadAnalysis, reverseSpread = false) {
                 const originalButtonContent = button.innerHTML;
                 const allButtonsInRow = button.closest('li').querySelectorAll('button');
-
-                // Disable all buttons in the row to prevent multiple clicks
-                allButtonsInRow.forEach(btn => {
-                    btn.disabled = true;
-                });
-
-                // Show loading state ONLY on the clicked button
+                allButtonsInRow.forEach(btn => { btn.disabled = true; });
                 updateButtonStatus(button, 'Generating...', originalButtonContent);
                 
                 const homeTeam = button.dataset.homeTeam;
@@ -712,12 +720,10 @@ ${analystPickInstructions}
                 
                 clearError();
 
-                // Reverse the spread if requested
                 if (reverseSpread) {
                     const parts = spread.split(' ');
                     const point = parseFloat(parts.pop());
                     const teamNameInSpread = parts.join(' ');
-
                     const newPoint = -point;
                     const newTeam = teamNameInSpread === homeTeam ? awayTeam : homeTeam;
                     spread = `${newTeam} ${newPoint > 0 ? '+' : ''}${newPoint}`;
@@ -739,10 +745,8 @@ ${analystPickInstructions}
                         fetchInjuries(awayData.name)
                     ]);
                     
-                    let homeStats = null;
-                    let awayStats = null;
-                    const seasonStartDate = new Date(new Date().getFullYear(), 7, 20); // Approx. Aug 20
-                    if (new Date() > seasonStartDate) {
+                    let homeStats = null, awayStats = null;
+                    if (new Date() > new Date(new Date().getFullYear(), 7, 20)) {
                         updateButtonStatus(button, 'Season Stats...', originalButtonContent);
                         [homeStats, awayStats] = await Promise.all([
                             fetchAdvancedSeasonStats(homeData.name),
@@ -752,17 +756,19 @@ ${analystPickInstructions}
                     
                     updateButtonStatus(button, 'News...', originalButtonContent);
                     const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
-                    const newsSnippets = await fetchGameNews(newsQuery);
+                    const newsArticles = await fetchGameNews(newsQuery);
+                    const newsSnippets = newsArticles.length > 0 
+                        ? newsArticles.map(a => a.snippet).join(' ... ') 
+                        : "No recent news found for this matchup.";
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-
                     const gameDetails = { gameDateTime, spread, newsSnippets };
                     const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis);
 
                     updateButtonStatus(button, 'Generating...', originalButtonContent);
                     const narrativeText = await generateNarrative(prompt);
 
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, newsArticles };
                     displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, originalButtonContent);
 
                 } catch (error) {
@@ -784,11 +790,11 @@ ${analystPickInstructions}
                 const reverseOddsBtn = e.target.closest('.generate-reverse-odds-btn');
 
                 if (oddsBtn) {
-                    handleGenerateClick(oddsBtn, true, false); // isSpreadAnalysis: true, reverseSpread: false
+                    handleGenerateClick(oddsBtn, true, false);
                 } else if (noSpreadBtn) {
-                    handleGenerateClick(noSpreadBtn, false, false); // isSpreadAnalysis: false, reverseSpread: false
+                    handleGenerateClick(noSpreadBtn, false, false);
                 } else if (reverseOddsBtn) {
-                    handleGenerateClick(reverseOddsBtn, true, true); // isSpreadAnalysis: true, reverseSpread: true
+                    handleGenerateClick(reverseOddsBtn, true, true);
                 }
             });
 
