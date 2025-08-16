@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 3.1 - Added filter to show only FBS vs. FBS matchups. Moved Delaware to FBS.
+        // Version 3.2 - Added logic to use previous season's stats for early-season games.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -296,10 +296,9 @@
                 };
             }
             
-            async function fetchAdvancedSeasonStats(teamName) {
-                const currentYear = new Date().getFullYear();
+            async function fetchAdvancedSeasonStats(teamName, year) {
                 const encodedTeamName = encodeURIComponent(teamName);
-                const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${currentYear}&team=${encodedTeamName}`;
+                const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${year}&team=${encodedTeamName}`;
                 return await cfbApiFetch(url);
             }
             
@@ -612,7 +611,7 @@
                 }
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis) {
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis, statsYear) {
                 const { gameDateTime, spread, newsSnippets } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
@@ -641,10 +640,15 @@
     -   **Other Factors:** How do returning production, talent, and injuries impact the likely result?
 -   **State Your Pick:** Clearly state which team you believe will win and provide a concise, data-backed reason for your choice.`;
 
-                let inSeasonSection = '';
+                let statsSection = '';
                 if (homeStats && awayStats) {
-                    inSeasonSection = `
-**IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
+                    const currentYear = new Date().getFullYear();
+                    const statsHeader = statsYear < currentYear 
+                        ? `**FINAL STATS (${statsYear} SEASON):**` 
+                        : `**IN-SEASON PERFORMANCE (${statsYear}):**`;
+
+                    statsSection = `
+${statsHeader}
 -   **${homeData.name}:**
     -   **Offense:**
         - Overall PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${homeStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${homeStats.offense?.passingPPA?.toFixed(2) || 'N/A'}
@@ -704,7 +708,7 @@ ${spreadContextLine}
     -   **Composite Talent Score:** ${awayData.talentScore}
     -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
 
-${inSeasonSection}
+${statsSection}
 ---
 
 **PART 1: Pre-Game Narrative**
@@ -771,13 +775,23 @@ ${analystPickInstructions}
                     await sleep(250);
                     
                     let homeStats = null, awayStats = null;
-                    if (new Date() > new Date(new Date().getFullYear(), 7, 20)) {
-                        updateButtonStatus(button, 'Season Stats...', originalButtonContent);
-                        homeStats = await fetchAdvancedSeasonStats(homeData.name);
-                        await sleep(250);
-                        awayStats = await fetchAdvancedSeasonStats(awayData.name);
-                        await sleep(250);
+                    const currentDate = new Date();
+                    const cutoffDate = new Date('2025-09-05T00:00:00');
+                    const currentYear = currentDate.getFullYear();
+                    const previousYear = currentYear - 1;
+                    let statsYear;
+
+                    if (currentDate < cutoffDate) {
+                        statsYear = previousYear;
+                    } else {
+                        statsYear = currentYear;
                     }
+
+                    updateButtonStatus(button, 'Season Stats...', originalButtonContent);
+                    homeStats = await fetchAdvancedSeasonStats(homeData.name, statsYear);
+                    await sleep(250);
+                    awayStats = await fetchAdvancedSeasonStats(awayData.name, statsYear);
+                    await sleep(250);
                     
                     updateButtonStatus(button, 'News...', originalButtonContent);
                     const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
@@ -788,7 +802,7 @@ ${analystPickInstructions}
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSnippets };
-                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis);
+                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, isSpreadAnalysis, statsYear);
 
                     updateButtonStatus(button, 'Generating...', originalButtonContent);
                     const narrativeText = await generateNarrative(prompt);
