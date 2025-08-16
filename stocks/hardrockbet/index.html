@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.9 - Switched to sequential API calls with delays for stability.
+        // Version 3.0 - Enriched prompt with advanced situational stats. Corrected button status typo.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -634,21 +634,25 @@
 **IN-SEASON PERFORMANCE (${new Date().getFullYear()}):**
 -   **${homeData.name}:**
     -   **Offense:**
-        - PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Overall PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${homeStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${homeStats.offense?.passingPPA?.toFixed(2) || 'N/A'}
+        - Overall Success Rate: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(homeStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success Rate: ${(homeStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}%
         - Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
     -   **Defense:**
-        - PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Overall PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${homeStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${homeStats.defense?.passingPPA?.toFixed(2) || 'N/A'}
+        - Overall Success Rate: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(homeStats.defense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Havoc Rate: ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
     -   **Offense:**
-        - PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Overall PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${awayStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${awayStats.offense?.passingPPA?.toFixed(2) || 'N/A'}
+        - Overall Success Rate: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(awayStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success Rate: ${(awayStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}%
         - Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
     -   **Defense:**
-        - PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'}
-        - Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Overall PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Rushing PPA: ${awayStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Passing PPA: ${awayStats.defense?.passingPPA?.toFixed(2) || 'N/A'}
+        - Overall Success Rate: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Passing Downs Success Rate: ${(awayStats.defense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
         - Havoc Rate: ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
 `;
                 }
@@ -657,8 +661,10 @@
 You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
 
 **DATA DEFINITIONS:**
-- **PPA (Predicted Points Added):** Measures how many points a unit is expected to add (offense) or prevent (defense) on a given play compared to an average team. Higher is better for offense, lower is better for defense.
-- **Success Rate:** The percentage of plays that are considered "successful." Higher is better for offense, lower is better for defense.
+- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
+- **Success Rate:** Percentage of "successful" plays. Higher is better for offense, lower for defense.
+- **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.
+- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
@@ -739,7 +745,7 @@ ${analystPickInstructions}
                     const headToHead = headToHeadData?.games || [];
                     await sleep(250);
 
-                    updateButton.status(button, 'SP+ Ratings...', originalButtonContent);
+                    updateButtonStatus(button, 'SP+ Ratings...', originalButtonContent);
                     const homeSP = await fetchSPRatings(homeData.name);
                     await sleep(250);
                     const awaySP = await fetchSPRatings(awayData.name);
