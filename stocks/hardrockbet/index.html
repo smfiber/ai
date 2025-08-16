@@ -131,7 +131,7 @@
     </div>
 
     <script>
-        // Version 2.5 - Fixed button loading state and modal padding.
+        // Version 2.6 - Added FCS aliases and SP+ data validation.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -311,7 +311,11 @@
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
-                return data?.[0];
+                // Validate that the returned data is for the correct team and not a fallback like 'nationalAverages'
+                if (data && data[0] && data[0].team.toLowerCase() === team.toLowerCase()) {
+                    return data[0];
+                }
+                return null; // Return null if no specific data is found
             }
 
             async function fetchInjuries(team) {
@@ -635,8 +639,8 @@ ${spreadContextLine}
 -   **Recent News Snippets:** ${gameDetails.newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()}):**
-    -   **${homeData.name}:** ${homeSP?.rating?.toFixed(1) || 'N/A'} (Overall), ${homeSP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${homeSP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
-    -   **${awayData.name}:** ${awaySP?.rating?.toFixed(1) || 'N/A'} (Overall), ${awaySP?.offense?.rating?.toFixed(1) || 'N/A'} (Off), ${awaySP?.defense?.rating?.toFixed(1) || 'N/A'} (Def)
+    -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def)
+    -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def)
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
