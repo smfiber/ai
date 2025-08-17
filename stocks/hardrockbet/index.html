@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.0 - Enhanced with weekly trends and key player data.
+        // Version 7.1 - Optimized consensus logic to a single API call.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -707,27 +707,6 @@
                 const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
                     <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType}</span>
                 </div>` : '';
-                
-                let individualAnalysesHtml = '';
-                if (rawData.individualAnalyses) {
-                    const analysisItems = rawData.individualAnalyses.map((analysis, index) => `
-                        <div class="mb-4 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                            <h5 class="font-bold text-md mb-2 text-gray-400">Analyst Report ${index + 1}</h5>
-                            <div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(analysis)}</div>
-                        </div>
-                    `).join('');
-
-                    individualAnalysesHtml = `
-                    <div class="mt-4 border-t border-gray-600 pt-4">
-                        <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
-                           <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Individual Analyst Reports
-                        </button>
-                        <div class="accordion-content bg-gray-900 rounded-md">
-                            ${analysisItems}
-                        </div>
-                    </div>`;
-                }
-
 
                 let newsAccordionHtml = '';
                 if (rawData.newsArticles && rawData.newsArticles.length > 0) {
@@ -759,7 +738,6 @@
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
-                    ${individualAnalysesHtml}
                     <div class="mt-8 border-t border-gray-600 pt-4">
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Prompt Sent to AI
@@ -947,22 +925,13 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 
                 let instructions;
                 switch(analysisType) {
-                    case 'prediction':
                     case 'consensus':
                         instructions = `
-### Game Synopsis
-Using all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses. **Incorporate in-season trends and the impact of key returning players.**
+You are an expert college football analyst. To determine your final prediction, you must follow these three steps using only the data provided:
 
----
-
-### AI-Powered Prediction
-Predict the most likely winner of the game. Weigh all factors, **paying special attention to recent performance trends shown in the weekly data versus the season-long stats.** Declare a clear winner and justify your prediction with specific data points. 
-
-Provide a confidence score based on the following rubric:
-- **Low**: Key data points are highly conflicting, or a team with better stats is on a clear negative trend.
-- **Medium**: Data shows a discernible advantage, but weekly trends or key players suggest a potential upset.
-- **High**: Data shows a clear and consistent advantage across most important categories and recent performance.
-- **Very High**: Data indicates a significant mismatch in nearly every critical metric, supported by performance trends.
+1.  **Bull Case for ${homeData.name}:** First, write a brief analysis making the strongest possible case for the home team to win and cover the spread. Use the data to highlight their biggest advantages.
+2.  **Bull Case for ${awayData.name}:** Second, do the same for the away team. What is their clearest path to victory based on the data?
+3.  **Final Verdict:** After considering both sides, declare your final consensus winner and provide a confidence score (Low, Medium, High, or Very High). Justify your choice by explaining which team's case is more compelling and why, referencing the most critical data points that tipped your decision.
 `;
                         break;
                     case 'odds':
@@ -1039,34 +1008,6 @@ ${currentSeasonStatsSection}
 ${weeklyTrendsSection}
 ---
 ${instructions}
-`;
-            }
-
-            function buildConsensusPrompt(analyses, homeTeam, awayTeam) {
-                let analysisSection = '';
-                analyses.forEach((analysis, index) => {
-                    analysisSection += `
----
-### Analyst Report ${index + 1}
-${analysis}
-`;
-                });
-
-                return `
-You are a lead college football analyst. You have received three independent analyses from your team regarding the upcoming game between ${awayTeam} and ${homeTeam}. Your task is to synthesize these reports into a single, definitive consensus prediction.
-
-**Your instructions are:**
-1.  **Review all three analyst reports provided below.**
-2.  **Identify the majority opinion.** Determine which team was picked as the winner most often across the three reports.
-3.  **Synthesize the reasoning.** Combine the key data points and arguments from the reports that support the majority pick.
-4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).
-5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:
-    -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.
-    -   **### Consensus Prediction:** Clearly state the consensus winner, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses.
-
-**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**
-
-${analysisSection}
 `;
             }
 
@@ -1167,105 +1108,9 @@ ${analysisSection}
             }
             
             async function handleConsensusClick(button) {
-                const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
-                allButtonsInRow.forEach(el => { el.disabled = true; });
-
-                const gameId = button.dataset.gameId;
-                const homeTeam = button.dataset.homeTeam;
-                const awayTeam = button.dataset.awayTeam;
-                const spread = button.dataset.spread;
-                const commenceTime = button.dataset.commenceTime;
-
-                showModalLoadingState({ homeTeam, awayTeam, analysisType: 'Consensus Prediction' });
-                narrativeModal.classList.remove('hidden');
-                clearError();
-
-                try {
-                    const currentYear = new Date().getFullYear();
-                    const previousYear = currentYear - 1;
-                    
-                    updateModalStatus('Fetching all game data...');
-                     const homeData = await fetchTeamData(homeTeam);
-                    const awayData = await fetchTeamData(awayTeam);
-                    
-                    const [
-                        homeRecordCurrent, awayRecordCurrent, headToHeadData, 
-                        homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                        homeInjuries, awayInjuries, 
-                        homeStatsPrev, awayStatsPrev, 
-                        homeStatsCurrent, awayStatsCurrent, 
-                        newsArticles,
-                        homeWeeklyStats, awayWeeklyStats,
-                        homeKeyPlayers, awayKeyPlayers
-                    ] = await Promise.all([
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
-                        fetchHeadToHead(homeData.name, awayData.name),
-                        fetchSPRatings(homeData.name, currentYear),
-                        fetchSPRatings(awayData.name, currentYear),
-                        fetchSPRatings(homeData.name, previousYear),
-                        fetchSPRatings(awayData.name, previousYear),
-                        fetchInjuries(homeData.name),
-                        fetchInjuries(awayData.name),
-                        fetchAdvancedSeasonStats(homeData.name, previousYear),
-                        fetchAdvancedSeasonStats(awayData.name, previousYear),
-                        fetchAdvancedSeasonStats(homeData.name, currentYear),
-                        fetchAdvancedSeasonStats(awayData.name, currentYear),
-                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
-                        fetchWeeklyAdvancedStats(homeData.name, currentYear),
-                        fetchWeeklyAdvancedStats(awayData.name, currentYear),
-                        fetchReturningAwardWinners(homeData.name, previousYear),
-                        fetchReturningAwardWinners(awayData.name, previousYear)
-                    ]);
-
-                    const headToHead = headToHeadData?.games || [];
-                    const newsSnippets = newsArticles.length > 0 
-                        ? newsArticles.map(a => a.snippet).join(' ... ') 
-                        : "No recent news found for this matchup.";
-                    
-                    const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-                    const gameDetails = { gameDateTime, spread, newsSnippets };
-                    
-                    const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, 
-                                               homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
-                                               headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                               homeInjuries, awayInjuries, 'prediction', homeRecordCurrent, awayRecordCurrent,
-                                               homeWeeklyStats, awayWeeklyStats, homeKeyPlayers, awayKeyPlayers);
-
-                    const individualAnalyses = [];
-                    for (let i = 0; i < 3; i++) {
-                        updateModalStatus(`Running Analysis ${i + 1} of 3...`);
-                        const narrative = await generateNarrative(singleAnalysisPrompt);
-                        individualAnalyses.push(narrative);
-                    }
-
-                    updateModalStatus('Synthesizing results...');
-                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
-                    const consensusNarrative = await generateNarrative(consensusPrompt);
-                    
-                    if (user) {
-                        const rating = gameRatings.get(gameId) || 'none';
-                        await saveAnalysis(gameId, 'consensus', consensusNarrative, rating);
-                    }
-
-                    const rawData = { 
-                        homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                        homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
-                        homeRecordCurrent: homeRecordCurrent?.[0] || null,
-                        awayRecordCurrent: awayRecordCurrent?.[0] || null,
-                        homeStatsCurrent, awayStatsCurrent,
-                        individualAnalyses, // Add this for the UI
-                        homeWeeklyStats, awayWeeklyStats, homeKeyPlayers, awayKeyPlayers
-                    };
-                    displayNarrative(consensusNarrative, { homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
-
-                } catch (error) {
-                    console.error("Consensus generation failed:", error);
-                    narrativeModal.classList.add('hidden');
-                    showError(`Could not generate consensus. ${error.message}`);
-                } finally {
-                     allButtonsInRow.forEach(el => { el.disabled = false; });
-                }
+                // This function now directly calls the more generic handleGenerateClick
+                // with the specific 'consensus' analysis type.
+                await handleGenerateClick(button, 'consensus');
             }
 
 
@@ -1279,9 +1124,6 @@ ${analysisSection}
                     handleGenerateClick(button, 'odds');
                 } else if (button.classList.contains('generate-no-spread-btn')) {
                     handleGenerateClick(button, 'no-spread');
-                } else if (button.classList.contains('ai-prediction-btn')) {
-                    // This button is now effectively removed, but we keep the logic just in case.
-                    handleGenerateClick(button, 'prediction');
                 }
             });
 
