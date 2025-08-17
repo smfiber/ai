@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 5.7 - Added accordion to view the prompt sent to the AI.
+        // Version 5.9 - Expanded advanced stats and added conditional SP+ logic.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -409,7 +409,8 @@
             async function fetchAdvancedSeasonStats(teamName, year) {
                 const encodedTeamName = encodeURIComponent(teamName);
                 const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${year}&team=${encodedTeamName}`;
-                return await cfbApiFetch(url);
+                const data = await cfbApiFetch(url);
+                return data?.[0] || null; // Return the first object or null if empty/error
             }
             
             async function fetchHeadToHead(team1, team2) {
@@ -720,10 +721,14 @@
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data
                         </button>
                         <div class="accordion-content bg-gray-900 rounded-md">
-                            <h4 class="font-bold text-md mb-2 text-gray-400">Home Team Data (${rawData.homeData.name})</h4>
+                            <h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre>
-                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team Data (${rawData.awayData.name})</h4>
+                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre>
+                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre>
+                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4>
@@ -731,7 +736,9 @@
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4>
-                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStats, null, 2)}\nAway: ${JSON.stringify(rawData.awayStats, null, 2)}</pre>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre>
+                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre>
                         </div>
@@ -777,9 +784,14 @@
                 errorDisplay.classList.add('hidden');
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, statsYear) {
+            function buildPrompt(gameDetails, homeData, awayData, 
+                                 homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
+                                 headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                                 homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent) {
+                                 
                 const { gameDateTime, spread, newsSnippets } = gameDetails;
-                const previousYear = new Date().getFullYear() - 1;
+                const currentYear = new Date().getFullYear();
+                const previousYear = currentYear - 1;
 
                 const formatInjuries = (injuries) => {
                     if (!injuries || injuries.length === 0) return 'None reported.';
@@ -790,7 +802,75 @@
                     if (!h2h || h2h.length === 0) return 'No recent meetings.';
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
+                
+                // Helper to generate the detailed advanced stats block for any given season's stats
+                const createStatsBlock = (stats, teamName) => {
+                    if (!stats) return ''; // Don't generate block if stats are null
+                    return `
+-   **${teamName}:**
+    -   **Offense Breakdown:**
+        - Overall: PPA: ${stats.offense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Rushing: PPA: ${stats.offense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.rushingPlays?.explosiveness?.toFixed(2) || 'N/A'}
+        - Passing: PPA: ${stats.offense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.passingPlays?.explosiveness?.toFixed(2) || 'N/A'}
+    -   **Defense Breakdown:**
+        - Overall: PPA: ${stats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(stats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - Vs. Rush: PPA: ${stats.defense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(stats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Vs. Pass: PPA: ${stats.defense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+        - Havoc Breakdown: Front Seven: ${(stats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+    -   **Line of Scrimmage & Explosiveness:**
+        - Off. Line Yards: ${stats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${stats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${stats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
+        - Def. Line Yards Allowed: ${stats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${stats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${stats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
+    -   **Situational & Efficiency:**
+        - Passing Downs Success: ${(stats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(stats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success: ${(stats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${stats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Avg. Field Position: ${stats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}`;
+                };
 
+                const homeStatsPrevBlock = createStatsBlock(homeStatsPrev, homeData.name);
+                const awayStatsPrevBlock = createStatsBlock(awayStatsPrev, awayData.name);
+                const homeStatsCurrentBlock = createStatsBlock(homeStatsCurrent, homeData.name);
+                const awayStatsCurrentBlock = createStatsBlock(awayStatsCurrent, awayData.name);
+
+                let previousSeasonStatsSection = '';
+                if (homeStatsPrevBlock || awayStatsPrevBlock) {
+                    previousSeasonStatsSection = `
+**ADVANCED STATS (PREVIOUS SEASON - ${previousYear}):**
+${homeStatsPrevBlock}${awayStatsPrevBlock}`;
+                }
+
+                let currentSeasonStatsSection = '';
+                if (homeStatsCurrentBlock || awayStatsCurrentBlock) {
+                    currentSeasonStatsSection = `
+**ADVANCED STATS (CURRENT SEASON - ${currentYear}):**
+${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
+                }
+
+                let currentSeasonRecordSection = '';
+                const homeRec = homeRecordCurrent?.[0];
+                const awayRec = awayRecordCurrent?.[0];
+                if (homeRec || awayRec) {
+                    currentSeasonRecordSection = `
+**CURRENT SEASON DATA (${currentYear}):**
+-   **${homeData.name} Record:** ${homeRec ? `${homeRec.total.wins}-${homeRec.total.losses}` : 'N/A'}
+-   **${awayData.name} Record:** ${awayRec ? `${awayRec.total.wins}-${awayRec.total.losses}` : 'N/A'}`;
+                }
+
+                let currentSPSection = '';
+                if (homeSP?.rating && awaySP?.rating) {
+                    currentSPSection = `
+-   **SP+ Ratings (${currentYear} PRE-SEASON):**
+    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST)
+    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST)`;
+                }
+                
+                let previousSPSection = '';
+                if (homeSPPrev?.rating && awaySPPrev?.rating) {
+                    previousSPSection = `
+-   **SP+ Ratings (${previousYear} FINAL):**
+    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)
+    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)`;
+                }
+                
                 const spreadContextLine = analysisType !== 'no-spread' ? `-   **Current Spread:** ${spread}.` : '';
                 
                 let instructions;
@@ -836,51 +916,6 @@ Perform a deeper analysis to determine the likely winner. Analyze factors like S
                         break;
                 }
 
-
-                let statsSection = '';
-                if (homeStats && awayStats) {
-                    const statsHeader = `**ADVANCED STATS (PREVIOUS SEASON - ${statsYear}):**`;
-
-                    statsSection = `
-${statsHeader}
--   **${homeData.name}:**
-    -   **Offense Breakdown:**
-        - Overall: PPA: ${homeStats.offense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(homeStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Rushing: PPA: ${homeStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.offense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.rushingExplosiveness?.toFixed(2) || 'N/A'}
-        - Passing: PPA: ${homeStats.offense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.offense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${homeStats.offense?.passingExplosiveness?.toFixed(2) || 'N/A'}
-    -   **Defense Breakdown:**
-        - Overall: PPA: ${homeStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(homeStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
-        - Vs. Rush: PPA: ${homeStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(homeStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Vs. Pass: PPA: ${homeStats.defense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(homeStats.defense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(homeStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-        - Havoc Breakdown: Front Seven: ${(homeStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(homeStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-    -   **Line of Scrimmage & Explosiveness:**
-        - Off. Line Yards: ${homeStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${homeStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${homeStats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
-        - Def. Line Yards Allowed: ${homeStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${homeStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${homeStats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
-    -   **Situational & Efficiency:**
-        - Passing Downs Success: ${(homeStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(homeStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Power Success: ${(homeStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${homeStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Avg. Field Position: ${homeStats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}
-
--   **${awayData.name}:**
-    -   **Offense Breakdown:**
-        - Overall: PPA: ${awayStats.offense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(awayStats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.explosiveness?.toFixed(2) || 'N/A'}
-        - Rushing: PPA: ${awayStats.offense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.offense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.rushingExplosiveness?.toFixed(2) || 'N/A'}
-        - Passing: PPA: ${awayStats.offense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.offense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${awayStats.offense?.passingExplosiveness?.toFixed(2) || 'N/A'}
-    -   **Defense Breakdown:**
-        - Overall: PPA: ${awayStats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(awayStats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
-        - Vs. Rush: PPA: ${awayStats.defense?.rushingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.rushingSuccessRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(awayStats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
-        - Vs. Pass: PPA: ${awayStats.defense?.passingPPA?.toFixed(2) || 'N/A'} | Success: ${(awayStats.defense?.passingSuccessRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(awayStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-        - Havoc Breakdown: Front Seven: ${(awayStats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(awayStats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
-    -   **Line of Scrimmage & Explosiveness:**
-        - Off. Line Yards: ${awayStats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${awayStats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${awayStats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
-        - Def. Line Yards Allowed: ${awayStats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${awayStats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${awayStats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
-    -   **Situational & Efficiency:**
-        - Passing Downs Success: ${(awayStats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(awayStats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
-        - Power Success: ${(awayStats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${awayStats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
-        - Avg. Field Position: ${awayStats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}
-`;
-                }
-
                 return `
 You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
 **Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.
@@ -909,27 +944,24 @@ You are an expert college football analyst. Your task is to generate a two-part 
 ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
--   **SP+ Ratings (${new Date().getFullYear()} PRE-SEASON):**
-    -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSP ? homeSP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
-    -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySP ? awaySP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
--   **SP+ Ratings (${previousYear} FINAL):**
-    -   **${homeData.name}:** ${homeSPPrev ? homeSPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSPPrev ? homeSPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSPPrev ? homeSPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSPPrev ? homeSPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
-    -   **${awayData.name}:** ${awaySPPrev ? awaySPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySPPrev ? awaySPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySPPrev ? awaySPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySPPrev ? awaySPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+${currentSPSection}
+${previousSPSection}
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
 
-**PRE-SEASON DATA (${previousYear} Season):**
+**PRE-SEASON DATA (Based on ${previousYear} Season):**
 -   **${homeData.name}:**
     -   **Record:** ${homeData.record}
-    -   **Composite Talent Score:** ${homeData.talentScore}
+    -   **Composite Talent Score (${currentYear}):** ${homeData.talentScore}
     -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
 -   **${awayData.name}:**
     -   **Record:** ${awayData.record}
-    -   **Composite Talent Score:** ${awayData.talentScore}
+    -   **Composite Talent Score (${currentYear}):** ${awayData.talentScore}
     -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
-
-${statsSection}
+${currentSeasonRecordSection}
+${previousSeasonStatsSection}
+${currentSeasonStatsSection}
 ---
 ${instructions}
 `;
@@ -951,12 +983,19 @@ ${instructions}
                 clearError();
 
                 try {
-                    updateModalStatus('Fetching home team data...');
-                    const homeData = await fetchTeamData(homeTeam);
+                    const currentYear = new Date().getFullYear();
+                    const previousYear = currentYear - 1;
+                    
+                    updateModalStatus('Fetching team overview data...');
+                    const homeData = await fetchTeamData(homeTeam); // Gets prev year record, returning prod, CURRENT talent
+                    await sleep(250);
+                    const awayData = await fetchTeamData(awayTeam);
                     await sleep(250);
 
-                    updateModalStatus('Fetching away team data...');
-                    const awayData = await fetchTeamData(awayTeam);
+                    updateModalStatus('Fetching current year records...');
+                    const homeRecordCurrent = await cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`);
+                    await sleep(250);
+                    const awayRecordCurrent = await cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`);
                     await sleep(250);
 
                     updateModalStatus('Fetching head-to-head data...');
@@ -965,8 +1004,6 @@ ${instructions}
                     await sleep(250);
 
                     updateModalStatus('Fetching SP+ ratings...');
-                    const currentYear = new Date().getFullYear();
-                    const previousYear = currentYear - 1;
                     const homeSP = await fetchSPRatings(homeData.name, currentYear);
                     await sleep(250);
                     const awaySP = await fetchSPRatings(awayData.name, currentYear);
@@ -982,15 +1019,18 @@ ${instructions}
                     const awayInjuries = await fetchInjuries(awayData.name);
                     await sleep(250);
                     
-                    let homeStats = null, awayStats = null;
-                    const statsYear = previousYear;
+                    updateModalStatus('Fetching previous year stats...');
+                    const homeStatsPrev = await fetchAdvancedSeasonStats(homeData.name, previousYear);
+                    await sleep(250);
+                    const awayStatsPrev = await fetchAdvancedSeasonStats(awayData.name, previousYear);
+                    await sleep(250);
 
-                    updateModalStatus('Fetching season stats...');
-                    homeStats = await fetchAdvancedSeasonStats(homeData.name, statsYear);
+                    updateModalStatus('Fetching current year stats...');
+                    const homeStatsCurrent = await fetchAdvancedSeasonStats(homeData.name, currentYear);
                     await sleep(250);
-                    awayStats = await fetchAdvancedSeasonStats(awayData.name, statsYear);
+                    const awayStatsCurrent = await fetchAdvancedSeasonStats(awayData.name, currentYear);
                     await sleep(250);
-                    
+
                     updateModalStatus('Fetching latest news...');
                     const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                     const newsArticles = await fetchGameNews(newsQuery);
@@ -1000,7 +1040,11 @@ ${instructions}
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSnippets };
-                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, statsYear);
+                    
+                    const prompt = buildPrompt(gameDetails, homeData, awayData, 
+                                               homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
+                                               headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                                               homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent);
 
                     updateModalStatus('Generating AI narrative...');
                     const narrativeText = await generateNarrative(prompt);
@@ -1011,18 +1055,11 @@ ${instructions}
                     }
 
                     const rawData = { 
-                        homeData, 
-                        awayData, 
-                        headToHead, 
-                        homeSP, 
-                        awaySP, 
-                        homeSPPrev, 
-                        awaySPPrev, 
-                        homeStats, 
-                        awayStats, 
-                        homeInjuries, 
-                        awayInjuries, 
-                        newsArticles 
+                        homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                        homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
+                        homeRecordCurrent: homeRecordCurrent?.[0] || null,
+                        awayRecordCurrent: awayRecordCurrent?.[0] || null,
+                        homeStatsCurrent, awayStatsCurrent
                     };
                     const isSpreadAnalysis = analysisType === 'odds';
                     displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
@@ -1035,6 +1072,7 @@ ${instructions}
                      allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
+
 
             gamesList.addEventListener('click', async (e) => {
                 const gameItem = e.target.closest('.game-item');
