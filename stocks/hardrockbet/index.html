@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.1 - Added diagnostic logging for talent score API.
+        // Version 7.3 - Load saved analyses from Firestore, check before generating.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -207,6 +207,7 @@
             let oddsApiKey = '', cfbDataApiKey = '', geminiApiKey = '', googleApiKey = '', googleCx = '';
             let currentNarrativeText = '';
             let gamePicks = new Map();
+            let savedAnalysesCache = new Map();
             let auth, db, user;
             let initialAuthCheckDone = false; 
 
@@ -256,9 +257,10 @@
                             user = currentUser;
                             updateUserProfile();
                             if (user) {
-                                await loadGamePicks();
+                                await Promise.all([loadGamePicks(), loadSavedAnalyses()]);
                             } else {
                                 gamePicks.clear();
+                                savedAnalysesCache.clear();
                             }
 
                             if (!initialAuthCheckDone) {
@@ -305,7 +307,6 @@
                         talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${previousYear}`);
                     }
                     
-                    // DIAGNOSTIC LOG: Print the raw talent data to the console
                     if (talentData && talentData.length > 0) {
                         console.log("--- Raw Talent API Data (Top 5) ---");
                         console.log(talentData.slice(0, 5));
@@ -393,7 +394,11 @@
                 const data = await cfbApiFetch(url);
                 if (!data) return {};
                 return data.reduce((acc, team) => {
-                    acc[team.school] = team.logos?.[0] || null;
+                    let logoUrl = team.logos?.[0] || null;
+                    if (logoUrl && logoUrl.startsWith('http://')) {
+                        logoUrl = logoUrl.replace('http://', 'https://');
+                    }
+                    acc[team.school] = logoUrl;
                     return acc;
                 }, {});
             }
@@ -735,6 +740,11 @@ ${snippets}
                         const noSpreadPick = gamePicks.get(`${game.id}_no-spread`);
                         const finalPick = gamePicks.get(`${game.id}_final`);
 
+                        const hasConsensusAnalysis = savedAnalysesCache.has(`${game.id}_consensus`);
+                        const hasOddsAnalysis = savedAnalysesCache.has(`${game.id}_odds`);
+                        const hasNoSpreadAnalysis = savedAnalysesCache.has(`${game.id}_no-spread`);
+                        const hasFinalAnalysis = savedAnalysesCache.has(`${game.id}_final`);
+
                         const pickDisplayHtml = (pick, type) => {
                             if (!pick) return '';
                             let label = 'Your Pick:';
@@ -769,10 +779,10 @@ ${snippets}
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="consensus">${consensusPick ? 'Predict Winner ✓' : 'Predict Winner'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="odds">${oddsPick ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="no-spread">${noSpreadPick ? 'Analyze Game ✓' : 'Analyze Game'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${finalPick ? 'Final Analysis ✓' : 'Final Analysis'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="consensus">${hasConsensusAnalysis ? 'Predict Winner ✓' : 'Predict Winner'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="odds">${hasOddsAnalysis ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="no-spread">${hasNoSpreadAnalysis ? 'Analyze Game ✓' : 'Analyze Game'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${hasFinalAnalysis ? 'Final Analysis ✓' : 'Final Analysis'}</button>
                                 </div>
                             </div>
                         </li>
@@ -898,15 +908,9 @@ ${snippets}
                         </div>`;
                 }
 
-                narrativeModalContent.innerHTML = `
-                    <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
-                    <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
-                    ${spreadDisplay}
-                    ${analysisTypeDisplay}
-                    <div class="prose prose-invert max-w-none text-gray-300">
-                        ${formattedNarrative}
-                    </div>
-                    ${individualAnalysesHtml}
+                let promptAccordionHtml = '';
+                if (prompt && !prompt.includes('not available')) {
+                    promptAccordionHtml = `
                     <div class="mt-8 border-t border-gray-600 pt-4">
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Prompt Sent to AI
@@ -914,7 +918,12 @@ ${snippets}
                         <div class="accordion-content bg-gray-900 rounded-md">
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${prompt}</pre>
                         </div>
-                    </div>
+                    </div>`;
+                }
+
+                let rawDataAccordionHtml = '';
+                if (rawData && rawData.homeData) {
+                    rawDataAccordionHtml = `
                     <div class="mt-4 border-t border-gray-600 pt-4">
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data
@@ -943,7 +952,20 @@ ${snippets}
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre>
                         </div>
+                    </div>`;
+                }
+
+                narrativeModalContent.innerHTML = `
+                    <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
+                    <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
+                    ${spreadDisplay}
+                    ${analysisTypeDisplay}
+                    <div class="prose prose-invert max-w-none text-gray-300">
+                        ${formattedNarrative}
                     </div>
+                    ${individualAnalysesHtml}
+                    ${promptAccordionHtml}
+                    ${rawDataAccordionHtml}
                     ${newsAccordionHtml}
                 `;
 
@@ -1300,7 +1322,14 @@ ${userPicksSection}
                 if(analysisType === 'consensus') analysisTitle = 'Winner Prediction';
                 if(analysisType === 'odds') analysisTitle = 'Spread Analysis';
                 if(analysisType === 'no-spread') analysisTitle = 'Game Analysis';
-
+                
+                const savedAnalysis = savedAnalysesCache.get(`${gameId}_${analysisType}`);
+                if (savedAnalysis) {
+                    const gameDetails = { gameId, homeTeam, awayTeam, spread, commenceTime, analysisType };
+                    displayNarrative(savedAnalysis, gameDetails, {}, analysisType === 'odds', analysisTitle, "Prompt not available for saved analysis.");
+                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                    return;
+                }
 
                 showModalLoadingState({ homeTeam, awayTeam, analysisType: analysisTitle });
                 narrativeModal.classList.remove('hidden');
@@ -1369,6 +1398,10 @@ ${userPicksSection}
                     
                     if (user) {
                         await saveAnalysis(gameId, analysisType, consensusNarrative);
+                        savedAnalysesCache.set(`${gameId}_${analysisType}`, consensusNarrative);
+                        if (!button.textContent.includes('✓')) {
+                            button.textContent += ' ✓';
+                        }
                     }
 
                     const rawData = { 
@@ -1396,6 +1429,14 @@ ${userPicksSection}
                 const gameId = button.dataset.gameId;
                 const homeTeam = button.dataset.homeTeam;
                 const awayTeam = button.dataset.awayTeam;
+                const analysisType = 'final';
+
+                const savedAnalysis = savedAnalysesCache.get(`${gameId}_${analysisType}`);
+                if (savedAnalysis) {
+                    displayNarrative(savedAnalysis, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, {}, false, 'Final Analysis', "Prompt not available for saved analysis.");
+                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                    return;
+                }
                 
                 showModalLoadingState({ homeTeam, awayTeam, analysisType: 'Final Analysis' });
                 narrativeModal.classList.remove('hidden');
@@ -1419,8 +1460,13 @@ ${userPicksSection}
                     const finalNarrative = await generateNarrative(prompt);
 
                     await saveAnalysis(gameId, 'final', finalNarrative);
+                    savedAnalysesCache.set(`${gameId}_${analysisType}`, finalNarrative);
+                    if (!button.textContent.includes('✓')) {
+                        button.textContent += ' ✓';
+                    }
 
-                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString() }, {}, false, 'Final Analysis', prompt);
+
+                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, {}, false, 'Final Analysis', prompt);
 
                 } catch (error) {
                     console.error("Final analysis generation failed:", error);
@@ -1527,17 +1573,29 @@ ${userPicksSection}
                     gamePicks = new Map();
                 }
             }
+            
+            async function loadSavedAnalyses() {
+                if (!user) return;
+                savedAnalysesCache.clear();
+                const analysesRef = collection(db, "game_analyses");
+                const q = query(analysesRef, where("userId", "==", user.uid));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const cacheKey = `${data.gameId}_${data.analysisType}`;
+                    savedAnalysesCache.set(cacheKey, data.analysisText);
+                });
+            }
+
 
             async function saveAnalysis(gameId, analysisType, analysisText) {
                 if (!user) return;
                 try {
-                    // Check if an analysis of this type already exists
                     const analysesRef = collection(db, "game_analyses");
                     const q = query(analysesRef, where("userId", "==", user.uid), where("gameId", "==", gameId), where("analysisType", "==", analysisType));
                     const querySnapshot = await getDocs(q);
 
                     if (querySnapshot.empty) {
-                        // No existing doc, so add a new one
                         await addDoc(analysesRef, {
                             userId: user.uid,
                             gameId: gameId,
@@ -1546,7 +1604,6 @@ ${userPicksSection}
                             createdAt: new Date()
                         });
                     } else {
-                        // Doc exists, update it
                         const docId = querySnapshot.docs[0].id;
                         const docRef = doc(db, "game_analyses", docId);
                         await setDoc(docRef, { analysisText: analysisText, createdAt: new Date() }, { merge: true });
