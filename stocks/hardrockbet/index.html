@@ -188,9 +188,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.3 - All analyses are now a consensus. Removed redundant rating dropdown.
+        // Version 6.4 - Added "Final Analysis" feature.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -596,11 +596,16 @@
                         const consensusPick = gamePicks.get(`${game.id}_consensus`);
                         const oddsPick = gamePicks.get(`${game.id}_odds`);
                         const noSpreadPick = gamePicks.get(`${game.id}_no-spread`);
+                        const finalPick = gamePicks.get(`${game.id}_final`);
 
                         const pickDisplayHtml = (pick, type) => {
                             if (!pick) return '';
-                            return `<div class="text-xs text-yellow-400 mt-1" data-pick-type="${type}">Your Pick: ${pick.team} (Confidence: ${pick.confidence})</div>`;
+                            let label = 'Your Pick:';
+                            if (type === 'final') label = 'Final Pick:';
+                            return `<div class="text-xs mt-1 ${type === 'final' ? 'text-green-400 font-bold' : 'text-yellow-400'}" data-pick-type="${type}">${label} ${pick.team} (Confidence: ${pick.confidence})</div>`;
                         };
+                        
+                        const allPicksMade = consensusPick && oddsPick && noSpreadPick;
 
                         return `
                         <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200" data-game-id="${game.id}">
@@ -616,6 +621,7 @@
                                     ${pickDisplayHtml(consensusPick, 'consensus')}
                                     ${pickDisplayHtml(oddsPick, 'odds')}
                                     ${pickDisplayHtml(noSpreadPick, 'no-spread')}
+                                    ${pickDisplayHtml(finalPick, 'final')}
                                 </div>
                             </div>
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
@@ -624,6 +630,7 @@
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="consensus">${consensusPick ? 'Predict Winner ✓' : 'Predict Winner'}</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="odds">${oddsPick ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="no-spread">${noSpreadPick ? 'Analyze Game ✓' : 'Analyze Game'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${finalPick ? 'Final Analysis ✓' : 'Final Analysis'}</button>
                                 </div>
                             </div>
                         </li>
@@ -1098,9 +1105,46 @@ ${analysisSection}
 `;
             }
 
+            function buildFinalAnalysisPrompt(analyses, userPicks, homeTeam, awayTeam) {
+                let analysisSection = '';
+                for (const [type, text] of Object.entries(analyses)) {
+                    analysisSection += `
+---
+### ${type.replace('-', ' ')} Analysis
+${text}
+`;
+                }
+
+                let userPicksSection = '';
+                for (const [type, pick] of Object.entries(userPicks)) {
+                     userPicksSection += `- **${type.replace('-', ' ')} Pick:** ${pick.team} (Confidence: ${pick.confidence})\n`;
+                }
+                
+                return `
+You are a master college football analyst. Your task is to synthesize three different AI-generated consensus reports and the user's own saved picks to produce one final, ultimate recommendation for the game between ${awayTeam} and ${homeTeam}.
+
+**Your instructions are:**
+1.  **Review the three AI reports:** "Winner Prediction," "Spread Analysis," and "Game Analysis." Note their conclusions and key arguments.
+2.  **Review the User's Picks:** Pay close attention to the user's selected team and their confidence level for each of the three analysis types. This represents the user's own judgment after reading the initial reports.
+3.  **Synthesize Everything:** Weigh all inputs. If the AI reports and user picks are aligned, your job is to create a confident, summary conclusion. If they conflict, your job is to highlight the disagreement and make a final judgment call, explaining why you are siding with one perspective over the other.
+4.  **Formulate a Final Pick and Confidence:** Declare a final pick (either for the winner or to cover the spread, depending on what makes the most sense from the synthesis) and a final confidence score (Low, Medium, High, Very High).
+5.  **Write the Final Report:** Structure your response using Markdown with the following two sections:
+    -   **### Final Synopsis:** Briefly summarize the different analytical perspectives and the user's inputs.
+    -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information.
+
+**You must base your entire response on the provided reports and user picks.**
+
+${analysisSection}
+
+---
+### User's Saved Picks
+${userPicksSection}
+`;
+            }
+
             // --- Event Handling ---
             async function handleAnalysisClick(button) {
-                const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
+                const allButtonsInRow = button.closest('li').querySelectorAll('button');
                 allButtonsInRow.forEach(el => { el.disabled = true; });
 
                 const gameId = button.dataset.gameId;
@@ -1200,12 +1244,58 @@ ${analysisSection}
                      allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
+            
+            async function handleFinalAnalysisClick(button) {
+                const allButtonsInRow = button.closest('li').querySelectorAll('button');
+                allButtonsInRow.forEach(el => { el.disabled = true; });
+
+                const gameId = button.dataset.gameId;
+                const homeTeam = button.dataset.homeTeam;
+                const awayTeam = button.dataset.awayTeam;
+                
+                showModalLoadingState({ homeTeam, awayTeam, analysisType: 'Final Analysis' });
+                narrativeModal.classList.remove('hidden');
+                clearError();
+
+                try {
+                    updateModalStatus('Fetching saved analyses...');
+                    const savedAnalyses = await getSavedAnalyses(gameId);
+                    if (!savedAnalyses.consensus || !savedAnalyses.odds || !savedAnalyses['no-spread']) {
+                        throw new Error("One or more required analyses are missing.");
+                    }
+
+                    const userPicks = {
+                        'Winner-Prediction': gamePicks.get(`${gameId}_consensus`),
+                        'Spread-Analysis': gamePicks.get(`${gameId}_odds`),
+                        'Game-Analysis': gamePicks.get(`${gameId}_no-spread`),
+                    };
+
+                    updateModalStatus('Generating final synthesis...');
+                    const prompt = buildFinalAnalysisPrompt(savedAnalyses, userPicks, homeTeam, awayTeam);
+                    const finalNarrative = await generateNarrative(prompt);
+
+                    await saveAnalysis(gameId, 'final', finalNarrative);
+
+                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString() }, {}, false, 'Final Analysis', prompt);
+
+                } catch (error) {
+                    console.error("Final analysis generation failed:", error);
+                    narrativeModal.classList.add('hidden');
+                    showError(`Could not generate final analysis. ${error.message}`);
+                } finally {
+                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                }
+            }
 
 
             gamesList.addEventListener('click', async (e) => {
-                const button = e.target.closest('button.analysis-btn');
-                if (button) {
+                const button = e.target.closest('button');
+                if (!button) return;
+
+                if (button.classList.contains('analysis-btn')) {
                     handleAnalysisClick(button);
+                } else if (button.classList.contains('final-analysis-btn')) {
+                    handleFinalAnalysisClick(button);
                 }
             });
 
@@ -1246,11 +1336,28 @@ ${analysisSection}
                 let pickElement = pickDisplayContainer.querySelector(`[data-pick-type="${analysisType}"]`);
                 if (!pickElement) {
                     pickElement = document.createElement('div');
-                    pickElement.className = 'text-xs text-yellow-400 mt-1';
+                    let className = 'text-xs mt-1 ';
+                    if (analysisType === 'final') {
+                         className += 'text-green-400 font-bold';
+                    } else {
+                         className += 'text-yellow-400';
+                    }
+                    pickElement.className = className;
                     pickElement.dataset.pickType = analysisType;
                     pickDisplayContainer.appendChild(pickElement);
                 }
-                pickElement.textContent = `Your Pick: ${team} (Confidence: ${confidence})`;
+                let label = 'Your Pick:';
+                if (analysisType === 'final') label = 'Final Pick:';
+                pickElement.textContent = `${label} ${team} (Confidence: ${confidence})`;
+
+                // Check if all three initial picks are made to show the final analysis button
+                const consensusPick = gamePicks.get(`${gameId}_consensus`);
+                const oddsPick = gamePicks.get(`${gameId}_odds`);
+                const noSpreadPick = gamePicks.get(`${gameId}_no-spread`);
+                if (consensusPick && oddsPick && noSpreadPick) {
+                    const finalBtn = gameItem.querySelector('.final-analysis-btn');
+                    if (finalBtn) finalBtn.classList.remove('hidden');
+                }
             }
             
             async function saveGamePicks() {
@@ -1275,17 +1382,44 @@ ${analysisSection}
             async function saveAnalysis(gameId, analysisType, analysisText) {
                 if (!user) return;
                 try {
-                    await addDoc(collection(db, "game_analyses"), {
-                        userId: user.uid,
-                        gameId: gameId,
-                        analysisType: analysisType,
-                        analysis: analysisText,
-                        createdAt: new Date()
-                    });
+                    // Check if an analysis of this type already exists
+                    const analysesRef = collection(db, "game_analyses");
+                    const q = query(analysesRef, where("userId", "==", user.uid), where("gameId", "==", gameId), where("analysisType", "==", analysisType));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
+                        // No existing doc, so add a new one
+                        await addDoc(analysesRef, {
+                            userId: user.uid,
+                            gameId: gameId,
+                            analysisType: analysisType,
+                            analysis: analysisText,
+                            createdAt: new Date()
+                        });
+                    } else {
+                        // Doc exists, update it
+                        const docId = querySnapshot.docs[0].id;
+                        const docRef = doc(db, "game_analyses", docId);
+                        await setDoc(docRef, { analysis: analysisText, createdAt: new Date() }, { merge: true });
+                    }
                 } catch (error) {
                     console.error("Error saving analysis to Firestore:", error);
                 }
             }
+
+            async function getSavedAnalyses(gameId) {
+                if (!user) return {};
+                const analyses = {};
+                const analysesRef = collection(db, "game_analyses");
+                const q = query(analysesRef, where("userId", "==", user.uid), where("gameId", "==", gameId));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    analyses[data.analysisType] = data.analysis;
+                });
+                return analyses;
+            }
+
 
             function updateUserProfile() {
                 if (user) {
