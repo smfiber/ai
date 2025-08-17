@@ -103,10 +103,8 @@
 </head>
 <body class="bg-gray-900 text-white">
 
-    <!-- User Profile / Login -->
     <div id="user-profile" class="absolute top-4 right-4 flex items-center"></div>
 
-    <!-- Combined API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md mx-4 overflow-y-auto max-h-screen">
             <h2 class="text-2xl font-bold mb-4 text-center">Enter API Keys & Config</h2>
@@ -141,47 +139,38 @@
         </div>
     </div>
 
-    <!-- Narrative Modal -->
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-4xl mx-4 relative flex flex-col">
             <button id="closeNarrativeModal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold z-10">&times;</button>
             <div id="narrativeModalContent" class="flex-grow max-h-[80vh] overflow-y-auto pr-8 pb-8">
-                <!-- Narrative will be injected here -->
-            </div>
+                </div>
             <div id="modal-footer" class="flex-shrink-0 pt-4 border-t border-gray-600">
-                 <!-- Save Pick UI will be injected here -->
                  <button id="copyNarrativeBtn" class="absolute bottom-6 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
             </div>
         </div>
     </div>
 
 
-    <!-- Main Content -->
     <div id="app" class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-bold">College Football Weekly</h1>
             <p class="text-gray-400 mt-2">AI-Generated Game Narratives Based on Live Spreads</p>
         </header>
 
-        <!-- Loading Indicator -->
         <div id="mainLoader" class="flex justify-center items-center my-16 hidden">
             <div class="loader"></div>
             <p id="mainLoaderText" class="ml-4 text-lg">Fetching upcoming games...</p>
         </div>
         
-        <!-- Error Display -->
         <div id="errorDisplay" class="hidden bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative my-4" role="alert">
             <strong class="font-bold">Error:</strong>
             <span id="errorMessage" class="block sm:inline"></span>
         </div>
 
-        <!-- Featured Game -->
         <div id="featured-game" class="mb-12"></div>
 
-        <!-- Games List -->
         <div id="games-list" class="space-y-8">
-            <!-- Game date cards will be injected here -->
-        </div>
+            </div>
 
     </div>
 
@@ -190,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.9 - Fixed a bug preventing the "Final Analysis" button from appearing.
+        // Version 7.0 - Featured game is restricted to major conference teams with a talent score tie-breaker.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -309,10 +298,16 @@
                     const currentYear = new Date().getFullYear();
                     const previousYear = currentYear - 1;
 
+                    // Fetch talent data with fallback
+                    let talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${currentYear}`);
+                    if (!talentData || talentData.length === 0) {
+                        console.log(`Talent data for ${currentYear} not found, falling back to ${previousYear}.`);
+                        talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${previousYear}`);
+                    }
+                    
                     const endpoints = {
                         spCurrent: `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}`,
                         spPrevious: `https://api.collegefootballdata.com/ratings/sp?year=${previousYear}`,
-                        talent: `https://api.collegefootballdata.com/talent?year=${currentYear}`,
                         recordsCurrent: `https://api.collegefootballdata.com/records?year=${currentYear}`,
                         recordsPrevious: `https://api.collegefootballdata.com/records?year=${previousYear}`,
                         returningProduction: `https://api.collegefootballdata.com/player/returning?year=${previousYear}`,
@@ -321,7 +316,7 @@
                     };
 
                     const [
-                        spCurrentData, spPreviousData, talentData,
+                        spCurrentData, spPreviousData,
                         recordsCurrentData, recordsPreviousData,
                         returningData, statsCurrentData, statsPreviousData
                     ] = await Promise.all(Object.values(endpoints).map(url => cfbApiFetch(url)));
@@ -330,10 +325,13 @@
                         acc[item[key]] = item;
                         return acc;
                     }, {});
+                    
+                    if (talentData) {
+                        talentCache = processData(talentData, 'school');
+                    }
 
                     spCache[currentYear] = processData(spCurrentData, 'team');
                     spCache[previousYear] = processData(spPreviousData, 'team');
-                    talentCache = processData(talentData, 'school');
                     recordsCache[currentYear] = processData(recordsCurrentData, 'team');
                     recordsCache[previousYear] = processData(recordsPreviousData, 'team');
                     returningProductionCache = processData(returningData, 'team');
@@ -591,7 +589,7 @@ ${snippets}
             }
             
             async function generateNarrative(prompt, retries = 3, delay = 1000) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${geminiApiKey}`;
 
                 try {
                     const response = await fetch(apiUrl, {
@@ -658,12 +656,41 @@ ${snippets}
                     const absoluteSpread = Math.abs(homeOutcome.point);
                     const spreadDisplay = `${homeOutcome.name} ${homeOutcome.point > 0 ? '+' : ''}${homeOutcome.point}`;
                     
-                    return { ...game, absoluteSpread, spreadDisplay };
+                    const homeTeamAlias = teamNameAliases[game.home_team];
+                    const awayTeamAlias = teamNameAliases[game.away_team];
+                    const homeTalent = talentCache[homeTeamAlias]?.talent || 0;
+                    const awayTalent = talentCache[awayTeamAlias]?.talent || 0;
+
+                    return { ...game, absoluteSpread, spreadDisplay, homeTalent, awayTalent };
                 }).filter(Boolean);
 
 
-                if (allGamesProcessed.length > 0) {
-                    const featuredGame = [...allGamesProcessed].sort((a,b) => a.absoluteSpread - b.absoluteSpread)[0];
+                const majorConferenceTeams = new Set([
+                    // SEC
+                    "Alabama", "Arkansas", "Auburn", "Florida", "Georgia", "Kentucky", "LSU", "Mississippi State", "Missouri", "Oklahoma", "Mississippi", "South Carolina", "Tennessee", "Texas A&M", "Texas", "Vanderbilt",
+                    // Big Ten
+                    "Illinois", "Indiana", "Iowa", "Maryland", "Michigan State", "Michigan", "Minnesota", "Nebraska", "Northwestern", "Ohio State", "Oregon", "Penn State", "Purdue", "Rutgers", "UCLA", "USC", "Washington", "Wisconsin",
+                    // Big 12
+                    "Arizona State", "Arizona", "Baylor", "BYU", "Cincinnati", "Colorado", "Houston", "Iowa State", "Kansas", "Kansas State", "Oklahoma State", "TCU", "Texas Tech", "UCF", "Utah", "West Virginia",
+                    // ACC
+                    "Boston College", "California", "Clemson", "Duke", "Florida State", "Georgia Tech", "Louisville", "Miami", "NC State", "North Carolina", "Pittsburgh", "SMU", "Stanford", "Syracuse", "Virginia", "Virginia Tech", "Wake Forest"
+                ]);
+
+                const majorConferenceGames = allGamesProcessed.filter(game => {
+                    const homeTeamAlias = teamNameAliases[game.home_team];
+                    const awayTeamAlias = teamNameAliases[game.away_team];
+                    return majorConferenceTeams.has(homeTeamAlias) && majorConferenceTeams.has(awayTeamAlias);
+                });
+
+                if (majorConferenceGames.length > 0) {
+                    const featuredGame = [...majorConferenceGames].sort((a, b) => {
+                        if (a.absoluteSpread !== b.absoluteSpread) {
+                            return a.absoluteSpread - b.absoluteSpread;
+                        }
+                        const aCombinedTalent = a.homeTalent + a.awayTalent;
+                        const bCombinedTalent = b.homeTalent + b.awayTalent;
+                        return bCombinedTalent - aCombinedTalent;
+                    })[0];
                     displayFeaturedGame(featuredGame, teamData);
                 }
 
