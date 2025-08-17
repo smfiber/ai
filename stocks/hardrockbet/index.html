@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.1 - Added AI News Summary to the modal display.
+        // Version 6.0 - Added Consensus Prediction feature for more rigorous analysis.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -260,7 +260,6 @@
                         googleApiKey = googleKey;
                         googleCx = cxKey;
                         apiKeyModal.classList.add('hidden');
-                        // fetchOdds() is now called within onAuthStateChanged to ensure ratings are loaded first
 
                     } catch (error) {
                         alert("Invalid Firebase configuration. Please provide a valid JSON object.");
@@ -467,26 +466,6 @@
                     return [];
                 }
             }
-
-            async function summarizeNews(articles, homeTeam, awayTeam) {
-                if (!articles || articles.length === 0) {
-                    return "No recent news found for this matchup.";
-                }
-
-                const snippets = articles.map(a => `Title: ${a.title}\nSnippet: ${a.snippet}`).join('\n---\n');
-
-                const summarizationPrompt = `
-                    You are a sports news analyst. Your task is to synthesize the following raw news snippets for a football game between ${homeTeam} and ${awayTeam}.
-                    Provide a concise, neutral, one-paragraph summary of the key storylines, potential injuries, or significant narratives.
-                    Ignore irrelevant information like ticket sales, historical records, or TV broadcast details. Focus only on what's relevant to the upcoming game.
-
-                    Here are the snippets:
-                    ${snippets}
-                `;
-
-                const summary = await generateNarrative(summarizationPrompt);
-                return summary;
-            }
             
             async function generateNarrative(prompt, retries = 3, delay = 1000) {
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
@@ -606,7 +585,7 @@
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="ai-prediction-btn flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">AI Prediction</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="consensus-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Consensus Pick</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Spread Analysis</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Game Analysis</button>
                                     <select class="confidence-rating bg-gray-600 text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" data-game-id="${game.id}">
@@ -686,7 +665,7 @@
                 }
             }
             
-            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType, prompt, summarizedNews) {
+            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType, prompt) {
                 currentNarrativeText = narrative;
                 const formattedNarrative = marked.parse(narrative);
 
@@ -697,19 +676,27 @@
                 const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
                     <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType}</span>
                 </div>` : '';
+                
+                let individualAnalysesHtml = '';
+                if (rawData.individualAnalyses) {
+                    const analysisItems = rawData.individualAnalyses.map((analysis, index) => `
+                        <div class="mb-4 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0">
+                            <h5 class="font-bold text-md mb-2 text-gray-400">Analyst Report ${index + 1}</h5>
+                            <div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(analysis)}</div>
+                        </div>
+                    `).join('');
 
-                let newsSummaryAccordionHtml = '';
-                if (summarizedNews) {
-                    newsSummaryAccordionHtml = `
-                        <div class="mt-8 border-t border-gray-600 pt-4">
-                            <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
-                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View AI News Summary
-                            </button>
-                            <div class="accordion-content bg-gray-900 rounded-md">
-                                <p class="text-sm text-gray-400 whitespace-pre-wrap break-words">${summarizedNews}</p>
-                            </div>
-                        </div>`;
+                    individualAnalysesHtml = `
+                    <div class="mt-4 border-t border-gray-600 pt-4">
+                        <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
+                           <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Individual Analyst Reports
+                        </button>
+                        <div class="accordion-content bg-gray-900 rounded-md">
+                            ${analysisItems}
+                        </div>
+                    </div>`;
                 }
+
 
                 let newsAccordionHtml = '';
                 if (rawData.newsArticles && rawData.newsArticles.length > 0) {
@@ -723,7 +710,7 @@
                     newsAccordionHtml = `
                         <div class="mt-4 border-t border-gray-600 pt-4">
                             <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
-                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw News Articles
+                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View News Articles
                             </button>
                             <div class="accordion-content bg-gray-900 rounded-md">
                                 <ul class="list-none">
@@ -741,8 +728,8 @@
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
-                    ${newsSummaryAccordionHtml}
-                    <div class="mt-4 border-t border-gray-600 pt-4">
+                    ${individualAnalysesHtml}
+                    <div class="mt-8 border-t border-gray-600 pt-4">
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Prompt Sent to AI
                         </button>
@@ -837,6 +824,7 @@
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
                 
+                // Helper to generate the detailed advanced stats block for any given season's stats
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return ''; // Don't generate block if stats are null
                     return `
@@ -892,16 +880,16 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 if (homeSP?.rating && awaySP?.rating) {
                     currentSPSection = `
 -   **SP+ Ratings (${currentYear} PRE-SEASON):**
-    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${homeSP.sos?.toFixed(2) || 'N/A'}
-    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${awaySP.sos?.toFixed(2) || 'N/A'}`;
+    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST)
+    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST)`;
                 }
                 
                 let previousSPSection = '';
                 if (homeSPPrev?.rating && awaySPPrev?.rating) {
                     previousSPSection = `
 -   **SP+ Ratings (${previousYear} FINAL):**
-    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${homeSPPrev.sos?.toFixed(2) || 'N/A'}
-    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${awaySPPrev.sos?.toFixed(2) || 'N/A'}`;
+    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)
+    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)`;
                 }
                 
                 const spreadContextLine = analysisType !== 'no-spread' ? `-   **Current Spread:** ${spread}.` : '';
@@ -909,6 +897,7 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 let instructions;
                 switch(analysisType) {
                     case 'prediction':
+                    case 'consensus': // Use same instructions for single and consensus predictions
                         instructions = `
 ### Game Synopsis
 Using all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses based on SP+ ratings, advanced stats, and talent.
@@ -955,8 +944,8 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
 
 **DATA DEFINITIONS:**
-- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense; for defense, a lower PPA is better as it indicates points prevented.
-- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense; for defense, a lower Success Rate is better.
+- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
+- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense, lower for defense.
 - **Explosiveness:** Measures the magnitude of successful plays.
 - **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.
 - **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.
@@ -970,14 +959,13 @@ You are an expert college football analyst. Your task is to generate a two-part 
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
-- **Strength of Schedule (SOS):** A rating of the team's schedule difficulty. Higher is more difficult.
 
 **CONTEXTUAL DATA:**
 -   **Game Date & Time:** ${gameDateTime}
 -   **Matchup:** ${awayData.name} at ${homeData.name}
 ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
--   **Head-to-Head History:** - ${formatHeadToHead(headToHead)}
+-   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 ${currentSPSection}
 ${previousSPSection}
 -   **Key Injuries:**
@@ -998,6 +986,34 @@ ${previousSeasonStatsSection}
 ${currentSeasonStatsSection}
 ---
 ${instructions}
+`;
+            }
+
+            function buildConsensusPrompt(analyses, homeTeam, awayTeam) {
+                let analysisSection = '';
+                analyses.forEach((analysis, index) => {
+                    analysisSection += `
+---
+### Analyst Report ${index + 1}
+${analysis}
+`;
+                });
+
+                return `
+You are a lead college football analyst. You have received three independent analyses from your team regarding the upcoming game between ${awayTeam} and ${homeTeam}. Your task is to synthesize these reports into a single, definitive consensus prediction.
+
+**Your instructions are:**
+1.  **Review all three analyst reports provided below.**
+2.  **Identify the majority opinion.** Determine which team was picked as the winner most often across the three reports.
+3.  **Synthesize the reasoning.** Combine the key data points and arguments from the reports that support the majority pick.
+4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).
+5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:
+    -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.
+    -   **### Consensus Prediction:** Clearly state the consensus winner, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses.
+
+**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**
+
+${analysisSection}
 `;
             }
 
@@ -1022,56 +1038,33 @@ ${instructions}
                     
                     updateModalStatus('Fetching team overview data...');
                     const homeData = await fetchTeamData(homeTeam);
-                    await sleep(250);
                     const awayData = await fetchTeamData(awayTeam);
-                    await sleep(250);
-
-                    updateModalStatus('Fetching current year records...');
-                    const homeRecordCurrent = await cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`);
-                    await sleep(250);
-                    const awayRecordCurrent = await cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`);
-                    await sleep(250);
-
-                    updateModalStatus('Fetching head-to-head data...');
-                    const headToHeadData = await fetchHeadToHead(homeData.name, awayData.name);
-                    const headToHead = headToHeadData?.games || [];
-                    await sleep(250);
-
-                    updateModalStatus('Fetching SP+ ratings...');
-                    const homeSP = await fetchSPRatings(homeData.name, currentYear);
-                    await sleep(250);
-                    const awaySP = await fetchSPRatings(awayData.name, currentYear);
-                    await sleep(250);
-                    const homeSPPrev = await fetchSPRatings(homeData.name, previousYear);
-                    await sleep(250);
-                    const awaySPPrev = await fetchSPRatings(awayData.name, previousYear);
-                    await sleep(250);
-
-                    updateModalStatus('Fetching injuries...');
-                    const homeInjuries = await fetchInjuries(homeData.name);
-                    await sleep(250);
-                    const awayInjuries = await fetchInjuries(awayData.name);
-                    await sleep(250);
                     
-                    updateModalStatus('Fetching previous year stats...');
-                    const homeStatsPrev = await fetchAdvancedSeasonStats(homeData.name, previousYear);
-                    await sleep(250);
-                    const awayStatsPrev = await fetchAdvancedSeasonStats(awayData.name, previousYear);
-                    await sleep(250);
+                    updateModalStatus('Fetching supporting data...');
+                    const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles] = await Promise.all([
+                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
+                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
+                        fetchHeadToHead(homeData.name, awayData.name),
+                        fetchSPRatings(homeData.name, currentYear),
+                        fetchSPRatings(awayData.name, currentYear),
+                        fetchSPRatings(homeData.name, previousYear),
+                        fetchSPRatings(awayData.name, previousYear),
+                        fetchInjuries(homeData.name),
+                        fetchInjuries(awayData.name),
+                        fetchAdvancedSeasonStats(homeData.name, previousYear),
+                        fetchAdvancedSeasonStats(awayData.name, previousYear),
+                        fetchAdvancedSeasonStats(homeData.name, currentYear),
+                        fetchAdvancedSeasonStats(awayData.name, currentYear),
+                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`)
+                    ]);
 
-                    updateModalStatus('Fetching current year stats...');
-                    const homeStatsCurrent = await fetchAdvancedSeasonStats(homeData.name, currentYear);
-                    await sleep(250);
-                    const awayStatsCurrent = await fetchAdvancedSeasonStats(awayData.name, currentYear);
-                    await sleep(250);
-
-                    updateModalStatus('Fetching and summarizing latest news...');
-                    const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
-                    const newsArticles = await fetchGameNews(newsQuery);
-                    const summarizedNews = await summarizeNews(newsArticles, homeData.name, awayData.name);
+                    const headToHead = headToHeadData?.games || [];
+                    const newsSnippets = newsArticles.length > 0 
+                        ? newsArticles.map(a => a.snippet).join(' ... ') 
+                        : "No recent news found for this matchup.";
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-                    const gameDetails = { gameDateTime, spread, newsSnippets: summarizedNews };
+                    const gameDetails = { gameDateTime, spread, newsSnippets };
                     
                     const prompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
@@ -1094,7 +1087,7 @@ ${instructions}
                         homeStatsCurrent, awayStatsCurrent
                     };
                     const isSpreadAnalysis = analysisType === 'odds';
-                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt, summarizedNews);
+                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
@@ -1104,24 +1097,108 @@ ${instructions}
                      allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
+            
+            async function handleConsensusClick(button) {
+                const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
+                allButtonsInRow.forEach(el => { el.disabled = true; });
+
+                const gameId = button.dataset.gameId;
+                const homeTeam = button.dataset.homeTeam;
+                const awayTeam = button.dataset.awayTeam;
+                const spread = button.dataset.spread;
+                const commenceTime = button.dataset.commenceTime;
+
+                showModalLoadingState({ homeTeam, awayTeam, analysisType: 'Consensus Prediction' });
+                narrativeModal.classList.remove('hidden');
+                clearError();
+
+                try {
+                    const currentYear = new Date().getFullYear();
+                    const previousYear = currentYear - 1;
+                    
+                    updateModalStatus('Fetching all game data...');
+                     const homeData = await fetchTeamData(homeTeam);
+                    const awayData = await fetchTeamData(awayTeam);
+                    
+                    const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles] = await Promise.all([
+                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
+                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
+                        fetchHeadToHead(homeData.name, awayData.name),
+                        fetchSPRatings(homeData.name, currentYear),
+                        fetchSPRatings(awayData.name, currentYear),
+                        fetchSPRatings(homeData.name, previousYear),
+                        fetchSPRatings(awayData.name, previousYear),
+                        fetchInjuries(homeData.name),
+                        fetchInjuries(awayData.name),
+                        fetchAdvancedSeasonStats(homeData.name, previousYear),
+                        fetchAdvancedSeasonStats(awayData.name, previousYear),
+                        fetchAdvancedSeasonStats(homeData.name, currentYear),
+                        fetchAdvancedSeasonStats(awayData.name, currentYear),
+                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`)
+                    ]);
+
+                    const headToHead = headToHeadData?.games || [];
+                    const newsSnippets = newsArticles.length > 0 
+                        ? newsArticles.map(a => a.snippet).join(' ... ') 
+                        : "No recent news found for this matchup.";
+                    
+                    const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+                    const gameDetails = { gameDateTime, spread, newsSnippets };
+                    
+                    const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, 
+                                               homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
+                                               headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                                               homeInjuries, awayInjuries, 'prediction', homeRecordCurrent, awayRecordCurrent);
+
+                    const individualAnalyses = [];
+                    for (let i = 0; i < 3; i++) {
+                        updateModalStatus(`Running Analysis ${i + 1} of 3...`);
+                        const narrative = await generateNarrative(singleAnalysisPrompt);
+                        individualAnalyses.push(narrative);
+                    }
+
+                    updateModalStatus('Synthesizing results...');
+                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
+                    const consensusNarrative = await generateNarrative(consensusPrompt);
+                    
+                    if (user) {
+                        const rating = gameRatings.get(gameId) || 'none';
+                        await saveAnalysis(gameId, 'consensus', consensusNarrative, rating);
+                    }
+
+                    const rawData = { 
+                        homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                        homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
+                        homeRecordCurrent: homeRecordCurrent?.[0] || null,
+                        awayRecordCurrent: awayRecordCurrent?.[0] || null,
+                        homeStatsCurrent, awayStatsCurrent,
+                        individualAnalyses // Add this for the UI
+                    };
+                    displayNarrative(consensusNarrative, { homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
+
+                } catch (error) {
+                    console.error("Consensus generation failed:", error);
+                    narrativeModal.classList.add('hidden');
+                    showError(`Could not generate consensus. ${error.message}`);
+                } finally {
+                     allButtonsInRow.forEach(el => { el.disabled = false; });
+                }
+            }
 
 
             gamesList.addEventListener('click', async (e) => {
-                const gameItem = e.target.closest('.game-item');
-                if (!gameItem) return;
+                const button = e.target.closest('button');
+                if (!button) return;
 
-                const gameId = gameItem.dataset.gameId;
-
-                const aiPredictionBtn = e.target.closest('.ai-prediction-btn');
-                const oddsBtn = e.target.closest('.odds-btn');
-                const noSpreadBtn = e.target.closest('.generate-no-spread-btn');
-
-                if (aiPredictionBtn) {
-                    handleGenerateClick(aiPredictionBtn, 'prediction');
-                } else if (oddsBtn) {
-                    handleGenerateClick(oddsBtn, 'odds');
-                } else if (noSpreadBtn) {
-                    handleGenerateClick(noSpreadBtn, 'no-spread');
+                if (button.classList.contains('consensus-btn')) {
+                    handleConsensusClick(button);
+                } else if (button.classList.contains('odds-btn')) {
+                    handleGenerateClick(button, 'odds');
+                } else if (button.classList.contains('generate-no-spread-btn')) {
+                    handleGenerateClick(button, 'no-spread');
+                } else if (button.classList.contains('ai-prediction-btn')) {
+                    // This button is now effectively removed, but we keep the logic just in case.
+                    handleGenerateClick(button, 'prediction');
                 }
             });
 
@@ -1200,8 +1277,7 @@ ${instructions}
                     `;
                     document.getElementById('sign-out-btn').addEventListener('click', () => {
                         signOut(auth).then(() => {
-                            // This will trigger onAuthStateChanged, which will clear ratings and re-fetch games for a logged-out state.
-                            initialAuthCheckDone = false; // Reset for re-login
+                            initialAuthCheckDone = false;
                         });
                     });
                 } else {
