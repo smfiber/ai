@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.3 - Load saved analyses from Firestore, check before generating.
+        // Version 7.4 - Refresh games on auth change, fix Gemini URL, improve API error handling.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -209,7 +209,7 @@
             let gamePicks = new Map();
             let savedAnalysesCache = new Map();
             let auth, db, user;
-            let initialAuthCheckDone = false; 
+            let initialLoadComplete = false;
 
             // --- Caching Objects ---
             let teamDataCache = {};
@@ -263,9 +263,12 @@
                                 savedAnalysesCache.clear();
                             }
 
-                            if (!initialAuthCheckDone) {
+                            // Always refetch games on auth change to sync UI
+                            if(initialLoadComplete) {
                                 fetchOdds();
-                                initialAuthCheckDone = true;
+                            } else {
+                                fetchOdds();
+                                initialLoadComplete = true;
                             }
                         });
 
@@ -438,13 +441,18 @@
                 try {
                     const response = await fetch(url, { headers });
                     if (!response.ok) {
-                        console.error(`API Error for ${url}: ${response.status}`);
-                        return null;
+                        throw new Error(`API request failed for ${url} with status: ${response.status}`);
                     }
-                    return await response.json();
+                    const text = await response.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error(`API response for ${url} was not valid JSON.`);
+                        throw new Error('The College Football Data API returned an invalid response. Please check your API key and the API status.');
+                    }
                 } catch (error) {
-                    console.error(`Fetch error for ${url}:`, error);
-                    return null;
+                    console.error(`Fetch error for ${url}:`, error.message);
+                    throw error;
                 }
             }
 
@@ -1635,7 +1643,7 @@ ${userPicksSection}
                     `;
                     document.getElementById('sign-out-btn').addEventListener('click', () => {
                         signOut(auth).then(() => {
-                            initialAuthCheckDone = false;
+                            // The onAuthStateChanged listener will handle UI updates
                         });
                     });
                 } else {
