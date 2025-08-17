@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 5.0 - Corrected talent score to fetch from previous year.
+        // Version 5.1 - Moved loading status into modal to prevent UI jumping.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -643,6 +643,28 @@
                     </div>
                 `;
             }
+
+            function showModalLoadingState(details) {
+                const analysisTypeDisplay = details.analysisType ? `<div class="text-center mb-4">
+                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${details.analysisType.replace('-', ' ')}</span>
+                </div>` : '';
+
+                narrativeModalContent.innerHTML = `
+                    <h2 class="text-3xl font-bold mb-2 text-center">${details.awayTeam} vs. ${details.homeTeam}</h2>
+                    ${analysisTypeDisplay}
+                    <div class="flex flex-col items-center justify-center my-16">
+                        <div class="loader"></div>
+                        <p id="modalStatusText" class="mt-4 text-lg text-gray-300">Initializing...</p>
+                    </div>
+                `;
+            }
+
+            function updateModalStatus(message) {
+                const statusTextElement = document.getElementById('modalStatusText');
+                if (statusTextElement) {
+                    statusTextElement.textContent = message;
+                }
+            }
             
             function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType) {
                 currentNarrativeText = narrative;
@@ -742,17 +764,6 @@
 
             function clearError() {
                 errorDisplay.classList.add('hidden');
-            }
-            
-            function updateButtonStatus(button, message, originalContent) {
-                if (message) {
-                    const spinner = `<div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>`;
-                    button.innerHTML = `${spinner} <span class="ml-2">${message}</span>`;
-                    button.disabled = true;
-                } else {
-                    button.innerHTML = originalContent;
-                    button.disabled = false;
-                }
             }
             
             function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear) {
@@ -909,40 +920,40 @@ ${instructions}
 
             // --- Event Handling ---
             async function handleGenerateClick(button, analysisType) {
-                const originalButtonContent = button.innerHTML;
-                const allButtonsInRow = button.closest('li').querySelectorAll('button');
-                allButtonsInRow.forEach(btn => { btn.disabled = true; });
-                updateButtonStatus(button, 'Generating...', originalButtonContent);
-                
+                const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
+                allButtonsInRow.forEach(el => { el.disabled = true; });
+
                 const gameId = button.dataset.gameId;
                 const homeTeam = button.dataset.homeTeam;
                 const awayTeam = button.dataset.awayTeam;
-                let spread = button.dataset.spread;
+                const spread = button.dataset.spread;
                 const commenceTime = button.dataset.commenceTime;
-                
+
+                showModalLoadingState({ homeTeam, awayTeam, analysisType: analysisType.replace('-', ' ') });
+                narrativeModal.classList.remove('hidden');
                 clearError();
 
                 try {
-                    updateButtonStatus(button, 'Home Data...', originalButtonContent);
+                    updateModalStatus('Fetching home team data...');
                     const homeData = await fetchTeamData(homeTeam);
                     await sleep(250);
 
-                    updateButtonStatus(button, 'Away Data...', originalButtonContent);
+                    updateModalStatus('Fetching away team data...');
                     const awayData = await fetchTeamData(awayTeam);
                     await sleep(250);
 
-                    updateButtonStatus(button, 'H2H...', originalButtonContent);
+                    updateModalStatus('Fetching head-to-head data...');
                     const headToHeadData = await fetchHeadToHead(homeData.name, awayData.name);
                     const headToHead = headToHeadData?.games || [];
                     await sleep(250);
 
-                    updateButtonStatus(button, 'SP+ Ratings...', originalButtonContent);
+                    updateModalStatus('Fetching SP+ ratings...');
                     const homeSP = await fetchSPRatings(homeData.name);
                     await sleep(250);
                     const awaySP = await fetchSPRatings(awayData.name);
                     await sleep(250);
 
-                    updateButtonStatus(button, 'Injuries...', originalButtonContent);
+                    updateModalStatus('Fetching injuries...');
                     const homeInjuries = await fetchInjuries(homeData.name);
                     await sleep(250);
                     const awayInjuries = await fetchInjuries(awayData.name);
@@ -961,13 +972,13 @@ ${instructions}
                         statsYear = currentYear;
                     }
 
-                    updateButtonStatus(button, 'Season Stats...', originalButtonContent);
+                    updateModalStatus('Fetching season stats...');
                     homeStats = await fetchAdvancedSeasonStats(homeData.name, statsYear);
                     await sleep(250);
                     awayStats = await fetchAdvancedSeasonStats(awayData.name, statsYear);
                     await sleep(250);
                     
-                    updateButtonStatus(button, 'News...', originalButtonContent);
+                    updateModalStatus('Fetching latest news...');
                     const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                     const newsArticles = await fetchGameNews(newsQuery);
                     const newsSnippets = newsArticles.length > 0 
@@ -978,7 +989,7 @@ ${instructions}
                     const gameDetails = { gameDateTime, spread, newsSnippets };
                     const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear);
 
-                    updateButtonStatus(button, 'Generating...', originalButtonContent);
+                    updateModalStatus('Generating AI narrative...');
                     const narrativeText = await generateNarrative(prompt);
 
                     if (user) {
@@ -992,15 +1003,10 @@ ${instructions}
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
+                    narrativeModal.classList.add('hidden');
                     showError(`Could not generate narrative. ${error.message}`);
                 } finally {
-                     allButtonsInRow.forEach(btn => {
-                        let originalContent = '...';
-                        if (btn.classList.contains('ai-prediction-btn')) originalContent = 'AI Prediction';
-                        if (btn.classList.contains('odds-btn')) originalContent = 'Spread Analysis';
-                        if (btn.classList.contains('generate-no-spread-btn')) originalContent = 'Game Analysis';
-                        updateButtonStatus(btn, null, originalContent);
-                    });
+                     allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
 
