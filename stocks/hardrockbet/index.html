@@ -98,10 +98,8 @@
 </head>
 <body class="bg-gray-900 text-white">
 
-    <!-- User Profile / Login -->
     <div id="user-profile" class="absolute top-4 right-4 flex items-center"></div>
 
-    <!-- Combined API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md mx-4 overflow-y-auto max-h-screen">
             <h2 class="text-2xl font-bold mb-4 text-center">Enter API Keys & Config</h2>
@@ -136,44 +134,36 @@
         </div>
     </div>
 
-    <!-- Narrative Modal -->
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-4xl mx-4 relative">
             <button id="closeNarrativeModal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold z-10">&times;</button>
             <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-8 pb-8">
-                <!-- Narrative will be injected here -->
-            </div>
+                </div>
              <button id="copyNarrativeBtn" class="absolute bottom-4 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
         </div>
     </div>
 
 
-    <!-- Main Content -->
     <div id="app" class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-bold">College Football Weekly</h1>
             <p class="text-gray-400 mt-2">AI-Generated Game Narratives Based on Live Spreads</p>
         </header>
 
-        <!-- Loading Indicator -->
         <div id="mainLoader" class="flex justify-center items-center my-16 hidden">
             <div class="loader"></div>
             <p class="ml-4 text-lg">Fetching upcoming games...</p>
         </div>
         
-        <!-- Error Display -->
         <div id="errorDisplay" class="hidden bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative my-4" role="alert">
             <strong class="font-bold">Error:</strong>
             <span id="errorMessage" class="block sm:inline"></span>
         </div>
 
-        <!-- Featured Game -->
         <div id="featured-game" class="mb-12"></div>
 
-        <!-- Games List -->
         <div id="games-list" class="space-y-8">
-            <!-- Game date cards will be injected here -->
-        </div>
+            </div>
 
     </div>
 
@@ -182,7 +172,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 5.3 - Fixed talent score API call to use current year.
+        // Version 5.4 - Fetches both previous & current year SP+ ratings and removes date-based logic.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -417,9 +407,8 @@
                 return await cfbApiFetch(url);
             }
 
-            async function fetchSPRatings(team) {
-                const currentYear = new Date().getFullYear();
-                const url = `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}&team=${encodeURIComponent(team)}`;
+            async function fetchSPRatings(team, year) {
+                const url = `https://api.collegefootballdata.com/ratings/sp?year=${year}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
                 if (data && data[0] && data[0].team.toLowerCase() === team.toLowerCase()) {
                     return data[0];
@@ -766,7 +755,7 @@
                 errorDisplay.classList.add('hidden');
             }
             
-            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear) {
+            function buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, statsYear) {
                 const { gameDateTime, spread, newsSnippets } = gameDetails;
                 const previousYear = new Date().getFullYear() - 1;
 
@@ -822,10 +811,7 @@ Perform a deeper analysis to determine the likely winner. Analyze factors like S
 
                 let statsSection = '';
                 if (homeStats && awayStats) {
-                    const currentYear = new Date().getFullYear();
-                    const statsHeader = statsYear < currentYear 
-                        ? `**FINAL STATS (${statsYear} SEASON):**` 
-                        : `**IN-SEASON PERFORMANCE (${statsYear}):**`;
+                    const statsHeader = `**ADVANCED STATS (PREVIOUS SEASON - ${statsYear}):**`;
 
                     statsSection = `
 ${statsHeader}
@@ -895,9 +881,12 @@ You are an expert college football analyst. Your task is to generate a two-part 
 ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
--   **SP+ Ratings (${new Date().getFullYear()}):**
+-   **SP+ Ratings (${new Date().getFullYear()} PRE-SEASON):**
     -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSP ? homeSP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
     -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySP ? awaySP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+-   **SP+ Ratings (${previousYear} FINAL):**
+    -   **${homeData.name}:** ${homeSPPrev ? homeSPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSPPrev ? homeSPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSPPrev ? homeSPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSPPrev ? homeSPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+    -   **${awayData.name}:** ${awaySPPrev ? awaySPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySPPrev ? awaySPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySPPrev ? awaySPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySPPrev ? awaySPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
@@ -948,9 +937,15 @@ ${instructions}
                     await sleep(250);
 
                     updateModalStatus('Fetching SP+ ratings...');
-                    const homeSP = await fetchSPRatings(homeData.name);
+                    const currentYear = new Date().getFullYear();
+                    const previousYear = currentYear - 1;
+                    const homeSP = await fetchSPRatings(homeData.name, currentYear);
                     await sleep(250);
-                    const awaySP = await fetchSPRatings(awayData.name);
+                    const awaySP = await fetchSPRatings(awayData.name, currentYear);
+                    await sleep(250);
+                    const homeSPPrev = await fetchSPRatings(homeData.name, previousYear);
+                    await sleep(250);
+                    const awaySPPrev = await fetchSPRatings(awayData.name, previousYear);
                     await sleep(250);
 
                     updateModalStatus('Fetching injuries...');
@@ -960,17 +955,7 @@ ${instructions}
                     await sleep(250);
                     
                     let homeStats = null, awayStats = null;
-                    const currentDate = new Date();
-                    const cutoffDate = new Date('2025-09-05T00:00:00');
-                    const currentYear = currentDate.getFullYear();
-                    const previousYear = currentYear - 1;
-                    let statsYear;
-
-                    if (currentDate < cutoffDate) {
-                        statsYear = previousYear;
-                    } else {
-                        statsYear = currentYear;
-                    }
+                    const statsYear = previousYear;
 
                     updateModalStatus('Fetching season stats...');
                     homeStats = await fetchAdvancedSeasonStats(homeData.name, statsYear);
@@ -987,7 +972,7 @@ ${instructions}
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSnippets };
-                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeInjuries, awayInjuries, analysisType, statsYear);
+                    const prompt = buildPrompt(gameDetails, homeData, awayData, homeStats, awayStats, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, statsYear);
 
                     updateModalStatus('Generating AI narrative...');
                     const narrativeText = await generateNarrative(prompt);
