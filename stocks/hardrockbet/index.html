@@ -603,7 +603,7 @@ ${snippets}
             }
             
             async function generateNarrative(prompt, retries = 3, delay = 1000) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-0514:generateContent?key=${geminiApiKey}`;
 
                 try {
                     const response = await fetch(apiUrl, {
