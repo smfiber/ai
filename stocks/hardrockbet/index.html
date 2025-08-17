@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.5 - Added dynamic data weighting based on the current week of the season.
+        // Version 6.6 - Implemented AI-powered news summarization for higher quality analysis inputs.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -456,7 +456,7 @@
 
             async function fetchGameNews(query) {
                 let allArticles = [];
-                const numPages = 5;
+                const numPages = 2; // Reduced from 5 to 2 for efficiency
             
                 try {
                     for (let i = 0; i < numPages; i++) {
@@ -487,6 +487,41 @@
                     console.error('Error fetching game news:', error);
                     return [];
                 }
+            }
+            
+            async function summarizeNews(articles, homeTeam, awayTeam) {
+                if (!articles || articles.length === 0) {
+                    return "No recent news found for this matchup.";
+                }
+
+                const snippets = articles.map(a => `Title: ${a.title}\nSnippet: ${a.snippet}`).join('\n---\n');
+
+                const prompt = `
+You are a sports news analyst. Your task is to read the following collection of news article snippets about an upcoming game between ${homeTeam} and ${awayTeam} and synthesize them into a concise, structured summary.
+
+**Instructions:**
+1.  Identify the 2-3 most important themes or narratives emerging from the news (e.g., a key player's performance, a specific positional battle, coaching changes).
+2.  List any specific player status updates, such as injuries, suspensions, or players returning. If none are mentioned, state that.
+3.  Determine the overall sentiment (Positive, Negative, or Neutral) for each team based on the provided text.
+
+**Format your response exactly as follows using Markdown:**
+
+### News & Narrative Summary
+-   **Key Narratives:**
+    -   [Narrative 1]
+    -   [Narrative 2]
+-   **Player Status Updates:**
+    -   **${homeTeam}:** [List any updates or "None mentioned"]
+    -   **${awayTeam}:** [List any updates or "None mentioned"]
+-   **Team Sentiment:**
+    -   **${homeTeam}:** [Positive/Negative/Neutral]
+    -   **${awayTeam}:** [Positive/Negative/Neutral]
+
+**Article Snippets to Analyze:**
+${snippets}
+`;
+
+                return await generateNarrative(prompt);
             }
             
             async function fetchCurrentWeek() {
@@ -901,7 +936,7 @@
                                  homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
                                  homeKeyPlayers, awayKeyPlayers, currentWeek) {
                                  
-                const { gameDateTime, spread, newsSnippets } = gameDetails;
+                const { gameDateTime, spread, newsSummary } = gameDetails;
                 const currentYear = new Date().getFullYear();
                 const previousYear = currentYear - 1;
 
@@ -1064,7 +1099,8 @@ ${seasonalWeightingInstructions}
 -   **Game Date & Time:** ${gameDateTime}
 -   **Matchup:** ${awayData.name} at ${homeData.name}
 ${spreadContextLine}
--   **Recent News Snippets:** ${newsSnippets}
+-   **AI-Generated News Summary:**
+${newsSummary}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 ${currentSPSection}
 ${previousSPSection}
@@ -1220,12 +1256,12 @@ ${userPicksSection}
                     ]);
 
                     const headToHead = headToHeadData?.games || [];
-                    const newsSnippets = newsArticles.length > 0 
-                        ? newsArticles.map(a => a.snippet).join(' ... ') 
-                        : "No recent news found for this matchup.";
+                    
+                    updateModalStatus('Summarizing news...');
+                    const newsSummary = await summarizeNews(newsArticles, homeData.name, awayData.name);
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-                    const gameDetails = { gameDateTime, spread, newsSnippets };
+                    const gameDetails = { gameDateTime, spread, newsSummary };
                     
                     const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
