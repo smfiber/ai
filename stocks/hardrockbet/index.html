@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.2 - Added Key Returning Players feature.
+        // Version 6.3 - All analyses are now a consensus. Removed redundant rating dropdown.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -220,7 +220,6 @@
             let googleApiKey = '';
             let googleCx = '';
             let currentNarrativeText = '';
-            let gameRatings = new Map();
             let gamePicks = new Map();
             let auth, db, user;
             let initialAuthCheckDone = false; 
@@ -252,10 +251,8 @@
                             user = currentUser;
                             updateUserProfile();
                             if (user) {
-                                await loadGameRatings();
                                 await loadGamePicks();
                             } else {
-                                gameRatings.clear();
                                 gamePicks.clear();
                             }
 
@@ -595,21 +592,18 @@
                     const gamesHtml = gamesForDate.map(game => {
                         const homeLogo = teamData[teamNameAliases[game.home_team]] || '';
                         const awayLogo = teamData[teamNameAliases[game.away_team]] || '';
-                        const rating = gameRatings.get(game.id) || '';
-                        const ratingClass = rating ? `confidence-${rating}` : '';
-
-                        // Check for saved picks
+                        
                         const consensusPick = gamePicks.get(`${game.id}_consensus`);
                         const oddsPick = gamePicks.get(`${game.id}_odds`);
                         const noSpreadPick = gamePicks.get(`${game.id}_no-spread`);
 
                         const pickDisplayHtml = (pick, type) => {
                             if (!pick) return '';
-                            return `<div class="text-xs text-yellow-400 mt-1" data-pick-type="${type}">${pick.team} (Confidence: ${pick.confidence})</div>`;
+                            return `<div class="text-xs text-yellow-400 mt-1" data-pick-type="${type}">Your Pick: ${pick.team} (Confidence: ${pick.confidence})</div>`;
                         };
 
                         return `
-                        <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200 ${ratingClass}" data-game-id="${game.id}">
+                        <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200" data-game-id="${game.id}">
                             <div class="flex flex-col items-start mb-4 md:mb-0 flex-grow">
                                 <div class="flex items-center">
                                     <img src="${awayLogo}" alt="${game.away_team}" class="w-8 h-8 mr-3 object-contain">
@@ -627,17 +621,9 @@
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="consensus-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${consensusPick ? 'Consensus Pick ✓' : 'Consensus Pick'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${oddsPick ? 'Spread Analysis ✓' : 'Spread Analysis'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${noSpreadPick ? 'Game Analysis ✓' : 'Game Analysis'}</button>
-                                    <select class="confidence-rating bg-gray-600 text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" data-game-id="${game.id}">
-                                        <option value="" ${rating === '' ? 'selected' : ''}>Rate Game</option>
-                                        <option value="low" ${rating === 'low' ? 'selected' : ''}>Low</option>
-                                        <option value="medium" ${rating === 'medium' ? 'selected' : ''}>Medium</option>
-                                        <option value="high" ${rating === 'high' ? 'selected' : ''}>High</option>
-                                        <option value="very-high" ${rating === 'very-high' ? 'selected' : ''}>Very High</option>
-                                        <option value="clear">Clear Rating</option>
-                                    </select>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="consensus">${consensusPick ? 'Predict Winner ✓' : 'Predict Winner'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="odds">${oddsPick ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="no-spread">${noSpreadPick ? 'Analyze Game ✓' : 'Analyze Game'}</button>
                                 </div>
                             </div>
                         </li>
@@ -891,6 +877,13 @@
                 const currentYear = new Date().getFullYear();
                 const previousYear = currentYear - 1;
 
+                const confidenceRubric = `
+Provide a confidence score based on the following rubric:
+- **Low**: Key data points are highly conflicting, making the outcome a statistical coin flip.
+- **Medium**: Data shows a discernible advantage for one team, but the opponent has significant strengths that could counter it.
+- **High**: Data shows a clear and consistent advantage for one team across most important categories.
+- **Very High**: Data indicates a significant mismatch in nearly every critical metric.`;
+
                 const formatInjuries = (injuries) => {
                     if (!injuries || injuries.length === 0) return 'None reported.';
                     return injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
@@ -901,9 +894,8 @@
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
                 
-                // Helper to generate the detailed advanced stats block for any given season's stats
                 const createStatsBlock = (stats, teamName) => {
-                    if (!stats) return ''; // Don't generate block if stats are null
+                    if (!stats) return '';
                     return `
 -   **${teamName}:**
     -   **Offense Breakdown:**
@@ -973,8 +965,7 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 
                 let instructions;
                 switch(analysisType) {
-                    case 'prediction':
-                    case 'consensus': // Use same instructions for single and consensus predictions
+                    case 'consensus':
                         instructions = `
 ### Game Synopsis
 Using all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses based on SP+ ratings, advanced stats, and talent.
@@ -983,12 +974,7 @@ Using all the data provided, write a brief, data-driven synopsis of the matchup.
 
 ### AI-Powered Prediction
 Predict the most likely winner of the game. Weigh all factors: SP+ ratings, advanced stats, talent scores, returning production, head-to-head results, and injuries. Declare a clear winner and justify your prediction with specific data points. 
-
-Provide a confidence score based on the following rubric:
-- **Low**: Key data points are highly conflicting, making the outcome a statistical coin flip.
-- **Medium**: Data shows a discernible advantage for one team, but the opponent has significant strengths that could counter it.
-- **High**: Data shows a clear and consistent advantage for one team across most important categories.
-- **Very High**: Data indicates a significant mismatch in nearly every critical metric.
+${confidenceRubric}
 `;
                         break;
                     case 'odds':
@@ -1000,6 +986,7 @@ Write a compelling, data-driven pre-game narrative. Weave in pre-season expectat
 
 ### Analyst's Pick
 Perform a deeper analysis to determine which team is more likely to cover the spread. Analyze factors like SP+ vs. Spread, key statistical mismatches (PPA, success rates), and the impact of injuries/news. Clearly state your pick and provide a step-by-step justification referencing the provided data.
+${confidenceRubric}
 `;
                         break;
                     case 'no-spread':
@@ -1011,6 +998,7 @@ Write a compelling, data-driven pre-game narrative. Weave in pre-season expectat
 
 ### Analyst's Pick
 Perform a deeper analysis to determine the likely winner. Analyze factors like SP+ ratings, key statistical mismatches (PPA, success rates), returning production, talent, and injuries. Clearly state your pick and provide a step-by-step justification referencing the provided data.
+${confidenceRubric}
 `;
                         break;
                 }
@@ -1070,7 +1058,7 @@ ${instructions}
 `;
             }
 
-            function buildConsensusPrompt(analyses, homeTeam, awayTeam) {
+            function buildConsensusPrompt(analyses, homeTeam, awayTeam, analysisType) {
                 let analysisSection = '';
                 analyses.forEach((analysis, index) => {
                     analysisSection += `
@@ -1080,17 +1068,29 @@ ${analysis}
 `;
                 });
 
+                let taskDescription;
+                switch (analysisType) {
+                    case 'odds':
+                        taskDescription = 'determine which team is most likely to cover the spread';
+                        break;
+                    case 'no-spread':
+                    case 'consensus':
+                    default:
+                        taskDescription = 'determine the most likely winner';
+                        break;
+                }
+
                 return `
 You are a lead college football analyst. You have received three independent analyses from your team regarding the upcoming game between ${awayTeam} and ${homeTeam}. Your task is to synthesize these reports into a single, definitive consensus prediction.
 
 **Your instructions are:**
 1.  **Review all three analyst reports provided below.**
-2.  **Identify the majority opinion.** Determine which team was picked as the winner most often across the three reports.
+2.  **Identify the majority opinion.** Based on the reports, ${taskDescription}.
 3.  **Synthesize the reasoning.** Combine the key data points and arguments from the reports that support the majority pick.
 4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).
 5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:
     -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.
-    -   **### Consensus Prediction:** Clearly state the consensus winner, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses.
+    -   **### Consensus Prediction:** Clearly state the consensus pick, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses.
 
 **Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**
 
@@ -1099,7 +1099,7 @@ ${analysisSection}
             }
 
             // --- Event Handling ---
-            async function handleGenerateClick(button, analysisType) {
+            async function handleAnalysisClick(button) {
                 const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
                 allButtonsInRow.forEach(el => { el.disabled = true; });
 
@@ -1108,97 +1108,15 @@ ${analysisSection}
                 const awayTeam = button.dataset.awayTeam;
                 const spread = button.dataset.spread;
                 const commenceTime = button.dataset.commenceTime;
+                const analysisType = button.dataset.analysisType;
 
-                showModalLoadingState({ homeTeam, awayTeam, analysisType: analysisType.replace('-', ' ') });
-                narrativeModal.classList.remove('hidden');
-                clearError();
+                let analysisTitle = "Analysis";
+                if(analysisType === 'consensus') analysisTitle = 'Winner Prediction';
+                if(analysisType === 'odds') analysisTitle = 'Spread Analysis';
+                if(analysisType === 'no-spread') analysisTitle = 'Game Analysis';
 
-                try {
-                    const currentYear = new Date().getFullYear();
-                    const previousYear = currentYear - 1;
-                    
-                    updateModalStatus('Fetching team overview data...');
-                    const homeData = await fetchTeamData(homeTeam);
-                    const awayData = await fetchTeamData(awayTeam);
-                    
-                    updateModalStatus('Fetching supporting data...');
-                    const [
-                        homeRecordCurrent, awayRecordCurrent, headToHeadData, 
-                        homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                        homeInjuries, awayInjuries, 
-                        homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
-                        newsArticles, homeKeyPlayers, awayKeyPlayers
-                    ] = await Promise.all([
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
-                        fetchHeadToHead(homeData.name, awayData.name),
-                        fetchSPRatings(homeData.name, currentYear),
-                        fetchSPRatings(awayData.name, currentYear),
-                        fetchSPRatings(homeData.name, previousYear),
-                        fetchSPRatings(awayData.name, previousYear),
-                        fetchInjuries(homeData.name),
-                        fetchInjuries(awayData.name),
-                        fetchAdvancedSeasonStats(homeData.name, previousYear),
-                        fetchAdvancedSeasonStats(awayData.name, previousYear),
-                        fetchAdvancedSeasonStats(homeData.name, currentYear),
-                        fetchAdvancedSeasonStats(awayData.name, currentYear),
-                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
-                        fetchKeyReturningPlayers(homeData.name, previousYear),
-                        fetchKeyReturningPlayers(awayData.name, previousYear)
-                    ]);
 
-                    const headToHead = headToHeadData?.games || [];
-                    const newsSnippets = newsArticles.length > 0 
-                        ? newsArticles.map(a => a.snippet).join(' ... ') 
-                        : "No recent news found for this matchup.";
-                    
-                    const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-                    const gameDetails = { gameDateTime, spread, newsSnippets };
-                    
-                    const prompt = buildPrompt(gameDetails, homeData, awayData, 
-                                               homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
-                                               headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                               homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
-                                               homeKeyPlayers, awayKeyPlayers);
-
-                    updateModalStatus('Generating AI narrative...');
-                    const narrativeText = await generateNarrative(prompt);
-
-                    if (user) {
-                        const rating = gameRatings.get(gameId) || 'none';
-                        await saveAnalysis(gameId, analysisType, narrativeText, rating);
-                    }
-
-                    const rawData = { 
-                        homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                        homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
-                        homeRecordCurrent: homeRecordCurrent?.[0] || null,
-                        awayRecordCurrent: awayRecordCurrent?.[0] || null,
-                        homeStatsCurrent, awayStatsCurrent, homeKeyPlayers, awayKeyPlayers
-                    };
-                    const isSpreadAnalysis = analysisType === 'odds';
-                    displayNarrative(narrativeText, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
-
-                } catch (error) {
-                    console.error("Narrative generation failed:", error);
-                    narrativeModal.classList.add('hidden');
-                    showError(`Could not generate narrative. ${error.message}`);
-                } finally {
-                     allButtonsInRow.forEach(el => { el.disabled = false; });
-                }
-            }
-            
-            async function handleConsensusClick(button) {
-                const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
-                allButtonsInRow.forEach(el => { el.disabled = true; });
-
-                const gameId = button.dataset.gameId;
-                const homeTeam = button.dataset.homeTeam;
-                const awayTeam = button.dataset.awayTeam;
-                const spread = button.dataset.spread;
-                const commenceTime = button.dataset.commenceTime;
-
-                showModalLoadingState({ homeTeam, awayTeam, analysisType: 'Consensus Prediction' });
+                showModalLoadingState({ homeTeam, awayTeam, analysisType: analysisTitle });
                 narrativeModal.classList.remove('hidden');
                 clearError();
 
@@ -1246,7 +1164,7 @@ ${analysisSection}
                     const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                                headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                               homeInjuries, awayInjuries, 'prediction', homeRecordCurrent, awayRecordCurrent,
+                                               homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
                                                homeKeyPlayers, awayKeyPlayers);
 
                     const individualAnalyses = [];
@@ -1257,12 +1175,11 @@ ${analysisSection}
                     }
 
                     updateModalStatus('Synthesizing results...');
-                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
+                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam, analysisType);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
                     if (user) {
-                        const rating = gameRatings.get(gameId) || 'none';
-                        await saveAnalysis(gameId, 'consensus', consensusNarrative, rating);
+                        await saveAnalysis(gameId, analysisType, consensusNarrative);
                     }
 
                     const rawData = { 
@@ -1273,7 +1190,7 @@ ${analysisSection}
                         homeStatsCurrent, awayStatsCurrent,
                         individualAnalyses, homeKeyPlayers, awayKeyPlayers
                     };
-                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
+                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, analysisType === 'odds', analysisTitle, consensusPrompt);
 
                 } catch (error) {
                     console.error("Consensus generation failed:", error);
@@ -1286,49 +1203,13 @@ ${analysisSection}
 
 
             gamesList.addEventListener('click', async (e) => {
-                const button = e.target.closest('button');
-                if (!button) return;
-
-                if (button.classList.contains('consensus-btn')) {
-                    handleConsensusClick(button);
-                } else if (button.classList.contains('odds-btn')) {
-                    handleGenerateClick(button, 'odds');
-                } else if (button.classList.contains('generate-no-spread-btn')) {
-                    handleGenerateClick(button, 'no-spread');
-                } else if (button.classList.contains('ai-prediction-btn')) {
-                    handleGenerateClick(button, 'prediction');
-                }
-            });
-
-            gamesList.addEventListener('change', (e) => {
-                if (e.target.classList.contains('confidence-rating')) {
-                    if (!user) {
-                        alert("Please log in to rate games.");
-                        e.target.value = '';
-                        return;
-                    }
-                    handleRatingChange(e.target);
+                const button = e.target.closest('button.analysis-btn');
+                if (button) {
+                    handleAnalysisClick(button);
                 }
             });
 
             // --- Firebase Functions ---
-            function handleRatingChange(selectElement) {
-                const gameId = selectElement.dataset.gameId;
-                const rating = selectElement.value;
-                const gameItem = selectElement.closest('.game-item');
-
-                gameItem.classList.remove('confidence-low', 'confidence-medium', 'confidence-high', 'confidence-very-high');
-
-                if (rating && rating !== 'clear') {
-                    gameRatings.set(gameId, rating);
-                    gameItem.classList.add(`confidence-${rating}`);
-                } else {
-                    gameRatings.delete(gameId);
-                }
-
-                saveGameRatings();
-            }
-
             async function handleSavePick(gameId, analysisType) {
                 if (!user) {
                     alert("Please log in to save your pick.");
@@ -1355,11 +1236,7 @@ ${analysisSection}
                 if (!gameItem) return;
 
                 // Update button with checkmark
-                let button;
-                if (analysisType === 'consensus') button = gameItem.querySelector('.consensus-btn');
-                else if (analysisType === 'odds') button = gameItem.querySelector('.odds-btn');
-                else if (analysisType === 'no-spread') button = gameItem.querySelector('.generate-no-spread-btn');
-                
+                const button = gameItem.querySelector(`[data-analysis-type="${analysisType}"]`);
                 if (button && !button.textContent.includes('✓')) {
                     button.textContent += ' ✓';
                 }
@@ -1373,14 +1250,7 @@ ${analysisSection}
                     pickElement.dataset.pickType = analysisType;
                     pickDisplayContainer.appendChild(pickElement);
                 }
-                pickElement.textContent = `${team} (Confidence: ${confidence})`;
-            }
-
-            async function saveGameRatings() {
-                if (!user) return;
-                const userDocRef = doc(db, "users", user.uid);
-                const ratingsObject = Object.fromEntries(gameRatings);
-                await setDoc(userDocRef, { gameRatings: ratingsObject }, { merge: true });
+                pickElement.textContent = `Your Pick: ${team} (Confidence: ${confidence})`;
             }
             
             async function saveGamePicks() {
@@ -1388,18 +1258,6 @@ ${analysisSection}
                 const userDocRef = doc(db, "users", user.uid);
                 const picksObject = Object.fromEntries(gamePicks);
                 await setDoc(userDocRef, { gamePicks: picksObject }, { merge: true });
-            }
-
-            async function loadGameRatings() {
-                if (!user) return;
-                const userDocRef = doc(db, "users", user.uid);
-                const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists() && docSnap.data().gameRatings) {
-                    const ratingsObject = docSnap.data().gameRatings;
-                    gameRatings = new Map(Object.entries(ratingsObject));
-                } else {
-                    gameRatings = new Map();
-                }
             }
             
             async function loadGamePicks() {
@@ -1414,7 +1272,7 @@ ${analysisSection}
                 }
             }
 
-            async function saveAnalysis(gameId, analysisType, analysisText, rating) {
+            async function saveAnalysis(gameId, analysisType, analysisText) {
                 if (!user) return;
                 try {
                     await addDoc(collection(db, "game_analyses"), {
@@ -1422,7 +1280,6 @@ ${analysisSection}
                         gameId: gameId,
                         analysisType: analysisType,
                         analysis: analysisText,
-                        rating: rating,
                         createdAt: new Date()
                     });
                 } catch (error) {
