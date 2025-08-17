@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.7 - Implemented a comprehensive caching strategy to drastically reduce API calls.
+        // Version 6.8 - Improved UI clarity for saved picks and prevented button text wrapping.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -702,7 +702,12 @@ ${snippets}
                         const pickDisplayHtml = (pick, type) => {
                             if (!pick) return '';
                             let label = 'Your Pick:';
-                            if (type === 'final') label = 'Final Pick:';
+                            switch(type) {
+                                case 'consensus': label = 'Winner Pick:'; break;
+                                case 'odds': label = 'Spread Pick:'; break;
+                                case 'no-spread': label = 'Game Pick:'; break;
+                                case 'final': label = 'Final Pick:'; break;
+                            }
                             return `<div class="text-xs mt-1 ${type === 'final' ? 'text-green-400 font-bold' : 'text-yellow-400'}" data-pick-type="${type}">${label} ${pick.team} (Confidence: ${pick.confidence})</div>`;
                         };
                         
@@ -728,10 +733,10 @@ ${snippets}
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="consensus">${consensusPick ? 'Predict Winner ✓' : 'Predict Winner'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="odds">${oddsPick ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm" data-analysis-type="no-spread">${noSpreadPick ? 'Analyze Game ✓' : 'Analyze Game'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${finalPick ? 'Final Analysis ✓' : 'Final Analysis'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="consensus">${consensusPick ? 'Predict Winner ✓' : 'Predict Winner'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="odds">${oddsPick ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="no-spread">${noSpreadPick ? 'Analyze Game ✓' : 'Analyze Game'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${finalPick ? 'Final Analysis ✓' : 'Final Analysis'}</button>
                                 </div>
                             </div>
                         </li>
@@ -1450,7 +1455,12 @@ ${userPicksSection}
                     pickDisplayContainer.appendChild(pickElement);
                 }
                 let label = 'Your Pick:';
-                if (analysisType === 'final') label = 'Final Pick:';
+                switch(analysisType) {
+                    case 'consensus': label = 'Winner Pick:'; break;
+                    case 'odds': label = 'Spread Pick:'; break;
+                    case 'no-spread': label = 'Game Pick:'; break;
+                    case 'final': label = 'Final Pick:'; break;
+                }
                 pickElement.textContent = `${label} ${team} (Confidence: ${confidence})`;
 
                 // Check if all three initial picks are made to show the final analysis button
@@ -1551,4 +1561,4 @@ ${userPicksSection}
         });
     </script>
 </body>
-</html>
+</ht
