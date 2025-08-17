@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.1 - Added "Save Your Pick" feature to the narrative modal.
+        // Version 6.2 - Added Key Returning Players feature.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -441,6 +441,20 @@
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 return await cfbApiFetch(url);
+            }
+
+            async function fetchKeyReturningPlayers(teamName, year) {
+                const url = `https://api.collegefootballdata.com/awards?year=${year}&team=${encodeURIComponent(teamName)}`;
+                const data = await cfbApiFetch(url);
+                if (!data || data.length === 0) return 'None';
+                
+                const keyAwards = [ "Walter Camp", "FWAA", "AP", "Sporting News", "AFCA", "Heisman", "Maxwell", "Davey O'Brien", "Doak Walker", "Biletnikoff", "John Mackey", "Rimington", "Outland", "Nagurski", "Bednarik", "Jim Thorpe", "Lou Groza", "Ray Guy" ];
+                const keyPlayers = data
+                    .filter(award => keyAwards.some(keyAward => award.name.includes(keyAward)))
+                    .map(award => `${award.recipient} (${award.name})`);
+
+                const uniquePlayers = [...new Set(keyPlayers)];
+                return uniquePlayers.length > 0 ? uniquePlayers.join(', ') : 'None';
             }
 
             async function fetchGameNews(query) {
@@ -775,6 +789,8 @@
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre>
+                            <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Key Returning Players (Previous Year Honors)</h4>
+                            <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${rawData.homeKeyPlayers}\nAway: ${rawData.awayKeyPlayers}</pre>
                             <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4>
                             <pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre>
                              <h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4>
@@ -822,7 +838,7 @@
                 });
 
                 document.getElementById('save-pick-btn').addEventListener('click', () => {
-                    handleSavePick(gameDetails.gameId, analysisType);
+                    handleSavePick(gameDetails.gameId, analysisType.replace(/ /g, '-').toLowerCase());
                 });
 
 
@@ -868,7 +884,8 @@
             function buildPrompt(gameDetails, homeData, awayData, 
                                  homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                 homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent) {
+                                 homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
+                                 homeKeyPlayers, awayKeyPlayers) {
                                  
                 const { gameDateTime, spread, newsSnippets } = gameDetails;
                 const currentYear = new Date().getFullYear();
@@ -1002,6 +1019,7 @@ Perform a deeper analysis to determine the likely winner. Analyze factors like S
 You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
 **Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.
 **Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
+**Use the "Key Returning Players" data to identify elite, game-changing talent that might not be fully captured by team-level stats.**
 
 **DATA DEFINITIONS:**
 - **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
@@ -1041,6 +1059,9 @@ ${previousSPSection}
     -   **Record:** ${awayData.record}
     -   **Composite Talent Score (${currentYear}):** ${awayData.talentScore}
     -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+-   **Key Returning Players (${previousYear} Honors):**
+    -   **${homeData.name}:** ${homeKeyPlayers}
+    -   **${awayData.name}:** ${awayKeyPlayers}
 ${currentSeasonRecordSection}
 ${previousSeasonStatsSection}
 ${currentSeasonStatsSection}
@@ -1101,7 +1122,13 @@ ${analysisSection}
                     const awayData = await fetchTeamData(awayTeam);
                     
                     updateModalStatus('Fetching supporting data...');
-                    const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles] = await Promise.all([
+                    const [
+                        homeRecordCurrent, awayRecordCurrent, headToHeadData, 
+                        homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                        homeInjuries, awayInjuries, 
+                        homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
+                        newsArticles, homeKeyPlayers, awayKeyPlayers
+                    ] = await Promise.all([
                         cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
                         cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
                         fetchHeadToHead(homeData.name, awayData.name),
@@ -1115,7 +1142,9 @@ ${analysisSection}
                         fetchAdvancedSeasonStats(awayData.name, previousYear),
                         fetchAdvancedSeasonStats(homeData.name, currentYear),
                         fetchAdvancedSeasonStats(awayData.name, currentYear),
-                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`)
+                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
+                        fetchKeyReturningPlayers(homeData.name, previousYear),
+                        fetchKeyReturningPlayers(awayData.name, previousYear)
                     ]);
 
                     const headToHead = headToHeadData?.games || [];
@@ -1129,7 +1158,8 @@ ${analysisSection}
                     const prompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                                headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                               homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent);
+                                               homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
+                                               homeKeyPlayers, awayKeyPlayers);
 
                     updateModalStatus('Generating AI narrative...');
                     const narrativeText = await generateNarrative(prompt);
@@ -1144,7 +1174,7 @@ ${analysisSection}
                         homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
                         homeRecordCurrent: homeRecordCurrent?.[0] || null,
                         awayRecordCurrent: awayRecordCurrent?.[0] || null,
-                        homeStatsCurrent, awayStatsCurrent
+                        homeStatsCurrent, awayStatsCurrent, homeKeyPlayers, awayKeyPlayers
                     };
                     const isSpreadAnalysis = analysisType === 'odds';
                     displayNarrative(narrativeText, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
@@ -1180,7 +1210,13 @@ ${analysisSection}
                      const homeData = await fetchTeamData(homeTeam);
                     const awayData = await fetchTeamData(awayTeam);
                     
-                    const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles] = await Promise.all([
+                    const [
+                        homeRecordCurrent, awayRecordCurrent, headToHeadData, 
+                        homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                        homeInjuries, awayInjuries, 
+                        homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
+                        newsArticles, homeKeyPlayers, awayKeyPlayers
+                    ] = await Promise.all([
                         cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
                         cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
                         fetchHeadToHead(homeData.name, awayData.name),
@@ -1194,7 +1230,9 @@ ${analysisSection}
                         fetchAdvancedSeasonStats(awayData.name, previousYear),
                         fetchAdvancedSeasonStats(homeData.name, currentYear),
                         fetchAdvancedSeasonStats(awayData.name, currentYear),
-                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`)
+                        fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
+                        fetchKeyReturningPlayers(homeData.name, previousYear),
+                        fetchKeyReturningPlayers(awayData.name, previousYear)
                     ]);
 
                     const headToHead = headToHeadData?.games || [];
@@ -1208,7 +1246,8 @@ ${analysisSection}
                     const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                                headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
-                                               homeInjuries, awayInjuries, 'prediction', homeRecordCurrent, awayRecordCurrent);
+                                               homeInjuries, awayInjuries, 'prediction', homeRecordCurrent, awayRecordCurrent,
+                                               homeKeyPlayers, awayKeyPlayers);
 
                     const individualAnalyses = [];
                     for (let i = 0; i < 3; i++) {
@@ -1232,7 +1271,7 @@ ${analysisSection}
                         homeRecordCurrent: homeRecordCurrent?.[0] || null,
                         awayRecordCurrent: awayRecordCurrent?.[0] || null,
                         homeStatsCurrent, awayStatsCurrent,
-                        individualAnalyses // Add this for the UI
+                        individualAnalyses, homeKeyPlayers, awayKeyPlayers
                     };
                     displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
 
