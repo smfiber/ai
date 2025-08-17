@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 5.6 - Included Previous Year SP+ and Advanced Stats in AI prompt and modal display.
+        // Version 5.7 - Revised the AI prompt to only use populated SP+ rating fields, excluding null sub-metrics.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -891,8 +891,7 @@ You are an expert college football analyst. Your task is to generate a two-part 
 - **Open Field Yards:** Avg. rushing yards gained 10+ yards past the LOS. Measures an offense's ability to create explosive "home run" plays.
 - **Front Seven Havoc:** Percentage of plays where the defensive line or linebackers record a TFL, forced fumble, or pass breakup. Measures disruption at and behind the line of scrimmage.
 - **Avg. Starting Field Position:** The average starting yard line for an offense.
-- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
-- **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.
+- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance, presented as a high-level rating for the overall team, offense, defense, and special teams.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
 
 **CONTEXTUAL DATA:**
@@ -902,11 +901,11 @@ ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
 -   **SP+ Ratings (${new Date().getFullYear()} PRE-SEASON):**
-    -   **${homeData.name}:** ${homeSP ? homeSP.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSP ? homeSP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSP ? homeSP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSP ? homeSP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
-    -   **${awayData.name}:** ${awaySP ? awaySP.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySP ? awaySP.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySP ? awaySP.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySP ? awaySP.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+    -   **${homeData.name}:** Overall: ${homeSP?.rating?.toFixed(1) || 'N/A'}, Offense: ${homeSP?.offense?.rating?.toFixed(1) || 'N/A'}, Defense: ${homeSP?.defense?.rating?.toFixed(1) || 'N/A'}, Special Teams: ${homeSP?.specialTeams?.rating?.toFixed(1) || 'N/A'}
+    -   **${awayData.name}:** Overall: ${awaySP?.rating?.toFixed(1) || 'N/A'}, Offense: ${awaySP?.offense?.rating?.toFixed(1) || 'N/A'}, Defense: ${awaySP?.defense?.rating?.toFixed(1) || 'N/A'}, Special Teams: ${awaySP?.specialTeams?.rating?.toFixed(1) || 'N/A'}
 -   **SP+ Ratings (${previousYear} FINAL):**
-    -   **${homeData.name}:** ${homeSPPrev ? homeSPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${homeSPPrev ? homeSPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${homeSPPrev ? homeSPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${homeSPPrev ? homeSPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
-    -   **${awayData.name}:** ${awaySPPrev ? awaySPPrev.rating?.toFixed(1) : 'N/A'} (Overall), ${awaySPPrev ? awaySPPrev.offense?.rating?.toFixed(1) : 'N/A'} (Off), ${awaySPPrev ? awaySPPrev.defense?.rating?.toFixed(1) : 'N/A'} (Def), ${awaySPPrev ? awaySPPrev.specialTeams?.rating?.toFixed(1) : 'N/A'} (ST)
+    -   **${homeData.name}:** Overall: ${homeSPPrev?.rating?.toFixed(1) || 'N/A'}, Offense: ${homeSPPrev?.offense?.rating?.toFixed(1) || 'N/A'}, Defense: ${homeSPPrev?.defense?.rating?.toFixed(1) || 'N/A'}, Special Teams: ${homeSPPrev?.specialTeams?.rating?.toFixed(1) || 'N/A'}
+    -   **${awayData.name}:** Overall: ${awaySPPrev?.rating?.toFixed(1) || 'N/A'}, Offense: ${awaySPPrev?.offense?.rating?.toFixed(1) || 'N/A'}, Defense: ${awaySPPrev?.defense?.rating?.toFixed(1) || 'N/A'}, Special Teams: ${awaySPPrev?.specialTeams?.rating?.toFixed(1) || 'N/A'}
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
     -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
