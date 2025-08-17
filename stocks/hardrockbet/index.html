@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.6 - Reverted fetchInjuries function to use current year.
+        // Version 7.7 - Removed API caching and reverted error handling.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -218,8 +218,6 @@
             let recordsCache = {};
             let returningProductionCache = {};
             let advancedStatsCache = {};
-            let injuriesCache = {};
-            let keyPlayersCache = {};
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -441,18 +439,13 @@
                 try {
                     const response = await fetch(url, { headers });
                     if (!response.ok) {
-                        throw new Error(`API request failed for ${url} with status: ${response.status}`);
+                        console.error(`API Error for ${url}: ${response.status}`);
+                        return null;
                     }
-                    const text = await response.text();
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        console.error(`API response for ${url} was not valid JSON.`);
-                        throw new Error('The College Football Data API returned an invalid response. Please check your API key and the API status.');
-                    }
+                    return await response.json();
                 } catch (error) {
-                    console.error(`Fetch error for ${url}:`, error.message);
-                    throw error;
+                    console.error(`Fetch error for ${url}:`, error);
+                    return null;
                 }
             }
 
@@ -488,23 +481,15 @@
             }
 
             async function fetchInjuries(team) {
-                if (injuriesCache[team]) return injuriesCache[team];
-                
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
-                const data = await cfbApiFetch(url);
-                injuriesCache[team] = data;
-                return data;
+                return await cfbApiFetch(url);
             }
 
             async function fetchKeyReturningPlayers(teamName, year) {
-                const cacheKey = `${teamName}-${year}`;
-                if (keyPlayersCache[cacheKey]) return keyPlayersCache[cacheKey];
-
                 const url = `https://api.collegefootballdata.com/awards?year=${year}&team=${encodeURIComponent(teamName)}`;
                 const data = await cfbApiFetch(url);
                 if (!data || data.length === 0) {
-                    keyPlayersCache[cacheKey] = 'None';
                     return 'None';
                 }
                 
@@ -514,9 +499,7 @@
                     .map(award => `${award.recipient} (${award.name})`);
 
                 const uniquePlayers = [...new Set(keyPlayers)];
-                const result = uniquePlayers.length > 0 ? uniquePlayers.join(', ') : 'None';
-                keyPlayersCache[cacheKey] = result;
-                return result;
+                return uniquePlayers.length > 0 ? uniquePlayers.join(', ') : 'None';
             }
 
             async function fetchGameNews(query) {
