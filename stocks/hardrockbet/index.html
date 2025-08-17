@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.0 - Featured game is restricted to major conference teams with a talent score tie-breaker.
+        // Version 7.1 - Added diagnostic logging for talent score API.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -305,6 +305,15 @@
                         talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${previousYear}`);
                     }
                     
+                    // DIAGNOSTIC LOG: Print the raw talent data to the console
+                    if (talentData && talentData.length > 0) {
+                        console.log("--- Raw Talent API Data (Top 5) ---");
+                        console.log(talentData.slice(0, 5));
+                        console.log("------------------------------------");
+                    } else {
+                        console.warn("--- No Talent API Data was found for current or previous year. ---");
+                    }
+
                     const endpoints = {
                         spCurrent: `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}`,
                         spPrevious: `https://api.collegefootballdata.com/ratings/sp?year=${previousYear}`,
@@ -1533,14 +1542,14 @@ ${userPicksSection}
                             userId: user.uid,
                             gameId: gameId,
                             analysisType: analysisType,
-                            analysis: analysisText,
+                            analysisText: analysisText,
                             createdAt: new Date()
                         });
                     } else {
                         // Doc exists, update it
                         const docId = querySnapshot.docs[0].id;
                         const docRef = doc(db, "game_analyses", docId);
-                        await setDoc(docRef, { analysis: analysisText, createdAt: new Date() }, { merge: true });
+                        await setDoc(docRef, { analysisText: analysisText, createdAt: new Date() }, { merge: true });
                     }
                 } catch (error) {
                     console.error("Error saving analysis to Firestore:", error);
@@ -1555,7 +1564,7 @@ ${userPicksSection}
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    analyses[data.analysisType] = data.analysis;
+                    analyses[data.analysisType] = data.analysisText;
                 });
                 return analyses;
             }
