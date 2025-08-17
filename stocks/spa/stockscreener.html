@@ -827,7 +827,7 @@
             }
             
             async function generateAndSaveAnalysis(prompt, container, exchange, analysisId, analysisTitle) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${appConfig.geminiApiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
