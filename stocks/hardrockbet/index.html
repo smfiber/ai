@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 5.9 - Expanded advanced stats and added conditional SP+ logic.
+        // Version 6.0 - Implemented news summarization and prompt enhancements for accuracy.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -467,6 +467,28 @@
                     return [];
                 }
             }
+
+            // *** NEW FUNCTION ***
+            async function summarizeNews(articles, homeTeam, awayTeam) {
+                if (!articles || articles.length === 0) {
+                    return "No recent news found for this matchup.";
+                }
+
+                const snippets = articles.map(a => `Title: ${a.title}\nSnippet: ${a.snippet}`).join('\n---\n');
+
+                const summarizationPrompt = `
+                    You are a sports news analyst. Your task is to synthesize the following raw news snippets for a football game between ${homeTeam} and ${awayTeam}.
+                    Provide a concise, neutral, one-paragraph summary of the key storylines, potential injuries, or significant narratives.
+                    Ignore irrelevant information like ticket sales, historical records, or TV broadcast details. Focus only on what's relevant to the upcoming game.
+
+                    Here are the snippets:
+                    ${snippets}
+                `;
+
+                // Reuse your existing generateNarrative function for this task
+                const summary = await generateNarrative(summarizationPrompt);
+                return summary;
+            }
             
             async function generateNarrative(prompt, retries = 3, delay = 1000) {
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
@@ -690,7 +712,7 @@
                     newsAccordionHtml = `
                         <div class="mt-4 border-t border-gray-600 pt-4">
                             <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
-                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View News Articles
+                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw News Articles
                             </button>
                             <div class="accordion-content bg-gray-900 rounded-md">
                                 <ul class="list-none">
@@ -784,6 +806,7 @@
                 errorDisplay.classList.add('hidden');
             }
             
+            // *** UPDATED FUNCTION ***
             function buildPrompt(gameDetails, homeData, awayData, 
                                  homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
@@ -803,7 +826,6 @@
                     return h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 };
                 
-                // Helper to generate the detailed advanced stats block for any given season's stats
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return ''; // Don't generate block if stats are null
                     return `
@@ -859,16 +881,16 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 if (homeSP?.rating && awaySP?.rating) {
                     currentSPSection = `
 -   **SP+ Ratings (${currentYear} PRE-SEASON):**
-    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST)
-    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST)`;
+    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${homeSP.sos?.toFixed(2) || 'N/A'}
+    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${awaySP.sos?.toFixed(2) || 'N/A'}`;
                 }
                 
                 let previousSPSection = '';
                 if (homeSPPrev?.rating && awaySPPrev?.rating) {
                     previousSPSection = `
 -   **SP+ Ratings (${previousYear} FINAL):**
-    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)
-    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)`;
+    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${homeSPPrev.sos?.toFixed(2) || 'N/A'}
+    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST), SOS: ${awaySPPrev.sos?.toFixed(2) || 'N/A'}`;
                 }
                 
                 const spreadContextLine = analysisType !== 'no-spread' ? `-   **Current Spread:** ${spread}.` : '';
@@ -922,8 +944,8 @@ You are an expert college football analyst. Your task is to generate a two-part 
 **Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
 
 **DATA DEFINITIONS:**
-- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
-- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense, lower for defense.
+- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense; for defense, a lower PPA is better as it indicates points prevented.
+- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense; for defense, a lower Success Rate is better.
 - **Explosiveness:** Measures the magnitude of successful plays.
 - **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.
 - **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.
@@ -937,13 +959,14 @@ You are an expert college football analyst. Your task is to generate a two-part 
 - **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
 - **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.
 - **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
+- **Strength of Schedule (SOS):** A rating of the team's schedule difficulty. Higher is more difficult.
 
 **CONTEXTUAL DATA:**
 -   **Game Date & Time:** ${gameDateTime}
 -   **Matchup:** ${awayData.name} at ${homeData.name}
 ${spreadContextLine}
 -   **Recent News Snippets:** ${newsSnippets}
--   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}
+-   **Head-to-Head History:** - ${formatHeadToHead(headToHead)}
 ${currentSPSection}
 ${previousSPSection}
 -   **Key Injuries:**
@@ -968,6 +991,7 @@ ${instructions}
             }
 
             // --- Event Handling ---
+            // *** UPDATED FUNCTION ***
             async function handleGenerateClick(button, analysisType) {
                 const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
                 allButtonsInRow.forEach(el => { el.disabled = true; });
@@ -987,7 +1011,7 @@ ${instructions}
                     const previousYear = currentYear - 1;
                     
                     updateModalStatus('Fetching team overview data...');
-                    const homeData = await fetchTeamData(homeTeam); // Gets prev year record, returning prod, CURRENT talent
+                    const homeData = await fetchTeamData(homeTeam);
                     await sleep(250);
                     const awayData = await fetchTeamData(awayTeam);
                     await sleep(250);
@@ -1031,15 +1055,13 @@ ${instructions}
                     const awayStatsCurrent = await fetchAdvancedSeasonStats(awayData.name, currentYear);
                     await sleep(250);
 
-                    updateModalStatus('Fetching latest news...');
+                    updateModalStatus('Fetching and summarizing latest news...');
                     const newsQuery = `"${homeData.name}" vs "${awayData.name}" football`;
                     const newsArticles = await fetchGameNews(newsQuery);
-                    const newsSnippets = newsArticles.length > 0 
-                        ? newsArticles.map(a => a.snippet).join(' ... ') 
-                        : "No recent news found for this matchup.";
+                    const summarizedNews = await summarizeNews(newsArticles, homeData.name, awayData.name);
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
-                    const gameDetails = { gameDateTime, spread, newsSnippets };
+                    const gameDetails = { gameDateTime, spread, newsSnippets: summarizedNews };
                     
                     const prompt = buildPrompt(gameDetails, homeData, awayData, 
                                                homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
