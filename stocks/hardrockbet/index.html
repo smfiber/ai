@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.7 - Removed API caching and reverted error handling.
+        // Version 7.9 - Updated Gemini model, added resilience to data fetching.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -594,7 +594,7 @@ ${snippets}
             }
             
             async function generateNarrative(prompt, retries = 3, delay = 1000) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-0514:generateContent?key=${geminiApiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
 
                 try {
                     const response = await fetch(apiUrl, {
@@ -1351,15 +1351,15 @@ ${userPicksSection}
                         fetchSPRatings(awayData.name, currentYear),
                         fetchSPRatings(homeData.name, previousYear),
                         fetchSPRatings(awayData.name, previousYear),
-                        fetchInjuries(homeData.name),
-                        fetchInjuries(awayData.name),
+                        fetchInjuries(homeData.name).catch(e => { console.error(`Failed to fetch home injuries: ${e.message}`); return []; }),
+                        fetchInjuries(awayData.name).catch(e => { console.error(`Failed to fetch away injuries: ${e.message}`); return []; }),
                         fetchAdvancedSeasonStats(homeData.name, previousYear),
                         fetchAdvancedSeasonStats(awayData.name, previousYear),
                         fetchAdvancedSeasonStats(homeData.name, currentYear),
                         fetchAdvancedSeasonStats(awayData.name, currentYear),
                         fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
-                        fetchKeyReturningPlayers(homeData.name, previousYear),
-                        fetchKeyReturningPlayers(awayData.name, previousYear)
+                        fetchKeyReturningPlayers(homeData.name, previousYear).catch(e => { console.error(`Failed to fetch home key players: ${e.message}`); return 'None'; }),
+                        fetchKeyReturningPlayers(awayData.name, previousYear).catch(e => { console.error(`Failed to fetch away key players: ${e.message}`); return 'None'; })
                     ]);
 
                     const headToHead = headToHeadData?.games || [];
