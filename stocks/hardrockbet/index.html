@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.8 - Improved UI clarity for saved picks and prevented button text wrapping.
+        // Version 6.9 - Fixed a bug preventing the "Final Analysis" button from appearing.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -807,7 +807,7 @@ ${snippets}
                 }
             }
             
-            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType, prompt) {
+            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisTitle, prompt) {
                 currentNarrativeText = narrative;
                 const formattedNarrative = marked.parse(narrative);
 
@@ -815,8 +815,8 @@ ${snippets}
                 const spreadDisplay = isSpreadAnalysis 
                     ? `<p class="text-blue-400 text-center font-semibold mb-6">${gameDetails.spread}</p>`
                     : '<div class="mb-6"></div>';
-                const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
-                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType}</span>
+                const analysisTypeDisplay = analysisTitle ? `<div class="text-center mb-4">
+                    <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisTitle}</span>
                 </div>` : '';
                 
                 let individualAnalysesHtml = '';
@@ -937,7 +937,7 @@ ${snippets}
                 });
 
                 document.getElementById('save-pick-btn').addEventListener('click', () => {
-                    handleSavePick(gameDetails.gameId, analysisType.replace(/ /g, '-').toLowerCase());
+                    handleSavePick(gameDetails.gameId, gameDetails.analysisType);
                 });
 
 
@@ -1342,7 +1342,7 @@ ${userPicksSection}
                         homeStatsCurrent, awayStatsCurrent,
                         individualAnalyses, homeKeyPlayers, awayKeyPlayers
                     };
-                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, analysisType === 'odds', analysisTitle, consensusPrompt);
+                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime, analysisType: analysisType }, rawData, analysisType === 'odds', analysisTitle, consensusPrompt);
 
                 } catch (error) {
                     console.error("Consensus generation failed:", error);
@@ -1561,4 +1561,4 @@ ${userPicksSection}
         });
     </script>
 </body>
-</ht
+</html>
