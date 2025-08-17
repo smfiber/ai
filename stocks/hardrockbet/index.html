@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 7.5 - Set injuries API call to previous year to avoid offseason errors.
+        // Version 7.6 - Reverted fetchInjuries function to use current year.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -490,8 +490,8 @@
             async function fetchInjuries(team) {
                 if (injuriesCache[team]) return injuriesCache[team];
                 
-                const previousYear = new Date().getFullYear() - 1;
-                const url = `https://api.collegefootballdata.com/injuries?year=${previousYear}&team=${encodeURIComponent(team)}`;
+                const currentYear = new Date().getFullYear();
+                const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
                 const data = await cfbApiFetch(url);
                 injuriesCache[team] = data;
                 return data;
