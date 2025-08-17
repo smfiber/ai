@@ -182,7 +182,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.0 - Implemented news summarization and prompt enhancements for accuracy.
+        // Version 6.1 - Added AI News Summary to the modal display.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -468,7 +468,6 @@
                 }
             }
 
-            // *** NEW FUNCTION ***
             async function summarizeNews(articles, homeTeam, awayTeam) {
                 if (!articles || articles.length === 0) {
                     return "No recent news found for this matchup.";
@@ -485,7 +484,6 @@
                     ${snippets}
                 `;
 
-                // Reuse your existing generateNarrative function for this task
                 const summary = await generateNarrative(summarizationPrompt);
                 return summary;
             }
@@ -688,7 +686,7 @@
                 }
             }
             
-            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType, prompt) {
+            function displayNarrative(narrative, gameDetails, rawData, isSpreadAnalysis, analysisType, prompt, summarizedNews) {
                 currentNarrativeText = narrative;
                 const formattedNarrative = marked.parse(narrative);
 
@@ -699,6 +697,19 @@
                 const analysisTypeDisplay = analysisType ? `<div class="text-center mb-4">
                     <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisType}</span>
                 </div>` : '';
+
+                let newsSummaryAccordionHtml = '';
+                if (summarizedNews) {
+                    newsSummaryAccordionHtml = `
+                        <div class="mt-8 border-t border-gray-600 pt-4">
+                            <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
+                               <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View AI News Summary
+                            </button>
+                            <div class="accordion-content bg-gray-900 rounded-md">
+                                <p class="text-sm text-gray-400 whitespace-pre-wrap break-words">${summarizedNews}</p>
+                            </div>
+                        </div>`;
+                }
 
                 let newsAccordionHtml = '';
                 if (rawData.newsArticles && rawData.newsArticles.length > 0) {
@@ -730,7 +741,8 @@
                     <div class="prose prose-invert max-w-none text-gray-300">
                         ${formattedNarrative}
                     </div>
-                    <div class="mt-8 border-t border-gray-600 pt-4">
+                    ${newsSummaryAccordionHtml}
+                    <div class="mt-4 border-t border-gray-600 pt-4">
                         <button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none">
                            <span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Prompt Sent to AI
                         </button>
@@ -806,7 +818,6 @@
                 errorDisplay.classList.add('hidden');
             }
             
-            // *** UPDATED FUNCTION ***
             function buildPrompt(gameDetails, homeData, awayData, 
                                  homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
@@ -991,7 +1002,6 @@ ${instructions}
             }
 
             // --- Event Handling ---
-            // *** UPDATED FUNCTION ***
             async function handleGenerateClick(button, analysisType) {
                 const allButtonsInRow = button.closest('li').querySelectorAll('button, select');
                 allButtonsInRow.forEach(el => { el.disabled = true; });
@@ -1084,7 +1094,7 @@ ${instructions}
                         homeStatsCurrent, awayStatsCurrent
                     };
                     const isSpreadAnalysis = analysisType === 'odds';
-                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
+                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt, summarizedNews);
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
