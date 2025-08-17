@@ -94,6 +94,11 @@
         .confidence-medium { border-left: 4px solid #22c55e; } /* green-500 */
         .confidence-high { border-left: 4px solid #f97316; } /* orange-500 */
         .confidence-very-high { border-left: 4px solid #ef4444; } /* red-500 */
+        .pick-btn.selected {
+            background-color: #2563eb; /* blue-600 */
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+            border-color: #3b82f6;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -138,12 +143,15 @@
 
     <!-- Narrative Modal -->
     <div id="narrativeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-4xl mx-4 relative">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-4xl mx-4 relative flex flex-col">
             <button id="closeNarrativeModal" class="absolute top-4 right-6 text-gray-400 hover:text-white text-3xl font-bold z-10">&times;</button>
-            <div id="narrativeModalContent" class="max-h-[80vh] overflow-y-auto pr-8 pb-8">
+            <div id="narrativeModalContent" class="flex-grow max-h-[80vh] overflow-y-auto pr-8 pb-8">
                 <!-- Narrative will be injected here -->
             </div>
-             <button id="copyNarrativeBtn" class="absolute bottom-4 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
+            <div id="modal-footer" class="flex-shrink-0 pt-4 border-t border-gray-600">
+                 <!-- Save Pick UI will be injected here -->
+                 <button id="copyNarrativeBtn" class="absolute bottom-6 right-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
+            </div>
         </div>
     </div>
 
@@ -182,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.0 - Added Consensus Prediction feature for more rigorous analysis.
+        // Version 6.1 - Added "Save Your Pick" feature to the narrative modal.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -197,6 +205,7 @@
             const narrativeModalContent = document.getElementById('narrativeModalContent');
             const closeNarrativeModal = document.getElementById('closeNarrativeModal');
             const copyNarrativeBtn = document.getElementById('copyNarrativeBtn');
+            const modalFooter = document.getElementById('modal-footer');
 
             const mainLoader = document.getElementById('mainLoader');
             const errorDisplay = document.getElementById('errorDisplay');
@@ -212,8 +221,9 @@
             let googleCx = '';
             let currentNarrativeText = '';
             let gameRatings = new Map();
+            let gamePicks = new Map();
             let auth, db, user;
-            let initialAuthCheckDone = false; // Flag to prevent multiple fetches
+            let initialAuthCheckDone = false; 
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -240,14 +250,15 @@
                         
                         onAuthStateChanged(auth, async (currentUser) => {
                             user = currentUser;
-                            updateUserProfile(); // Update UI for login/logout
+                            updateUserProfile();
                             if (user) {
                                 await loadGameRatings();
+                                await loadGamePicks();
                             } else {
-                                gameRatings.clear(); // Clear ratings if user logs out
+                                gameRatings.clear();
+                                gamePicks.clear();
                             }
 
-                            // Fetch games only after the first auth check is complete
                             if (!initialAuthCheckDone) {
                                 fetchOdds();
                                 initialAuthCheckDone = true;
@@ -573,21 +584,38 @@
                         const rating = gameRatings.get(game.id) || '';
                         const ratingClass = rating ? `confidence-${rating}` : '';
 
+                        // Check for saved picks
+                        const consensusPick = gamePicks.get(`${game.id}_consensus`);
+                        const oddsPick = gamePicks.get(`${game.id}_odds`);
+                        const noSpreadPick = gamePicks.get(`${game.id}_no-spread`);
+
+                        const pickDisplayHtml = (pick, type) => {
+                            if (!pick) return '';
+                            return `<div class="text-xs text-yellow-400 mt-1" data-pick-type="${type}">${pick.team} (Confidence: ${pick.confidence})</div>`;
+                        };
+
                         return `
                         <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200 ${ratingClass}" data-game-id="${game.id}">
-                            <div class="flex items-center mb-4 md:mb-0 flex-grow">
-                                <img src="${awayLogo}" alt="${game.away_team}" class="w-8 h-8 mr-3 object-contain">
-                                <span class="font-bold text-lg">${game.away_team}</span>
-                                <span class="mx-2 text-gray-400">@</span>
-                                <img src="${homeLogo}" alt="${game.home_team}" class="w-8 h-8 mr-3 object-contain">
-                                <span class="font-bold text-lg">${game.home_team}</span>
+                            <div class="flex flex-col items-start mb-4 md:mb-0 flex-grow">
+                                <div class="flex items-center">
+                                    <img src="${awayLogo}" alt="${game.away_team}" class="w-8 h-8 mr-3 object-contain">
+                                    <span class="font-bold text-lg">${game.away_team}</span>
+                                    <span class="mx-2 text-gray-400">@</span>
+                                    <img src="${homeLogo}" alt="${game.home_team}" class="w-8 h-8 mr-3 object-contain">
+                                    <span class="font-bold text-lg">${game.home_team}</span>
+                                </div>
+                                <div class="pick-display mt-2 pl-1">
+                                    ${pickDisplayHtml(consensusPick, 'consensus')}
+                                    ${pickDisplayHtml(oddsPick, 'odds')}
+                                    ${pickDisplayHtml(noSpreadPick, 'no-spread')}
+                                </div>
                             </div>
                             <div class="w-full md:w-auto flex flex-col md:flex-row items-center md:space-x-4">
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="consensus-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Consensus Pick</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Spread Analysis</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">Game Analysis</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="consensus-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${consensusPick ? 'Consensus Pick ✓' : 'Consensus Pick'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="odds-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${oddsPick ? 'Spread Analysis ✓' : 'Spread Analysis'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="generate-no-spread-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm">${noSpreadPick ? 'Game Analysis ✓' : 'Game Analysis'}</button>
                                     <select class="confidence-rating bg-gray-600 text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" data-game-id="${game.id}">
                                         <option value="" ${rating === '' ? 'selected' : ''}>Rate Game</option>
                                         <option value="low" ${rating === 'low' ? 'selected' : ''}>Low</option>
@@ -647,7 +675,8 @@
                 const analysisTypeDisplay = details.analysisType ? `<div class="text-center mb-4">
                     <span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${details.analysisType.replace('-', ' ')}</span>
                 </div>` : '';
-
+                
+                modalFooter.innerHTML = ''; // Clear footer
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${details.awayTeam} vs. ${details.homeTeam}</h2>
                     ${analysisTypeDisplay}
@@ -766,6 +795,37 @@
                     </div>
                     ${newsAccordionHtml}
                 `;
+
+                // Add Save Pick UI to the footer
+                modalFooter.innerHTML = `
+                    <div id="save-pick-section" class="flex items-center space-x-4">
+                        <span class="font-bold text-lg">Your Pick:</span>
+                        <button class="pick-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md border-2 border-transparent transition" data-team-name="${gameDetails.awayTeam}">${gameDetails.awayTeam}</button>
+                        <button class="pick-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md border-2 border-transparent transition" data-team-name="${gameDetails.homeTeam}">${gameDetails.homeTeam}</button>
+                        <select id="pick-confidence" class="bg-gray-600 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                            <option value="Low">Low Confidence</option>
+                            <option value="Medium">Medium Confidence</option>
+                            <option value="High">High Confidence</option>
+                            <option value="Very High">Very High Confidence</option>
+                        </select>
+                        <button id="save-pick-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition">Save Pick</button>
+                    </div>
+                `;
+
+                // Add event listeners for the new pick UI
+                const pickButtons = modalFooter.querySelectorAll('.pick-btn');
+                pickButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        pickButtons.forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                    });
+                });
+
+                document.getElementById('save-pick-btn').addEventListener('click', () => {
+                    handleSavePick(gameDetails.gameId, analysisType);
+                });
+
+
                 narrativeModal.classList.remove('hidden');
 
                 // Generic Accordion logic for all toggles
@@ -1087,7 +1147,7 @@ ${analysisSection}
                         homeStatsCurrent, awayStatsCurrent
                     };
                     const isSpreadAnalysis = analysisType === 'odds';
-                    displayNarrative(narrativeText, { homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
+                    displayNarrative(narrativeText, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, isSpreadAnalysis, analysisType.replace('-', ' ').toUpperCase(), prompt);
 
                 } catch (error) {
                     console.error("Narrative generation failed:", error);
@@ -1174,7 +1234,7 @@ ${analysisSection}
                         homeStatsCurrent, awayStatsCurrent,
                         individualAnalyses // Add this for the UI
                     };
-                    displayNarrative(consensusNarrative, { homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
+                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime }, rawData, false, 'CONSENSUS PREDICTION', consensusPrompt);
 
                 } catch (error) {
                     console.error("Consensus generation failed:", error);
@@ -1197,7 +1257,6 @@ ${analysisSection}
                 } else if (button.classList.contains('generate-no-spread-btn')) {
                     handleGenerateClick(button, 'no-spread');
                 } else if (button.classList.contains('ai-prediction-btn')) {
-                    // This button is now effectively removed, but we keep the logic just in case.
                     handleGenerateClick(button, 'prediction');
                 }
             });
@@ -1219,7 +1278,6 @@ ${analysisSection}
                 const rating = selectElement.value;
                 const gameItem = selectElement.closest('.game-item');
 
-                // Remove all old confidence classes
                 gameItem.classList.remove('confidence-low', 'confidence-medium', 'confidence-high', 'confidence-very-high');
 
                 if (rating && rating !== 'clear') {
@@ -1232,12 +1290,65 @@ ${analysisSection}
                 saveGameRatings();
             }
 
+            async function handleSavePick(gameId, analysisType) {
+                if (!user) {
+                    alert("Please log in to save your pick.");
+                    return;
+                }
+                const selectedButton = modalFooter.querySelector('.pick-btn.selected');
+                if (!selectedButton) {
+                    alert("Please select a team before saving.");
+                    return;
+                }
+                const team = selectedButton.dataset.teamName;
+                const confidence = modalFooter.querySelector('#pick-confidence').value;
+                
+                const pickKey = `${gameId}_${analysisType}`;
+                gamePicks.set(pickKey, { team, confidence });
+
+                await saveGamePicks();
+                updatePickDisplayOnCard(gameId, analysisType, team, confidence);
+                narrativeModal.classList.add('hidden');
+            }
+            
+            function updatePickDisplayOnCard(gameId, analysisType, team, confidence) {
+                const gameItem = document.querySelector(`.game-item[data-game-id="${gameId}"]`);
+                if (!gameItem) return;
+
+                // Update button with checkmark
+                let button;
+                if (analysisType === 'consensus') button = gameItem.querySelector('.consensus-btn');
+                else if (analysisType === 'odds') button = gameItem.querySelector('.odds-btn');
+                else if (analysisType === 'no-spread') button = gameItem.querySelector('.generate-no-spread-btn');
+                
+                if (button && !button.textContent.includes('✓')) {
+                    button.textContent += ' ✓';
+                }
+
+                // Update or add pick display text
+                const pickDisplayContainer = gameItem.querySelector('.pick-display');
+                let pickElement = pickDisplayContainer.querySelector(`[data-pick-type="${analysisType}"]`);
+                if (!pickElement) {
+                    pickElement = document.createElement('div');
+                    pickElement.className = 'text-xs text-yellow-400 mt-1';
+                    pickElement.dataset.pickType = analysisType;
+                    pickDisplayContainer.appendChild(pickElement);
+                }
+                pickElement.textContent = `${team} (Confidence: ${confidence})`;
+            }
+
             async function saveGameRatings() {
                 if (!user) return;
                 const userDocRef = doc(db, "users", user.uid);
-                // Convert Map to an Object for Firestore compatibility
                 const ratingsObject = Object.fromEntries(gameRatings);
                 await setDoc(userDocRef, { gameRatings: ratingsObject }, { merge: true });
+            }
+            
+            async function saveGamePicks() {
+                if (!user) return;
+                const userDocRef = doc(db, "users", user.uid);
+                const picksObject = Object.fromEntries(gamePicks);
+                await setDoc(userDocRef, { gamePicks: picksObject }, { merge: true });
             }
 
             async function loadGameRatings() {
@@ -1245,11 +1356,22 @@ ${analysisSection}
                 const userDocRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(userDocRef);
                 if (docSnap.exists() && docSnap.data().gameRatings) {
-                    // Convert Object back to a Map
                     const ratingsObject = docSnap.data().gameRatings;
                     gameRatings = new Map(Object.entries(ratingsObject));
                 } else {
                     gameRatings = new Map();
+                }
+            }
+            
+            async function loadGamePicks() {
+                if (!user) return;
+                const userDocRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists() && docSnap.data().gamePicks) {
+                    const picksObject = docSnap.data().gamePicks;
+                    gamePicks = new Map(Object.entries(picksObject));
+                } else {
+                    gamePicks = new Map();
                 }
             }
 
