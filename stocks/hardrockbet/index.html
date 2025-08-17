@@ -166,7 +166,7 @@
         <!-- Loading Indicator -->
         <div id="mainLoader" class="flex justify-center items-center my-16 hidden">
             <div class="loader"></div>
-            <p class="ml-4 text-lg">Fetching upcoming games...</p>
+            <p id="mainLoaderText" class="ml-4 text-lg">Fetching upcoming games...</p>
         </div>
         
         <!-- Error Display -->
@@ -190,7 +190,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 6.6 - Implemented AI-powered news summarization for higher quality analysis inputs.
+        // Version 6.7 - Implemented a comprehensive caching strategy to drastically reduce API calls.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -208,21 +208,28 @@
             const modalFooter = document.getElementById('modal-footer');
 
             const mainLoader = document.getElementById('mainLoader');
+            const mainLoaderText = document.getElementById('mainLoaderText');
             const errorDisplay = document.getElementById('errorDisplay');
             const errorMessage = document.getElementById('errorMessage');
             const gamesList = document.getElementById('games-list');
             const featuredGameContainer = document.getElementById('featured-game');
             const userProfileContainer = document.getElementById('user-profile');
             
-            let oddsApiKey = '';
-            let cfbDataApiKey = '';
-            let geminiApiKey = '';
-            let googleApiKey = '';
-            let googleCx = '';
+            let oddsApiKey = '', cfbDataApiKey = '', geminiApiKey = '', googleApiKey = '', googleCx = '';
             let currentNarrativeText = '';
             let gamePicks = new Map();
             let auth, db, user;
             let initialAuthCheckDone = false; 
+
+            // --- Caching Objects ---
+            let teamDataCache = {};
+            let spCache = {};
+            let talentCache = {};
+            let recordsCache = {};
+            let returningProductionCache = {};
+            let advancedStatsCache = {};
+            let injuriesCache = {};
+            let keyPlayersCache = {};
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -231,7 +238,7 @@
                 apiKeyModal.classList.remove('hidden');
             }
 
-            apiKeyForm.addEventListener('submit', (e) => {
+            apiKeyForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const oddsKey = oddsApiKeyInput.value.trim();
                 const cfbDataKey = cfbDataApiKeyInput.value.trim();
@@ -247,6 +254,15 @@
                         auth = getAuth();
                         db = getFirestore();
                         
+                        oddsApiKey = oddsKey;
+                        cfbDataApiKey = cfbDataKey;
+                        geminiApiKey = geminiKey;
+                        googleApiKey = googleKey;
+                        googleCx = cxKey;
+                        apiKeyModal.classList.add('hidden');
+
+                        await initializeAndCacheData();
+
                         onAuthStateChanged(auth, async (currentUser) => {
                             user = currentUser;
                             updateUserProfile();
@@ -262,16 +278,9 @@
                             }
                         });
 
-                        oddsApiKey = oddsKey;
-                        cfbDataApiKey = cfbDataKey;
-                        geminiApiKey = geminiKey;
-                        googleApiKey = googleKey;
-                        googleCx = cxKey;
-                        apiKeyModal.classList.add('hidden');
-
                     } catch (error) {
-                        alert("Invalid Firebase configuration. Please provide a valid JSON object.");
-                        console.error("Firebase config error:", error);
+                        alert("Invalid Firebase configuration or caching failed. Please check console.");
+                        console.error("Initialization error:", error);
                     }
                 } else {
                     alert('Please provide all API keys and the Firebase config.');
@@ -292,10 +301,56 @@
             });
 
 
-            // --- API Fetching ---
+            // --- Caching and API Fetching ---
+
+            async function initializeAndCacheData() {
+                showLoader(true, "Caching seasonal data...");
+                try {
+                    const currentYear = new Date().getFullYear();
+                    const previousYear = currentYear - 1;
+
+                    const endpoints = {
+                        spCurrent: `https://api.collegefootballdata.com/ratings/sp?year=${currentYear}`,
+                        spPrevious: `https://api.collegefootballdata.com/ratings/sp?year=${previousYear}`,
+                        talent: `https://api.collegefootballdata.com/talent?year=${currentYear}`,
+                        recordsCurrent: `https://api.collegefootballdata.com/records?year=${currentYear}`,
+                        recordsPrevious: `https://api.collegefootballdata.com/records?year=${previousYear}`,
+                        returningProduction: `https://api.collegefootballdata.com/player/returning?year=${previousYear}`,
+                        statsCurrent: `https://api.collegefootballdata.com/stats/season/advanced?year=${currentYear}`,
+                        statsPrevious: `https://api.collegefootballdata.com/stats/season/advanced?year=${previousYear}`
+                    };
+
+                    const [
+                        spCurrentData, spPreviousData, talentData,
+                        recordsCurrentData, recordsPreviousData,
+                        returningData, statsCurrentData, statsPreviousData
+                    ] = await Promise.all(Object.values(endpoints).map(url => cfbApiFetch(url)));
+
+                    const processData = (data, key) => data.reduce((acc, item) => {
+                        acc[item[key]] = item;
+                        return acc;
+                    }, {});
+
+                    spCache[currentYear] = processData(spCurrentData, 'team');
+                    spCache[previousYear] = processData(spPreviousData, 'team');
+                    talentCache = processData(talentData, 'school');
+                    recordsCache[currentYear] = processData(recordsCurrentData, 'team');
+                    recordsCache[previousYear] = processData(recordsPreviousData, 'team');
+                    returningProductionCache = processData(returningData, 'team');
+                    advancedStatsCache[currentYear] = processData(statsCurrentData, 'team');
+                    advancedStatsCache[previousYear] = processData(statsPreviousData, 'team');
+
+                } catch (error) {
+                    console.error("Failed to cache seasonal data:", error);
+                    showError("Could not initialize app data. Please check API keys and refresh.");
+                    throw error; // Propagate error to stop initialization
+                } finally {
+                    showLoader(false);
+                }
+            }
 
             async function fetchOdds() {
-                showLoader(true);
+                showLoader(true, "Fetching upcoming games...");
                 clearError();
                 gamesList.innerHTML = '';
                 featuredGameContainer.innerHTML = '';
@@ -321,7 +376,6 @@
                 } catch (error) {
                     console.error('Error fetching odds:', error);
                     showError(`Failed to fetch odds: ${error.message}`);
-                    apiKeyModal.classList.remove('hidden');
                 } finally {
                     showLoader(false);
                 }
@@ -383,27 +437,14 @@
             }
 
             async function fetchTeamData(teamName) {
-                const currentYear = new Date().getFullYear();
-                const previousYear = currentYear - 1;
                 const aliasedTeamName = teamNameAliases[teamName] || teamName;
-                const encodedTeamName = encodeURIComponent(aliasedTeamName);
-
-                const recordsUrl = `https://api.collegefootballdata.com/records?year=${previousYear}&team=${encodedTeamName}`;
-                const returningUrl = `https://api.collegefootballdata.com/player/returning?year=${previousYear}&team=${encodedTeamName}`;
-                const talentUrl = `https://api.collegefootballdata.com/talent?year=${currentYear}`;
-
-                const recordsData = await cfbApiFetch(recordsUrl);
-                await sleep(250);
-                const returningData = await cfbApiFetch(returningUrl);
-                await sleep(250);
-                const talentData = await cfbApiFetch(talentUrl);
-
-                const teamRecord = recordsData?.[0];
-                const record = teamRecord ? `${teamRecord.total.wins}-${teamRecord.total.losses}` : 'N/A';
-                const returningProduction = returningData?.[0];
+                const previousYear = new Date().getFullYear() - 1;
                 
-                const teamTalent = talentData?.find(t => t.school === aliasedTeamName);
-                const talentScore = teamTalent?.talent || 'N/A';
+                const teamRecordData = recordsCache[previousYear]?.[aliasedTeamName];
+                const record = teamRecordData ? `${teamRecordData.total.wins}-${teamRecordData.total.losses}` : 'N/A';
+                
+                const returningProduction = returningProductionCache[aliasedTeamName];
+                const talentScore = talentCache[aliasedTeamName]?.talent || 'N/A';
 
                 return {
                     name: aliasedTeamName,
@@ -414,10 +455,7 @@
             }
             
             async function fetchAdvancedSeasonStats(teamName, year) {
-                const encodedTeamName = encodeURIComponent(teamName);
-                const url = `https://api.collegefootballdata.com/stats/season/advanced?year=${year}&team=${encodedTeamName}`;
-                const data = await cfbApiFetch(url);
-                return data?.[0] || null; // Return the first object or null if empty/error
+                return advancedStatsCache[year]?.[teamName] || null;
             }
             
             async function fetchHeadToHead(team1, team2) {
@@ -426,24 +464,29 @@
             }
 
             async function fetchSPRatings(team, year) {
-                const url = `https://api.collegefootballdata.com/ratings/sp?year=${year}&team=${encodeURIComponent(team)}`;
-                const data = await cfbApiFetch(url);
-                if (data && data[0] && data[0].team.toLowerCase() === team.toLowerCase()) {
-                    return data[0];
-                }
-                return null;
+                return spCache[year]?.[team] || null;
             }
 
             async function fetchInjuries(team) {
+                if (injuriesCache[team]) return injuriesCache[team];
+                
                 const currentYear = new Date().getFullYear();
                 const url = `https://api.collegefootballdata.com/injuries?year=${currentYear}&team=${encodeURIComponent(team)}`;
-                return await cfbApiFetch(url);
+                const data = await cfbApiFetch(url);
+                injuriesCache[team] = data;
+                return data;
             }
 
             async function fetchKeyReturningPlayers(teamName, year) {
+                const cacheKey = `${teamName}-${year}`;
+                if (keyPlayersCache[cacheKey]) return keyPlayersCache[cacheKey];
+
                 const url = `https://api.collegefootballdata.com/awards?year=${year}&team=${encodeURIComponent(teamName)}`;
                 const data = await cfbApiFetch(url);
-                if (!data || data.length === 0) return 'None';
+                if (!data || data.length === 0) {
+                    keyPlayersCache[cacheKey] = 'None';
+                    return 'None';
+                }
                 
                 const keyAwards = [ "Walter Camp", "FWAA", "AP", "Sporting News", "AFCA", "Heisman", "Maxwell", "Davey O'Brien", "Doak Walker", "Biletnikoff", "John Mackey", "Rimington", "Outland", "Nagurski", "Bednarik", "Jim Thorpe", "Lou Groza", "Ray Guy" ];
                 const keyPlayers = data
@@ -451,7 +494,9 @@
                     .map(award => `${award.recipient} (${award.name})`);
 
                 const uniquePlayers = [...new Set(keyPlayers)];
-                return uniquePlayers.length > 0 ? uniquePlayers.join(', ') : 'None';
+                const result = uniquePlayers.length > 0 ? uniquePlayers.join(', ') : 'None';
+                keyPlayersCache[cacheKey] = result;
+                return result;
             }
 
             async function fetchGameNews(query) {
@@ -917,7 +962,8 @@ ${snippets}
                 });
             }
 
-            function showLoader(isLoading) {
+            function showLoader(isLoading, message = "Loading...") {
+                mainLoaderText.textContent = message;
                 mainLoader.classList.toggle('hidden', !isLoading);
             }
 
@@ -1012,8 +1058,8 @@ ${homeStatsCurrentBlock}${awayStatsCurrentBlock}`;
                 }
 
                 let currentSeasonRecordSection = '';
-                const homeRec = homeRecordCurrent?.[0];
-                const awayRec = awayRecordCurrent?.[0];
+                const homeRec = homeRecordCurrent;
+                const awayRec = awayRecordCurrent;
                 if (homeRec || awayRec) {
                     currentSeasonRecordSection = `
 **CURRENT SEASON DATA (${currentYear}):**
@@ -1226,8 +1272,8 @@ ${userPicksSection}
                     updateModalStatus('Fetching current week...');
                     const currentWeek = await fetchCurrentWeek();
 
-                    updateModalStatus('Fetching all game data...');
-                     const homeData = await fetchTeamData(homeTeam);
+                    updateModalStatus('Gathering cached data...');
+                    const homeData = await fetchTeamData(homeTeam);
                     const awayData = await fetchTeamData(awayTeam);
                     
                     const [
@@ -1237,8 +1283,8 @@ ${userPicksSection}
                         homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
                         newsArticles, homeKeyPlayers, awayKeyPlayers
                     ] = await Promise.all([
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(homeData.name)}`),
-                        cfbApiFetch(`https://api.collegefootballdata.com/records?year=${currentYear}&team=${encodeURIComponent(awayData.name)}`),
+                        Promise.resolve(recordsCache[currentYear]?.[homeData.name] || null),
+                        Promise.resolve(recordsCache[currentYear]?.[awayData.name] || null),
                         fetchHeadToHead(homeData.name, awayData.name),
                         fetchSPRatings(homeData.name, currentYear),
                         fetchSPRatings(awayData.name, currentYear),
@@ -1287,8 +1333,7 @@ ${userPicksSection}
                     const rawData = { 
                         homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
                         homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles,
-                        homeRecordCurrent: homeRecordCurrent?.[0] || null,
-                        awayRecordCurrent: awayRecordCurrent?.[0] || null,
+                        homeRecordCurrent, awayRecordCurrent,
                         homeStatsCurrent, awayStatsCurrent,
                         individualAnalyses, homeKeyPlayers, awayKeyPlayers
                     };
