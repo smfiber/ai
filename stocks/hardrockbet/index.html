@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 8.8 - Aligned button and pick labels for consistency.
+        // Version 8.9 - Limited coach history to last 3 years for relevance.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -430,10 +430,15 @@
                 return await cfbApiFetch(url);
             }
 
+            // <!-- GEMINI CHANGE -->
+            // This function now fetches coach data for only the last 3 years for relevance.
             async function fetchCoachData(team) {
-                const url = `https://api.collegefootballdata.com/coaches?team=${encodeURIComponent(team)}`;
+                const currentYear = new Date().getFullYear();
+                const minYear = currentYear - 2;
+                const url = `https://api.collegefootballdata.com/coaches?team=${encodeURIComponent(team)}&minYear=${minYear}`;
                 return await cfbApiFetch(url);
             }
+            // <!-- END GEMINI CHANGE -->
             
             async function fetchBettingLines(team1, team2) {
                 const currentYear = new Date().getFullYear();
@@ -869,12 +874,28 @@
                 const formatInjuries = (injuries) => !injuries || injuries.length === 0 ? 'None reported.' : injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
                 const formatHeadToHead = (h2h) => !h2h || h2h.length === 0 ? 'No recent meetings.' : h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 
+                // <!-- GEMINI CHANGE -->
+                // This function now robustly finds the current coach and calculates their record over the last 3 years.
                 const formatCoachData = (coachArray) => {
                     if (!coachArray || coachArray.length === 0) return 'Data not available.';
-                    const coach = coachArray[0]; // Assumes the first coach returned is the head coach
-                    const currentSeason = coach.seasons[coach.seasons.length - 1]; // Assumes last season is current
-                    return `${coach.first_name} ${coach.last_name} (Record at ${currentSeason.school}: ${currentSeason.wins}-${currentSeason.losses})`;
+                    const currentYear = new Date().getFullYear();
+                    
+                    let currentCoach = coachArray.find(coach => coach.seasons.some(season => season.year === currentYear)) || coachArray[0];
+                    
+                    const currentSchool = currentCoach.seasons[currentCoach.seasons.length - 1].school;
+                    const seasonsAtSchool = currentCoach.seasons.filter(s => s.school === currentSchool);
+                    
+                    if (seasonsAtSchool.length === 0) return 'Data not available.';
+
+                    const record = seasonsAtSchool.reduce((acc, season) => {
+                        acc.wins += season.wins;
+                        acc.losses += season.losses;
+                        return acc;
+                    }, { wins: 0, losses: 0 });
+
+                    return `${currentCoach.first_name} ${currentCoach.last_name} (Record at ${currentSchool} over last 3 years: ${record.wins}-${record.losses})`;
                 };
+                // <!-- END GEMINI CHANGE -->
 
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return '';
@@ -1208,8 +1229,6 @@ ${userPicksSection}`;
                 }
             }
             
-            // <!-- GEMINI CHANGE -->
-            // Updated the labels to match the button text for better consistency.
             function updatePickDisplayOnCard(gameId, analysisType, team, confidence) {
                 const gameItem = document.querySelector(`.game-item[data-game-id="${gameId}"]`);
                 if (!gameItem) return;
@@ -1233,7 +1252,6 @@ ${userPicksSection}`;
                     case 'final': label = 'Final Analysis:'; break;
                 }
                 pickElement.textContent = `${label} ${team} (Confidence: ${confidence})`;
-            // <!-- END GEMINI CHANGE -->
 
                 const consensusPick = gamePicks.get(`${gameId}_consensus`);
                 const matchupPick = gamePicks.get(`${gameId}_matchup`);
