@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 8.4 - Integrated GET /coaches endpoint for deeper analysis.
+        // Version 8.5 - Added Refresh Analysis button in modal.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -430,13 +430,10 @@
                 return await cfbApiFetch(url);
             }
 
-            // <!-- GEMINI CHANGE -->
-            // Added new helper function to fetch coach data.
             async function fetchCoachData(team) {
                 const url = `https://api.collegefootballdata.com/coaches?team=${encodeURIComponent(team)}`;
                 return await cfbApiFetch(url);
             }
-            // <!-- END GEMINI CHANGE -->
 
             async function fetchKeyReturningPlayers(teamName, year) {
                 const url = `https://api.collegefootballdata.com/awards?year=${year}&team=${encodeURIComponent(teamName)}`;
@@ -731,10 +728,7 @@
 
                 let rawDataAccordionHtml = '';
                 if (rawData && rawData.homeData) {
-                    // <!-- GEMINI CHANGE -->
-                    // Added Coach Data to the raw data accordion for display in the modal.
                     rawDataAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Key Returning Players (Previous Year Honors)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${rawData.homeKeyPlayers}\nAway: ${rawData.awayKeyPlayers}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Coach Data</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeCoachData, null, 2)}\nAway: ${JSON.stringify(rawData.awayCoachData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre></div></div>`;
-                    // <!-- END GEMINI CHANGE -->
                 }
 
                 narrativeModalContent.innerHTML = `
@@ -748,7 +742,22 @@
                     ${rawDataAccordionHtml}
                     ${newsAccordionHtml}`;
 
-                modalFooter.innerHTML = `<div class="flex justify-center"><button id="copyNarrativeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button></div>`;
+                // <!-- GEMINI CHANGE -->
+                // Added a "Refresh Analysis" button to the modal footer.
+                modalFooter.innerHTML = `
+                    <div class="flex justify-center space-x-4">
+                        <button id="copyNarrativeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button>
+                        <button id="refreshAnalysisBtn" 
+                                data-game-id="${gameDetails.gameId}" 
+                                data-home-team="${gameDetails.homeTeam}" 
+                                data-away-team="${gameDetails.awayTeam}" 
+                                data-spread="${gameDetails.spread}" 
+                                data-commence-time="${gameDetails.commenceTime}" 
+                                data-analysis-type="${gameDetails.analysisType}"
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                            Refresh Analysis
+                        </button>
+                    </div>`;
                 
                 document.getElementById('copyNarrativeBtn').addEventListener('click', () => {
                     navigator.clipboard.writeText(currentNarrativeText).then(() => {
@@ -757,6 +766,16 @@
                         setTimeout(() => { btn.textContent = 'Copy Text'; }, 2000);
                     });
                 });
+
+                document.getElementById('refreshAnalysisBtn').addEventListener('click', (e) => {
+                    const button = e.currentTarget;
+                    if (button.dataset.analysisType === 'final') {
+                        handleFinalAnalysisClick(button, true);
+                    } else {
+                        handleAnalysisClick(button, true);
+                    }
+                });
+                // <!-- END GEMINI CHANGE -->
 
                 narrativeModal.classList.remove('hidden');
 
@@ -792,14 +811,11 @@
             }
             function clearError() { errorDisplay.classList.add('hidden'); }
             
-            // <!-- GEMINI CHANGE -->
-            // Updated buildPrompt to accept and use coach data.
             function buildPrompt(gameDetails, homeData, awayData, 
                                  homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
                                  homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
                                  homeKeyPlayers, awayKeyPlayers, currentWeek, homeCoachData, awayCoachData) {
-            // <!-- END GEMINI CHANGE -->
                                  
                 const { gameDateTime, newsSummary } = gameDetails;
                 const currentYear = new Date().getFullYear();
@@ -814,15 +830,12 @@
                 const formatInjuries = (injuries) => !injuries || injuries.length === 0 ? 'None reported.' : injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
                 const formatHeadToHead = (h2h) => !h2h || h2h.length === 0 ? 'No recent meetings.' : h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 
-                // <!-- GEMINI CHANGE -->
-                // Added a helper function to format coach data for the prompt.
                 const formatCoachData = (coachArray) => {
                     if (!coachArray || coachArray.length === 0) return 'Data not available.';
                     const coach = coachArray[0]; // Assumes the first coach returned is the head coach
                     const currentSeason = coach.seasons[coach.seasons.length - 1]; // Assumes last season is current
                     return `${coach.first_name} ${coach.last_name} (Record at ${currentSeason.school}: ${currentSeason.wins}-${currentSeason.losses})`;
                 };
-                // <!-- END GEMINI CHANGE -->
 
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return '';
@@ -870,8 +883,6 @@
                         break;
                 }
 
-                // <!-- GEMINI CHANGE -->
-                // Added Coaching Matchup to the prompt's CONTEXTUAL DATA section.
                 return `You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
 **Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.
 **Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
@@ -919,7 +930,6 @@ ${newsSummary}
     -   **${awayData.name}:** ${awayKeyPlayers}${currentSeasonRecordSection}${previousSeasonStatsSection}${currentSeasonStatsSection}
 ---
 ${instructions}`;
-                // <!-- END GEMINI CHANGE -->
             }
 
             function buildConsensusPrompt(analyses, homeTeam, awayTeam) {
@@ -960,9 +970,12 @@ ${userPicksSection}`;
             }
 
             // --- Event Handling & Analysis Logic ---
-            async function handleAnalysisClick(button) {
-                const allButtonsInRow = button.closest('li').querySelectorAll('button');
-                allButtonsInRow.forEach(el => { el.disabled = true; });
+            // <!-- GEMINI CHANGE -->
+            // Added forceRefresh parameter to bypass cache check when refreshing.
+            async function handleAnalysisClick(button, forceRefresh = false) {
+            // <!-- END GEMINI CHANGE -->
+                const allButtonsInRow = button.closest('li')?.querySelectorAll('button');
+                if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = true; });
 
                 const gameId = button.dataset.gameId;
                 const homeTeam = button.dataset.homeTeam;
@@ -976,10 +989,13 @@ ${userPicksSection}`;
                 if(analysisType === 'matchup') analysisTitle = 'Matchup Breakdown';
                 if(analysisType === 'no-spread') analysisTitle = 'Game Analysis';
                 
+                // <!-- GEMINI CHANGE -->
+                // Modified cache check to respect the forceRefresh flag.
                 const savedAnalysisPackage = savedAnalysesCache.get(`${gameId}_${analysisType}`);
-                if (savedAnalysisPackage) {
-                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime, analysisType }, savedAnalysisPackage.rawData, analysisTitle, savedAnalysisPackage.prompt);
-                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                if (savedAnalysisPackage && !forceRefresh) {
+                // <!-- END GEMINI CHANGE -->
+                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime, analysisType, spread }, savedAnalysisPackage.rawData, analysisTitle, savedAnalysisPackage.prompt);
+                    if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
 
@@ -998,8 +1014,6 @@ ${userPicksSection}`;
                     const homeData = await fetchTeamData(homeTeam);
                     const awayData = await fetchTeamData(awayTeam);
                     
-                    // <!-- GEMINI CHANGE -->
-                    // Updated Promise.all to fetch coach data.
                     const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles, homeKeyPlayers, awayKeyPlayers, homeCoachData, awayCoachData] = await Promise.all([
                         Promise.resolve(recordsCache[currentYear]?.[homeData.name] || null), Promise.resolve(recordsCache[currentYear]?.[awayData.name] || null),
                         fetchHeadToHead(homeData.name, awayData.name), fetchSPRatings(homeData.name, currentYear), fetchSPRatings(awayData.name, currentYear),
@@ -1011,7 +1025,6 @@ ${userPicksSection}`;
                         fetchKeyReturningPlayers(homeData.name, previousYear), fetchKeyReturningPlayers(awayData.name, previousYear),
                         fetchCoachData(homeData.name), fetchCoachData(awayData.name)
                     ]);
-                    // <!-- END GEMINI CHANGE -->
 
                     const headToHead = headToHeadData?.games || [];
                     updateModalStatus('Summarizing news...');
@@ -1020,10 +1033,7 @@ ${userPicksSection}`;
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSummary };
                     
-                    // <!-- GEMINI CHANGE -->
-                    // Passed coach data to the buildPrompt function.
                     const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent, homeKeyPlayers, awayKeyPlayers, currentWeek, homeCoachData, awayCoachData);
-                    // <!-- END GEMINI CHANGE -->
 
                     const individualAnalyses = [];
                     for (let i = 0; i < 3; i++) {
@@ -1035,43 +1045,49 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    // <!-- GEMINI CHANGE -->
-                    // Added coach data to the rawData object for saving and display.
                     const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayers, awayKeyPlayers, homeCoachData, awayCoachData };
-                    // <!-- END GEMINI CHANGE -->
                     const analysisPackage = { analysisText: consensusNarrative, rawData, prompt: consensusPrompt };
 
                     if (user) {
                         await saveAnalysis(gameId, analysisType, analysisPackage);
                         savedAnalysesCache.set(`${gameId}_${analysisType}`, analysisPackage);
                         await parseAndSavePick(consensusNarrative, gameId, analysisType, homeTeam, awayTeam);
-                        if (!button.textContent.includes('✓')) button.textContent += ' ✓';
+                        if(allButtonsInRow) {
+                            const originalButton = Array.from(allButtonsInRow).find(b => b.dataset.analysisType === analysisType);
+                            if (originalButton && !originalButton.textContent.includes('✓')) originalButton.textContent += ' ✓';
+                        }
                     }
                     
-                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, commenceTime, analysisType }, rawData, analysisTitle, consensusPrompt);
+                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, commenceTime, analysisType, spread }, rawData, analysisTitle, consensusPrompt);
 
                 } catch (error) {
                     console.error("Analysis generation failed:", error);
                     narrativeModal.classList.add('hidden');
                     showError(`Could not generate analysis. ${error.message}`);
                 } finally {
-                     allButtonsInRow.forEach(el => { el.disabled = false; });
+                     if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
             
-            async function handleFinalAnalysisClick(button) {
-                const allButtonsInRow = button.closest('li').querySelectorAll('button');
-                allButtonsInRow.forEach(el => { el.disabled = true; });
+            // <!-- GEMINI CHANGE -->
+            // Added forceRefresh parameter to bypass cache check when refreshing.
+            async function handleFinalAnalysisClick(button, forceRefresh = false) {
+            // <!-- END GEMINI CHANGE -->
+                const allButtonsInRow = button.closest('li')?.querySelectorAll('button');
+                if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = true; });
 
                 const gameId = button.dataset.gameId;
                 const homeTeam = button.dataset.homeTeam;
                 const awayTeam = button.dataset.awayTeam;
                 const analysisType = 'final';
 
+                // <!-- GEMINI CHANGE -->
+                // Modified cache check to respect the forceRefresh flag.
                 const savedAnalysisPackage = savedAnalysesCache.get(`${gameId}_${analysisType}`);
-                if (savedAnalysisPackage) {
-                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, savedAnalysisPackage.rawData, 'Final Analysis', savedAnalysisPackage.prompt);
-                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                if (savedAnalysisPackage && !forceRefresh) {
+                // <!-- END GEMINI CHANGE -->
+                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType, spread: button.dataset.spread }, savedAnalysisPackage.rawData, 'Final Analysis', savedAnalysisPackage.prompt);
+                    if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
                 
@@ -1102,17 +1118,20 @@ ${userPicksSection}`;
                         await saveAnalysis(gameId, 'final', analysisPackage);
                         savedAnalysesCache.set(`${gameId}_${analysisType}`, analysisPackage);
                         await parseAndSavePick(finalNarrative, gameId, analysisType, homeTeam, awayTeam);
-                        if (!button.textContent.includes('✓')) button.textContent += ' ✓';
+                         if(allButtonsInRow) {
+                            const originalButton = Array.from(allButtonsInRow).find(b => b.dataset.analysisType === analysisType);
+                            if (originalButton && !originalButton.textContent.includes('✓')) originalButton.textContent += ' ✓';
+                        }
                     }
 
-                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, analysisPackage.rawData, 'Final Analysis', prompt);
+                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType, spread: button.dataset.spread }, analysisPackage.rawData, 'Final Analysis', prompt);
 
                 } catch (error) {
                     console.error("Final analysis generation failed:", error);
                     narrativeModal.classList.add('hidden');
                     showError(`Could not generate final analysis. ${error.message}`);
                 } finally {
-                    allButtonsInRow.forEach(el => { el.disabled = false; });
+                    if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = false; });
                 }
             }
 
