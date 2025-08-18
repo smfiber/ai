@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 8.0 - Automated pick saving
+        // Version 8.1 - Improved prompt readability
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -466,7 +466,24 @@
             async function summarizeNews(articles, homeTeam, awayTeam) {
                 if (!articles || articles.length === 0) return "No recent news found for this matchup.";
                 const snippets = articles.map(a => `Title: ${a.title}\nSnippet: ${a.snippet}`).join('\n---\n');
-                const prompt = `You are a sports news analyst. Your task is to read the following collection of news article snippets about an upcoming game between ${homeTeam} and ${awayTeam} and synthesize them into a concise, structured summary. **Format your response exactly as follows using Markdown:**\n\n### News & Narrative Summary\n-   **Key Narratives:**\n    -   [Narrative 1]\n    -   [Narrative 2]\n-   **Player Status Updates:**\n    -   **${homeTeam}:** [List any updates or "None mentioned"]\n    -   **${awayTeam}:** [List any updates or "None mentioned"]\n-   **Team Sentiment:**\n    -   **${homeTeam}:** [Positive/Negative/Neutral]\n    -   **${awayTeam}:** [Positive/Negative/Neutral]\n\n**Article Snippets to Analyze:**\n${snippets}`;
+                const prompt = `
+                    You are a sports news analyst. Your task is to read the following collection of news article snippets 
+                    about an upcoming game between ${homeTeam} and ${awayTeam} and synthesize them into a concise, structured summary.
+                    **Format your response exactly as follows using Markdown:**
+
+                    ### News & Narrative Summary
+                    -   **Key Narratives:**
+                        -   [Narrative 1]
+                        -   [Narrative 2]
+                    -   **Player Status Updates:**
+                        -   **${homeTeam}:** [List any updates or "None mentioned"]
+                        -   **${awayTeam}:** [List any updates or "None mentioned"]
+                    -   **Team Sentiment:**
+                        -   **${homeTeam}:** [Positive/Negative/Neutral]
+                        -   **${awayTeam}:** [Positive/Negative/Neutral]
+
+                    **Article Snippets to Analyze:**
+                    ${snippets}`;
                 return await generateNarrative(prompt);
             }
             
@@ -773,18 +790,39 @@
                                  homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
                                  homeKeyPlayers, awayKeyPlayers, currentWeek) {
                                  
-                const { gameDateTime, spread, newsSummary } = gameDetails;
+                const { gameDateTime, newsSummary } = gameDetails;
                 const currentYear = new Date().getFullYear();
                 const previousYear = currentYear - 1;
 
-                let seasonalWeightingInstructions = currentWeek < 5 ? `**SEASONAL ANALYSIS DIRECTIVE: EARLY SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Heavily weigh previous-year data (${previousYear}), pre-season SP+ ratings, and returning production percentages. These are the most reliable indicators of team quality at this stage.\n-   **Cautious Weighting:** Use current-season data (${currentYear}) with extreme caution due to small sample sizes. Look for significant deviations from pre-season expectations but do not overreact to stats from one or two games, especially against mismatched competition.\n-   **Focus:** Identify if teams are meeting, exceeding, or falling short of their pre-season projections based on the limited data available.` : `**SEASONAL ANALYSIS DIRECTIVE: MID-SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Shift focus to current-season data (${currentYear}). Performance metrics over several games are now more indicative of team quality than pre-season projections.\n-   **Secondary Weighting:** Use previous-year data (${previousYear}) and pre-season SP+ ratings as context to understand a team's baseline talent and coaching, but prioritize what they have demonstrated on the field this year.\n-   **Focus:** Analyze established trends, statistical strengths and weaknesses from the current season, and how teams have performed against comparable opponents.`;
+                const seasonalWeightingInstructions = currentWeek < 5 ? 
+                    `**SEASONAL ANALYSIS DIRECTIVE: EARLY SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Heavily weigh previous-year data (${previousYear}), pre-season SP+ ratings, and returning production percentages. These are the most reliable indicators of team quality at this stage.\n-   **Cautious Weighting:** Use current-season data (${currentYear}) with extreme caution due to small sample sizes. Look for significant deviations from pre-season expectations but do not overreact to stats from one or two games, especially against mismatched competition.\n-   **Focus:** Identify if teams are meeting, exceeding, or falling short of their pre-season projections based on the limited data available.` : 
+                    `**SEASONAL ANALYSIS DIRECTIVE: MID-SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Shift focus to current-season data (${currentYear}). Performance metrics over several games are now more indicative of team quality than pre-season projections.\n-   **Secondary Weighting:** Use previous-year data (${previousYear}) and pre-season SP+ ratings as context to understand a team's baseline talent and coaching, but prioritize what they have demonstrated on the field this year.\n-   **Focus:** Analyze established trends, statistical strengths and weaknesses from the current season, and how teams have performed against comparable opponents.`;
+                
                 const confidenceRubric = `Provide a confidence score based on the following rubric:\n- **Low**: Key data points are highly conflicting, making the outcome a statistical coin flip.\n- **Medium**: Data shows a discernible advantage for one team, but the opponent has significant strengths that could counter it.\n- **High**: Data shows a clear and consistent advantage for one team across most important categories.\n- **Very High**: Data indicates a significant mismatch in nearly every critical metric.`;
+                
                 const formatInjuries = (injuries) => !injuries || injuries.length === 0 ? 'None reported.' : injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
                 const formatHeadToHead = (h2h) => !h2h || h2h.length === 0 ? 'No recent meetings.' : h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return '';
-                    return `\n-   **${teamName}:**\n    -   **Offense Breakdown:**\n        - Overall: PPA: ${stats.offense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.explosiveness?.toFixed(2) || 'N/A'}\n        - Rushing: PPA: ${stats.offense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.rushingPlays?.explosiveness?.toFixed(2) || 'N/A'}\n        - Passing: PPA: ${stats.offense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.passingPlays?.explosiveness?.toFixed(2) || 'N/A'}\n    -   **Defense Breakdown:**\n        - Overall: PPA: ${stats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(stats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%\n        - Vs. Rush: PPA: ${stats.defense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(stats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%\n        - Vs. Pass: PPA: ${stats.defense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%\n        - Havoc Breakdown: Front Seven: ${(stats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%\n    -   **Line of Scrimmage & Explosiveness:**\n        - Off. Line Yards: ${stats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${stats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${stats.offense?.openFieldYards?.toFixed(2) || 'N/A'}\n        - Def. Line Yards Allowed: ${stats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${stats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${stats.defense?.openFieldYards?.toFixed(2) || 'N/A'}\n    -   **Situational & Efficiency:**\n        - Passing Downs Success: ${(stats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(stats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%\n        - Power Success: ${(stats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${stats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}\n        - Avg. Field Position: ${stats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}`;
+                    return `
+-   **${teamName}:**
+    -   **Offense Breakdown:**
+        - Overall: PPA: ${stats.offense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.explosiveness?.toFixed(2) || 'N/A'}
+        - Rushing: PPA: ${stats.offense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.rushingPlays?.explosiveness?.toFixed(2) || 'N/A'}
+        - Passing: PPA: ${stats.offense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.offense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Explosiveness: ${stats.offense?.passingPlays?.explosiveness?.toFixed(2) || 'N/A'}
+    -   **Defense Breakdown:**
+        - Overall: PPA: ${stats.defense?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.successRate * 100).toFixed(1) || 'N/A'}% | Havoc (Total): ${(stats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%
+        - Vs. Rush: PPA: ${stats.defense?.rushingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.rushingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | Stuff Rate: ${(stats.defense?.stuffRate * 100).toFixed(1) || 'N/A'}%
+        - Vs. Pass: PPA: ${stats.defense?.passingPlays?.ppa?.toFixed(2) || 'N/A'} | Success: ${(stats.defense?.passingPlays?.successRate * 100).toFixed(1) || 'N/A'}% | DB Havoc: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+        - Havoc Breakdown: Front Seven: ${(stats.defense?.havoc?.frontSeven * 100).toFixed(1) || 'N/A'}% | DBs: ${(stats.defense?.havoc?.db * 100).toFixed(1) || 'N/A'}%
+    -   **Line of Scrimmage & Explosiveness:**
+        - Off. Line Yards: ${stats.offense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards: ${stats.offense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards: ${stats.offense?.openFieldYards?.toFixed(2) || 'N/A'}
+        - Def. Line Yards Allowed: ${stats.defense?.lineYards?.toFixed(2) || 'N/A'} | Second Level Yards Allowed: ${stats.defense?.secondLevelYards?.toFixed(2) || 'N/A'} | Open Field Yards Allowed: ${stats.defense?.openFieldYards?.toFixed(2) || 'N/A'}
+    -   **Situational & Efficiency:**
+        - Passing Downs Success: ${(stats.offense?.passingDowns?.successRate * 100).toFixed(1) || 'N/A'}% | Standard Downs Success: ${(stats.offense?.standardDowns?.successRate * 100).toFixed(1) || 'N/A'}%
+        - Power Success: ${(stats.offense?.powerSuccess * 100).toFixed(1) || 'N/A'}% | Points Per Opportunity: ${stats.offense?.pointsPerOpportunity?.toFixed(2) || 'N/A'}
+        - Avg. Field Position: ${stats.offense?.fieldPosition?.averageStart?.toFixed(1) || 'N/A'}`;
                 };
 
                 const homeStatsPrevBlock = createStatsBlock(homeStatsPrev, homeData.name);
@@ -792,11 +830,11 @@
                 const homeStatsCurrentBlock = createStatsBlock(homeStatsCurrent, homeData.name);
                 const awayStatsCurrentBlock = createStatsBlock(awayStatsCurrent, awayData.name);
 
-                let previousSeasonStatsSection = (homeStatsPrevBlock || awayStatsPrevBlock) ? `\n**ADVANCED STATS (PREVIOUS SEASON - ${previousYear}):**${homeStatsPrevBlock}${awayStatsPrevBlock}` : '';
-                let currentSeasonStatsSection = (homeStatsCurrentBlock || awayStatsCurrentBlock) ? `\n**ADVANCED STATS (CURRENT SEASON - ${currentYear}):**${homeStatsCurrentBlock}${awayStatsCurrentBlock}` : '';
-                let currentSeasonRecordSection = (homeRecordCurrent || awayRecordCurrent) ? `\n**CURRENT SEASON DATA (${currentYear}):**\n-   **${homeData.name} Record:** ${homeRecordCurrent ? `${homeRecordCurrent.total.wins}-${homeRecordCurrent.total.losses}` : 'N/A'}\n-   **${awayData.name} Record:** ${awayRecordCurrent ? `${awayRecordCurrent.total.wins}-${awayRecordCurrent.total.losses}` : 'N/A'}` : '';
-                let currentSPSection = (homeSP?.rating && awaySP?.rating) ? `\n-   **SP+ Ratings (${currentYear} PRE-SEASON):**\n    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST)\n    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST)` : '';
-                let previousSPSection = (homeSPPrev?.rating && awaySPPrev?.rating) ? `\n-   **SP+ Ratings (${previousYear} FINAL):**\n    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)\n    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)` : '';
+                const previousSeasonStatsSection = (homeStatsPrevBlock || awayStatsPrevBlock) ? `\n**ADVANCED STATS (PREVIOUS SEASON - ${previousYear}):**${homeStatsPrevBlock}${awayStatsPrevBlock}` : '';
+                const currentSeasonStatsSection = (homeStatsCurrentBlock || awayStatsCurrentBlock) ? `\n**ADVANCED STATS (CURRENT SEASON - ${currentYear}):**${homeStatsCurrentBlock}${awayStatsCurrentBlock}` : '';
+                const currentSeasonRecordSection = (homeRecordCurrent || awayRecordCurrent) ? `\n**CURRENT SEASON DATA (${currentYear}):**\n-   **${homeData.name} Record:** ${homeRecordCurrent ? `${homeRecordCurrent.total.wins}-${homeRecordCurrent.total.losses}` : 'N/A'}\n-   **${awayData.name} Record:** ${awayRecordCurrent ? `${awayRecordCurrent.total.wins}-${awayRecordCurrent.total.losses}` : 'N/A'}` : '';
+                const currentSPSection = (homeSP?.rating && awaySP?.rating) ? `\n-   **SP+ Ratings (${currentYear} PRE-SEASON):**\n    -   **${homeData.name}:** ${homeSP.rating?.toFixed(1)} (Overall), ${homeSP.offense?.rating?.toFixed(1)} (Off), ${homeSP.defense?.rating?.toFixed(1)} (Def), ${homeSP.specialTeams?.rating?.toFixed(1)} (ST)\n    -   **${awayData.name}:** ${awaySP.rating?.toFixed(1)} (Overall), ${awaySP.offense?.rating?.toFixed(1)} (Off), ${awaySP.defense?.rating?.toFixed(1)} (Def), ${awaySP.specialTeams?.rating?.toFixed(1)} (ST)` : '';
+                const previousSPSection = (homeSPPrev?.rating && awaySPPrev?.rating) ? `\n-   **SP+ Ratings (${previousYear} FINAL):**\n    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)\n    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)` : '';
                 
                 let instructions;
                 switch(analysisType) {
@@ -811,19 +849,85 @@
                         break;
                 }
 
-                return `You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.\n**Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.\n**Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**\n**Use the "Key Returning Players" data to identify elite, game-changing talent that might not be fully captured by team-level stats.**\n${seasonalWeightingInstructions}\n**DATA DEFINITIONS:**\n- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.\n- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense, lower for defense.\n- **Explosiveness:** Measures the magnitude of successful plays.\n- **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.\n- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.\n- **Havoc Rate:** Percentage of plays where the defense records a TFL, forced fumble, pass breakup, or interception.\n- **Points Per Opportunity (PPO):** Average points scored on drives that cross the opponent's 40-yard line.\n- **Line Yards:** Avg. rushing yards attributed to the offensive line (0-5 yards past LOS).\n- **Second Level Yards:** Avg. rushing yards gained 5-10 yards past the LOS.\n- **Open Field Yards:** Avg. rushing yards gained 10+ yards past the LOS. Measures an offense's ability to create explosive "home run" plays.\n- **Front Seven Havoc:** Percentage of plays where the defensive line or linebackers record a TFL, forced fumble, or pass breakup. Measures disruption at and behind the line of scrimmage.\n- **Avg. Starting Field Position:** The average starting yard line for an offense.\n- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.\n- **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.\n- **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.\n**CONTEXTUAL DATA:**\n-   **Game Date & Time:** ${gameDateTime}\n-   **Matchup:** ${awayData.name} at ${homeData.name}\n-   **AI-Generated News Summary:**\n${newsSummary}\n-   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}${currentSPSection}${previousSPSection}\n-   **Key Injuries:**\n    -   **${homeData.name}:** ${formatInjuries(homeInjuries)}\n    -   **${awayData.name}:** ${formatInjuries(awayInjuries)}\n**PRE-SEASON DATA (Based on ${previousYear} Season):**\n-   **${homeData.name}:**\n    -   **Record:** ${homeData.record}\n    -   **Composite Talent Score (${currentYear}):** ${homeData.talentScore}\n    -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%\n-   **${awayData.name}:**\n    -   **Record:** ${awayData.record}\n    -   **Composite Talent Score (${currentYear}):** ${awayData.talentScore}\n    -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%\n-   **Key Returning Players (${previousYear} Honors):**\n    -   **${homeData.name}:** ${homeKeyPlayers}\n    -   **${awayData.name}:** ${awayKeyPlayers}${currentSeasonRecordSection}${previousSeasonStatsSection}${currentSeasonStatsSection}\n---\n${instructions}`;
+                return `You are an expert college football analyst. Your task is to generate a two-part analysis for the upcoming game using detailed data.
+**Format your entire response using Markdown.** This includes using headings, bold/italic text, and lists to structure your analysis for readability.
+**Crucially, you must only use the data provided below in your analysis. Do not invent or infer any statistics not present in the data.**
+**Use the "Key Returning Players" data to identify elite, game-changing talent that might not be fully captured by team-level stats.**
+${seasonalWeightingInstructions}
+**DATA DEFINITIONS:**
+- **PPA (Predicted Points Added):** Measures points added/prevented vs. average. Higher is better for offense, lower for defense.
+- **Success Rate:** Percentage of "successful" plays (gaining 50% of needed yards on 1st down, 70% on 2nd, 100% on 3rd/4th). Higher is better for offense, lower for defense.
+- **Explosiveness:** Measures the magnitude of successful plays.
+- **Power Success Rate:** Percentage of successful runs on 3rd/4th and short. Measures short-yardage rushing ability.
+- **Stuff Rate:** Percentage of runs stopped at or behind the line of scrimmage. Measures defensive line dominance.
+- **Havoc Rate:** Percentage of plays where the defense records a TFL, forced fumble, pass breakup, or interception.
+- **Points Per Opportunity (PPO):** Average points scored on drives that cross the opponent's 40-yard line.
+- **Line Yards:** Avg. rushing yards attributed to the offensive line (0-5 yards past LOS).
+- **Second Level Yards:** Avg. rushing yards gained 5-10 yards past the LOS.
+- **Open Field Yards:** Avg. rushing yards gained 10+ yards past the LOS. Measures an offense's ability to create explosive "home run" plays.
+- **Front Seven Havoc:** Percentage of plays where the defensive line or linebackers record a TFL, forced fumble, or pass breakup. Measures disruption at and behind the line of scrimmage.
+- **Avg. Starting Field Position:** The average starting yard line for an offense.
+- **SP+ Rating:** A tempo- and opponent-adjusted measure of college football efficiency. It is a predictive measure of future performance.
+- **Special Teams SP+ Rating:** The SP+ rating for the team's special teams unit.
+- **Total Returning Production (%):** The overall percentage of the team's production returning from the previous season.
+**CONTEXTUAL DATA:**
+-   **Game Date & Time:** ${gameDateTime}
+-   **Matchup:** ${awayData.name} at ${homeData.name}
+-   **AI-Generated News Summary:**
+${newsSummary}
+-   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}${currentSPSection}${previousSPSection}
+-   **Key Injuries:**
+    -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
+    -   **${awayData.name}:** ${formatInjuries(awayInjuries)}
+**PRE-SEASON DATA (Based on ${previousYear} Season):**
+-   **${homeData.name}:**
+    -   **Record:** ${homeData.record}
+    -   **Composite Talent Score (${currentYear}):** ${homeData.talentScore}
+    -   **Total Returning Production:** ${(homeData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+-   **${awayData.name}:**
+    -   **Record:** ${awayData.record}
+    -   **Composite Talent Score (${currentYear}):** ${awayData.talentScore}
+    -   **Total Returning Production:** ${(awayData.returningProduction?.percentPPA * 100).toFixed(1) || 'N/A'}%
+-   **Key Returning Players (${previousYear} Honors):**
+    -   **${homeData.name}:** ${homeKeyPlayers}
+    -   **${awayData.name}:** ${awayKeyPlayers}${currentSeasonRecordSection}${previousSeasonStatsSection}${currentSeasonStatsSection}
+---
+${instructions}`;
             }
 
-            function buildConsensusPrompt(analyses, homeTeam, awayTeam, analysisType) {
+            function buildConsensusPrompt(analyses, homeTeam, awayTeam) {
                 const analysisSection = analyses.map((analysis, index) => `\n---\n### Analyst Report ${index + 1}\n${analysis}`).join('');
                 const taskDescription = 'determine the most likely winner';
-                return `You are a lead college football analyst. You have received three independent analyses from your team regarding the upcoming game between ${awayTeam} and ${homeTeam}. Your task is to synthesize these reports into a single, definitive consensus prediction.\n**Your instructions are:**\n1.  **Review all three analyst reports provided below.**\n2.  **Identify the majority opinion.** Based on the reports, ${taskDescription}.\n3.  **Synthesize the reasoning.** Combine the key data points and arguments from the reports that support the majority pick.\n4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).\n5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:\n    -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.\n    -   **### Consensus Prediction:** Clearly state the consensus pick, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses. **Crucially, end your prediction with the final pick on its own line in the format: **Team Name** (Confidence: Level)**\n**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**${analysisSection}`;
+                return `You are a lead college football analyst. You have received three independent analyses from your team regarding the upcoming game between ${awayTeam} and ${homeTeam}. Your task is to synthesize these reports into a single, definitive consensus prediction.
+**Your instructions are:**
+1.  **Review all three analyst reports provided below.**
+2.  **Identify the majority opinion.** Based on the reports, ${taskDescription}.
+3.  **Synthesize the reasoning.** Combine the key data points and arguments from the reports that support the majority pick.
+4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).
+5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:
+    -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.
+    -   **### Consensus Prediction:** Clearly state the consensus pick, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses. **Crucially, end your prediction with the final pick on its own line in the format: **Team Name** (Confidence: Level)**
+**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**${analysisSection}`;
             }
 
             function buildFinalAnalysisPrompt(analyses, userPicks, homeTeam, awayTeam) {
                 const analysisSection = Object.entries(analyses).map(([type, text]) => `\n---\n### ${type.replace('-', ' ')} Analysis\n${text}`).join('');
                 const userPicksSection = Object.entries(userPicks).map(([type, pick]) => `- **${type.replace('-', ' ')} Pick:** ${pick.team} (Confidence: ${pick.confidence})`).join('\n');
-                return `You are a master college football analyst. Your task is to synthesize three different AI-generated consensus reports and the user's own saved picks to produce one final, ultimate recommendation for the game between ${awayTeam} and ${homeTeam}.\n**Your instructions are:**\n1.  **Review the three AI reports:** "Winner Prediction," "Matchup Breakdown," and "Game Analysis." Note their conclusions and key arguments.\n2.  **Review the User's Picks:** Pay close attention to the user's selected team and their confidence level for each of the three analysis types. This represents the user's own judgment after reading the initial reports.\n3.  **Synthesize Everything:** Weigh all inputs, giving significant weight to any high-confidence or very-high-confidence picks from the user. If the AI reports and user picks are aligned, create a confident, summary conclusion. If they conflict, highlight the disagreement and make a final judgment call, explaining why you are siding with one perspective over the other (e.g., "Siding with the user's high-confidence pick despite one conflicting AI analysis...").\n4.  **Formulate a Final Pick and Confidence:** Declare a final pick for the winner and a final confidence score (Low, Medium, High, Very High).\n5.  **Write the Final Report:** Structure your response using Markdown with the following two sections:\n    -   **### Final Synopsis:** Briefly summarize the different analytical perspectives and the user's inputs.\n    -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information. **Crucially, end your recommendation with the final pick on its own line in the format: **Team Name** (Confidence: Level)**\n**You must base your entire response on the provided reports and user picks.**${analysisSection}\n---\n### User's Saved Picks\n${userPicksSection}`;
+                
+                return `You are a master college football analyst. Your task is to synthesize three different AI-generated consensus reports and the user's own saved picks to produce one final, ultimate recommendation for the game between ${awayTeam} and ${homeTeam}.
+**Your instructions are:**
+1.  **Review the three AI reports:** "Winner Prediction," "Matchup Breakdown," and "Game Analysis." Note their conclusions and key arguments.
+2.  **Review the User's Picks:** Pay close attention to the user's selected team and their confidence level for each of the three analysis types. This represents the user's own judgment after reading the initial reports.
+3.  **Synthesize Everything:** Weigh all inputs, giving significant weight to any high-confidence or very-high-confidence picks. If the AI reports and saved picks are aligned, create a confident, summary conclusion. If they conflict, highlight the disagreement and make a final judgment call, explaining why you are siding with one perspective over the other (e.g., "Siding with the high-confidence pick despite one conflicting AI analysis...").
+4.  **Formulate a Final Pick and Confidence:** Declare a final pick for the winner and a final confidence score (Low, Medium, High, Very High).
+5.  **Write the Final Report:** Structure your response using Markdown with the following two sections:
+    -   **### Final Synopsis:** Briefly summarize the different analytical perspectives and the user's inputs.
+    -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information. **Crucially, end your recommendation with the final pick on its own line in the format: **Team Name** (Confidence: Level)**
+**You must base your entire response on the provided reports and user picks.**
+${analysisSection}
+---
+### User's Saved Picks
+${userPicksSection}`;
             }
 
             // --- Event Handling & Analysis Logic ---
@@ -892,7 +996,7 @@
                     }
 
                     updateModalStatus('Synthesizing results...');
-                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam, analysisType);
+                    const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
                     if (user) {
