@@ -430,15 +430,14 @@
                 return await cfbApiFetch(url);
             }
 
-            // <!-- GEMINI CHANGE -->
-            // This function now fetches coach data for only the last 3 years for relevance.
             async function fetchCoachData(team) {
                 const currentYear = new Date().getFullYear();
-                const minYear = currentYear - 2;
-                const url = `https://api.collegefootballdata.com/coaches?team=${encodeURIComponent(team)}&minYear=${minYear}`;
+                // <!-- GEMINI CHANGE -->
+                // Updated to fetch data for 2024 and 2025 specifically.
+                const url = `https://api.collegefootballdata.com/coaches?team=${encodeURIComponent(team)}&minYear=2024&maxYear=2025`;
+                // <!-- END GEMINI CHANGE -->
                 return await cfbApiFetch(url);
             }
-            // <!-- END GEMINI CHANGE -->
             
             async function fetchBettingLines(team1, team2) {
                 const currentYear = new Date().getFullYear();
@@ -874,28 +873,23 @@
                 const formatInjuries = (injuries) => !injuries || injuries.length === 0 ? 'None reported.' : injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
                 const formatHeadToHead = (h2h) => !h2h || h2h.length === 0 ? 'No recent meetings.' : h2h.map(g => `${g.season}: ${g.homeTeam} ${g.homeScore}-${g.awayScore} ${g.awayTeam}`).join('\n    - ');
                 
-                // <!-- GEMINI CHANGE -->
-                // This function now robustly finds the current coach and calculates their record over the last 3 years.
                 const formatCoachData = (coachArray) => {
-                    if (!coachArray || coachArray.length === 0) return 'Data not available.';
-                    const currentYear = new Date().getFullYear();
+                    if (!coachArray || coachArray.length === 0) return 'No data for 2024-2025.';
                     
-                    let currentCoach = coachArray.find(coach => coach.seasons.some(season => season.year === currentYear)) || coachArray[0];
+                    const coach = coachArray[0];
                     
-                    const currentSchool = currentCoach.seasons[currentCoach.seasons.length - 1].school;
-                    const seasonsAtSchool = currentCoach.seasons.filter(s => s.school === currentSchool);
-                    
-                    if (seasonsAtSchool.length === 0) return 'Data not available.';
+                    if (!coach.seasons || coach.seasons.length === 0) return 'No data for 2024-2025.';
 
-                    const record = seasonsAtSchool.reduce((acc, season) => {
+                    const record = coach.seasons.reduce((acc, season) => {
                         acc.wins += season.wins;
                         acc.losses += season.losses;
                         return acc;
                     }, { wins: 0, losses: 0 });
+                    
+                    const school = coach.seasons[coach.seasons.length - 1].school;
 
-                    return `${currentCoach.first_name} ${currentCoach.last_name} (Record at ${currentSchool} over last 3 years: ${record.wins}-${record.losses})`;
+                    return `${coach.first_name} ${coach.last_name} (2024-2025 Record at ${school}: ${record.wins}-${record.losses})`;
                 };
-                // <!-- END GEMINI CHANGE -->
 
                 const createStatsBlock = (stats, teamName) => {
                     if (!stats) return '';
