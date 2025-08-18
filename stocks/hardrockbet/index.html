@@ -727,12 +727,12 @@ ${snippets}
                         const awayLogo = teamData[teamNameAliases[game.away_team]] || '';
                         
                         const consensusPick = gamePicks.get(`${game.id}_consensus`);
-                        const oddsPick = gamePicks.get(`${game.id}_odds`);
+                        const matchupPick = gamePicks.get(`${game.id}_matchup`); // Changed from odds
                         const noSpreadPick = gamePicks.get(`${game.id}_no-spread`);
                         const finalPick = gamePicks.get(`${game.id}_final`);
 
                         const hasConsensusAnalysis = savedAnalysesCache.has(`${game.id}_consensus`);
-                        const hasOddsAnalysis = savedAnalysesCache.has(`${game.id}_odds`);
+                        const hasMatchupAnalysis = savedAnalysesCache.has(`${game.id}_matchup`); // Changed from odds
                         const hasNoSpreadAnalysis = savedAnalysesCache.has(`${game.id}_no-spread`);
                         const hasFinalAnalysis = savedAnalysesCache.has(`${game.id}_final`);
 
@@ -741,14 +741,14 @@ ${snippets}
                             let label = 'Your Pick:';
                             switch(type) {
                                 case 'consensus': label = 'Winner Pick:'; break;
-                                case 'odds': label = 'Spread Pick:'; break;
+                                case 'matchup': label = 'Matchup Pick:'; break; // Changed from odds
                                 case 'no-spread': label = 'Game Pick:'; break;
                                 case 'final': label = 'Final Pick:'; break;
                             }
                             return `<div class="text-xs mt-1 ${type === 'final' ? 'text-green-400 font-bold' : 'text-yellow-400'}" data-pick-type="${type}">${label} ${pick.team} (Confidence: ${pick.confidence})</div>`;
                         };
                         
-                        const allPicksMade = consensusPick && oddsPick && noSpreadPick;
+                        const allPicksMade = consensusPick && matchupPick && noSpreadPick; // Changed from odds
 
                         return `
                         <li class="game-item flex flex-col md:flex-row justify-between items-center p-4 rounded-lg hover:bg-gray-700 transition duration-200" data-game-id="${game.id}">
@@ -762,7 +762,7 @@ ${snippets}
                                 </div>
                                 <div class="pick-display mt-2 pl-1">
                                     ${pickDisplayHtml(consensusPick, 'consensus')}
-                                    ${pickDisplayHtml(oddsPick, 'odds')}
+                                    ${pickDisplayHtml(matchupPick, 'matchup')}
                                     ${pickDisplayHtml(noSpreadPick, 'no-spread')}
                                     ${pickDisplayHtml(finalPick, 'final')}
                                 </div>
@@ -771,7 +771,7 @@ ${snippets}
                                <p class="text-blue-400 font-semibold w-full md:w-auto text-left md:text-right mb-2 md:mb-0">${game.spreadDisplay}</p>
                                <div class="flex w-full md:w-auto space-x-2">
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="consensus">${hasConsensusAnalysis ? 'Predict Winner ✓' : 'Predict Winner'}</button>
-                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="odds">${hasOddsAnalysis ? 'Analyze Spread ✓' : 'Analyze Spread'}</button>
+                                    <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="matchup">${hasMatchupAnalysis ? 'Matchup Breakdown ✓' : 'Matchup Breakdown'}</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" data-spread="${game.spreadDisplay}" data-commence-time="${game.commence_time}" class="analysis-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap" data-analysis-type="no-spread">${hasNoSpreadAnalysis ? 'Analyze Game ✓' : 'Analyze Game'}</button>
                                     <button data-game-id="${game.id}" data-home-team="${game.home_team}" data-away-team="${game.away_team}" class="final-analysis-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-md transition duration-300 text-sm whitespace-nowrap ${allPicksMade ? '' : 'hidden'}" data-analysis-type="final">${hasFinalAnalysis ? 'Final Analysis ✓' : 'Final Analysis'}</button>
                                 </div>
@@ -1151,13 +1151,13 @@ Predict the most likely winner of the game. Weigh all factors: SP+ ratings, adva
 ${confidenceRubric}
 `;
                         break;
-                    case 'odds':
+                    case 'matchup':
                         instructions = `
-### Pre-Game Narrative
-Write a compelling, data-driven pre-game narrative. Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data. Integrate news snippets and injury reports for context.
+### Key Matchup Analysis
+Identify the single most important positional or schematic battle that will decide this game (e.g., Home Team's passing offense vs. Away Team's pass defense, or Away Team's defensive line vs. Home Team's offensive line). Justify your choice using specific data points provided, such as PPA, Success Rates, Havoc Rates, or Line Yards.
 ---
-### Analyst's Pick
-Perform a deeper analysis to determine which team is more likely to cover the spread. Analyze factors like SP+ vs. Spread, key statistical mismatches (PPA, success rates), and the impact of injuries/news. Clearly state your pick and provide a step-by-step justification referencing the provided data.
+### Strategic Prediction
+Based on your analysis of the key matchup above, predict the winner of the game. Explain how the team with the advantage in that specific matchup will leverage it to control the game and secure a victory.
 ${confidenceRubric}
 `;
                         break;
@@ -1239,9 +1239,7 @@ ${analysis}
 
                 let taskDescription;
                 switch (analysisType) {
-                    case 'odds':
-                        taskDescription = 'determine which team is most likely to cover the spread';
-                        break;
+                    case 'matchup': // Changed from odds
                     case 'no-spread':
                     case 'consensus':
                     default:
@@ -1282,10 +1280,10 @@ ${text}
                 return `
 You are a master college football analyst. Your task is to synthesize three different AI-generated consensus reports and the user's own saved picks to produce one final, ultimate recommendation for the game between ${awayTeam} and ${homeTeam}.
 **Your instructions are:**
-1.  **Review the three AI reports:** "Winner Prediction," "Spread Analysis," and "Game Analysis." Note their conclusions and key arguments.
+1.  **Review the three AI reports:** "Winner Prediction," "Matchup Breakdown," and "Game Analysis." Note their conclusions and key arguments.
 2.  **Review the User's Picks:** Pay close attention to the user's selected team and their confidence level for each of the three analysis types. This represents the user's own judgment after reading the initial reports.
 3.  **Synthesize Everything:** Weigh all inputs. If the AI reports and user picks are aligned, your job is to create a confident, summary conclusion. If they conflict, your job is to highlight the disagreement and make a final judgment call, explaining why you are siding with one perspective over the other.
-4.  **Formulate a Final Pick and Confidence:** Declare a final pick (either for the winner or to cover the spread, depending on what makes the most sense from the synthesis) and a final confidence score (Low, Medium, High, Very High).
+4.  **Formulate a Final Pick and Confidence:** Declare a final pick for the winner and a final confidence score (Low, Medium, High, Very High).
 5.  **Write the Final Report:** Structure your response using Markdown with the following two sections:
     -   **### Final Synopsis:** Briefly summarize the different analytical perspectives and the user's inputs.
     -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information.
@@ -1311,13 +1309,13 @@ ${userPicksSection}
 
                 let analysisTitle = "Analysis";
                 if(analysisType === 'consensus') analysisTitle = 'Winner Prediction';
-                if(analysisType === 'odds') analysisTitle = 'Spread Analysis';
+                if(analysisType === 'matchup') analysisTitle = 'Matchup Breakdown';
                 if(analysisType === 'no-spread') analysisTitle = 'Game Analysis';
                 
                 const savedAnalysis = savedAnalysesCache.get(`${gameId}_${analysisType}`);
                 if (savedAnalysis) {
                     const gameDetails = { gameId, homeTeam, awayTeam, spread, commenceTime, analysisType };
-                    displayNarrative(savedAnalysis, gameDetails, {}, analysisType === 'odds', analysisTitle, "Prompt not available for saved analysis.");
+                    displayNarrative(savedAnalysis, gameDetails, {}, false, analysisTitle, "Prompt not available for saved analysis.");
                     allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
@@ -1402,7 +1400,7 @@ ${userPicksSection}
                         homeStatsCurrent, awayStatsCurrent,
                         individualAnalyses, homeKeyPlayers, awayKeyPlayers
                     };
-                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime, analysisType: analysisType }, rawData, analysisType === 'odds', analysisTitle, consensusPrompt);
+                    displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, spread, commenceTime, analysisType: analysisType }, rawData, false, analysisTitle, consensusPrompt);
 
                 } catch (error) {
                     console.error("Consensus generation failed:", error);
@@ -1436,13 +1434,13 @@ ${userPicksSection}
                 try {
                     updateModalStatus('Fetching saved analyses...');
                     const savedAnalyses = await getSavedAnalyses(gameId);
-                    if (!savedAnalyses.consensus || !savedAnalyses.odds || !savedAnalyses['no-spread']) {
+                    if (!savedAnalyses.consensus || !savedAnalyses.matchup || !savedAnalyses['no-spread']) { // Changed from odds
                         throw new Error("One or more required analyses are missing.");
                     }
 
                     const userPicks = {
                         'Winner-Prediction': gamePicks.get(`${gameId}_consensus`),
-                        'Spread-Analysis': gamePicks.get(`${gameId}_odds`),
+                        'Matchup-Breakdown': gamePicks.get(`${gameId}_matchup`), // Changed from odds
                         'Game-Analysis': gamePicks.get(`${gameId}_no-spread`),
                     };
 
@@ -1530,7 +1528,7 @@ ${userPicksSection}
                 let label = 'Your Pick:';
                 switch(analysisType) {
                     case 'consensus': label = 'Winner Pick:'; break;
-                    case 'odds': label = 'Spread Pick:'; break;
+                    case 'matchup': label = 'Matchup Pick:'; break; // Changed from odds
                     case 'no-spread': label = 'Game Pick:'; break;
                     case 'final': label = 'Final Pick:'; break;
                 }
@@ -1538,9 +1536,9 @@ ${userPicksSection}
 
                 // Check if all three initial picks are made to show the final analysis button
                 const consensusPick = gamePicks.get(`${gameId}_consensus`);
-                const oddsPick = gamePicks.get(`${gameId}_odds`);
+                const matchupPick = gamePicks.get(`${gameId}_matchup`); // Changed from odds
                 const noSpreadPick = gamePicks.get(`${gameId}_no-spread`);
-                if (consensusPick && oddsPick && noSpreadPick) {
+                if (consensusPick && matchupPick && noSpreadPick) {
                     const finalBtn = gameItem.querySelector('.final-analysis-btn');
                     if (finalBtn) finalBtn.classList.remove('hidden');
                 }
