@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 8.2 - Bug fixes for accordions and pick updates
+        // Version 8.3 - Improved pick parsing reliability and accordion data persistence.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -705,7 +705,7 @@
                 const analysisTypeDisplay = analysisTitle ? `<div class="text-center mb-4"><span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisTitle}</span></div>` : '';
                 
                 let individualAnalysesHtml = '';
-                if (rawData.individualAnalyses) {
+                if (rawData.individualAnalyses && rawData.individualAnalyses.length > 0) {
                     const analysisItems = rawData.individualAnalyses.map((analysis, index) => `<div class="mb-4 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0"><h5 class="font-bold text-md mb-2 text-gray-400">Analyst Report ${index + 1}</h5><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(analysis)}</div></div>`).join('');
                     individualAnalysesHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Individual Analyst Reports</button><div class="accordion-content bg-gray-900 rounded-md">${analysisItems}</div></div>`;
                 }
@@ -903,8 +903,9 @@ ${instructions}`;
 4.  **Formulate a final confidence score.** Based on the confidence levels expressed in the individual reports and the level of agreement, assign a final consensus confidence score (Low, Medium, High, Very High).
 5.  **Write the Consensus Report.** Structure your response using Markdown with the following two sections:
     -   **### Consensus Synopsis:** A brief summary of the matchup, integrating the common themes from the analyst reports.
-    -   **### Consensus Prediction:** Clearly state the consensus pick, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses. **Crucially, end your prediction with the final pick on its own line in the format: **Team Name** (Confidence: Level)**
-**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**${analysisSection}`;
+    -   **### Consensus Prediction:** Clearly state the consensus pick, the final confidence score, and a justification that synthesizes the strongest arguments from the provided analyses.
+**Do not introduce any new data or opinions. Your entire response must be based solely on the three analyst reports provided.**
+**Crucially, you must end your prediction with the final pick on its own, separate line, in the exact format: **Team Name** (Confidence: Level)**${analysisSection}`;
             }
 
             function buildFinalAnalysisPrompt(analyses, userPicks, homeTeam, awayTeam) {
@@ -919,8 +920,9 @@ ${instructions}`;
 4.  **Formulate a Final Pick and Confidence:** Declare a final pick for the winner and a final confidence score (Low, Medium, High, Very High).
 5.  **Write the Final Report:** Structure your response using Markdown with the following two sections:
     -   **### Final Synopsis:** Briefly summarize the different analytical perspectives and the user's inputs.
-    -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information. **Crucially, end your recommendation with the final pick on its own line in the format: **Team Name** (Confidence: Level)**
+    -   **### Final Recommendation:** Clearly state your final pick, the final confidence score, and a concise justification for your decision, explaining how you synthesized the provided information.
 **You must base your entire response on the provided reports and user picks.**
+**Crucially, you must end your recommendation with the final pick on its own, separate line, in the exact format: **Team Name** (Confidence: Level)**
 ${analysisSection}
 ---
 ### User's Saved Picks
@@ -944,9 +946,9 @@ ${userPicksSection}`;
                 if(analysisType === 'matchup') analysisTitle = 'Matchup Breakdown';
                 if(analysisType === 'no-spread') analysisTitle = 'Game Analysis';
                 
-                const savedAnalysis = savedAnalysesCache.get(`${gameId}_${analysisType}`);
-                if (savedAnalysis) {
-                    displayNarrative(savedAnalysis, { gameId, homeTeam, awayTeam, commenceTime, analysisType }, {}, analysisTitle, "Prompt not available for saved analysis.");
+                const savedAnalysisPackage = savedAnalysesCache.get(`${gameId}_${analysisType}`);
+                if (savedAnalysisPackage) {
+                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime, analysisType }, savedAnalysisPackage.rawData, analysisTitle, savedAnalysisPackage.prompt);
                     allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
@@ -996,14 +998,16 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayers, awayKeyPlayers };
+                    const analysisPackage = { analysisText: consensusNarrative, rawData, prompt: consensusPrompt };
+
                     if (user) {
-                        await saveAnalysis(gameId, analysisType, consensusNarrative);
-                        savedAnalysesCache.set(`${gameId}_${analysisType}`, consensusNarrative);
+                        await saveAnalysis(gameId, analysisType, analysisPackage);
+                        savedAnalysesCache.set(`${gameId}_${analysisType}`, analysisPackage);
                         await parseAndSavePick(consensusNarrative, gameId, analysisType, homeTeam, awayTeam);
                         if (!button.textContent.includes('✓')) button.textContent += ' ✓';
                     }
-
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayers, awayKeyPlayers };
+                    
                     displayNarrative(consensusNarrative, { gameId, homeTeam, awayTeam, commenceTime, analysisType }, rawData, analysisTitle, consensusPrompt);
 
                 } catch (error) {
@@ -1024,9 +1028,9 @@ ${userPicksSection}`;
                 const awayTeam = button.dataset.awayTeam;
                 const analysisType = 'final';
 
-                const savedAnalysis = savedAnalysesCache.get(`${gameId}_${analysisType}`);
-                if (savedAnalysis) {
-                    displayNarrative(savedAnalysis, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, {}, 'Final Analysis', "Prompt not available for saved analysis.");
+                const savedAnalysisPackage = savedAnalysesCache.get(`${gameId}_${analysisType}`);
+                if (savedAnalysisPackage) {
+                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, savedAnalysisPackage.rawData, 'Final Analysis', savedAnalysisPackage.prompt);
                     allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
@@ -1051,15 +1055,17 @@ ${userPicksSection}`;
                     updateModalStatus('Generating final synthesis...');
                     const prompt = buildFinalAnalysisPrompt(savedAnalyses, userPicks, homeTeam, awayTeam);
                     const finalNarrative = await generateNarrative(prompt);
+                    
+                    const analysisPackage = { analysisText: finalNarrative, rawData: { individualAnalyses: Object.values(savedAnalyses) }, prompt };
 
                     if (user) {
-                        await saveAnalysis(gameId, 'final', finalNarrative);
-                        savedAnalysesCache.set(`${gameId}_${analysisType}`, finalNarrative);
+                        await saveAnalysis(gameId, 'final', analysisPackage);
+                        savedAnalysesCache.set(`${gameId}_${analysisType}`, analysisPackage);
                         await parseAndSavePick(finalNarrative, gameId, analysisType, homeTeam, awayTeam);
                         if (!button.textContent.includes('✓')) button.textContent += ' ✓';
                     }
 
-                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, {}, 'Final Analysis', prompt);
+                    displayNarrative(finalNarrative, { gameId, homeTeam, awayTeam, commenceTime: new Date().toISOString(), analysisType }, analysisPackage.rawData, 'Final Analysis', prompt);
 
                 } catch (error) {
                     console.error("Final analysis generation failed:", error);
@@ -1081,18 +1087,16 @@ ${userPicksSection}`;
             async function parseAndSavePick(narrativeText, gameId, analysisType, homeTeam, awayTeam) {
                 if (!user) return;
 
-                // This regex is more flexible, capturing the team name as provided by the AI.
-                const regex = new RegExp(`\\*\\*(?<team>.+?)\\*\\*\\s*\\(Confidence:\\s*(?<confidence>Low|Medium|High|Very High)\\)`, "i");
+                const regex = new RegExp(`\\*\\*(?<team>.+?)\\*\\*\\s*\\(Confidence:\\s*(?<confidence>Low|Medium|High|Very High)\\)`, "im");
                 const match = narrativeText.match(regex);
 
                 if (match && match.groups) {
                     let { team, confidence } = match.groups;
                     
-                    // Determine if the matched team is the home or away team for consistency.
-                    let finalTeamName = team;
-                    if (homeTeam.includes(team)) {
+                    let finalTeamName = team.trim();
+                    if (homeTeam.includes(finalTeamName)) {
                         finalTeamName = homeTeam;
-                    } else if (awayTeam.includes(team)) {
+                    } else if (awayTeam.includes(finalTeamName)) {
                         finalTeamName = awayTeam;
                     }
                     
@@ -1167,21 +1171,38 @@ ${userPicksSection}`;
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    savedAnalysesCache.set(`${data.gameId}_${data.analysisType}`, data.analysisText);
+                    if (data.analysisPackage) {
+                         savedAnalysesCache.set(`${data.gameId}_${data.analysisType}`, data.analysisPackage);
+                    } else if (data.analysisText) { // Backward compatibility
+                        const backwardCompatiblePackage = {
+                            analysisText: data.analysisText,
+                            rawData: {},
+                            prompt: "Prompt not available for this legacy analysis."
+                        };
+                        savedAnalysesCache.set(`${data.gameId}_${data.analysisType}`, backwardCompatiblePackage);
+                    }
                 });
             }
 
-            async function saveAnalysis(gameId, analysisType, analysisText) {
+            async function saveAnalysis(gameId, analysisType, analysisPackage) {
                 if (!user) return;
                 try {
                     const analysesRef = collection(db, "game_analyses");
                     const q = query(analysesRef, where("userId", "==", user.uid), where("gameId", "==", gameId), where("analysisType", "==", analysisType));
                     const querySnapshot = await getDocs(q);
+                    const dataToSave = { 
+                        userId: user.uid, 
+                        gameId: gameId, 
+                        analysisType: analysisType, 
+                        analysisPackage: analysisPackage, 
+                        createdAt: new Date() 
+                    };
+
                     if (querySnapshot.empty) {
-                        await addDoc(analysesRef, { userId: user.uid, gameId: gameId, analysisType: analysisType, analysisText: analysisText, createdAt: new Date() });
+                        await addDoc(analysesRef, dataToSave);
                     } else {
                         const docRef = doc(db, "game_analyses", querySnapshot.docs[0].id);
-                        await setDoc(docRef, { analysisText: analysisText, createdAt: new Date() }, { merge: true });
+                        await setDoc(docRef, dataToSave, { merge: true });
                     }
                 } catch (error) {
                     console.error("Error saving analysis to Firestore:", error);
@@ -1194,7 +1215,14 @@ ${userPicksSection}`;
                 const analysesRef = collection(db, "game_analyses");
                 const q = query(analysesRef, where("userId", "==", user.uid), where("gameId", "==", gameId));
                 const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((doc) => { analyses[doc.data().analysisType] = doc.data().analysisText; });
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.analysisPackage) {
+                        analyses[data.analysisType] = data.analysisPackage.analysisText;
+                    } else if (data.analysisText) { // Backward compatibility
+                        analyses[data.analysisType] = data.analysisText;
+                    }
+                });
                 return analyses;
             }
 
