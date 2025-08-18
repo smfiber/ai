@@ -289,10 +289,10 @@
                     const currentYear = new Date().getFullYear();
                     const previousYear = currentYear - 1;
 
-                    let talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${currentYear}`);
+                    let talentData = await cfbApiFetch(`https://apinext.collegefootballdata.com/talent?year=${currentYear}`);
                     if (!talentData || talentData.length === 0) {
                         console.log(`Talent data for ${currentYear} not found, falling back to ${previousYear}.`);
-                        talentData = await cfbApiFetch(`https://api.collegefootballdata.com/talent?year=${previousYear}`);
+                        talentData = await cfbApiFetch(`https://apinext.collegefootballdata.com/talent?year=${previousYear}`);
                     }
 
                     const endpoints = {
