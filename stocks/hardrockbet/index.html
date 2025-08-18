@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 8.1 - Improved prompt readability
+        // Version 8.2 - Bug fixes for accordions and pick updates
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -260,12 +260,11 @@
                                 savedAnalysesCache.clear();
                             }
 
-                            // Always refetch games on auth change to sync UI
-                            if(initialLoadComplete) {
-                                fetchOdds();
-                            } else {
+                            if(!initialLoadComplete) {
                                 fetchOdds();
                                 initialLoadComplete = true;
+                            } else {
+                                fetchOdds();
                             }
                         });
 
@@ -312,10 +311,10 @@
                         returningData, statsCurrentData, statsPreviousData
                     ] = await Promise.all(Object.values(endpoints).map(url => cfbApiFetch(url)));
 
-                    const processData = (data, key) => data.reduce((acc, item) => {
+                    const processData = (data, key) => data ? data.reduce((acc, item) => {
                         acc[item[key]] = item;
                         return acc;
-                    }, {});
+                    }, {}) : {};
                     
                     if (talentData) talentCache = processData(talentData, 'school');
                     spCache[currentYear] = processData(spCurrentData, 'team');
@@ -738,10 +737,8 @@
                     ${rawDataAccordionHtml}
                     ${newsAccordionHtml}`;
 
-                // The footer now only contains the copy button.
                 modalFooter.innerHTML = `<div class="flex justify-center"><button id="copyNarrativeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Copy Text</button></div>`;
                 
-                // Add listener to the newly created copy button
                 document.getElementById('copyNarrativeBtn').addEventListener('click', () => {
                     navigator.clipboard.writeText(currentNarrativeText).then(() => {
                         const btn = document.getElementById('copyNarrativeBtn');
@@ -1084,22 +1081,30 @@ ${userPicksSection}`;
             async function parseAndSavePick(narrativeText, gameId, analysisType, homeTeam, awayTeam) {
                 if (!user) return;
 
-                const homeTeamRegex = homeTeam.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                const awayTeamRegex = awayTeam.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                const regex = new RegExp(`\\*\\*(?<team>${homeTeamRegex}|${awayTeamRegex})\\*\\*\\s*\\(Confidence:\\s*(?<confidence>Low|Medium|High|Very High)\\)`, "i");
+                // This regex is more flexible, capturing the team name as provided by the AI.
+                const regex = new RegExp(`\\*\\*(?<team>.+?)\\*\\*\\s*\\(Confidence:\\s*(?<confidence>Low|Medium|High|Very High)\\)`, "i");
                 const match = narrativeText.match(regex);
 
                 if (match && match.groups) {
-                    const { team, confidence } = match.groups;
-                    console.log(`Auto-saving pick for ${analysisType}: ${team} with ${confidence} confidence.`);
+                    let { team, confidence } = match.groups;
+                    
+                    // Determine if the matched team is the home or away team for consistency.
+                    let finalTeamName = team;
+                    if (homeTeam.includes(team)) {
+                        finalTeamName = homeTeam;
+                    } else if (awayTeam.includes(team)) {
+                        finalTeamName = awayTeam;
+                    }
+                    
+                    console.log(`Auto-saving pick for ${analysisType}: ${finalTeamName} with ${confidence} confidence.`);
                     
                     const pickKey = `${gameId}_${analysisType}`;
-                    gamePicks.set(pickKey, { team, confidence });
+                    gamePicks.set(pickKey, { team: finalTeamName, confidence });
 
                     await saveGamePicks();
-                    updatePickDisplayOnCard(gameId, analysisType, team, confidence);
+                    updatePickDisplayOnCard(gameId, analysisType, finalTeamName, confidence);
                 } else {
-                    console.warn(`Could not automatically parse pick for game ${gameId}, type ${analysisType}. No match found.`);
+                    console.warn(`Could not automatically parse pick for game ${gameId}, type ${analysisType}. No match found in text.`);
                 }
             }
             
