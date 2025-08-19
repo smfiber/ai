@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.0 - Corrected Appalachian State alias.
+        // Version 9.1 - Reworked modal to show full data/prompt flow.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -380,8 +380,6 @@
                 }, {});
             }
             
-            // <!-- GEMINI CHANGE -->
-            // Corrected the alias for Appalachian State to match the API's abbreviation.
             const teamNameAliases = {
                 "Alabama Crimson Tide": "Alabama", "Arkansas Razorbacks": "Arkansas", "Auburn Tigers": "Auburn", "Florida Gators": "Florida", "Georgia Bulldogs": "Georgia", "Kentucky Wildcats": "Kentucky", "LSU Tigers": "LSU", "Mississippi State Bulldogs": "Mississippi State", "Missouri Tigers": "Missouri", "Oklahoma Sooners": "Oklahoma", "Ole Miss Rebels": "Mississippi", "South Carolina Gamecocks": "South Carolina", "Tennessee Volunteers": "Tennessee", "Texas A&M Aggies": "Texas A&M", "Texas Longhorns": "Texas", "Vanderbilt Commodores": "Vanderbilt",
                 "Illinois Fighting Illini": "Illinois", "Indiana Hoosiers": "Indiana", "Iowa Hawkeyes": "Iowa", "Maryland Terrapins": "Maryland", "Michigan State Spartans": "Michigan State", "Michigan Wolverines": "Michigan", "Minnesota Golden Gophers": "Minnesota", "Nebraska Cornhuskers": "Nebraska", "Northwestern Wildcats": "Northwestern", "Ohio State Buckeyes": "Ohio State", "Oregon Ducks": "Oregon", "Penn State Nittany Lions": "Penn State", "Purdue Boilermakers": "Purdue", "Rutgers Scarlet Knights": "Rutgers", "UCLA Bruins": "UCLA", "USC Trojans": "USC", "Washington Huskies": "Washington", "Wisconsin Badgers": "Wisconsin",
@@ -394,7 +392,6 @@
                 "Appalachian State Mountaineers": "Appalachian St.", "Arkansas State Red Wolves": "Arkansas State", "Coastal Carolina Chanticleers": "Coastal Carolina", "Georgia Southern Eagles": "Georgia Southern", "Georgia State Panthers": "Georgia State", "James Madison Dukes": "James Madison", "Louisiana Ragin' Cajuns": "Louisiana", "UL Monroe Warhawks": "UL Monroe", "Marshall Thundering Herd": "Marshall", "Old Dominion Monarchs": "Old Dominion", "South Alabama Jaguars": "South Alabama", "Southern Miss Golden Eagles": "Southern Miss", "Texas State Bobcats": "Texas State", "Troy Trojans": "Troy",
                 "Notre Dame Fighting Irish": "Notre Dame", "UConn Huskies": "Connecticut", "UMass Minutemen": "UMass",
             };
-            // <!-- END GEMINI CHANGE -->
 
             async function cfbApiFetch(url) {
                 const headers = { 'Authorization': `Bearer ${cfbDataApiKey}` };
@@ -507,7 +504,9 @@
             }
             
             async function summarizeNews(articles, homeTeam, awayTeam) {
-                if (!articles || articles.length === 0) return "No recent news found for this matchup.";
+                if (!articles || articles.length === 0) {
+                    return { summary: "No recent news found for this matchup.", prompt: "No prompt generated as no news was found." };
+                }
                 const snippets = articles.map(a => `Title: ${a.title}\nSnippet: ${a.snippet}`).join('\n---\n');
                 const prompt = `
                     You are a sports news analyst. Your task is to read the following collection of news article snippets 
@@ -527,7 +526,8 @@
 
                     **Article Snippets to Analyze:**
                     ${snippets}`;
-                return await generateNarrative(prompt);
+                const summary = await generateNarrative(prompt);
+                return { summary, prompt };
             }
             
             async function fetchCurrentWeek() {
@@ -742,44 +742,59 @@
                 if (statusTextElement) statusTextElement.textContent = message;
             }
             
-            function displayNarrative(narrative, gameDetails, rawData, analysisTitle, prompt) {
+            function displayNarrative(narrative, gameDetails, rawData, analysisTitle, consensusPrompt) {
                 currentNarrativeText = narrative;
                 const formattedNarrative = marked.parse(narrative);
                 const gameDateTime = new Date(gameDetails.commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                 const analysisTypeDisplay = analysisTitle ? `<div class="text-center mb-4"><span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisTitle}</span></div>` : '';
                 
-                let individualAnalysesHtml = '';
-                if (rawData.individualAnalyses && rawData.individualAnalyses.length > 0) {
-                    const analysisItems = rawData.individualAnalyses.map((analysis, index) => `<div class="mb-4 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0"><h5 class="font-bold text-md mb-2 text-gray-400">Analyst Report ${index + 1}</h5><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(analysis)}</div></div>`).join('');
-                    individualAnalysesHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Individual Analyst Reports</button><div class="accordion-content bg-gray-900 rounded-md">${analysisItems}</div></div>`;
-                }
-
-                let newsAccordionHtml = '';
-                if (rawData.newsArticles && rawData.newsArticles.length > 0) {
-                    const newsItems = rawData.newsArticles.map(article => `<li class="mb-3 pb-3 border-b border-gray-700 last:border-b-0 last:mb-0 last:pb-0"><a href="${article.link}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline font-semibold">${article.title}</a><p class="text-sm text-gray-400 mt-1">${article.snippet}</p></li>`).join('');
-                    newsAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View News Articles</button><div class="accordion-content bg-gray-900 rounded-md"><ul class="list-none">${newsItems}</ul></div></div>`;
-                }
-
-                let promptAccordionHtml = '';
-                if (prompt && !prompt.includes('not available')) {
-                    promptAccordionHtml = `<div class="mt-8 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Prompt Sent to AI</button><div class="accordion-content bg-gray-900 rounded-md"><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${prompt}</pre></div></div>`;
-                }
-
+                // --- Accordion HTML Generation ---
+                
                 let rawDataAccordionHtml = '';
                 if (rawData && rawData.homeData) {
                     rawDataAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Key Player Accolades</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeKeyPlayersData, null, 2)}\nAway: ${JSON.stringify(rawData.awayKeyPlayersData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Coach Data</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeCoachData, null, 2)}\nAway: ${JSON.stringify(rawData.awayCoachData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Betting Lines</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.bettingLines, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">PPA Win Probability</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.winProbability, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre></div></div>`;
                 }
 
+                let newsAccordionHtml = '';
+                if (rawData.newsArticles && rawData.newsArticles.length > 0) {
+                    const newsItems = rawData.newsArticles.map(article => `<li class="mb-3 pb-3 border-b border-gray-700 last:border-b-0 last:mb-0 last:pb-0"><a href="${article.link}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline font-semibold">${article.title}</a><p class="text-sm text-gray-400 mt-1">${article.snippet}</p></li>`).join('');
+                    newsAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw News Articles</button><div class="accordion-content bg-gray-900 rounded-md"><ul class="list-none">${newsItems}</ul></div></div>`;
+                }
+
+                let newsSummaryAccordionHtml = '';
+                if (rawData.newsSummaryPrompt) {
+                    newsSummaryAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> Step 1: View News Summary Prompt & Result</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Prompt Sent to AI:</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${rawData.newsSummaryPrompt}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Resulting Summary:</h4><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(rawData.newsSummary)}</div></div></div>`;
+                }
+
+                let mainAnalysisPromptAccordionHtml = '';
+                if (rawData.mainAnalysisPrompt) {
+                     mainAnalysisPromptAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> Step 2: View Main Analysis Prompt</button><div class="accordion-content bg-gray-900 rounded-md"><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${rawData.mainAnalysisPrompt}</pre></div></div>`;
+                }
+
+                let individualAnalysesHtml = '';
+                if (rawData.individualAnalyses && rawData.individualAnalyses.length > 0) {
+                    const analysisItems = rawData.individualAnalyses.map((analysis, index) => `<div class="mb-4 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0"><h5 class="font-bold text-md mb-2 text-gray-400">Analyst Report ${index + 1}</h5><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(analysis)}</div></div>`).join('');
+                    individualAnalysesHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> Step 3: View Individual Analyst Reports</button><div class="accordion-content bg-gray-900 rounded-md">${analysisItems}</div></div>`;
+                }
+
+                let consensusPromptAccordionHtml = '';
+                if (consensusPrompt && !consensusPrompt.includes('not available')) {
+                    consensusPromptAccordionHtml = `<div class="mt-8 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> Step 4: View Final Consensus Prompt</button><div class="accordion-content bg-gray-900 rounded-md"><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${consensusPrompt}</pre></div></div>`;
+                }
+                
+                // --- Final Modal Assembly ---
                 narrativeModalContent.innerHTML = `
                     <h2 class="text-3xl font-bold mb-2 text-center">${gameDetails.awayTeam} vs. ${gameDetails.homeTeam}</h2>
                     <p class="text-center text-gray-400 text-sm mb-2">${gameDateTime}</p>
                     <div class="mb-6"></div>
                     ${analysisTypeDisplay}
                     <div class="prose prose-invert max-w-none text-gray-300">${formattedNarrative}</div>
-                    ${individualAnalysesHtml}
-                    ${promptAccordionHtml}
                     ${rawDataAccordionHtml}
-                    ${newsAccordionHtml}`;
+                    ${newsAccordionHtml}
+                    ${newsSummaryAccordionHtml}
+                    ${mainAnalysisPromptAccordionHtml}
+                    ${individualAnalysesHtml}
+                    ${consensusPromptAccordionHtml}`;
 
                 modalFooter.innerHTML = `
                     <div class="flex justify-center space-x-4">
@@ -1048,7 +1063,7 @@ ${userPicksSection}`;
                 
                 const savedAnalysisPackage = savedAnalysesCache.get(`${gameId}_${analysisType}`);
                 if (savedAnalysisPackage && !forceRefresh) {
-                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime, analysisType, spread }, savedAnalysisPackage.rawData, analysisTitle, savedAnalysisPackage.prompt);
+                    displayNarrative(savedAnalysisPackage.analysisText, { gameId, homeTeam, awayTeam, commenceTime, analysisType, spread }, savedAnalysisPackage.rawData, analysisTitle, savedAnalysisPackage.consensusPrompt);
                     if(allButtonsInRow) allButtonsInRow.forEach(el => { el.disabled = false; });
                     return;
                 }
@@ -1086,25 +1101,25 @@ ${userPicksSection}`;
 
                     const headToHead = headToHeadData?.games || [];
                     updateModalStatus('Summarizing news...');
-                    const newsSummary = await summarizeNews(newsArticles, homeData.name, awayData.name);
+                    const { summary: newsSummary, prompt: newsSummaryPrompt } = await summarizeNews(newsArticles, homeData.name, awayData.name);
                     
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSummary };
                     
-                    const singleAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent, homeKeyPlayersData, awayKeyPlayersData, currentWeek, homeCoachData, awayCoachData, bettingLines, winProbability);
+                    const mainAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent, homeKeyPlayersData, awayKeyPlayersData, currentWeek, homeCoachData, awayCoachData, bettingLines, winProbability);
 
                     const individualAnalyses = [];
                     for (let i = 0; i < 3; i++) {
                         updateModalStatus(`Running Analysis ${i + 1} of 3...`);
-                        individualAnalyses.push(await generateNarrative(singleAnalysisPrompt));
+                        individualAnalyses.push(await generateNarrative(mainAnalysisPrompt));
                     }
 
                     updateModalStatus('Synthesizing results...');
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability };
-                    const analysisPackage = { analysisText: consensusNarrative, rawData, prompt: consensusPrompt };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability };
+                    const analysisPackage = { analysisText: consensusNarrative, rawData, consensusPrompt };
 
                     if (user) {
                         await saveAnalysis(gameId, analysisType, analysisPackage);
@@ -1288,7 +1303,7 @@ ${userPicksSection}`;
                         const backwardCompatiblePackage = {
                             analysisText: data.analysisText,
                             rawData: {},
-                            prompt: "Prompt not available for this legacy analysis."
+                            consensusPrompt: "Prompt not available for this legacy analysis."
                         };
                         savedAnalysesCache.set(`${data.gameId}_${data.analysisType}`, backwardCompatiblePackage);
                     }
