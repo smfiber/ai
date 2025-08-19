@@ -145,8 +145,7 @@
             <div id="narrativeModalContent" class="flex-grow max-h-[80vh] overflow-y-auto pr-8 pb-8">
                 </div>
             <div id="modal-footer" class="flex-shrink-0 pt-4 border-t border-gray-600">
-                 <!-- Footer content is now dynamically generated -->
-            </div>
+                 </div>
         </div>
     </div>
 
@@ -179,7 +178,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.5 - Removed failing API calls for injuries/awards and fixed Firestore save error.
+        // Version 9.6 - Corrected win probability API endpoint from /ppa/predicted to /predictions and added week parameter.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -455,9 +454,9 @@
                 return lines.find(line => line.homeTeam === team1 && line.awayTeam === team2 || line.homeTeam === team2 && line.awayTeam === team1);
             }
 
-            async function fetchWinProbability(team1, team2) {
+            async function fetchWinProbability(team1, team2, week) {
                 const currentYear = new Date().getFullYear();
-                const url = `https://api.collegefootballdata.com/ppa/predicted?year=${currentYear}&team=${encodeURIComponent(team1)}`;
+                const url = `https://api.collegefootballdata.com/predictions?year=${currentYear}&week=${week}`;
                 const predictions = await cfbApiFetch(url);
                  if (!predictions || predictions.length === 0) return null;
                 return predictions.find(pred => pred.homeTeam === team1 && pred.awayTeam === team2 || pred.homeTeam === team2 && pred.awayTeam === team1);
@@ -1052,7 +1051,7 @@ ${marketAndModelInstructions}
     -   **${awayData.name}:** ${formatCoachData(awayCoachData)}
 -   **Market & Model Predictions:**
     -   **Consensus Game Total:** ${bettingLines?.lines?.[0]?.overUnder || 'N/A'}
-    -   **PPA Model Win Probability:** ${winProbability ? `${winProbability.homeTeam === homeData.name ? homeData.name : awayData.name} ${(winProbability.winProbability * 100).toFixed(1)}%` : 'N/A'}
+    -   **PPA Model Win Probability:** ${winProbability ? `${winProbability.homeTeam === homeData.name ? homeData.name : awayData.name} ${(winProbability.homeWinProb * 100).toFixed(1)}%` : 'N/A'}
 -   **AI-Generated News Summary:**
 ${newsSummary}
 **SCOUTING REPORT: NOTABLE PLAYERS**
@@ -1176,7 +1175,7 @@ ${userPicksSection}`;
                         fetchCoachData(homeData.name), 
                         fetchCoachData(awayData.name),
                         fetchBettingLines(homeData.name, awayData.name),
-                        fetchWinProbability(homeData.name, awayData.name),
+                        fetchWinProbability(homeData.name, awayData.name, currentWeek),
                         fetchTeamRoster(homeData.name),
                         fetchTeamRoster(awayData.name),
                         fetchPlayerStats(homeData.name, previousYear),
