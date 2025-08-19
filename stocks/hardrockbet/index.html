@@ -178,7 +178,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.6 - Corrected win probability API endpoint from /ppa/predicted to /predictions and added week parameter.
+        // Version 9.7 - Limited head-to-head API call to the last 10 years for data hygiene.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -435,7 +435,9 @@
 
             async function fetchAdvancedSeasonStats(teamName, year) { return advancedStatsCache[year]?.[teamName] || null; }
             async function fetchHeadToHead(team1, team2) {
-                const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`;
+                const currentYear = new Date().getFullYear();
+                const minYear = currentYear - 10;
+                const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}&minYear=${minYear}`;
                 return await cfbApiFetch(url);
             }
             async function fetchSPRatings(team, year) { return spCache[year]?.[team] || null; }
@@ -1059,7 +1061,7 @@ ${newsSummary}
 ${homeNotablePlayers}
 - **${awayData.name}:**
 ${awayNotablePlayers}
--   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}${currentSPSection}${previousSPSection}
+-   **Head-to-Head (Last 10 Years):** - ${formatHeadToHead(headToHead)}${currentSPSection}${previousSPSection}
 **PRE-SEASON DATA (Based on ${previousYear} Season):**
 -   **${homeData.name}:**
     -   **Record:** ${homeData.record}
