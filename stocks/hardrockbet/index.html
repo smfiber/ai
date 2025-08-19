@@ -178,7 +178,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.7 - Limited head-to-head API call to the last 10 years for data hygiene.
+        // Version 9.8 - Removed the malfunctioning fetchWinProbability API call.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -456,14 +456,6 @@
                 return lines.find(line => line.homeTeam === team1 && line.awayTeam === team2 || line.homeTeam === team2 && line.awayTeam === team1);
             }
 
-            async function fetchWinProbability(team1, team2, week) {
-                const currentYear = new Date().getFullYear();
-                const url = `https://api.collegefootballdata.com/predictions?year=${currentYear}&week=${week}`;
-                const predictions = await cfbApiFetch(url);
-                 if (!predictions || predictions.length === 0) return null;
-                return predictions.find(pred => pred.homeTeam === team1 && pred.awayTeam === team2 || pred.homeTeam === team2 && pred.awayTeam === team1);
-            }
-
             async function fetchGameNews(query) {
                 let allArticles = [];
                 const numPages = 2;
@@ -739,7 +731,7 @@
 
                 let rawDataAccordionHtml = '';
                 if (rawData && rawData.homeData) {
-                    rawDataAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Coach Data</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeCoachData, null, 2)}\nAway: ${JSON.stringify(rawData.awayCoachData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Betting Lines</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.bettingLines, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">PPA Win Probability</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.winProbability, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre></div></div>`;
+                    rawDataAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Coach Data</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeCoachData, null, 2)}\nAway: ${JSON.stringify(rawData.awayCoachData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Betting Lines</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.bettingLines, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre></div></div>`;
                 }
 
                 let newsAccordionHtml = '';
@@ -940,7 +932,7 @@ ${formatPlayerStats(teamAData.playerStats)}
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
                                  analysisType, homeRecordCurrent, awayRecordCurrent,
                                  currentWeek, homeCoachData, awayCoachData,
-                                 bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers) {
+                                 bettingLines, homeNotablePlayers, awayNotablePlayers) {
                                  
                 const { gameDateTime, newsSummary } = gameDetails;
                 const currentYear = new Date().getFullYear();
@@ -949,7 +941,7 @@ ${formatPlayerStats(teamAData.playerStats)}
                 const marketAndModelInstructions = `
 **MARKET & MODEL ANALYSIS DIRECTIVE:**
 -   **Game Total Context:** A high game total (e.g., >60) suggests an offensive shootout. Prioritize offensive stats like PPA and Success Rate. A low total (e.g., <45) suggests a defensive battle. Prioritize defensive stats like Havoc, Stuff Rate, and field position.
--   **PPA Win Probability:** Use the PPA Win Probability as a quantitative baseline. Your main task is to determine if the qualitative data (news, coaching) and key statistical matchups support or contradict this baseline prediction.
+-   **Quantitative Baseline:** Use the market consensus (Game Total) as a quantitative baseline for the game's expected pace and style. Your main task is to determine if the qualitative data (news, coaching) and key statistical matchups support or contradict this baseline prediction.
 `;
 
                 const seasonalWeightingInstructions = currentWeek < 3 ? 
@@ -1053,7 +1045,6 @@ ${marketAndModelInstructions}
     -   **${awayData.name}:** ${formatCoachData(awayCoachData)}
 -   **Market & Model Predictions:**
     -   **Consensus Game Total:** ${bettingLines?.lines?.[0]?.overUnder || 'N/A'}
-    -   **PPA Model Win Probability:** ${winProbability ? `${winProbability.homeTeam === homeData.name ? homeData.name : awayData.name} ${(winProbability.homeWinProb * 100).toFixed(1)}%` : 'N/A'}
 -   **AI-Generated News Summary:**
 ${newsSummary}
 **SCOUTING REPORT: NOTABLE PLAYERS**
@@ -1158,7 +1149,7 @@ ${userPicksSection}`;
                         homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
                         newsArticles,
                         homeCoachData, awayCoachData, 
-                        bettingLines, winProbability,
+                        bettingLines,
                         homeRoster, awayRoster,
                         homePlayerStats, awayPlayerStats
                     ] = await Promise.all([
@@ -1177,7 +1168,6 @@ ${userPicksSection}`;
                         fetchCoachData(homeData.name), 
                         fetchCoachData(awayData.name),
                         fetchBettingLines(homeData.name, awayData.name),
-                        fetchWinProbability(homeData.name, awayData.name, currentWeek),
                         fetchTeamRoster(homeData.name),
                         fetchTeamRoster(awayData.name),
                         fetchPlayerStats(homeData.name, previousYear),
@@ -1201,7 +1191,7 @@ ${userPicksSection}`;
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSummary };
                     
-                    const mainAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, analysisType, homeRecordCurrent, awayRecordCurrent, currentWeek, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers);
+                    const mainAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, analysisType, homeRecordCurrent, awayRecordCurrent, currentWeek, homeCoachData, awayCoachData, bettingLines, homeNotablePlayers, awayNotablePlayers);
 
                     const individualAnalyses = [];
                     for (let i = 0; i < 3; i++) {
@@ -1213,7 +1203,7 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeCoachData, awayCoachData, bettingLines, homeNotablePlayers, awayNotablePlayers, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
                     const analysisPackage = { analysisText: consensusNarrative, rawData, consensusPrompt };
 
                     if (user) {
