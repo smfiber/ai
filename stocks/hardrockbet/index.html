@@ -178,7 +178,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.9 - Added explicit formatting instructions to prompts to ensure consistent output.
+        // Version 9.10 - Fully removed win probability API call and fixed a Firestore data integrity issue.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -1205,7 +1205,7 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeCoachData, awayCoachData, bettingLines, homeNotablePlayers, awayNotablePlayers, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeCoachData, awayCoachData, bettingLines: bettingLines || null, homeNotablePlayers, awayNotablePlayers, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
                     const analysisPackage = { analysisText: consensusNarrative, rawData, consensusPrompt };
 
                     if (user) {
