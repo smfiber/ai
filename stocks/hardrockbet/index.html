@@ -178,7 +178,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.8 - Removed the malfunctioning fetchWinProbability API call.
+        // Version 9.9 - Added explicit formatting instructions to prompts to ensure consistent output.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -1004,15 +1004,17 @@ ${formatPlayerStats(teamAData.playerStats)}
                 const previousSPSection = (homeSPPrev?.rating && awaySPPrev?.rating) ? `\n-   **SP+ Ratings (${previousYear} FINAL):**\n    -   **${homeData.name}:** ${homeSPPrev.rating?.toFixed(1)} (Overall), ${homeSPPrev.offense?.rating?.toFixed(1)} (Off), ${homeSPPrev.defense?.rating?.toFixed(1)} (Def), ${homeSPPrev.specialTeams?.rating?.toFixed(1)} (ST)\n    -   **${awayData.name}:** ${awaySPPrev.rating?.toFixed(1)} (Overall), ${awaySPPrev.offense?.rating?.toFixed(1)} (Off), ${awaySPPrev.defense?.rating?.toFixed(1)} (Def), ${awaySPPrev.specialTeams?.rating?.toFixed(1)} (ST)` : '';
                 
                 let instructions;
+                const finalInstruction = `\n**Crucially, you must end your prediction with the final pick on its own, separate line, in the exact format: **Team Name** (Confidence: Level)**`;
+
                 switch(analysisType) {
                     case 'consensus':
-                        instructions = `\n### Game Synopsis\nUsing all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses based on SP+ ratings, advanced stats, and talent.\n---\n### AI-Powered Prediction\nPredict the most likely winner of the game. Weigh all factors: SP+ ratings, advanced stats, talent scores, returning production, and head-to-head results. Declare a clear winner and justify your prediction with specific data points. \n${confidenceRubric}`;
+                        instructions = `\n### Game Synopsis\nUsing all the data provided, write a brief, data-driven synopsis of the matchup. Synthesize data on key strengths and weaknesses based on SP+ ratings, advanced stats, and talent.\n---\n### AI-Powered Prediction\nPredict the most likely winner of the game. Weigh all factors: SP+ ratings, advanced stats, talent scores, returning production, and head-to-head results. Declare a clear winner and justify your prediction with specific data points. \n${confidenceRubric}${finalInstruction}`;
                         break;
                     case 'matchup':
-                        instructions = `\n### Key Matchup Analysis\nIdentify the single most important positional or schematic battle that will decide this game (e.g., Home Team's passing offense vs. Away Team's pass defense, or Away Team's defensive line vs. Home Team's offensive line). Justify your choice using specific data points provided, such as PPA, Success Rates, Havoc Rates, or Line Yards.\n---\n### Strategic Prediction\nBased on your analysis of the key matchup above, predict the winner of the game. Explain how the team with the advantage in that specific matchup will leverage it to control the game and secure a victory.\n${confidenceRubric}`;
+                        instructions = `\n### Key Matchup Analysis\nIdentify the single most important positional or schematic battle that will decide this game (e.g., Home Team's passing offense vs. Away Team's pass defense, or Away Team's defensive line vs. Home Team's offensive line). Justify your choice using specific data points provided, such as PPA, Success Rates, Havoc Rates, or Line Yards.\n---\n### Strategic Prediction\nBased on your analysis of the key matchup above, predict the winner of the game. Explain how the team with the advantage in that specific matchup will leverage it to control the game and secure a victory.\n${confidenceRubric}${finalInstruction}`;
                         break;
                     case 'no-spread':
-                        instructions = `\n### Pre-Game Narrative\nWrite a compelling, data-driven pre-game narrative. Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data. Integrate news snippets for context.\n---\n### Analyst's Pick\nPerform a deeper analysis to determine the likely winner. Analyze factors like SP+ ratings, key statistical mismatches (PPA, success rates), returning production, and talent. Clearly state your pick and provide a step-by-step justification referencing the provided data.\n${confidenceRubric}`;
+                        instructions = `\n### Pre-Game Narrative\nWrite a compelling, data-driven pre-game narrative. Weave in pre-season expectations (talent, returning production), SP+ ratings, historical matchups, and any available in-season performance data. Integrate news snippets for context.\n---\n### Analyst's Pick\nPerform a deeper analysis to determine the likely winner. Analyze factors like SP+ ratings, key statistical mismatches (PPA, success rates), returning production, and talent. Clearly state your pick and provide a step-by-step justification referencing the provided data.\n${confidenceRubric}${finalInstruction}`;
                         break;
                 }
 
