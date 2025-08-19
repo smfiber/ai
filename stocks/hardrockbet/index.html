@@ -401,7 +401,13 @@
                         console.error(`API Error for ${url}: ${response.status}`);
                         return null;
                     }
-                    return await response.json();
+                    // Gracefully handle non-JSON responses
+                    try {
+                        return await response.json();
+                    } catch (e) {
+                        console.error(`JSON parsing error for ${url}:`, e);
+                        return null;
+                    }
                 } catch (error) {
                     console.error(`Fetch error for ${url}:`, error);
                     return null;
@@ -922,6 +928,7 @@
                     if (!playerStats || playerStats.length === 0) return 'No individual player stats from last season available.';
                     const topPlayers = playerStats.slice(0, 15); // Limit to top 15 for brevity
                     return topPlayers.map(p => {
+                        if (!p.stats || !Array.isArray(p.stats)) return `- ${p.player} (${p.position}): No stats available`;
                         const stats = p.stats.map(s => `${s.category}: ${s.stat}`).join(', ');
                         return `- ${p.player} (${p.position}): ${stats}`;
                     }).join('\n');
