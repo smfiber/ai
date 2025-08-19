@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.1 - Reworked modal to show full data/prompt flow.
+        // Version 9.3 - Refined seasonal weighting logic and prompt language.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -749,7 +749,11 @@
                 const analysisTypeDisplay = analysisTitle ? `<div class="text-center mb-4"><span class="bg-gray-700 text-gray-300 text-sm font-semibold px-3 py-1 rounded-full uppercase tracking-wider">${analysisTitle}</span></div>` : '';
                 
                 // --- Accordion HTML Generation ---
-                
+                let notablePlayersAccordionHtml = '';
+                if (rawData.homeNotablePlayers && rawData.awayNotablePlayers) {
+                    notablePlayersAccordionHtml = `<div class="mt-8 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> Scouting Report: Notable Players</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Home Team: ${gameDetails.homeTeam}</h4><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(rawData.homeNotablePlayers)}</div><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Away Team: ${gameDetails.awayTeam}</h4><div class="prose prose-sm prose-invert max-w-none text-gray-400">${marked.parse(rawData.awayNotablePlayers)}</div></div></div>`;
+                }
+
                 let rawDataAccordionHtml = '';
                 if (rawData && rawData.homeData) {
                     rawDataAccordionHtml = `<div class="mt-4 border-t border-gray-600 pt-4"><button class="accordion-toggle w-full text-left text-lg font-semibold text-gray-300 hover:text-white focus:outline-none"><span class="accordion-arrow transform transition-transform duration-300 inline-block mr-2">▶</span> View Raw API Data</button><div class="accordion-content bg-gray-900 rounded-md"><h4 class="font-bold text-md mb-2 text-gray-400">Team Overview Data (Home: ${rawData.homeData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Team Overview Data (Away: ${rawData.awayData.name})</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Key Player Accolades</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeKeyPlayersData, null, 2)}\nAway: ${JSON.stringify(rawData.awayKeyPlayersData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Home)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.homeRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year Record (Away)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.awayRecordCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Head to Head</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.headToHead, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Coach Data</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeCoachData, null, 2)}\nAway: ${JSON.stringify(rawData.awayCoachData, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Betting Lines</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.bettingLines, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">PPA Win Probability</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">${JSON.stringify(rawData.winProbability, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Current Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSP, null, 2)}\nAway: ${JSON.stringify(rawData.awaySP, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Previous Year SP+ Ratings</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeSPPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awaySPPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Previous Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsPrev, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsPrev, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Advanced Season Stats (Current Year)</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeStatsCurrent, null, 2)}\nAway: ${JSON.stringify(rawData.awayStatsCurrent, null, 2)}</pre><h4 class="font-bold text-md mt-4 mb-2 text-gray-400">Injuries</h4><pre class="text-xs text-gray-400 whitespace-pre-wrap break-words">Home: ${JSON.stringify(rawData.homeInjuries, null, 2)}\nAway: ${JSON.stringify(rawData.awayInjuries, null, 2)}</pre></div></div>`;
@@ -789,6 +793,7 @@
                     <div class="mb-6"></div>
                     ${analysisTypeDisplay}
                     <div class="prose prose-invert max-w-none text-gray-300">${formattedNarrative}</div>
+                    ${notablePlayersAccordionHtml}
                     ${rawDataAccordionHtml}
                     ${newsAccordionHtml}
                     ${newsSummaryAccordionHtml}
@@ -862,12 +867,87 @@
             }
             function clearError() { errorDisplay.classList.add('hidden'); }
             
+            function buildNotablePlayersPrompt(teamA, teamB, allData) {
+                const {
+                    newsSummary, homeData, awayData, homeStatsPrev, awayStatsPrev,
+                    homeStatsCurrent, awayStatsCurrent, homeInjuries, awayInjuries,
+                    homeKeyPlayersData, awayKeyPlayersData
+                } = allData;
+
+                const teamAData = teamA === homeData.name ? {
+                    statsPrev: homeStatsPrev,
+                    statsCurrent: homeStatsCurrent,
+                    injuries: homeInjuries,
+                    keyPlayers: homeKeyPlayersData
+                } : {
+                    statsPrev: awayStatsPrev,
+                    statsCurrent: awayStatsCurrent,
+                    injuries: awayInjuries,
+                    keyPlayers: awayKeyPlayersData
+                };
+
+                const teamBData = teamB === homeData.name ? {
+                    statsPrev: homeStatsPrev,
+                    statsCurrent: homeStatsCurrent
+                } : {
+                    statsPrev: awayStatsPrev,
+                    statsCurrent: awayStatsCurrent
+                };
+
+                const formatInjuries = (injuries) => !injuries || injuries.length === 0 ? 'None reported.' : injuries.map(i => `${i.firstName} ${i.lastName} (${i.position}) - ${i.status}`).join(', ');
+                const createStatsBlock = (stats, teamName) => {
+                    if (!stats) return `No advanced stats available for ${teamName}.`;
+                    return `
+-   **${teamName}:**
+    -   Offense: PPA: ${stats.offense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(stats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
+    -   Defense: PPA: ${stats.defense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(stats.defense?.successRate * 100).toFixed(1) || 'N/A'}%, Havoc: ${(stats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%`;
+                };
+
+                return `Act as an expert college football analyst and scout, similar to one from ESPN or The Athletic.
+
+Your task is to analyze the notable players for ${teamA} and identify the "unfair advantages" they create in their upcoming matchup against ${teamB}.
+
+For each key player you identify (focus on 3-5 of the most impactful), provide a detailed breakdown covering the following points:
+
+1.  **Player Profile:**
+    * Name, Position, Year (e.g., Junior, Senior).
+    * A brief summary of their role and playing style.
+
+2.  **The "Unfair Advantage" vs. ${teamB}:**
+    * This is the most critical section. Explain precisely how this player's skills create a significant mismatch against ${teamB}'s specific personnel, scheme, or known weaknesses.
+    * Reference specific stats or tendencies for ${teamB}. For example: "[Team B]'s offensive line has allowed a 25% pressure rate on third downs," or "[Team B]'s top cornerback is only 5'9" and struggles with taller receivers]."
+
+3.  **Supporting Evidence & Star Power:**
+    * **Key Stats:** Provide current season statistics that highlight their dominance. Compare these stats to national or conference leaders to provide context (e.g., "His 8 sacks rank 3rd in the SEC").
+    * **Proven Abilities:** Mention any awards, All-American/All-Conference honors, or standout performances from past seasons.
+    * **NFL Draft Stock:** Briefly comment on their potential as a pro prospect (e.g., "Projected first-round pick," "Considered a top-5 QB in the upcoming draft class").
+
+Please structure your response clearly, with a separate section for each player. Conclude with a short summary of which matchup advantage you believe will be the most decisive in the game.
+
+Format the response as a simple Markdown bulleted list.
+
+**AVAILABLE DATA FOR YOUR ANALYSIS:**
+- **News Summary:**
+${newsSummary}
+- **${teamA} Key Player Accolades:**
+  - Previous Season Honors: ${teamAData.keyPlayers.postSeasonHonors}
+  - Current Pre-Season Watchlists: ${teamAData.keyPlayers.preSeasonWatchlist}
+- **${teamA} Injuries:** ${formatInjuries(teamAData.injuries)}
+- **Advanced Stats (${new Date().getFullYear() - 1}):**
+  ${createStatsBlock(teamAData.statsPrev, teamA)}
+  ${createStatsBlock(teamBData.statsPrev, teamB)}
+- **Advanced Stats (${new Date().getFullYear()}):**
+  ${createStatsBlock(teamAData.statsCurrent, teamA)}
+  ${createStatsBlock(teamBData.statsCurrent, teamB)}
+`;
+            }
+
             function buildPrompt(gameDetails, homeData, awayData, 
                                  homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent,
                                  headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, 
                                  homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent,
                                  homeKeyPlayersData, awayKeyPlayersData, currentWeek, homeCoachData, awayCoachData,
-                                 bettingLines, winProbability) {
+                                 bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers) {
                                  
                 const { gameDateTime, newsSummary } = gameDetails;
                 const currentYear = new Date().getFullYear();
@@ -879,9 +959,9 @@
 -   **PPA Win Probability:** Use the PPA Win Probability as a quantitative baseline. Your main task is to determine if the qualitative data (injuries, news, coaching) and key statistical matchups support or contradict this baseline prediction.
 `;
 
-                const seasonalWeightingInstructions = currentWeek < 5 ? 
-                    `**SEASONAL ANALYSIS DIRECTIVE: EARLY SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Heavily weigh previous-year data (${previousYear}), pre-season SP+ ratings, and returning production percentages. These are the most reliable indicators of team quality at this stage.\n-   **Cautious Weighting:** Use current-season data (${currentYear}) with extreme caution due to small sample sizes. Look for significant deviations from pre-season expectations but do not overreact to stats from one or two games, especially against mismatched competition.\n-   **Focus:** Identify if teams are meeting, exceeding, or falling short of their pre-season projections based on the limited data available.` : 
-                    `**SEASONAL ANALYSIS DIRECTIVE: MID-SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Shift focus to current-season data (${currentYear}). Performance metrics over several games are now more indicative of team quality than pre-season projections.\n-   **Secondary Weighting:** Use previous-year data (${previousYear}) and pre-season SP+ ratings as context to understand a team's baseline talent and coaching, but prioritize what they have demonstrated on the field this year.\n-   **Focus:** Analyze established trends, statistical strengths and weaknesses from the current season, and how teams have performed against comparable opponents.`;
+                const seasonalWeightingInstructions = currentWeek < 3 ? 
+                    `**SEASONAL ANALYSIS DIRECTIVE: EARLY SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Assign primary weight to previous-year data (${previousYear}), pre-season SP+ ratings, and returning production percentages, as these are the most reliable indicators of team quality at this stage.\n-   **Secondary Weighting:** Use current-season data (${currentYear}) cautiously as a secondary indicator due to small sample sizes. Note significant deviations from pre-season expectations but do not overreact to stats from one or two games.\n-   **Focus:** Identify if teams are meeting, exceeding, or falling short of their pre-season projections based on the limited data available.` : 
+                    `**SEASONAL ANALYSIS DIRECTIVE: MID/LATE SEASON (Current Week: ${currentWeek})**\n-   **Primary Weighting:** Assign primary weight to current-season data (${currentYear}). Performance metrics are now more indicative of team quality than pre-season projections.\n-   **Secondary Weighting:** Use previous-year data (${previousYear}) and pre-season SP+ ratings as context to understand a team's baseline talent and coaching, but prioritize demonstrated on-field performance from this year.\n-   **Focus:** Analyze established trends, statistical strengths and weaknesses from the current season, and how teams have performed against comparable opponents.`;
                 
                 const confidenceRubric = `Provide a confidence score based on the following rubric:\n- **Low**: Key data points are highly conflicting, making the outcome a statistical coin flip.\n- **Medium**: Data shows a discernible advantage for one team, but the opponent has significant strengths that could counter it.\n- **High**: Data shows a clear and consistent advantage for one team across most important categories.\n- **Very High**: Data indicates a significant mismatch in nearly every critical metric.`;
                 
@@ -985,6 +1065,11 @@ ${marketAndModelInstructions}
     -   **PPA Model Win Probability:** ${winProbability ? `${winProbability.homeTeam === homeData.name ? homeData.name : awayData.name} ${(winProbability.winProbability * 100).toFixed(1)}%` : 'N/A'}
 -   **AI-Generated News Summary:**
 ${newsSummary}
+**SCOUTING REPORT: NOTABLE PLAYERS**
+- **${homeData.name}:**
+${homeNotablePlayers}
+- **${awayData.name}:**
+${awayNotablePlayers}
 -   **Head-to-Head (Last 5 Years):** - ${formatHeadToHead(headToHead)}${currentSPSection}${previousSPSection}
 -   **Key Injuries:**
     -   **${homeData.name}:** ${formatInjuries(homeInjuries)}
@@ -1103,10 +1188,20 @@ ${userPicksSection}`;
                     updateModalStatus('Summarizing news...');
                     const { summary: newsSummary, prompt: newsSummaryPrompt } = await summarizeNews(newsArticles, homeData.name, awayData.name);
                     
+                    const allDataForScouting = { newsSummary, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, homeInjuries, awayInjuries, homeKeyPlayersData, awayKeyPlayersData };
+                    
+                    updateModalStatus(`Scouting ${homeData.name}...`);
+                    const homeNotablePlayersPrompt = buildNotablePlayersPrompt(homeData.name, awayData.name, allDataForScouting);
+                    const homeNotablePlayers = await generateNarrative(homeNotablePlayersPrompt);
+
+                    updateModalStatus(`Scouting ${awayData.name}...`);
+                    const awayNotablePlayersPrompt = buildNotablePlayersPrompt(awayData.name, homeData.name, allDataForScouting);
+                    const awayNotablePlayers = await generateNarrative(awayNotablePlayersPrompt);
+
                     const gameDateTime = new Date(commenceTime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
                     const gameDetails = { gameDateTime, spread, newsSummary };
                     
-                    const mainAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent, homeKeyPlayersData, awayKeyPlayersData, currentWeek, homeCoachData, awayCoachData, bettingLines, winProbability);
+                    const mainAnalysisPrompt = buildPrompt(gameDetails, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, analysisType, homeRecordCurrent, awayRecordCurrent, homeKeyPlayersData, awayKeyPlayersData, currentWeek, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers);
 
                     const individualAnalyses = [];
                     for (let i = 0; i < 3; i++) {
@@ -1118,7 +1213,7 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers };
                     const analysisPackage = { analysisText: consensusNarrative, rawData, consensusPrompt };
 
                     if (user) {
