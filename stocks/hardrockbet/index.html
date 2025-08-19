@@ -179,7 +179,7 @@
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Version 9.3 - Refined seasonal weighting logic and prompt language.
+        // Version 9.4 - Added fetching for real player rosters and stats to ground scouting reports.
         document.addEventListener('DOMContentLoaded', () => {
             const apiKeyModal = document.getElementById('apiKeyModal');
             const apiKeyForm = document.getElementById('apiKeyForm');
@@ -418,6 +418,16 @@
                 return { name: aliasedTeamName, record, returningProduction, talentScore };
             }
             
+            async function fetchTeamRoster(teamName) {
+                const url = `https://api.collegefootballdata.com/roster?team=${encodeURIComponent(teamName)}`;
+                return await cfbApiFetch(url);
+            }
+
+            async function fetchPlayerStats(teamName, year) {
+                const url = `https://api.collegefootballdata.com/stats/player/season?year=${year}&team=${encodeURIComponent(teamName)}`;
+                return await cfbApiFetch(url);
+            }
+
             async function fetchAdvancedSeasonStats(teamName, year) { return advancedStatsCache[year]?.[teamName] || null; }
             async function fetchHeadToHead(team1, team2) {
                 const url = `https://api.collegefootballdata.com/teams/matchup?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`;
@@ -871,19 +881,24 @@
                 const {
                     newsSummary, homeData, awayData, homeStatsPrev, awayStatsPrev,
                     homeStatsCurrent, awayStatsCurrent, homeInjuries, awayInjuries,
-                    homeKeyPlayersData, awayKeyPlayersData
+                    homeKeyPlayersData, awayKeyPlayersData, homeRoster, awayRoster,
+                    homePlayerStats, awayPlayerStats
                 } = allData;
 
                 const teamAData = teamA === homeData.name ? {
                     statsPrev: homeStatsPrev,
                     statsCurrent: homeStatsCurrent,
                     injuries: homeInjuries,
-                    keyPlayers: homeKeyPlayersData
+                    keyPlayers: homeKeyPlayersData,
+                    roster: homeRoster,
+                    playerStats: homePlayerStats
                 } : {
                     statsPrev: awayStatsPrev,
                     statsCurrent: awayStatsCurrent,
                     injuries: awayInjuries,
-                    keyPlayers: awayKeyPlayersData
+                    keyPlayers: awayKeyPlayersData,
+                    roster: awayRoster,
+                    playerStats: awayPlayerStats
                 };
 
                 const teamBData = teamB === homeData.name ? {
@@ -902,25 +917,35 @@
     -   Offense: PPA: ${stats.offense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(stats.offense?.successRate * 100).toFixed(1) || 'N/A'}%
     -   Defense: PPA: ${stats.defense?.ppa?.toFixed(2) || 'N/A'}, Success Rate: ${(stats.defense?.successRate * 100).toFixed(1) || 'N/A'}%, Havoc: ${(stats.defense?.havoc?.total * 100).toFixed(1) || 'N/A'}%`;
                 };
+                
+                const formatPlayerStats = (playerStats) => {
+                    if (!playerStats || playerStats.length === 0) return 'No individual player stats from last season available.';
+                    const topPlayers = playerStats.slice(0, 15); // Limit to top 15 for brevity
+                    return topPlayers.map(p => {
+                        const stats = p.stats.map(s => `${s.category}: ${s.stat}`).join(', ');
+                        return `- ${p.player} (${p.position}): ${stats}`;
+                    }).join('\n');
+                };
 
                 return `Act as an expert college football analyst and scout, similar to one from ESPN or The Athletic.
 
 Your task is to analyze the notable players for ${teamA} and identify the "unfair advantages" they create in their upcoming matchup against ${teamB}.
+**You must use the provided roster and player stats below. Do not invent players or statistics.**
 
 For each key player you identify (focus on 3-5 of the most impactful), provide a detailed breakdown covering the following points:
 
 1.  **Player Profile:**
-    * Name, Position, Year (e.g., Junior, Senior).
-    * A brief summary of their role and playing style.
+    * Name, Position, Year (e.g., Junior, Senior) from the provided roster.
+    * A brief summary of their role and playing style based on their stats.
 
 2.  **The "Unfair Advantage" vs. ${teamB}:**
-    * This is the most critical section. Explain precisely how this player's skills create a significant mismatch against ${teamB}'s specific personnel, scheme, or known weaknesses.
+    * This is the most critical section. Explain precisely how this player's skills create a significant mismatch against ${teamB}'s specific personnel, scheme, or known weaknesses based on the provided team-level stats.
     * Reference specific stats or tendencies for ${teamB}. For example: "[Team B]'s offensive line has allowed a 25% pressure rate on third downs," or "[Team B]'s top cornerback is only 5'9" and struggles with taller receivers]."
 
 3.  **Supporting Evidence & Star Power:**
-    * **Key Stats:** Provide current season statistics that highlight their dominance. Compare these stats to national or conference leaders to provide context (e.g., "His 8 sacks rank 3rd in the SEC").
-    * **Proven Abilities:** Mention any awards, All-American/All-Conference honors, or standout performances from past seasons.
-    * **NFL Draft Stock:** Briefly comment on their potential as a pro prospect (e.g., "Projected first-round pick," "Considered a top-5 QB in the upcoming draft class").
+    * **Key Stats:** Provide statistics from the provided player stats data that highlight their dominance.
+    * **Proven Abilities:** Mention any awards from the "Key Player Accolades" data.
+    * **NFL Draft Stock:** Briefly comment on their potential as a pro prospect.
 
 Please structure your response clearly, with a separate section for each player. Conclude with a short summary of which matchup advantage you believe will be the most decisive in the game.
 
@@ -929,14 +954,18 @@ Format the response as a simple Markdown bulleted list.
 **AVAILABLE DATA FOR YOUR ANALYSIS:**
 - **News Summary:**
 ${newsSummary}
+- **${teamA} Roster:**
+${JSON.stringify(teamAData.roster?.slice(0, 25), null, 2)}
+- **${teamA} Previous Season Player Stats:**
+${formatPlayerStats(teamAData.playerStats)}
 - **${teamA} Key Player Accolades:**
   - Previous Season Honors: ${teamAData.keyPlayers.postSeasonHonors}
   - Current Pre-Season Watchlists: ${teamAData.keyPlayers.preSeasonWatchlist}
 - **${teamA} Injuries:** ${formatInjuries(teamAData.injuries)}
-- **Advanced Stats (${new Date().getFullYear() - 1}):**
+- **Advanced Team Stats (${new Date().getFullYear() - 1}):**
   ${createStatsBlock(teamAData.statsPrev, teamA)}
   ${createStatsBlock(teamBData.statsPrev, teamB)}
-- **Advanced Stats (${new Date().getFullYear()}):**
+- **Advanced Team Stats (${new Date().getFullYear()}):**
   ${createStatsBlock(teamAData.statsCurrent, teamA)}
   ${createStatsBlock(teamBData.statsCurrent, teamB)}
 `;
@@ -1168,27 +1197,48 @@ ${userPicksSection}`;
                     const homeData = await fetchTeamData(homeTeam);
                     const awayData = await fetchTeamData(awayTeam);
                     
-                    const [homeRecordCurrent, awayRecordCurrent, headToHeadData, homeSP, awaySP, homeSPPrev, awaySPPrev, homeInjuries, awayInjuries, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, newsArticles, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability] = await Promise.all([
-                        Promise.resolve(recordsCache[currentYear]?.[homeData.name] || null), Promise.resolve(recordsCache[currentYear]?.[awayData.name] || null),
-                        fetchHeadToHead(homeData.name, awayData.name), fetchSPRatings(homeData.name, currentYear), fetchSPRatings(awayData.name, currentYear),
-                        fetchSPRatings(homeData.name, previousYear), fetchSPRatings(awayData.name, previousYear),
-                        fetchInjuries(homeData.name), fetchInjuries(awayData.name),
-                        fetchAdvancedSeasonStats(homeData.name, previousYear), fetchAdvancedSeasonStats(awayData.name, previousYear),
-                        fetchAdvancedSeasonStats(homeData.name, currentYear), fetchAdvancedSeasonStats(awayData.name, currentYear),
+                    const [
+                        homeRecordCurrent, awayRecordCurrent, headToHeadData, 
+                        homeSP, awaySP, homeSPPrev, awaySPPrev, 
+                        homeInjuries, awayInjuries, 
+                        homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, 
+                        newsArticles, homeKeyPlayersData, awayKeyPlayersData, 
+                        homeCoachData, awayCoachData, 
+                        bettingLines, winProbability,
+                        homeRoster, awayRoster,
+                        homePlayerStats, awayPlayerStats
+                    ] = await Promise.all([
+                        Promise.resolve(recordsCache[currentYear]?.[homeData.name] || null), 
+                        Promise.resolve(recordsCache[currentYear]?.[awayData.name] || null),
+                        fetchHeadToHead(homeData.name, awayData.name), 
+                        fetchSPRatings(homeData.name, currentYear), 
+                        fetchSPRatings(awayData.name, currentYear),
+                        fetchSPRatings(homeData.name, previousYear), 
+                        fetchSPRatings(awayData.name, previousYear),
+                        fetchInjuries(homeData.name), 
+                        fetchInjuries(awayData.name),
+                        fetchAdvancedSeasonStats(homeData.name, previousYear), 
+                        fetchAdvancedSeasonStats(awayData.name, previousYear),
+                        fetchAdvancedSeasonStats(homeData.name, currentYear), 
+                        fetchAdvancedSeasonStats(awayData.name, currentYear),
                         fetchGameNews(`"${homeData.name}" vs "${awayData.name}" football`),
                         fetchKeyPlayersData(homeData.name), 
                         fetchKeyPlayersData(awayData.name),
                         fetchCoachData(homeData.name), 
                         fetchCoachData(awayData.name),
                         fetchBettingLines(homeData.name, awayData.name),
-                        fetchWinProbability(homeData.name, awayData.name)
+                        fetchWinProbability(homeData.name, awayData.name),
+                        fetchTeamRoster(homeData.name),
+                        fetchTeamRoster(awayData.name),
+                        fetchPlayerStats(homeData.name, previousYear),
+                        fetchPlayerStats(awayData.name, previousYear)
                     ]);
 
                     const headToHead = headToHeadData?.games || [];
                     updateModalStatus('Summarizing news...');
                     const { summary: newsSummary, prompt: newsSummaryPrompt } = await summarizeNews(newsArticles, homeData.name, awayData.name);
                     
-                    const allDataForScouting = { newsSummary, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, homeInjuries, awayInjuries, homeKeyPlayersData, awayKeyPlayersData };
+                    const allDataForScouting = { newsSummary, homeData, awayData, homeStatsPrev, awayStatsPrev, homeStatsCurrent, awayStatsCurrent, homeInjuries, awayInjuries, homeKeyPlayersData, awayKeyPlayersData, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
                     
                     updateModalStatus(`Scouting ${homeData.name}...`);
                     const homeNotablePlayersPrompt = buildNotablePlayersPrompt(homeData.name, awayData.name, allDataForScouting);
@@ -1213,7 +1263,7 @@ ${userPicksSection}`;
                     const consensusPrompt = buildConsensusPrompt(individualAnalyses, homeTeam, awayTeam);
                     const consensusNarrative = await generateNarrative(consensusPrompt);
                     
-                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers };
+                    const rawData = { homeData, awayData, headToHead, homeSP, awaySP, homeSPPrev, awaySPPrev, homeStatsPrev, awayStatsPrev, homeInjuries, awayInjuries, newsArticles, newsSummary, newsSummaryPrompt, mainAnalysisPrompt, homeRecordCurrent, awayRecordCurrent, homeStatsCurrent, awayStatsCurrent, individualAnalyses, homeKeyPlayersData, awayKeyPlayersData, homeCoachData, awayCoachData, bettingLines, winProbability, homeNotablePlayers, awayNotablePlayers, homeRoster, awayRoster, homePlayerStats, awayPlayerStats };
                     const analysisPackage = { analysisText: consensusNarrative, rawData, consensusPrompt };
 
                     if (user) {
