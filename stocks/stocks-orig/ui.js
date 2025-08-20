@@ -499,10 +499,16 @@ async function openRawDataViewer(ticker) {
     document.querySelector('.tab-button[data-tab="company-profile"]').classList.add('active');
 
     try {
-        const fmpData = await getFmpStockData(ticker);
+        const fmpDataPromise = getFmpStockData(ticker);
+        const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
+
+        const [fmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, savedReportsPromise]);
+
         if (!fmpData) {
             throw new Error('No cached FMP data found for this stock.');
         }
+
+        const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
 
         titleEl.textContent = `Analysis for ${ticker}`;
 
@@ -532,9 +538,10 @@ async function openRawDataViewer(ticker) {
             { reportType: 'CapitalAllocators', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' }
         ];
         
-        aiButtonsContainer.innerHTML = buttons.map(btn => 
-            `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button text-sm ${btn.bg} text-white font-semibold py-2 px-4 rounded-lg">${btn.text}</button>`
-        ).join('');
+        aiButtonsContainer.innerHTML = buttons.map(btn => {
+            const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
+            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}">${btn.text}</button>`
+        }).join('');
         
         // Render the new company profile section
         const imageUrl = get(fmpData, 'company_profile_data.0.image', '');
@@ -572,6 +579,7 @@ async function openRawDataViewer(ticker) {
         aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
+
 
 async function displayStockCard(ticker) {
     if (document.getElementById(`card-${ticker}`)) {
