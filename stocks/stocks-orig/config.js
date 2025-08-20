@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.0.1"; 
+export const APP_VERSION = "13.0.2"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -717,4 +717,4 @@ export const creativePromptMap = {
     'Utilities': { prompt: UTILITIES_SECTOR_PROMPT, label: 'Playbook' },
     'Real Estate': { prompt: REAL_ESTATE_SECTOR_PROMPT, label: 'Playbook' },
     'Materials': { prompt: MATERIALS_SECTOR_PROMPT, label: 'Playbook' }
-}
+};
