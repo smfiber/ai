@@ -399,3 +399,15 @@ body.modal-open {
     visibility: visible;
     transform: translateX(-50%) translateY(-12px);
 }
+
+.analysis-tile.has-saved-report::before {
+    content: '';
+    position: absolute;
+    top: 0.5rem; /* 8px */
+    right: 0.5rem; /* 8px */
+    width: 0.75rem; /* 12px */
+    height: 0.75rem; /* 12px */
+    background-color: #22c55e; /* bg-green-500 */
+    border-radius: 9999px; /* rounded-full */
+    border: 2px solid white;
+}
