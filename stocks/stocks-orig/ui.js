@@ -2014,7 +2014,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
-        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
         // Only close the main loading modal if it was opened for a new generation.
         if (forceNew || (await getSavedReports(symbol, reportType)).length === 0) {
@@ -2141,6 +2141,13 @@ async function getSavedReports(ticker, reportType) {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+async function getSavedBroadReports(contextName, contextType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS);
+    const q = query(reportsRef, where("contextName", "==", contextName), where("contextType", "==", contextType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 function displayReport(container, content) {
     if (content.startsWith('<')) { // If content is HTML
         container.innerHTML = content;
@@ -2193,6 +2200,140 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
         generateNewBtn.addEventListener('click', () => {
             handleAnalysisRequest(analysisParams.symbol, analysisParams.reportType, analysisParams.promptTemplate, true);
         });
+    }
+}
+
+function updateBroadReportStatus(statusContainer, reports, activeReportId, analysisParams) {
+    statusContainer.classList.remove('hidden');
+    statusContainer.dataset.activeReportType = analysisParams.reportType;
+    let statusHtml = '';
+
+    if (reports.length > 0) {
+        const activeReport = reports.find(r => r.id === activeReportId) || reports[0];
+        const savedDate = activeReport.savedAt.toDate().toLocaleString();
+        
+        statusHtml = `
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-blue-800">Displaying report from: ${savedDate}</span>
+                <select id="broad-version-selector-${analysisParams.reportType}" class="text-sm border-gray-300 rounded-md">
+                    ${reports.map(r => `<option value="${r.id}" ${r.id === activeReport.id ? 'selected' : ''}>${r.savedAt.toDate().toLocaleString()}</option>`).join('')}
+                </select>
+            </div>
+            <button id="broad-generate-new-${analysisParams.reportType}" class="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-1 px-3 rounded-full">Generate New Report</button>
+        `;
+    } else {
+        statusHtml = `<span class="text-sm font-semibold text-green-800">Displaying newly generated report.</span>`;
+    }
+    
+    statusContainer.innerHTML = statusHtml;
+
+    const versionSelector = document.getElementById(`broad-version-selector-${analysisParams.reportType}`);
+    if (versionSelector) {
+        versionSelector.addEventListener('change', (e) => {
+            const selectedReport = reports.find(r => r.id === e.target.value);
+            if (selectedReport) {
+                const contentContainer = statusContainer.parentElement.querySelector('.prose');
+                displayReport(contentContainer, selectedReport.content);
+                updateBroadReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
+            }
+        });
+    }
+
+    const generateNewBtn = document.getElementById(`broad-generate-new-${analysisParams.reportType}`);
+    if (generateNewBtn) {
+        generateNewBtn.addEventListener('click', () => {
+            handleBroadAnalysisRequest(analysisParams.contextName, analysisParams.contextType, analysisParams.reportType, true);
+        });
+    }
+}
+
+async function handleSaveBroadReportToDb(modalId) {
+    const modal = document.getElementById(modalId);
+    const contextName = modal.dataset.contextName;
+    const contextType = modal.dataset.contextType;
+    const reportType = modal.dataset.reportType;
+    
+    const contentContainer = modal.querySelector('.prose');
+    if (!contentContainer || !contentContainer.innerHTML.trim() || contentContainer.textContent.includes('Please select an analysis type')) {
+        displayMessageInModal("Please generate an analysis before saving.", "warning");
+        return;
+    }
+
+    const contentToSave = contentContainer.innerHTML;
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report for ${contextName}...`;
+
+    try {
+        const reportData = {
+            contextName,
+            contextType,
+            reportType,
+            content: contentToSave,
+            savedAt: Timestamp.now()
+        };
+        await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS), reportData);
+        displayMessageInModal("Report saved successfully!", "info");
+        
+        // Refresh the status to show the new version
+        const savedReports = await getSavedBroadReports(contextName, contextType);
+        const latestReport = savedReports.find(r => r.reportType === reportType);
+        const statusContainer = modal.querySelector('[id^="report-status-container"]');
+        if (latestReport && statusContainer) {
+            updateBroadReportStatus(statusContainer, savedReports.filter(r => r.reportType === reportType), latestReport.id, { contextName, contextType, reportType });
+        }
+
+    } catch (error) {
+        console.error("Error saving broad report to DB:", error);
+        displayMessageInModal(`Could not save report: ${error.message}`, 'error');
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
+
+async function handleBroadAnalysisRequest(contextName, contextType, promptName, forceNew = false) {
+    const modalId = contextType === 'sector' ? CONSTANTS.MODAL_CUSTOM_ANALYSIS : CONSTANTS.MODAL_INDUSTRY_ANALYSIS;
+    const modal = document.getElementById(modalId);
+    const contentArea = modal.querySelector('.prose');
+    const statusContainer = modal.querySelector('[id^="report-status-container"]');
+
+    contentArea.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    try {
+        const savedReports = (await getSavedBroadReports(contextName, contextType)).filter(r => r.reportType === promptName);
+
+        if (savedReports.length > 0 && !forceNew) {
+            const latestReport = savedReports[0];
+            displayReport(contentArea, latestReport.content);
+            updateBroadReportStatus(statusContainer, savedReports, latestReport.id, { contextName, contextType, reportType: promptName });
+            return;
+        }
+
+        // Map promptName to the correct handler function
+        const analysisHandlers = {
+            'MarketTrends': contextType === 'sector' ? handleMarketTrendsAnalysis : handleIndustryMarketTrendsAnalysis,
+            'DisruptorAnalysis': contextType === 'sector' ? handleDisruptorAnalysis : handleIndustryDisruptorAnalysis,
+            'FortressAnalysis': handleFortressAnalysis,
+            'PhoenixAnalysis': handlePhoenixAnalysis,
+            'PickAndShovel': handlePickAndShovelAnalysis,
+            'Linchpin': handleLinchpinAnalysis,
+            'HiddenValue': handleHiddenValueAnalysis,
+            'Untouchables': handleUntouchablesAnalysis,
+        };
+
+        const handler = analysisHandlers[promptName];
+        if (handler) {
+            await handler(contextName, contextType); // Pass contextType for relevant handlers
+            updateBroadReportStatus(statusContainer, [], null, { contextName, contextType, reportType: promptName });
+        } else {
+            throw new Error(`No handler found for analysis type: ${promptName}`);
+        }
+
+    } catch (error) {
+        console.error(`Error during broad analysis for ${contextName}:`, error);
+        displayMessageInModal(`Could not complete analysis: ${error.message}`, 'error');
+        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     }
 }
 
