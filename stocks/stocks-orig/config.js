@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.5"; 
+export const APP_VERSION = "13.2.6"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -787,7 +787,7 @@ Your task is to generate a comprehensive markdown report by following these step
 3.  **Generate Report:** Structure your output as a single, professional markdown report.
 
 Output Format:
-The report must start with an overall summary, followed by a deeper dive into the key companies you identified. For each catalyst or event you mention, you MUST append a source placeholder like this: `[Source: X]`, where X is the `articleIndex` from the original news data JSON.
+The report must start with an overall summary, followed by a deeper dive into the key companies you identified. For each catalyst or event you mention, you MUST append a source placeholder like this: ` + "`[Source: X]`" + `, where X is the \`articleIndex\` from the original news data JSON.
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
