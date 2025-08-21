@@ -14,6 +14,18 @@ const promptMap = {
     'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT
 };
 
+// v13.1.0: Icons for stock-specific analysis tiles
+const ANALYSIS_ICONS = {
+    'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
+    'UndervaluedAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0l.879-.659M7.5 14.25l6-6M4.5 12l6-6m6 6l-6 6" /></svg>`,
+    'BullVsBear': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    'MoatAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>`,
+    'DividendSafety': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
+    'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
+    'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
+    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`
+};
+
 // --- UTILITY & SECURITY HELPERS ---
 
 function formatLargeNumber(value, precision = 2) {
@@ -528,19 +540,23 @@ async function openRawDataViewer(ticker) {
 
         // Build AI buttons
         const buttons = [
-            { reportType: 'FinancialAnalysis', text: 'Financial Analysis', bg: 'bg-teal-500 hover:bg-teal-600' },
-            { reportType: 'UndervaluedAnalysis', text: 'Undervalued Analysis', bg: 'bg-amber-500 hover:bg-amber-600' },
-            { reportType: 'BullVsBear', text: 'Bull vs. Bear', bg: 'bg-purple-500 hover:bg-purple-600' },
-            { reportType: 'MoatAnalysis', text: 'Moat Analysis', bg: 'bg-cyan-500 hover:bg-cyan-600' },
-            { reportType: 'DividendSafety', text: 'Dividend Safety', bg: 'bg-sky-500 hover:bg-sky-600' },
-            { reportType: 'GrowthOutlook', text: 'Growth Outlook', bg: 'bg-lime-500 hover:bg-lime-600' },
-            { reportType: 'RiskAssessment', text: 'Risk Assessment', bg: 'bg-rose-500 hover:bg-rose-600' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators', bg: 'bg-orange-500 hover:bg-orange-600' }
+            { reportType: 'FinancialAnalysis', text: 'Financial Analysis' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear' },
+            { reportType: 'MoatAnalysis', text: 'Moat Analysis' },
+            { reportType: 'DividendSafety', text: 'Dividend Safety' },
+            { reportType: 'GrowthOutlook', text: 'Growth Outlook' },
+            { reportType: 'RiskAssessment', text: 'Risk Assessment' },
+            { reportType: 'CapitalAllocators', text: 'Capital Allocators' }
         ];
         
         aiButtonsContainer.innerHTML = buttons.map(btn => {
             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
-            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}">${btn.text}</button>`
+            const icon = ANALYSIS_ICONS[btn.reportType] || '';
+            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}">
+                        ${icon}
+                        <span class="tile-name">${btn.text}</span>
+                    </button>`
         }).join('');
         
         // Render the new company profile section
@@ -1155,69 +1171,43 @@ function setupGlobalEventListeners() {
     });
 
     document.getElementById('customAnalysisModal').addEventListener('click', (e) => {
-        const target = e.target.closest('button[data-prompt-name]');
-        if (target) {
-            const sector = target.dataset.sector;
-            const promptName = target.dataset.promptName;
-            const analysisName = target.querySelector('.tile-name')?.textContent || promptName;
-            
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const sector = button.dataset.sector;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
+
             const modal = document.getElementById('customAnalysisModal');
             modal.dataset.analysisName = analysisName;
-
-            if (promptName === 'MarketTrends') {
-                handleMarketTrendsAnalysis(sector, 'sector');
-            } else if (promptName === 'DisruptorAnalysis') {
-                handleDisruptorAnalysis(sector);
-            } else if (promptName === 'MacroPlaybook') {
-                handleMacroPlaybookAnalysis(sector);
-            } else if (promptName === 'FortressAnalysis') {
-                handleFortressAnalysis(sector, 'sector');
-            } else if (promptName === 'PhoenixAnalysis') {
-                handlePhoenixAnalysis(sector, 'sector');
-            } else if (promptName === 'PickAndShovel') {
-                handlePickAndShovelAnalysis(sector, 'sector');
-            } else if (promptName === 'Linchpin') {
-                handleLinchpinAnalysis(sector, 'sector');
-            } else if (promptName === 'HiddenValue') {
-                handleHiddenValueAnalysis(sector, 'sector');
-            } else if (promptName === 'Untouchables') {
-                handleUntouchablesAnalysis(sector, 'sector');
+            modal.dataset.contextName = sector;
+            modal.dataset.contextType = 'sector';
+            modal.dataset.reportType = promptName;
+            
+            if (button.classList.contains('has-saved-report')) {
+                handleBroadAnalysisRequest(sector, 'sector', promptName, true);
             } else {
-                handleCreativeSectorAnalysis(sector, promptName);
+                handleBroadAnalysisRequest(sector, 'sector', promptName, false);
             }
         }
     });
 
     document.getElementById('industryAnalysisModal').addEventListener('click', (e) => {
-        const target = e.target.closest('button[data-prompt-name]');
-        if (target) {
-            const industry = target.dataset.industry;
-            const promptName = target.dataset.promptName;
-            const analysisName = target.querySelector('.tile-name')?.textContent || promptName;
+        const button = e.target.closest('button[data-prompt-name]');
+        if (button) {
+            const industry = button.dataset.industry;
+            const promptName = button.dataset.promptName;
+            const analysisName = button.querySelector('.tile-name')?.textContent || promptName;
             
             const modal = document.getElementById('industryAnalysisModal');
             modal.dataset.analysisName = analysisName;
+            modal.dataset.contextName = industry;
+            modal.dataset.contextType = 'industry';
+            modal.dataset.reportType = promptName;
 
-            if (promptName === 'MarketTrends') {
-                handleIndustryMarketTrendsAnalysis(industry);
-            } else if (promptName === 'DisruptorAnalysis') {
-                handleIndustryDisruptorAnalysis(industry);
-            } else if (promptName === 'MacroPlaybook') {
-                handleIndustryMacroPlaybookAnalysis(industry);
-            } else if (promptName === 'PlaybookAnalysis') {
-                handleIndustryPlaybookAnalysis(industry);
-            } else if (promptName === 'FortressAnalysis') {
-                handleFortressAnalysis(industry, 'industry');
-            } else if (promptName === 'PhoenixAnalysis') {
-                handlePhoenixAnalysis(industry, 'industry');
-            } else if (promptName === 'PickAndShovel') {
-                handlePickAndShovelAnalysis(industry, 'industry');
-            } else if (promptName === 'Linchpin') {
-                handleLinchpinAnalysis(industry, 'industry');
-            } else if (promptName === 'HiddenValue') {
-                handleHiddenValueAnalysis(industry, 'industry');
-            } else if (promptName === 'Untouchables') {
-                handleUntouchablesAnalysis(industry, 'industry');
+            if (button.classList.contains('has-saved-report')) {
+                handleBroadAnalysisRequest(industry, 'industry', promptName, true);
+            } else {
+                handleBroadAnalysisRequest(industry, 'industry', promptName, false);
             }
         }
     });
@@ -1274,6 +1264,17 @@ export function setupEventListeners() {
         button.addEventListener('click', (e) => {
             const modalId = e.target.dataset.modalId;
             handleSaveToDrive(modalId);
+        });
+    });
+    
+    document.querySelectorAll('.save-to-db-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modalId;
+            if (modalId === 'rawDataViewerModal') {
+                handleSaveReportToDb();
+            } else {
+                handleSaveBroadReportToDb(modalId);
+            }
         });
     });
 
@@ -1338,11 +1339,6 @@ export function setupEventListeners() {
             return;
         }
         
-        if (target.matches('.save-to-db-button')) {
-            handleSaveReportToDb();
-            return;
-        }
-
         const symbol = target.dataset.symbol;
         if (!symbol) return;
 
@@ -1423,16 +1419,21 @@ async function handleMarketTrendsAnalysis(sectorName) {
     }
 }
 
-function handleSectorSelection(sectorName) {
+async function handleSectorSelection(sectorName) {
     const modal = document.getElementById(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     const modalTitle = modal.querySelector('#custom-analysis-modal-title');
     const selectorContainer = modal.querySelector('#custom-analysis-selector-container');
     const contentArea = modal.querySelector('#custom-analysis-content');
+    const statusContainer = modal.querySelector('#report-status-container-sector');
 
     modalTitle.textContent = `Sector Deep Dive | ${sectorName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    statusContainer.classList.add('hidden');
     modal.dataset.analysisName = 'Sector_Deep_Dive'; // Reset on new selection
     
+    const savedReports = await getSavedBroadReports(sectorName, 'sector');
+    const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
+
     const analysisTypes = [
         {
             name: 'Market Trends',
@@ -1490,8 +1491,9 @@ function handleSectorSelection(sectorName) {
             <div class="flex flex-wrap justify-center gap-4">`;
 
     analysisTypes.forEach(type => {
+        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
         html += `
-            <button class="analysis-tile" data-sector="${sectorName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+            <button class="analysis-tile ${hasSaved}" data-sector="${sectorName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
                 ${type.svgIcon}
                 <span class="tile-name">${type.name}</span>
             </button>
@@ -1739,16 +1741,21 @@ function renderIndustryButtons() {
 }
 
 
-function handleIndustrySelection(industryName) {
+async function handleIndustrySelection(industryName) {
     const modal = document.getElementById(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
     const modalTitle = modal.querySelector('#industry-analysis-modal-title');
     const selectorContainer = modal.querySelector('#industry-analysis-selector-container');
     const contentArea = modal.querySelector('#industry-analysis-content');
+    const statusContainer = modal.querySelector('#report-status-container-industry');
 
     modalTitle.textContent = `Industry Deep Dive | ${industryName}`;
     contentArea.innerHTML = `<div class="text-center text-gray-500 pt-16">Please select an analysis type above to begin.</div>`;
+    statusContainer.classList.add('hidden');
     modal.dataset.analysisName = 'Industry_Deep_Dive'; // Reset on new selection
     
+    const savedReports = await getSavedBroadReports(industryName, 'industry');
+    const savedReportTypes = new Set(savedReports.map(doc => doc.reportType));
+
     const analysisTypes = [
         {
             name: 'Market Trends',
@@ -1806,8 +1813,9 @@ function handleIndustrySelection(industryName) {
             <div class="flex flex-wrap justify-center gap-4">`;
 
     analysisTypes.forEach(type => {
+        const hasSaved = savedReportTypes.has(type.promptName) ? 'has-saved-report' : '';
         html += `
-            <button class="analysis-tile" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
+            <button class="analysis-tile ${hasSaved}" data-industry="${industryName}" data-prompt-name="${type.promptName}" data-tooltip="${type.description}">
                 ${type.svgIcon}
                 <span class="tile-name">${type.name}</span>
             </button>
