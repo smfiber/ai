@@ -1735,7 +1735,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
 
 export async function displayIndustryScreener() {
     try {
-        const url = `https://financialmodelingprep.com/api/v3/industry-list?apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/api/v3/industries-list?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
             state.availableIndustries = industryData.map(item => item.industry).sort();
@@ -1977,6 +1977,20 @@ async function handleIndustryMacroPlaybookAnalysis(industryName) {
 
 // --- AI ANALYSIS REPORT GENERATORS ---
 
+async function getSavedReports(ticker, reportType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
+    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function getSavedBroadReports(contextName, contextType) {
+    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS);
+    const q = query(reportsRef, where("contextName", "==", contextName), where("contextType", "==", contextType), orderBy("savedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNew = false) {
     const contentContainer = document.getElementById('ai-article-container');
     const statusContainer = document.getElementById('report-status-container-ai');
@@ -2133,20 +2147,6 @@ async function handleSaveReportToDb() {
     }
 }
 
-
-async function getSavedReports(ticker, reportType) {
-    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS);
-    const q = query(reportsRef, where("ticker", "==", ticker), where("reportType", "==", reportType), orderBy("savedAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-async function getSavedBroadReports(contextName, contextType) {
-    const reportsRef = collection(state.db, CONSTANTS.DB_COLLECTION_BROAD_REPORTS);
-    const q = query(reportsRef, where("contextName", "==", contextName), where("contextType", "==", contextType), orderBy("savedAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
 
 function displayReport(container, content) {
     if (content.startsWith('<')) { // If content is HTML
