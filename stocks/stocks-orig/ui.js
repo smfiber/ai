@@ -2185,4 +2185,6 @@ async function handleSaveToDrive(modalId) {
         displayMessageInModal(`Failed to save to Drive: ${error.message || 'Check console for details.'}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
+    }
+}
     
