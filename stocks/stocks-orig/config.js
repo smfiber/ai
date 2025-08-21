@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.1.0"; 
+export const APP_VERSION = "13.2.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -443,6 +443,115 @@ export const CAPITAL_ALLOCATORS_PROMPT = `
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
+
+// --- NEW PROMPTS (v13.2.0) ---
+
+export const MANAGEMENT_SCORECARD_PROMPT = `
+Role: You are an analyst specializing in corporate governance and leadership, in the style of a proxy advisory firm like Glass Lewis, but writing for a private investor. Your goal is to evaluate the quality and alignment of the management team based on the provided data.
+
+Output Format: Provide a report in markdown. Use ## for major sections, ### for sub-sections, and bullet points. Conclude with a final letter grade.
+
+JSON Data:
+{jsonData}
+
+# Management & Governance Scorecard: {companyName} ({tickerSymbol})
+
+## 1. Leadership Evaluation
+Based on the 'company_profile' data, analyze the CEO's background.
+- **CEO:** [Name of CEO from 'company_profile.ceo']
+- **Experience & Tenure:** Briefly comment on the CEO's tenure and role. Is this a long-serving, experienced leader or a newer hire?
+
+## 2. Shareholder Alignment
+Review the 'company_profile.description' and any recent 'stock_grade_news' for clues about management's philosophy.
+- **Capital Allocation Clues:** Does the company description mention a focus on long-term value, disciplined acquisitions, or returning capital to shareholders?
+- **Recent Analyst Sentiment:** Does the tone of analyst grades suggest confidence or concern in the current leadership?
+
+## 3. Governance Red Flags
+Based on all available data, are there any potential red flags? (e.g., lack of clear strategy in the description, consistently poor analyst ratings).
+
+## 4. Final Grade & Summary
+Provide a final letter grade (A, B, C, D, F) for the management team's perceived quality and shareholder alignment based on this limited, data-driven view. Justify the grade in one or two sentences.
+- **Grade:** [Your Grade]
+- **Summary:** [Your justification].
+`.trim();
+
+export const COMPETITIVE_LANDSCAPE_PROMPT = `
+Role: You are a business strategy consultant. Your task is to analyze {companyName}'s competitive position within its industry using the provided financial data.
+
+Output Format: Provide a concise report in markdown. Use ## for major sections and bullet points for comparisons. Conclude with a clear verdict on the company's market position.
+
+JSON Data:
+{jsonData}
+
+# Competitive Landscape Analysis: {companyName} ({tickerSymbol})
+
+## 1. The Arena: Industry Context
+- **Industry:** [Value from 'company_profile.industry']
+- **Key Business:** Based on the company's description, what is the primary battlefield where it competes?
+
+## 2. Head-to-Head: Financial & Operational Comparison
+Compare the company's key metrics to what is typical for its industry. (e.g., "Tech companies often have higher margins, while industrial firms may have lower ones.")
+- **Profitability (Net Profit Margin):** [Value from 'key_metrics.netProfitMargin']. Is this margin considered high, low, or average for this industry? This indicates pricing power and operational efficiency.
+- **Returns on Capital (ROE):** [Value from 'key_metrics.returnOnEquity']. Is this ROE strong or weak for this industry? This shows how effectively the company uses shareholder money.
+- **Debt Load (Debt-to-Equity):** [Value from 'key_metrics.debtToEquity']. How does its debt level compare to industry norms? Is it more or less conservative than its peers?
+
+## 3. The Market's View: Valuation Comparison
+- **Valuation (P/E Ratio):** [Value from 'key_metrics.peRatio']. Does the market award the company a higher or lower P/E ratio than is typical for its peers? A higher P/E often implies higher growth expectations.
+
+## 4. Final Verdict: Leader, Laggard, or Middle of the Pack?
+Based on the financial and valuation comparison, provide a one-sentence conclusion. For example: "{companyName} appears to be a **Leader** in its industry, with superior profitability and returns," or "{companyName} appears to be a **Laggard**, struggling with lower margins than its competitors."
+`.trim();
+
+export const NARRATIVE_CATALYST_PROMPT = `
+Role: You are a forward-looking equity analyst. Your task is to identify the primary investment narrative and potential future catalysts for {companyName}, based on the provided data.
+
+Output Format: Use markdown to create a checklist and a brief summary.
+
+JSON Data:
+{jsonData}
+
+# Narrative & Catalyst Checklist: {companyName} ({tickerSymbol})
+
+## 1. The Big Picture: Secular Trends
+- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company benefit from any long-term secular trends (e.g., Artificial Intelligence, Aging Population, Electrification, On-shoring)? If so, name the trend.
+
+## 2. Company-Specific Events: Potential Catalysts
+- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth accelerating in the most recent 'income_statement' data? This can signal a business inflection point.
+- **[ ] Analyst Sentiment Shift:** Are there recent "upgrades" in the 'stock_grade_news' data? This can indicate that Wall Street is becoming more positive on the stock's future.
+
+## 3. The Investment Story
+Conclude with a 1-2 sentence summary of the core investment narrative. What is the main story an investor is buying into with this stock? For example: "The investment story for {companyName} is that of a historically stable company now showing signs of accelerating growth, potentially benefiting from the broader trend of [Megatrend]."
+`.trim();
+
+export const INVESTMENT_MEMO_PROMPT = `
+Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo.
+
+IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Do not use any external knowledge. Synthesize, do not invent.
+
+Input Reports:
+{allAnalysesData}
+
+# Investment Memo: {companyName} ({tickerSymbol})
+
+## 1. The Core Question
+Based on the collection of reports, what is the primary reason this stock is under consideration now? (e.g., potential undervaluation, strong competitive moat, a new catalyst, etc.).
+
+## 2. Synthesis of Analyst Findings
+Concisely summarize the most critical conclusions from the analyst dossier.
+- **Financial Health & Quality:** What is the overall health of the business? Is it financially robust or fragile? (Synthesize from Financial Analysis, Risk Assessment, Dividend Safety).
+- **Competitive Position:** Does the company have a durable competitive advantage (moat) and a strong position in its market? (Synthesize from Moat Analysis, Competitive Landscape).
+- **Management & Stewardship:** Is the leadership team capable and aligned with shareholders? (Synthesize from Management Scorecard, Capital Allocators).
+- **Future Outlook:** What are the prospects for growth and what catalysts could unlock value? (Synthesize from Growth Outlook, Narrative & Catalyst Checklist).
+
+## 3. The Valuation Case
+Based on the Undervalued Analysis report, is the stock currently trading at a price that offers a sufficient margin of safety?
+
+## 4. Primary Risks to Thesis
+What are the 2-3 most critical risks that could derail this investment? (Synthesize from all reports, especially Risk Assessment and Bear Case).
+
+## 5. Final Verdict & Recommendation
+In one paragraph, deliver your final judgment. State clearly whether you recommend **Initiating a Position**, **Adding to Watchlist for Further Monitoring**, or **Passing on this Opportunity**. Justify your decision by referencing the most important factors from your synthesis (e.g., strength of the moat, valuation, management quality, or overriding risks).
+`.trim();
 
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
