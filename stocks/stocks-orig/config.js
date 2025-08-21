@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.0.2"; 
+export const APP_VERSION = "13.1.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -64,6 +64,8 @@ export const CONSTANTS = {
     DB_COLLECTION_FMP_ENDPOINTS: 'fmp_endpoints',
     DB_COLLECTION_BROAD_ENDPOINTS: 'broad_api_endpoints',
     DB_COLLECTION_AI_REPORTS: 'ai_analysis_reports',
+    // v13.1.0: New collection for sector/industry reports
+    DB_COLLECTION_BROAD_REPORTS: 'ai_broad_reports',
 };
 
 export const SECTOR_ICONS = {
