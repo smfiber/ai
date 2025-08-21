@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.2"; 
+export const APP_VERSION = "13.2.3"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -428,8 +428,8 @@ Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-
 `.trim();
 
 export const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
-	Your task is to analyze the CEO and management team of {companyName} ({tickerSymbol}), focusing on their skill in capital allocation.
+	Act as a discerning investment strategist focused on management quality, in the style of a detailed shareholder letter. Your analysis must be based *only* on the provided financial data for {companyName}.
+	Your task is to analyze the management team of {companyName} ({tickerSymbol}), focusing strictly on their skill in capital allocation as evidenced by the data provided.
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
 	1. The CEO's Philosophy:
 		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
