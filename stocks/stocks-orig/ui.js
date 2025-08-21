@@ -1711,7 +1711,7 @@ async function handleUntouchablesAnalysis(contextName, contextType) {
 
 export async function displayIndustryScreener() {
     try {
-        const url = `https://financialmodelingprep.com/stable/available-industries?apikey=${state.fmpApiKey}`;
+        const url = `https://financialmodelingprep.com/api/v3/industry-list?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
             state.availableIndustries = industryData.map(item => item.industry).sort();
@@ -2185,5 +2185,4 @@ async function handleSaveToDrive(modalId) {
         displayMessageInModal(`Failed to save to Drive: ${error.message || 'Check console for details.'}`, 'error');
     } finally {
         closeModal(CONSTANTS.MODAL_LOADING);
-    }
-}
+    
