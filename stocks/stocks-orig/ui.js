@@ -1990,7 +1990,7 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
 
     } catch (error) {
         displayMessageInModal(`Could not generate or load analysis: ${error.message}`, 'error');
-        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
+        contentArea.innerHTML = `<p class="text-red-500">Failed to generate report: ${error.message}</p>`;
     } finally {
         // Only close the main loading modal if it was opened for a new generation.
         if (forceNew || (await getSavedReports(symbol, reportType)).length === 0) {
