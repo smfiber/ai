@@ -35,6 +35,12 @@ body.modal-open {
     overflow: hidden;
 }
 
+/* v13.1.0: Fix for modal content overflowing rounded corners */
+.modal > .relative {
+    overflow: hidden;
+}
+
+
 /*
  * =================================================================
  * LOADER & SPINNER STYLES
