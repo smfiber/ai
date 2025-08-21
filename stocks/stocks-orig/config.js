@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.0"; 
+export const APP_VERSION = "13.2.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -429,7 +429,7 @@ Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-
 
 export const CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
-	Your task is to analyze one CEO/management team from the {tickerSymbol} sector known for their skill in capital allocation.
+	Your task is to analyze the CEO and management team of {companyName} ({tickerSymbol}), focusing on their skill in capital allocation.
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
 	1. The CEO's Philosophy:
 		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
@@ -555,7 +555,7 @@ In one paragraph, deliver your final judgment. State clearly whether you recomme
 
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
 	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
-	Your task is to analyze one CEO/management team from the {industryName} industry known for their skill in capital allocation.
+	Your task is to analyze the CEO and management team of {companyName} ({tickerSymbol}), focusing on their skill in capital allocation.
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
 	1. The CEO's Philosophy:
 		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
