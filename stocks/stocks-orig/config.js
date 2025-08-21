@@ -428,26 +428,45 @@ Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-
 `.trim();
 
 export const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a discerning investment strategist focused on management quality, in the style of a detailed shareholder letter. Your analysis must be based *only* on the provided financial data for {companyName}.
-	Your task is to analyze the management team of {companyName} ({tickerSymbol}), focusing strictly on their skill in capital allocation as evidenced by the data provided.
+	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. Avoid any information not present in the data provided.
+
+	Your task is to critically evaluate the management team of {companyName} ({tickerSymbol}) on their skill as capital allocators. Every claim you make must be substantiated with specific metrics, figures, or trends from the data.
+
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
-	1. The CEO's Philosophy:
-		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
-	2. The Track Record: Analyzing the Decisions
-		○ Analyze their capital allocation decisions over the last 5-10 years across three key areas:
-			§ Reinvestment in the Business: Have their internal investments (R&D, new factories) generated high returns on capital?
-			§ Acquisitions (M&A): Has their track record of buying other companies been successful and created value, or have they overpaid?
-			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
-	3. The Scorecard & Investment Thesis:
-		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
+
+	## 1. The CEO's Inferred Philosophy
+
+	Instead of stating the CEO's philosophy, **deduce it directly from the numbers**. Based on where the cash has flowed over the last 5-10 years (e.g., CapEx vs. R&D vs. Acquisitions vs. Buybacks), what can you infer about their strategic priorities? **Is it a growth-at-all-costs model, a focus on maintaining a fortress balance sheet, or a commitment to shareholder returns?**
+
+	## 2. The Track Record: A Quantitative Analysis
+
+	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using specific metrics:
+
+	- **Reinvestment in the Business:**
+		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)**. Have these core profitability metrics improved or declined as they've reinvested capital?
+		- Compare the growth in **Capital Expenditures (CapEx)** and **R&D spending** to the corresponding growth in revenue and gross profit. **Is there a clear and profitable link between investment and growth?**
+
+	- **Acquisitions (M&A):**
+		- If M&A activity is evident, analyze the change in **goodwill** on the balance sheet relative to total assets.
+		- Examine the company's **profit margins** and **ROIC** in the years immediately following a major acquisition. Did the deal appear to be accretive (value-creating) or dilutive (value-destroying)? **Is there evidence of overpayment (i.e., large goodwill additions followed by stagnant or declining returns)?**
+
+	- **Returning Capital to Shareholders:**
+		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
+		- **Dividends:** Analyze the **dividend payout ratio** over time. Is the dividend well-covered by free cash flow? Is its growth steady and sustainable, or erratic?
+
+	## 3. The Scorecard & Investment Thesis
+
+	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your analysis above.
+	- Based *only* on this track record of capital allocation, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to compound wealth effectively in the future?
+	- **Conclude with a "Red Flags" section, highlighting any concerning trends in the data (e.g., consistently poor returns on investment, value-destructive M&A, or ill-timed buybacks).**
+
+	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 // --- NEW PROMPTS (v13.2.0) ---
 
 export const MANAGEMENT_SCORECARD_PROMPT = `
-Role: You are an analyst specializing in corporate governance and leadership, in the style of a proxy advisory firm like Glass Lewis, but writing for a private investor. Your goal is to evaluate the quality and alignment of the management team based on the provided data.
+Role: You are an analyst specializing in corporate governance, in the style of a proxy advisory firm like Glass Lewis. Your goal is to conduct a **preliminary** evaluation of the management team's quality and shareholder alignment, based **strictly and exclusively** on the limited JSON data provided. **Acknowledge where the data is insufficient to make a full judgment.**
 
 Output Format: Provide a report in markdown. Use ## for major sections, ### for sub-sections, and bullet points. Conclude with a final letter grade.
 
@@ -456,75 +475,107 @@ JSON Data:
 
 # Management & Governance Scorecard: {companyName} ({tickerSymbol})
 
-## 1. Leadership Evaluation
-Based on the 'company_profile' data, analyze the CEO's background.
+## 1. Leadership Snapshot
+Based on the 'company_profile' data, provide a factual snapshot of the CEO. **Do not infer or analyze their background beyond what is explicitly stated.**
 - **CEO:** [Name of CEO from 'company_profile.ceo']
-- **Experience & Tenure:** Briefly comment on the CEO's tenure and role. Is this a long-serving, experienced leader or a newer hire?
+- **Tenure:** [CEO's tenure, if available]. **Comment on whether this suggests stability (long-serving) or a recent change in leadership. If data is unavailable, state that.**
 
-## 2. Shareholder Alignment
-Review the 'company_profile.description' and any recent 'stock_grade_news' for clues about management's philosophy.
-- **Capital Allocation Clues:** Does the company description mention a focus on long-term value, disciplined acquisitions, or returning capital to shareholders?
-- **Recent Analyst Sentiment:** Does the tone of analyst grades suggest confidence or concern in the current leadership?
+## 2. Shareholder Alignment Signals
+This section assesses alignment based on management's own words and actions as reflected in the data.
 
-## 3. Governance Red Flags
-Based on all available data, are there any potential red flags? (e.g., lack of clear strategy in the description, consistently poor analyst ratings).
+### ### Stated Philosophy (from Corporate Description)
+- **Keyword Analysis:** Scan the 'company_profile.description' for keywords related to shareholder value (e.g., "long-term value," "ROI," "capital discipline," "dividends," "share repurchases").
+- **Assessment:** **Is the language specific and strategy-focused, or is it generic corporate jargon?** Quote a brief, relevant excerpt if available.
+
+### ### Analyst Commentary on Execution
+- **Management-Specific Sentiment:** Review the 'stock_grade_news'. Find and summarize any analyst commentary that **specifically mentions management, strategy, or execution**. Ignore general market or price target commentary.
+- **Example:** "Does news mention praise for a 'strong quarter execution' or concern over 'strategic missteps'?"
+
+## 3. Potential Red Flags
+Based on all available data, identify potential governance or alignment risks.
+- **Vague Strategy:** Does the corporate description lack clarity or rely heavily on buzzwords?
+- **Misalignment:** Are there any contradictions between the company's stated strategy and the focus of recent analyst grades (e.g., company talks about long-term value, but analysts are focused on short-term misses)?
+- **Negative Sentiment:** Is there a recurring theme of negative commentary directed at management's decisions in the news items?
 
 ## 4. Final Grade & Summary
-Provide a final letter grade (A, B, C, D, F) for the management team's perceived quality and shareholder alignment based on this limited, data-driven view. Justify the grade in one or two sentences.
+Provide a final letter grade (A, B, C, D, F) for the management team's **perceived quality and alignment based *only* on this data**. Justify the grade by summarizing the key data points.
 - **Grade:** [Your Grade]
-- **Summary:** [Your justification].
+- **Summary:** [Your justification, directly referencing findings from the sections above].
 `.trim();
 
 export const COMPETITIVE_LANDSCAPE_PROMPT = `
-Role: You are a business strategy consultant. Your task is to analyze {companyName}'s competitive position within its industry using the provided financial data.
+Role: You are a business strategy consultant, in the style of an analyst from a top-tier firm like McKinsey or Bain. Your task is to analyze {companyName}'s competitive position using the provided financial data, which includes peer and industry benchmarks.
 
-Output Format: Provide a concise report in markdown. Use ## for major sections and bullet points for comparisons. Conclude with a clear verdict on the company's market position.
+**IMPORTANT:** This prompt assumes the 'jsonData' includes an 'industry_averages' object and/or a 'competitors' array with corresponding financial metrics. Without this comparative data, a meaningful analysis is not possible.
+
+Output Format: Provide a strategic report in markdown. Use ## for major sections and bullet points. Conclude with a clear verdict on the company's market position and the source of its advantage.
 
 JSON Data:
 {jsonData}
 
 # Competitive Landscape Analysis: {companyName} ({tickerSymbol})
 
-## 1. The Arena: Industry Context
+## 1. The Competitive Arena
 - **Industry:** [Value from 'company_profile.industry']
-- **Key Business:** Based on the company's description, what is the primary battlefield where it competes?
+- **Primary Business:** Based on the 'company_profile.description', what is the core product/service and who are the target customers?
+- **Key Competitors:** [List of competitors, if provided in the data]
 
-## 2. Head-to-Head: Financial & Operational Comparison
-Compare the company's key metrics to what is typical for its industry. (e.g., "Tech companies often have higher margins, while industrial firms may have lower ones.")
-- **Profitability (Net Profit Margin):** [Value from 'key_metrics.netProfitMargin']. Is this margin considered high, low, or average for this industry? This indicates pricing power and operational efficiency.
-- **Returns on Capital (ROE):** [Value from 'key_metrics.returnOnEquity']. Is this ROE strong or weak for this industry? This shows how effectively the company uses shareholder money.
-- **Debt Load (Debt-to-Equity):** [Value from 'key_metrics.debtToEquity']. How does its debt level compare to industry norms? Is it more or less conservative than its peers?
+## 2. Financial Benchmarking: Performance vs. Peers
+For each metric, compare {companyName} against the 'industry_averages' and key 'competitors'.
+- **Profitability (Net Profit Margin):** How does [Value from 'key_metrics.netProfitMargin'] compare? Superior margins can indicate **pricing power** or **cost advantages**.
+- **Efficiency (Return on Equity - ROE):** How does [Value from 'key_metrics.returnOnEquity'] compare? A higher ROE suggests more effective use of capital to generate profits, a sign of a **quality business**.
+- **Leverage (Debt-to-Equity):** How does [Value from 'key_metrics.debtToEquity'] compare? This reveals the company's **risk profile** relative to its peers. Is it more aggressive or conservative?
 
-## 3. The Market's View: Valuation Comparison
-- **Valuation (P/E Ratio):** [Value from 'key_metrics.peRatio']. Does the market award the company a higher or lower P/E ratio than is typical for its peers? A higher P/E often implies higher growth expectations.
+## 3. Market Perception: Valuation
+- **Valuation (P/E Ratio):** Compare [Value from 'key_metrics.peRatio'] to peers. A premium valuation (higher P/E) suggests the market has **higher growth expectations** or perceives the company as being **higher quality and less risky**. A discount suggests the opposite.
 
-## 4. Final Verdict: Leader, Laggard, or Middle of the Pack?
-Based on the financial and valuation comparison, provide a one-sentence conclusion. For example: "{companyName} appears to be a **Leader** in its industry, with superior profitability and returns," or "{companyName} appears to be a **Laggard**, struggling with lower margins than its competitors."
+## 4. Identifying the Competitive Moat
+Synthesize the analysis above to hypothesize the source of the company's competitive advantage (or lack thereof).
+- **Hypothesis:** Based on the financial evidence, what is the most likely "moat"?
+    - *Example if strong:* "The company's consistently superior margins and high ROE, combined with its premium P/E ratio, suggest a strong competitive moat, likely derived from **brand power** or **proprietary technology**."
+    - *Example if weak:* "The company's below-average margins and ROE suggest it may lack a significant competitive moat, possibly competing primarily on **price**."
+
+## 5. Strategic Conclusion: Leader, Laggard, or Contender?
+Provide a one-sentence final verdict that links the company's position to its underlying advantage.
+- **Verdict:** For example: "{companyName} is a clear **Leader** in its space, leveraging its strong brand to command premium pricing and deliver superior returns," or "{companyName} appears to be a **Laggard**, struggling to differentiate itself in a crowded market, as shown by its weak profitability and discounted valuation."
 `.trim();
 
 export const NARRATIVE_CATALYST_PROMPT = `
-Role: You are a forward-looking equity analyst. Your task is to identify the primary investment narrative and potential future catalysts for {companyName}, based on the provided data.
+Role: You are a forward-looking equity analyst. Your task is to identify the primary investment narrative, future catalysts, and key risks for {companyName}, based strictly on the provided data.
 
-Output Format: Use markdown to create a checklist and a brief summary.
+Output Format: Use markdown to create a checklist and a brief summary framing the "Bull vs. Bear" case.
 
 JSON Data:
 {jsonData}
 
 # Narrative & Catalyst Checklist: {companyName} ({tickerSymbol})
 
-## 1. The Big Picture: Secular Trends
-- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company benefit from any long-term secular trends (e.g., Artificial Intelligence, Aging Population, Electrification, On-shoring)? If so, name the trend.
+## 1. The Big Picture: Secular Tailwinds
+- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company have direct exposure to a long-term secular trend (e.g., AI, Electrification, Demographics)?
+- **The Link:** **If yes, briefly explain *how* the company benefits from this trend.**
 
-## 2. Company-Specific Events: Potential Catalysts
-- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth accelerating in the most recent 'income_statement' data? This can signal a business inflection point.
-- **[ ] Analyst Sentiment Shift:** Are there recent "upgrades" in the 'stock_grade_news' data? This can indicate that Wall Street is becoming more positive on the stock's future.
+## 2. The Foundation: Financial Health Check
+A strong narrative needs a solid foundation.
+- **[ ] Profitability:** Is the company profitable (positive 'netIncome') **and generating positive free cash flow?** A business that funds its own growth is inherently more robust.
+- **[ ] Balance Sheet Strength:** Does the company have a manageable debt load ('debtToEquity')? **This assesses the company's resilience during economic downturns.**
 
-## 3. The Investment Story
-Conclude with a 1-2 sentence summary of the core investment narrative. What is the main story an investor is buying into with this stock? For example: "The investment story for {companyName} is that of a historically stable company now showing signs of accelerating growth, potentially benefiting from the broader trend of [Megatrend]."
+## 3. The Spark: Potential Future Catalysts
+- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent 'income_statement' data? This can signal a business inflection point.
+- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' improving? This is a powerful sign of **pricing power or increased efficiency.**
+- **[ ] Analyst Sentiment Shift:** Are recent "upgrades" in the 'stock_grade_news' data indicating that Wall Street's view is becoming more positive?
+
+## 4. The Investment Narrative: Bull vs. Bear
+Conclude with a concise summary of the core investment thesis and its primary risk.
+
+- **The Bull Case:** In one sentence, what is the main story an investor is buying into? Combine the tailwind and catalysts.
+    - *Example: "The bull case for {companyName} is that of a financially sound leader in [Megatrend], which is now hitting an inflection point with accelerating growth and expanding margins."*
+
+- **The Bear Case (Key Risk):** In one sentence, what is the biggest data-driven risk to the narrative?
+    - *Example: "The key risk is that despite its compelling story, the company's high debt load makes it vulnerable to a slowdown," or "The narrative is challenged by the company's lack of consistent profitability."*
 `.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
-Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo.
+Role: You are the Chief Investment Officer (CIO) of a value-investing fund. You have been given a dossier of reports from your analyst team on {companyName}. Your task is to synthesize these findings into a final, decisive investment memo, **weighing the pros and cons to arrive at a clear-cut recommendation.**
 
 IMPORTANT: Your analysis MUST be based *only* on the provided summaries from the other reports. Do not use any external knowledge. Synthesize, do not invent.
 
@@ -534,159 +585,226 @@ Input Reports:
 # Investment Memo: {companyName} ({tickerSymbol})
 
 ## 1. The Core Question
-Based on the collection of reports, what is the primary reason this stock is under consideration now? (e.g., potential undervaluation, strong competitive moat, a new catalyst, etc.).
+Based on the collection of reports, what is the primary reason this stock is under consideration now? (e.g., a potential price dislocation, a newly identified catalyst, a best-in-class business hitting a buy point, etc.).
 
 ## 2. Synthesis of Analyst Findings
-Concisely summarize the most critical conclusions from the analyst dossier.
-- **Financial Health & Quality:** What is the overall health of the business? Is it financially robust or fragile? (Synthesize from Financial Analysis, Risk Assessment, Dividend Safety).
-- **Competitive Position:** Does the company have a durable competitive advantage (moat) and a strong position in its market? (Synthesize from Moat Analysis, Competitive Landscape).
-- **Management & Stewardship:** Is the leadership team capable and aligned with shareholders? (Synthesize from Management Scorecard, Capital Allocators).
-- **Future Outlook:** What are the prospects for growth and what catalysts could unlock value? (Synthesize from Growth Outlook, Narrative & Catalyst Checklist).
+Concisely synthesize the most critical conclusions from the analyst dossier.
+- **Business Quality (Moat & Financials):** What is the fundamental quality of the business? Is it a financially robust "fortress" with a durable competitive moat? (Synthesize from Financial Analysis, Moat Analysis, Competitive Landscape).
+- **Management & Stewardship:** Is the leadership team a net **asset or liability**? Are they skilled capital allocators who are aligned with shareholders? (Synthesize from Management Scorecard, Capital Allocators).
+- **Growth & Catalysts:** What are the realistic prospects for future growth, and are there clear catalysts on the horizon to unlock value? (Synthesize from Growth Outlook, Narrative & Catalyst Checklist).
 
 ## 3. The Valuation Case
-Based on the Undervalued Analysis report, is the stock currently trading at a price that offers a sufficient margin of safety?
+Based on the Undervalued Analysis report, is the stock currently trading at a price that offers a **compelling** margin of safety? **Briefly state the implied upside.**
 
-## 4. Primary Risks to Thesis
-What are the 2-3 most critical risks that could derail this investment? (Synthesize from all reports, especially Risk Assessment and Bear Case).
+## 4. Primary Risks & Mitigants
+What are the 2-3 most critical risks that could permanently impair capital? **For each risk, note any potential mitigating factors mentioned in the reports.** (Synthesize from all reports, especially Risk Assessment and Bear Case).
 
-## 5. Final Verdict & Recommendation
-In one paragraph, deliver your final judgment. State clearly whether you recommend **Initiating a Position**, **Adding to Watchlist for Further Monitoring**, or **Passing on this Opportunity**. Justify your decision by referencing the most important factors from your synthesis (e.g., strength of the moat, valuation, management quality, or overriding risks).
+## 5. Final Verdict & Actionable Recommendation
+In one paragraph, deliver your final judgment. Justify your decision by **explicitly weighing the investment's strengths (e.g., moat, valuation) against its weaknesses (e.g., risks, management).**
+
+- **Recommendation:** [Choose one: **Initiate a Position**, **Add to Watchlist**, **Pass**]
+- **Conviction Level:** [Choose one: **High**, **Medium**, **Low**]
+- **Key Monitoring Point (if Watchlist):** [If recommending 'Watchlist', state the single most important factor to monitor that would change the recommendation. E.g., "Two consecutive quarters of margin improvement."]
 `.trim();
 
 export const INDUSTRY_CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a discerning investment strategist focused on management quality, in the style of a shareholder letter from a firm like Constellation Software or Berkshire Hathaway.
-	Your task is to analyze the CEO and management team of {companyName} ({tickerSymbol}), focusing on their skill in capital allocation.
+	Act as a discerning investment strategist, channeling the analytical rigor and long-term perspective of firms like Berkshire Hathaway. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. **Be critical; praise should be reserved for exceptional, data-backed performance.**
+
 	Article Title: "The Capital Allocators: A Deep Dive into the Financial Stewardship of {companyName}'s Leadership"
-	1. The CEO's Philosophy:
-		○ Introduce the CEO and their stated approach to managing the company's capital. What do they prioritize?
-	2. The Track Record: Analyzing the Decisions
-		○ Analyze their capital allocation decisions over the last 5-10 years across three key areas:
-			§ Reinvestment in the Business: Have their internal investments (R&D, new factories) generated high returns on capital?
-			§ Acquisitions (M&A): Has their track record of buying other companies been successful and created value, or have they overpaid?
-			§ Returning Capital to Shareholders: How disciplined are they with stock buybacks (buying low) and dividend growth?
-	3. The Scorecard & Investment Thesis:
-		○ Provide an overall assessment of the management team's skill as capital allocators. Based on their track record, what is the investment thesis for trusting this team to wisely compound shareholder wealth for the future?
-When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
+
+	## 1. The CEO's Inferred Philosophy
+	**Instead of their stated approach, deduce their *actual* philosophy from the numbers.** Based on the flow of capital over the last decade, what do their actions reveal about their priorities? Do they favor aggressive growth, maintaining a fortress balance sheet, or maximizing shareholder returns?
+
+	## 2. A Quantitative Analysis of the Track Record
+	Analyze their capital allocation decisions over the last 5-10 years, using specific metrics to judge their effectiveness:
+
+	- **Reinvestment in the Business (The Primary Engine):**
+		- Analyze the trend in **Return on Invested Capital (ROIC)**. Is it consistently high and stable, or is it volatile or declining? **This is the single most important measure of internal investment skill.**
+		- Is the company's ROIC comfortably above its Weighted Average Cost of Capital (WACC)? **Value is only created when ROIC > WACC.**
+
+	- **Acquisitions (M&A):**
+		- Examine the company's **profit margins** and **ROIC** in the years immediately following major acquisitions. Did the deals enhance profitability (accretive) or dilute it (destructive)?
+		- Analyze the growth of **"goodwill"** on the balance sheet. A large increase in goodwill followed by stagnant or declining ROIC is a major red flag for overpayment ("diworsification").
+
+	- **Returning Capital to Shareholders:**
+		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?**
+		- **Dividends:** Analyze the **dividend payout ratio** against free cash flow. Is the dividend safely covered, and is its growth rational and sustainable?
+
+	## 3. Final Scorecard & Investment Thesis
+	- **Provide a final letter grade (A through F) for the management team's overall skill as capital allocators.** Justify this grade by summarizing the strongest and weakest points from your quantitative analysis above.
+	- Based on this track record, formulate a concise investment thesis. Why should (or shouldn't) an investor trust this team to be wise stewards of capital in the future?
+	- **Conclude with a "Key Risks & Red Flags" section**, highlighting any concerning trends (e.g., declining ROIC, value-destructive M&A, or ill-timed buybacks).
+
+	When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+
+	Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice. Readers should consult with a qualified financial professional before making any investment decisions.
 `;
 
 export const DISRUPTOR_ANALYSIS_PROMPT = `
 Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+
 For the {sectorName} sector, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Sub-Industry] Market"
+
 Your analysis must be structured as follows:
-1. Introduction: The Challenger Appears
 
+## 1. Introduction: The Challenger Appears
 Briefly introduce the company and its bold, simple mission. What industry is it targeting, and what fundamental problem is it solving?
-2. The Old Guard and The Opening
 
+## 2. The Old Guard and The Opening
 Who are the established, legacy competitors (the "Goliaths")? Briefly describe the "old way" of doing things in this market and explain what inefficiency, technological gap, or customer dissatisfaction created the opening for a disruptor.
-3. The Disruptor's Edge: The 'How'
 
+## 3. The Disruptor's Edge: The 'How'
 This is the core of the analysis. What is this company's unique advantage or "unfair" edge? Focus on one or two of the following:
-Technological Moat: Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
-Business Model Innovation: Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
-Go-to-Market Strategy: Are they acquiring customers in a novel, cheaper, or more efficient way than the incumbents?
-4. 'Hitting Their Stride': The Proof
+- **Technological Moat:** Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
+- **Business Model Innovation:** Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
+- **Network Effects:** **Is the product or service designed so that each new user adds value to the other users, creating a powerful, self-reinforcing moat?**
 
-Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully? (e.g., exponential revenue growth, accelerating customer adoption, major strategic partnerships, achieving positive cash flow, etc.).
-5. The Path to Dominance: The Future
+## 4. 'Hitting Their Stride': The Proof in the Numbers
+Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully?
+- **(e.g., Sustained YoY revenue growth > 40%, an attractive LTV/CAC ratio, Net Revenue Retention > 120% for SaaS models, or reaching positive operating cash flow).**
 
-What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles (e.g., competition waking up, regulatory threats, execution risk) that could derail their ascent?
-6. Investment Thesis Summary
+## 5. The Path to Dominance: The Future
+What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles that could derail their ascent?
+- **(e.g., Can incumbents leverage their scale and distribution to retaliate? Regulatory threats? Execution risk as the company scales?)**
 
-Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
+## 6. Valuation Context
+**Briefly comment on the company's valuation. Is it trading at a high multiple? If so, what is the justification (e.g., superior growth, higher margins)? This is not a price target, but a crucial context check on the current stock price.**
+
+## 7. Investment Thesis Summary
+Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, **why might it be a compelling idea now**, and what is the main risk to watch out for?
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
 export const INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT = `
-Act as a senior analyst for a a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+Act as a senior analyst for a forward-looking investment research publication like The Motley Fool or ARK Invest, known for identifying high-growth, innovative companies. Your new assignment is to write an article for your "Disruptor Deep Dive" series.
+
 For the {industryName} industry, your task is to identify one public company that perfectly fits the "disruptor" profile: it has already hit its stride with a proven product and significant traction, but it still has immense potential to disrupt the established leaders and redefine its industry.
+
 Article Title: "Disruptor Deep Dive: How [Company Name] is Rewriting the Rules of the [Industry] Market"
+
 Your analysis must be structured as follows:
-1. Introduction: The Challenger Appears
 
+## 1. Introduction: The Challenger Appears
 Briefly introduce the company and its bold, simple mission. What industry is it targeting, and what fundamental problem is it solving?
-2. The Old Guard and The Opening
 
+## 2. The Old Guard and The Opening
 Who are the established, legacy competitors (the "Goliaths")? Briefly describe the "old way" of doing things in this market and explain what inefficiency, technological gap, or customer dissatisfaction created the opening for a disruptor.
-3. The Disruptor's Edge: The 'How'
 
+## 3. The Disruptor's Edge: The 'How'
 This is the core of the analysis. What is this company's unique advantage or "unfair" edge? Focus on one or two of the following:
-Technological Moat: Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
-Business Model Innovation: Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
-Go-to-Market Strategy: Are they acquiring customers in a novel, cheaper, or more efficient way than the incumbents?
-4. 'Hitting Their Stride': The Proof
+- **Technological Moat:** Do they have proprietary technology, a unique platform, or a data advantage that is hard to replicate?
+- **Business Model Innovation:** Are they changing how the product/service is sold? (e.g., shifting to a subscription model, creating a marketplace, using a direct-to-consumer approach).
+- **Network Effects:** **Is the product or service designed so that each new user adds value to the other users, creating a powerful, self-reinforcing moat?**
 
-Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully? (e.g., exponential revenue growth, accelerating customer adoption, major strategic partnerships, achieving positive cash flow, etc.).
-5. The Path to Dominance: The Future
+## 4. 'Hitting Their Stride': The Proof in the Numbers
+Provide concrete evidence that this company is past the purely speculative stage. What are the key performance indicators (KPIs) that prove they are executing successfully?
+- **(e.g., Sustained YoY revenue growth > 40%, an attractive LTV/CAC ratio, Net Revenue Retention > 120% for SaaS models, or reaching positive operating cash flow).**
 
-What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles (e.g., competition waking up, regulatory threats, execution risk) that could derail their ascent?
-6. Investment Thesis Summary
+## 5. The Path to Dominance: The Future
+What is the long-term bull case? Analyze the Total Addressable Market (TAM) they are pursuing. What are the next steps in their strategy? What are the primary risks or hurdles that could derail their ascent?
+- **(e.g., Can incumbents leverage their scale and distribution to retaliate? Regulatory threats? Execution risk as the company scales?)**
 
-Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, and what is the main risk to watch out for?
+## 6. Valuation Context
+**Briefly comment on the company's valuation. Is it trading at a high multiple? If so, what is the justification (e.g., superior growth, higher margins)? This is not a price target, but a crucial context check on the current stock price.**
+
+## 7. Investment Thesis Summary
+Conclude with a concise summary for an investor. In 2-3 sentences, what is the core reason to be bullish on this company's long-term potential, **why might it be a compelling idea now**, and what is the main risk to watch out for?
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
+
 The tone should be insightful and optimistic about innovation, but grounded in business fundamentals and realistic about the challenges of disruption.
 `;
 
 export const MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
-	1. The Wave (The Macro Trend):
-		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
-	2. The 'Surfboard' (The Company):
-		- Within the {sectorName} sector, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
-	3. Quantifying the Tail-Wind:
-		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
-	4. Thesis Risks (When the Wave Breaks):
-		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
-	5. Conclusion: Investing in a Megatrend
-		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+
+## 1. The Wave (The Macro Trend)
+- Start by identifying and explaining one powerful, multi-year macro or societal trend (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of AI Compute).
+- Provide key data points on the size ($) and expected growth (CAGR) of this trend.
+
+## 2. The 'Surfboard' (The Best-in-Class Company)
+- Within the {sectorName} sector, identify one company that is a best-in-class, pure-play beneficiary of this macro wave, defined by its **market leadership, technological edge, and superior financial profile.**
+- **Business Model Alignment:** Explain exactly how the company's products or services are positioned to capture growth from this trend.
+- **Competitive Differentiation:** **Why is this company a better "surfboard" for this wave than its key rivals?**
+
+## 3. Quantifying the Tail-Wind
+- Based on financial reports and management commentary, **estimate the percentage of the company's revenue that is directly exposed to this trend.** How is this exposure trending over time?
+- **Find and quote management's most insightful public statement** regarding how they are capitalizing on this macro trend.
+
+## 4. Thesis Risks (When the Wave Breaks)
+- What could disrupt this thesis? Consider risks to the macro trend itself, competitive threats from new technology, and **valuation risk (i.e., is the powerful trend already fully priced into the stock?).**
+
+## 5. Conclusion: Investing in a Megatrend
+- Conclude with a summary of why owning this specific company is a **high-conviction** way for a long-term investor to gain direct exposure to this powerful, enduring global trend, despite the identified risks.
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 export const INDUSTRY_MACRO_PLAYBOOK_PROMPT = `
 Act as a thematic investment strategist for a global macro fund. You are authoring a new report for your "Macro Playbook" series.
-	1. The Wave (The Macro Trend):
-		- Start by identifying and explaining one powerful, multi-year macro or societal trend. (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of the Global Middle Class, The Aging Population). Provide data on the size and expected growth of this trend.
-	2. The 'Surfboard' (The Company):
-		- Within the {industryName} industry, identify 1 company that is a best-in-class, pure-play beneficiary of this macro wave. Explain why its business model is perfectly aligned to capture the growth from this trend.
-	3. Quantifying the Tail-Wind:
-		- How much of the company's current and projected revenue growth can be attributed directly to this macro trend? How does management talk about this trend in their investor presentations and earnings calls?
-	4. Thesis Risks (When the Wave Breaks):
-		- What could disrupt this thesis? Could the macro trend fizzle out, could government policy change, or could a new technology allow competitors to ride the wave more effectively?
-	5. Conclusion: Investing in a Megatrend
-		- Conclude with a summary of why owning this specific company is a smart and direct way for a long-term investor to gain exposure to this powerful, enduring global trend.
+
+## 1. The Wave (The Macro Trend)
+- Start by identifying and explaining one powerful, multi-year macro or societal trend (e.g., The Electrification of Everything, The On-Shoring of Manufacturing, The Rise of AI Compute).
+- Provide key data points on the size ($) and expected growth (CAGR) of this trend.
+
+## 2. The 'Surfboard' (The Best-in-Class Company)
+- Within the {industryName} industry, identify one company that is a best-in-class, pure-play beneficiary of this macro wave, defined by its **market leadership, technological edge, and superior financial profile.**
+- **Business Model Alignment:** Explain exactly how the company's products or services are positioned to capture growth from this trend.
+- **Competitive Differentiation:** **Why is this company a better "surfboard" for this wave than its key rivals?**
+
+## 3. Quantifying the Tail-Wind
+- Based on financial reports and management commentary, **estimate the percentage of the company's revenue that is directly exposed to this trend.** How is this exposure trending over time?
+- **Find and quote management's most insightful public statement** regarding how they are capitalizing on this macro trend.
+
+## 4. Thesis Risks (When the Wave Breaks)
+- What could disrupt this thesis? Consider risks to the macro trend itself, competitive threats from new technology, and **valuation risk (i.e., is the powerful trend already fully priced into the stock?).**
+
+## 5. Conclusion: Investing in a Megatrend
+- Conclude with a summary of why owning this specific company is a **high-conviction** way for a long-term investor to gain direct exposure to this powerful, enduring global trend, despite the identified risks.
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
 
 export const ONE_SHOT_INDUSTRY_TREND_PROMPT = `
-Role: You are an expert financial analyst AI. Your task is to write a detailed investment research report for a specific economic industry based on a provided list of companies and recent news articles.
+Role: You are an expert financial analyst AI. Your task is to write a detailed, **balanced** investment research report for a specific economic industry based on a provided list of companies and recent news articles.
 
 Task:
-You will be given a list of companies in the {industryName} industry and a list of recent news articles that may or may not be relevant to them.
+You will be given a list of companies in the {industryName} industry and a list of recent news articles.
 Your task is to generate a comprehensive markdown report by following these steps:
 
-1.  **Analyze and Synthesize:** Read all news articles and identify the most noteworthy trends, events, and narratives affecting the companies in the provided list.
-2.  **Rank Companies:** From your analysis, identify the Top 3-5 most favorably mentioned companies. Your ranking must be based on the significance (e.g., earnings reports, major partnerships > product updates) and positive sentiment of the news.
+1.  **Analyze and Synthesize:** Read all news articles to identify the most noteworthy trends, events, and narratives affecting the companies in the provided list. **Separate findings into positive (tailwinds) and negative (headwinds).**
+2.  **Identify Key Movers:** From your analysis, identify the **Top 3 most favorably mentioned** companies and the **1-2 companies facing the most significant headwinds**. Your ranking must be based on the significance and sentiment of the news.
 3.  **Generate Report:** Structure your output as a single, professional markdown report.
 
 Output Format:
-The report must start with an overall summary, followed by a deeper dive into the top companies you identified. For each catalyst you mention, you MUST append a source placeholder at the end of the line, like this: \`[Source: X]\`, where X is the \`articleIndex\` from the original news data JSON.
+The report must start with an overall summary, followed by a deeper dive into the key companies you identified. For each catalyst or event you mention, you MUST append a source placeholder like this: `[Source: X]`, where X is the `articleIndex` from the original news data JSON.
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
 ## AI-Powered Market Analysis: {industryName} Industry
 ### Overall Industry Outlook & Key Themes
-Provide a 2-3 sentence summary of the overall outlook for the {industryName} industry based on the collective news. Identify the most significant themes present (e.g., M&A activity, supply chain pressures, regulatory changes).
+Provide a summary of the overall outlook for the {industryName} industry.
+- **Key Tailwinds:** [Summarize the most significant positive themes from the news.]
+- **Key Headwinds:** [Summarize the most significant challenges or negative themes from the news.]
 
 ### Deeper Dive: Top Companies in the News
 For each of the top companies you identified:
 1.  Use its name and ticker as a sub-header (e.g., "### 1. NVIDIA Corp (NVDA)"). You will have to find the company name associated with the ticker from the news articles.
-2.  **Investment Thesis:** Write a concise, 2-3 sentence investment thesis summarizing why this company is currently viewed favorably based on the news.
+2.  **News-Driven Outlook:** Write a concise, 2-3 sentence summary explaining why this company is in the spotlight based on recent news.
 3.  **Positive Catalysts:** Create a bulleted list of the specific positive events or catalysts from the news. Remember to append the source placeholder for each point.
+
+### Companies Facing Headwinds
+*For the 1-2 companies you identified as facing challenges:*
+1.  Use its name and ticker as a sub-header (e.g., "### ACME Corp (ACME)").
+2.  **Summary of Challenges:** Write a 1-2 sentence summary of the key issues or negative events affecting the company according to the news.
+3.  **Negative Catalysts:** Create a bulleted list of the specific negative events. Remember to append the source placeholder for each point.
+
+**Disclaimer:** This report is an AI-generated synthesis of public news articles and is for informational purposes only. It does not constitute financial advice.
 
 --- END OF REPORT ---
 
@@ -699,105 +817,193 @@ News Articles JSON Data:
 
 export const FORTRESS_ANALYSIS_PROMPT = `
 Act as a conservative, risk-averse investment analyst. Your goal is to identify an "all-weather" business within the {contextName} {contextType} that is built for resilience.
-Article Title: "The Fortress: Why [Company Name] Is Built to Withstand the Economic Storm"
+
+Article Title: "The Fortress: Why [Company Name] Is Built to Withstand Any Economic Storm"
+
 Your analysis must be structured as follows:
-1. The Economic Storm:
-   - Define a hypothetical adverse economic scenario (e.g., a period of high inflation and low consumer spending).
-2. The Fortress:
-   - Within the {contextName} {contextType}, identify one public company that appears structurally resilient to this storm.
-3. Analyzing the Defenses:
-   - Inelastic Demand: Does the company sell a product or service that customers need, regardless of the economic climate?
-   - Pricing Power: Does its brand or market position allow it to pass on cost increases to customers, protecting its margins?
-   - Impenetrable Balance Sheet: Analyze its debt levels. Does it have a strong cash position to survive a downturn and perhaps even acquire weaker rivals?
-4. The Long-Term Compounding Thesis:
-   - Conclude by summarizing why this company's resilience makes it a prime candidate to not just survive but thrive over a multi-decade timeline, steadily compounding wealth for patient investors.
+
+## 1. The Economic Storm
+- Define a specific, adverse economic scenario to test our thesis (e.g., a "stagflation" environment with high inflation and stagnant growth).
+
+## 2. The Fortress
+- Within the {contextName} {contextType}, identify one public company that appears structurally resilient to this storm.
+
+## 3. Analyzing the Defenses: A Four-Pillar Framework
+- **Pillar 1: Inelastic Demand:** Does the company sell a product or service that customers **need**, not just want, regardless of the economic climate?
+
+- **Pillar 2: Pricing Power:** Does its brand or market position allow it to pass on cost increases to customers? **Look for proof in its stable or expanding Gross Profit Margins over time.**
+
+- **Pillar 3: Impenetrable Balance Sheet:** Analyze its debt levels (**Debt-to-Equity ratio**) and cash generation (**Free Cash Flow**). Is its balance sheet a source of strength that could allow it to survive a downturn and acquire weaker rivals?
+
+- **Pillar 4: Disciplined Stewardship:** Does the management team have a **proven track record of conservative financial management**, as evidenced by the strong balance sheet and consistent profitability?
+
+## 4. The Price of Safety: Valuation
+- A fortress is only a good investment if you don't overpay for it. Briefly comment on the company's valuation. Does its current stock price offer a reasonable **margin of safety**, or is its quality fully recognized with a premium valuation?
+
+## 5. The Long-Term Compounding Thesis
+- Conclude by summarizing why this company's combination of a **defensive business model, pristine financials, disciplined management, and a reasonable valuation** makes it a prime candidate to not just survive but thrive, steadily compounding wealth for patient, long-term investors.
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 export const PHOENIX_ANALYSIS_PROMPT = `
 Act as a special situations analyst looking for high-risk, high-reward opportunities. Your goal is to analyze a potential turnaround story.
+
 Article Title: "The Phoenix: Analyzing the Potential Turnaround of [Company Name]"
+
 Your analysis must be structured as follows:
-1. The Fall From Grace:
-   - Identify a company in the {contextName} {contextType} that has stumbled. Briefly describe its past troubles (e.g., lost market share, failed product, crushing debt).
-2. The Catalyst for Change:
-   - Identify the single most important catalyst driving the potential turnaround (e.g., new CEO, strategic pivot, new product).
-3. The "Green Shoots" (Finding the Proof):
-   - Search for early, quantifiable evidence that the turnaround is taking hold. Look for improving profit margins, debt reduction, positive free cash flow, or renewed revenue growth.
-4. The Rebirth Thesis & The Risks:
-   - Summarize the bull case for why the company could be a multi-bagger if the turnaround succeeds.
-   - Crucially, also outline the major risks and what could cause the "Phoenix" to turn back to ash.
+
+## 1. The Fall From Grace
+- Identify a company in the {contextName} {contextType} that has stumbled. Briefly describe its past troubles (e.g., lost market share, a failed strategy, or crushing debt).
+
+## 2. The Catalyst for Change
+- Identify the single most important catalyst driving the potential turnaround (e.g., a new CEO with a proven track record, a strategic divestiture, or a new blockbuster product).
+- **If the catalyst is new leadership, briefly comment on their background and past successes.**
+
+## 3. The Turnaround Plan & Early "Green Shoots"
+- **Financial Runway:** First, does the company have the financial resources to **survive** long enough for the turnaround to work? Analyze its cash position and debt maturity schedule.
+- **Early Evidence:** Search for early, quantifiable evidence ("green shoots") that the turnaround plan is taking hold. Look for improving profit margins, debt reduction, positive free cash flow, or renewed revenue growth.
+
+## 4. The Valuation Opportunity
+- The essence of a turnaround investment is buying at a point of maximum pessimism. **Is the company's stock still trading at a deeply discounted valuation multiple (e.g., low Price-to-Sales or Price-to-Book) that reflects its past troubles rather than its future potential?**
+
+## 5. The Asymmetric Bet: Rebirth Thesis & Risks
+- **The Bull Case:** Summarize the thesis for why the company could be a "multi-bagger" if the turnaround succeeds. What could the business look like in 3-5 years?
+- **The Bear Case:** Crucially, outline the major risks. **What is the single most important "make-or-break" factor that could cause the "Phoenix" to turn back to ash?**
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 export const PICK_AND_SHOVEL_PROMPT = `
 Act as an investment analyst specializing in identifying indirect beneficiaries of major economic trends.
+
 Article Title: "The 'Pick and Shovel' Play: How [Company Name] is Powering the [Trend Name] Gold Rush"
+
 Your analysis must be structured as follows:
-1. The Gold Rush:
-   - Define the major trend or "gold rush" sweeping through the {contextName} {contextType} (e.g., the build-out of AI data centers, the transition to electric vehicles, the revolution in gene editing).
-2. The "Pick and Shovel" Provider:
-   - Identify a company within the {contextName} {contextType} that doesn't make the end product but provides a critical component, technology, or service to the companies that do.
-3. The Tollbooth Thesis:
-   - Explain why this company's business model acts like a tollbooth on the industry's growth highway. Why does it win regardless of which specific competitor comes out on top?
-4. Quantifying the Tailwind:
-   - How is the "gold rush" showing up in the company's results? Is its revenue growth tied directly to the industry's expansion?
-5. Investment Outlook:
-   - Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme for the long run.
+
+## 1. The Gold Rush
+- Define the major trend or "gold rush" sweeping through the {contextName} {contextType} (e.g., the build-out of AI data centers, the transition to electric vehicles).
+
+## 2. The "Pick and Shovel" Provider
+- Identify a company within the {contextName} {contextType} that doesn't make the end product but provides a critical component, technology, or service to the companies that do.
+
+## 3. The Tollbooth Thesis
+- Explain why this company's business model acts like a tollbooth on the industry's growth highway.
+- **Competitive Position:** **Is this a monopoly, an oligopoly, or just one of many suppliers? What is its market share, and what protects it from competition?**
+
+## 4. Quantifying the Tailwind
+- How is the "gold rush" showing up in the company's results? **Look for evidence in accelerating revenue growth, expanding margins, and management commentary about demand.**
+
+## 5. Risks to the Thesis
+- **What are the primary risks to this investment?** Consider factors like:
+    - **Trend Risk:** What if the "gold rush" slows down or fizzles out?
+    - **Technological Risk:** Could a new technology make their "picks and shovels" obsolete?
+    - **Valuation Risk:** Is the company's strategic position already fully priced into the stock?
+
+## 6. Investment Outlook
+- Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme, **after considering the risks and valuation.**
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 export const LINCHPIN_ANALYSIS_PROMPT = `
 Act as a business strategist focused on identifying companies with deep, structural competitive advantages.
+
 Article Title: "The Linchpin: How [Company Name] Dominates the [Industry] Supply Chain"
+
 Your analysis must be structured as follows:
-1. Mapping the Value Chain:
-   - Briefly describe the key steps required to bring the {contextName} {contextType}'s product or service to market.
-2. The Linchpin Company:
-   - Identify one public company within the {contextName} {contextType} that represents a critical, non-negotiable step in this chain.
-3. The Choke Point Moat:
-   - Analyze the source of its power. Is it due to unique IP, immense economies of scale, or prohibitively high switching costs for its customers?
-4. The Investment Case:
-   - Conclude by explaining why this "linchpin" status translates into predictable, long-term profitability and makes the company a cornerstone of its industry, and therefore a potentially excellent long-term holding.
+
+## 1. Mapping the Value Chain
+- Briefly describe the key steps required to bring the {contextName} {contextType}'s product or service to market (e.g., design -> manufacturing -> logistics -> sales).
+
+## 2. The Linchpin Company
+- Identify one public company within the {contextName} {contextType} that represents a critical, non-negotiable step in this chain.
+
+## 3. The Choke Point Moat
+- Analyze the source of its power. Is it due to unique IP, immense economies of scale, or prohibitively high switching costs for its customers?
+- **Find the proof in the numbers:** A true linchpin should exhibit **sustainably high and stable profit margins (Operating Margin, Net Margin)** and **Return on Invested Capital (ROIC)** that are superior to other companies in the value chain.
+
+## 4. Threats to the Linchpin
+- **Every fortress is under potential siege. What are the primary threats to this company's choke point position?** Consider **technological disruption, regulatory risk, or large customers attempting to vertically integrate or design around them.**
+
+## 5. The Price of Power: Valuation
+- Does the market already recognize this company's dominant position? Briefly comment on its valuation. **Is it trading at a premium multiple, and is that premium justified by its strategic importance and financial superiority?**
+
+## 6. The Investment Case
+- Conclude by explaining why this "linchpin" status—**supported by strong financial metrics and after considering the risks**—translates into predictable, long-term profitability, making it a potential cornerstone holding for a patient investor.
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 export const HIDDEN_VALUE_PROMPT = `
 Act as a value investor and activist analyst, searching for hidden value in complex companies.
+
+**Note:** This analysis is data-intensive. The quality of the output depends on the availability of public financial data for the company's individual business segments.
+
 Article Title: "Hidden Value: A Sum-of-the-Parts Investigation of [Company Name]"
+
 Your analysis must be structured as follows:
-1. The Misunderstood Giant:
-   - Introduce a large, multi-divisional company in the {contextName} {contextType} that may be subject to a "conglomerate discount."
-2. Breaking Down the Empire:
-   - Identify and describe the company's primary business segments. For each, identify its pure-play competitors.
-3. Valuing the Pieces:
-   - For each major segment, apply a reasonable valuation multiple (e.g., Price/Sales or EV/EBITDA) based on its publicly-traded competitors.
-4. The Sum-of-the-Parts (SOTP) Calculation:
-   - Add up the estimated values of all segments and subtract net debt to arrive at a theoretical "unlocked" equity value.
-5. The Value Thesis and Potential Catalysts:
-   - Compare the SOTP value to the current market cap. If there's a significant discount, discuss what future events (e.g., spinoffs) could unlock this value for shareholders.
+
+## 1. The Misunderstood Giant
+- Introduce a large, multi-divisional company in the {contextName} {contextType} that you believe the market misunderstands and may be subject to a "conglomerate discount."
+
+## 2. Breaking Down the Empire
+- Identify and describe the company's primary business segments. For each, identify its key pure-play competitors.
+
+## 3. Valuing the Pieces
+- For each major segment, apply a reasonable valuation multiple (e.g., Price/Sales or EV/EBITDA) based on its publicly-traded competitors.
+- **You MUST briefly justify the choice of multiple for each segment** (e.g., "EV/EBITDA is appropriate for this mature, cash-flowing business, while Price/Sales is better for the high-growth, unprofitable division.").
+
+## 4. The Sum-of-the-Parts (SOTP) Calculation
+- Add up the estimated values of all segments.
+- **From this total, subtract a capitalized value for unallocated corporate costs (the "conglomerate drag").**
+- Finally, subtract the company's net debt to arrive at a theoretical "unlocked" equity value and a per-share SOTP target price.
+
+## 5. Risks to the Thesis
+- What could prevent this "hidden value" from being realized? Discuss the primary risks:
+    - **Catalyst Risk:** Is management entrenched and unlikely to pursue spin-offs?
+    - **Execution Risk:** Could a breakup be messy, costly, or destroy hidden synergies?
+    - **Valuation Risk:** Are the chosen peer multiples at a cyclical peak, potentially inflating the SOTP value?
+
+## 6. The Activist Playbook: Unlocking Value
+- Compare your SOTP value to the current market cap. If there's a significant discount, summarize the activist thesis.
+- What are the **specific catalysts (e.g., spin-offs, divestitures, a new management team)** that could unlock this value for shareholders?
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 export const UNTOUCHABLES_ANALYSIS_PROMPT = `
 Act as a brand strategist and long-term investor, analyzing companies with powerful, "cult-like" brands.
+
 Article Title: "The Untouchables: Deconstructing [Company Name]'s 'Cult' Brand Moat"
+
 Your analysis must be structured as follows:
-1. The Icon:
-   - Identify a company in the {contextName} {contextType} famous for its powerful brand and devoted following.
-2. Anatomy of Devotion:
-   - Analyze the sources of this intense customer loyalty (e.g., identity/aspiration, superior design/UX, unwavering trust).
-3. The Financial Fingerprint of a Great Brand:
-   - Find proof of the brand's power in the financials. Look for sustainably high gross margins, low S&M spend as a % of revenue, and high rates of recurring revenue.
-4. The Long-Term Investment Thesis:
-   - Conclude by explaining why this powerful brand is a durable competitive advantage that is extremely difficult for a rival to replicate, leading to predictable long-term profits.
+
+## 1. The Icon
+- Identify a company in the {contextName} {contextType} famous for its powerful brand and devoted following.
+
+## 2. Anatomy of Devotion
+- Analyze the sources of this intense customer loyalty. Is it rooted in **creating a sense of identity/aspiration, delivering a superior and consistent user experience, or earning unwavering trust through quality?**
+
+## 3. The Financial Proof of a Great Brand
+- Find proof of the brand's power in the financials. Look for:
+    - **Sustainably high gross margins** (evidence of pricing power).
+    - **Low Sales & Marketing spend as a % of revenue** (the brand does the selling for them).
+    - **High rates of recurring or repeat revenue.**
+
+## 4. The Achilles' Heel: Risks to the Brand
+- Even the strongest brands are not invincible. What are the primary threats to this company's brand moat? Consider risks like:
+    - **Reputational Damage:** Could a major scandal or product failure break customer trust?
+    - **Cultural Shifts:** Could the brand fall out of touch with the next generation?
+    - **Technological Disruption:** Could a new technology make their product category less relevant?
+
+## 5. The Price of Perfection: Valuation
+- The market is rarely blind to a great brand. Briefly comment on the company's valuation. **Is it trading at a significant premium to its peers and the broader market? Is that premium justified by its superior profitability and growth prospects?**
+
+## 6. The Long-Term Investment Thesis
+- Conclude by explaining why this powerful brand—**validated by its financial performance and after considering the risks and valuation**—creates a durable competitive advantage that is extremely difficult to replicate, leading to predictable long-term profits.
+
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
-Crucial Disclaimer: This article is for informational purposes only and should not be considered financial advice.
 `;
 
 
