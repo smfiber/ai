@@ -116,7 +116,7 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const flowedDraft = await callGeminiApi(flowPrompt);
 
     updateLoadingMessage("Adding final flair...");
-    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
+    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowDraft}`;
     const finalArticle = await callGeminiApi(flairPrompt);
 
     return finalArticle;
@@ -131,13 +131,19 @@ export async function getFmpStockData(symbol) {
         return null;
     }
 
-    const allData = { cachedAt: null };
+    const stockData = { cachedAt: null };
     let latestTimestamp = null;
 
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
-        const endpointName = docSnap.id.toLowerCase().replace(/\s+/g, '_');
-        allData[endpointName] = docData.data;
+        const endpointData = docData.data;
+
+        // Merge properties into the main stockData object
+        if (Array.isArray(endpointData) && endpointData.length > 0) {
+            Object.assign(stockData, endpointData[0]); // Merge the first object of the array
+        } else if (typeof endpointData === 'object' && endpointData !== null) {
+            Object.assign(stockData, endpointData); // Merge if it's a single object
+        }
 
         if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
@@ -146,8 +152,8 @@ export async function getFmpStockData(symbol) {
         }
     });
 
-    allData.cachedAt = latestTimestamp;
-    return allData;
+    stockData.cachedAt = latestTimestamp;
+    return stockData;
 }
 
 // --- GOOGLE DRIVE FUNCTIONS ---
