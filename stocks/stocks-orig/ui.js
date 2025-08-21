@@ -1,4 +1,4 @@
-import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT } from './config.js';
+import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, MANAGEMENT_SCORECARD_PROMPT, COMPETITIVE_LANDSCAPE_PROMPT, NARRATIVE_CATALYST_PROMPT, INVESTMENT_MEMO_PROMPT } from './config.js';
 import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -11,7 +11,11 @@ const promptMap = {
     'DividendSafety': DIVIDEND_SAFETY_PROMPT,
     'GrowthOutlook': GROWTH_OUTLOOK_PROMPT,
     'RiskAssessment': RISK_ASSESSMENT_PROMPT,
-    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT
+    'CapitalAllocators': CAPITAL_ALLOCATORS_PROMPT,
+    'ManagementScorecard': MANAGEMENT_SCORECARD_PROMPT,
+    'CompetitiveLandscape': COMPETITIVE_LANDSCAPE_PROMPT,
+    'NarrativeCatalyst': NARRATIVE_CATALYST_PROMPT,
+    'InvestmentMemo': INVESTMENT_MEMO_PROMPT
 };
 
 // v13.1.0: Icons for stock-specific analysis tiles
@@ -23,7 +27,11 @@ const ANALYSIS_ICONS = {
     'DividendSafety': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m15 0a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25" /></svg>`,
     'GrowthOutlook': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>`,
     'RiskAssessment': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>`,
-    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`
+    'CapitalAllocators': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 15.91a2.25 2.25 0 01-3.182 0l-3.03-3.03a.75.75 0 011.06-1.061l2.47 2.47 2.47-2.47a.75.75 0 011.06 1.06l-3.03 3.03z" /></svg>`,
+    'ManagementScorecard': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 21v-4.5c0-1.105-1.12-2-2.5-2h-5C6.12 14.5 5 15.395 5 16.5V21" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a4 4 0 100-8 4 4 0 000 8z" /></svg>`,
+    'CompetitiveLandscape': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a5.25 5.25 0 015.25 5.25H6.75a5.25 5.25 0 015.25-5.25z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75V15m0 6.75a.75.75 0 100-1.5.75.75 0 000 1.5z" /><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5" /></svg>`,
+    'NarrativeCatalyst': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.62a8.983 8.983 0 013.362-3.867 8.262 8.262 0 013 2.456z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`,
+    'InvestmentMemo': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`
 };
 
 // --- UTILITY & SECURITY HELPERS ---
@@ -540,25 +548,37 @@ async function openRawDataViewer(ticker) {
 
         // Build AI buttons
         const buttons = [
-            { reportType: 'FinancialAnalysis', text: 'Financial Analysis' },
-            { reportType: 'UndervaluedAnalysis', text: 'Undervalued' },
-            { reportType: 'BullVsBear', text: 'Bull vs. Bear' },
-            { reportType: 'MoatAnalysis', text: 'Moat Analysis' },
-            { reportType: 'DividendSafety', text: 'Dividend Safety' },
-            { reportType: 'GrowthOutlook', text: 'Growth Outlook' },
-            { reportType: 'RiskAssessment', text: 'Risk Assessment' },
-            { reportType: 'CapitalAllocators', text: 'Capital Allocators' }
+            { reportType: 'FinancialAnalysis', text: 'Financial Analysis', tooltip: 'Deep dive into financial statements, ratios, and health.' },
+            { reportType: 'UndervaluedAnalysis', text: 'Undervalued', tooltip: 'Assess if the stock is a potential bargain based on valuation metrics.' },
+            { reportType: 'BullVsBear', text: 'Bull vs. Bear', tooltip: 'Presents both the positive and negative investment arguments.' },
+            { reportType: 'MoatAnalysis', text: 'Moat Analysis', tooltip: 'Evaluates the company\'s competitive advantages.' },
+            { reportType: 'DividendSafety', text: 'Dividend Safety', tooltip: 'Checks the sustainability of the company\'s dividend payments.' },
+            { reportType: 'GrowthOutlook', text: 'Growth Outlook', tooltip: 'Analyzes the company\'s future growth potential.' },
+            { reportType: 'RiskAssessment', text: 'Risk Assessment', tooltip: 'Identifies potential financial, market, and business risks.' },
+            { reportType: 'CapitalAllocators', text: 'Capital Allocators', tooltip: 'Assesses management\'s skill in deploying capital.' },
+            { reportType: 'ManagementScorecard', text: 'Management', tooltip: 'Scores the quality and alignment of the leadership team.' },
+            { reportType: 'CompetitiveLandscape', text: 'Competition', tooltip: 'Compares the company against its industry peers.' },
+            { reportType: 'NarrativeCatalyst', text: 'Catalysts', tooltip: 'Identifies the investment story and future catalysts.' }
         ];
         
         aiButtonsContainer.innerHTML = buttons.map(btn => {
             const hasSaved = savedReportTypes.has(btn.reportType) ? 'has-saved-report' : '';
             const icon = ANALYSIS_ICONS[btn.reportType] || '';
-            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}">
+            return `<button data-symbol="${ticker}" data-report-type="${btn.reportType}" class="ai-analysis-button analysis-tile ${hasSaved}" data-tooltip="${btn.tooltip}">
                         ${icon}
                         <span class="tile-name">${btn.text}</span>
                     </button>`
         }).join('');
         
+        // Add the special Investment Memo button
+        aiButtonsContainer.innerHTML += `
+            <div class="w-full border-t my-4"></div>
+            <button data-symbol="${ticker}" id="investment-memo-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg" data-tooltip="Synthesizes all other reports into a final verdict. Requires all other analyses to be saved first.">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Generate Investment Committee Memo
+            </button>
+        `;
+
         // Render the new company profile section
         const imageUrl = get(fmpData, 'company_profile_data.0.image', '');
         const description = get(fmpData, 'company_profile_data.0.description', 'No description available.');
@@ -1349,6 +1369,10 @@ export function setupEventListeners() {
                 handleAnalysisRequest(symbol, reportType, promptTemplate);
             }
         }
+        
+        if (target.id === 'investment-memo-button') {
+            handleInvestmentMemoRequest(symbol);
+        }
     });
 	
 	document.getElementById('manageBroadEndpointsModal')?.addEventListener('click', (e) => {
@@ -1996,6 +2020,64 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         if (forceNew || (await getSavedReports(symbol, reportType)).length === 0) {
             closeModal(CONSTANTS.MODAL_LOADING);
         }
+    }
+}
+
+async function handleInvestmentMemoRequest(symbol) {
+    const contentContainer = document.getElementById('ai-article-container');
+    const statusContainer = document.getElementById('report-status-container-ai');
+    contentContainer.innerHTML = '';
+    statusContainer.classList.add('hidden');
+
+    openModal(CONSTANTS.MODAL_LOADING);
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+
+    try {
+        loadingMessage.textContent = "Gathering all latest analysis reports from the database...";
+        const reportTypes = [
+            'FinancialAnalysis', 'UndervaluedAnalysis', 'BullVsBear', 'MoatAnalysis', 
+            'DividendSafety', 'GrowthOutlook', 'RiskAssessment', 'CapitalAllocators',
+            'ManagementScorecard', 'CompetitiveLandscape', 'NarrativeCatalyst'
+        ];
+
+        const reportPromises = reportTypes.map(type => getSavedReports(symbol, type).then(reports => reports[0])); // Get only the latest
+        const allLatestReports = await Promise.all(reportPromises);
+
+        const foundReports = allLatestReports.filter(Boolean); // Filter out any undefined/null reports
+        const missingReports = reportTypes.filter((type, index) => !allLatestReports[index]);
+
+        if (missingReports.length > 0) {
+            throw new Error(`Cannot generate memo. Please generate and save the following reports first: ${missingReports.join(', ')}`);
+        }
+
+        loadingMessage.textContent = "Synthesizing reports into a final memo...";
+        
+        let allAnalysesData = foundReports.map(report => {
+            const reportTitle = report.content.match(/#\s*(.*)/)?.[1] || report.reportType;
+            return `--- REPORT: ${reportTitle} ---\n\n${report.content}\n\n`;
+        }).join('\n');
+        
+        const data = await getFmpStockData(symbol);
+        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+
+        const prompt = INVESTMENT_MEMO_PROMPT
+            .replace(/{companyName}/g, companyName)
+            .replace(/{tickerSymbol}/g, symbol)
+            .replace('{allAnalysesData}', allAnalysesData);
+
+        const memoContent = await generatePolishedArticle(prompt, loadingMessage);
+        displayReport(contentContainer, memoContent);
+        
+        // Since this is a unique, synthesized report, we don't show versioning for it.
+        statusContainer.innerHTML = `<span class="text-sm font-semibold text-green-800">Investment Memo generated successfully.</span>`;
+        statusContainer.classList.remove('hidden');
+
+    } catch (error) {
+        console.error("Error generating investment memo:", error);
+        displayMessageInModal(`Could not generate memo: ${error.message}`, 'error');
+        contentContainer.innerHTML = `<p class="text-red-500">Failed to generate memo: ${error.message}</p>`;
+    } finally {
+        closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
 
