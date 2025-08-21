@@ -1203,11 +1203,9 @@ function setupGlobalEventListeners() {
             modal.dataset.contextType = 'sector';
             modal.dataset.reportType = promptName;
             
-            if (button.classList.contains('has-saved-report')) {
-                handleBroadAnalysisRequest(sector, 'sector', promptName, true);
-            } else {
-                handleBroadAnalysisRequest(sector, 'sector', promptName, false);
-            }
+            // FIX: Always call with forceNew = false when a user clicks a tile.
+            // The handleBroadAnalysisRequest function will correctly check for saved reports.
+            handleBroadAnalysisRequest(sector, 'sector', promptName, false);
         }
     });
 
@@ -1224,11 +1222,8 @@ function setupGlobalEventListeners() {
             modal.dataset.contextType = 'industry';
             modal.dataset.reportType = promptName;
 
-            if (button.classList.contains('has-saved-report')) {
-                handleBroadAnalysisRequest(industry, 'industry', promptName, true);
-            } else {
-                handleBroadAnalysisRequest(industry, 'industry', promptName, false);
-            }
+            // FIX: Always call with forceNew = false when a user clicks a tile.
+            handleBroadAnalysisRequest(industry, 'industry', promptName, false);
         }
     });
 
@@ -1738,7 +1733,8 @@ export async function displayIndustryScreener() {
         const url = `https://financialmodelingprep.com/api/v3/industries-list?apikey=${state.fmpApiKey}`;
         const industryData = await callApi(url);
         if (Array.isArray(industryData)) {
-            state.availableIndustries = industryData.map(item => item.industry).sort();
+            // FIX: Handle both object array and string array formats from the API.
+            state.availableIndustries = industryData.map(item => (typeof item === 'object' && item.industry) ? item.industry : item).filter(Boolean).sort();
             renderIndustryButtons();
         }
     } catch (error) {
