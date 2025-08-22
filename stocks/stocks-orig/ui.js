@@ -157,7 +157,7 @@ export function openSessionLogModal() {
     openModal(CONSTANTS.MODAL_SESSION_LOG);
 }
 
-// --- FMP API INTEGRATION & MANAGEMENT (MOVED FROM API.JS)---
+// --- FMP API INTEGRATION & MANAGEMENT ---
 async function handleRefreshFmpData(symbol) {
     if (!state.fmpApiKey) {
         displayMessageInModal("Financial Modeling Prep API Key is required for this feature.", "warning");
@@ -165,52 +165,57 @@ async function handleRefreshFmpData(symbol) {
     }
 
     openModal(CONSTANTS.MODAL_LOADING);
-    document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching all FMP data for ${symbol}...`;
+    const loadingMessage = document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE);
+    loadingMessage.textContent = `Fetching all FMP data for ${symbol}...`;
 
     try {
-        const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
-        if (endpointsSnapshot.empty) {
-            throw new Error("No FMP endpoints configured. Please add endpoints via the manager.");
-        }
+        const coreEndpoints = [
+            { name: 'profile', path: 'profile' },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5' },
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5' },
+            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5' },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5' }
+        ];
 
-        const endpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         let successfulFetches = 0;
 
-        for (const endpoint of endpoints) {
-            if (!endpoint.url_template || !endpoint.name) continue;
-
-            document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Fetching FMP Data: ${endpoint.name}...`;
-            
-            const url = endpoint.url_template
-                .replace('${symbol}', symbol)
-                .replace('${fmpApiKey}', state.fmpApiKey);
-            
+        // Fetch core historical and profile data
+        for (const endpoint of coreEndpoints) {
+            loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
+            const url = `https://financialmodelingprep.com/api/v3/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             const data = await callApi(url);
 
             if (!data || (Array.isArray(data) && data.length === 0)) {
-                 console.warn(`No data returned from FMP for endpoint: ${endpoint.name}`);
-                 continue;
+                console.warn(`No data returned from FMP for core endpoint: ${endpoint.name}`);
+                continue;
             }
 
-            const dataToCache = {
-                cachedAt: Timestamp.now(),
-                data: data
-            };
-
-            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
-            await setDoc(docRef, dataToCache);
-            
-            const endpointDocRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, endpoint.id);
-            await updateDoc(endpointDocRef, {
-                usageCount: increment(1)
-            });
-
+            const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.name);
+            await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
             successfulFetches++;
         }
         
-        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s). You can now view it.`, 'info');
+        // Fetch user-defined endpoints
+        const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+        if (!endpointsSnapshot.empty) {
+            const userEndpoints = endpointsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            for (const endpoint of userEndpoints) {
+                 if (!endpoint.url_template || !endpoint.name) continue;
+                loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name}...`;
+                const url = endpoint.url_template.replace('${symbol}', symbol).replace('${fmpApiKey}', state.fmpApiKey);
+                const data = await callApi(url);
+
+                if (data && (!Array.isArray(data) || data.length > 0)) {
+                    const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints', endpoint.id);
+                    await setDoc(docRef, { cachedAt: Timestamp.now(), data: data });
+                    await updateDoc(doc(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS, endpoint.id), { usageCount: increment(1) });
+                    successfulFetches++;
+                }
+            }
+        }
         
-        await fetchAndCachePortfolioData();
+        displayMessageInModal(`Successfully fetched and updated data for ${successfulFetches} FMP endpoint(s).`, 'info');
+        await fetchAndCachePortfolioData(); // Refresh portfolio cache which might contain new FMP data references
 
     } catch (error) {
         console.error("Error fetching FMP data:", error);
@@ -251,8 +256,8 @@ async function _renderGroupedStockList(container, stocksWithData, listType) {
                     <ul class="divide-y divide-gray-200">`;
         
         stocks.forEach(stock => {
-            const fmp = stock.fmpData;
-            const refreshedAt = fmp.cachedAt ? fmp.cachedAt.toDate().toLocaleString() : 'N/A';
+            const profile = stock.fmpData?.profile?.[0] || {};
+            const refreshedAt = stock.fmpData?.cachedAt ? stock.fmpData.cachedAt.toDate().toLocaleString() : 'N/A';
 
             html += `
                 <li class="dashboard-list-item-detailed">
@@ -523,7 +528,8 @@ async function openRawDataViewer(ticker) {
         }
 
         const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
-
+        const profile = fmpData?.profile?.[0] || {};
+        
         titleEl.textContent = `Analysis for ${ticker}`;
 
         // Build nested accordions for raw data
@@ -534,7 +540,7 @@ async function openRawDataViewer(ticker) {
             for (const key of sortedKeys) {
                 accordionHtml += `
                     <details class="mb-2 bg-white rounded-lg border">
-                        <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${sanitizeText(key)}</summary>
+                        <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${sanitizeText(key.replace(/_/g, ' '))}</summary>
                         <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(JSON.stringify(groupedFmpData[key], null, 2))}</pre>
                     </details>
                 `;
@@ -578,11 +584,11 @@ async function openRawDataViewer(ticker) {
         `;
 
         // Render the new company profile section
-        const imageUrl = fmpData.image || '';
-        const description = fmpData.description || 'No description available.';
-        const exchange = fmpData.exchange || 'N/A';
-        const sector = fmpData.sector || 'N/A';
-        const filingsUrl = fmpData.secFilingsUrl || '';
+        const imageUrl = profile.image || '';
+        const description = profile.description || 'No description available.';
+        const exchange = profile.exchange || 'N/A';
+        const sector = profile.sector || 'N/A';
+        const filingsUrl = profile.secFilingsUrl || '';
 
         let profileHtml = '<div class="mt-6 border-t pt-4">';
         if (imageUrl) {
@@ -716,7 +722,8 @@ async function handleFetchNews(symbol) {
 
     try {
         const stockData = await getFmpStockData(symbol);
-        const companyName = stockData.companyName || symbol;
+        const profile = stockData?.profile?.[0] || {};
+        const companyName = profile.companyName || symbol;
         const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
         
         const newsData = await callApi(url);
@@ -783,11 +790,12 @@ export function renderSectorButtons() {
 }
 
 function renderOverviewCard(data, symbol, status) {
-    if (!data.symbol) return '';
+    const profile = data.profile?.[0] || {};
+    if (!profile.symbol) return '';
 
-    const price = data.price || 0;
-    const change = data.change || 0;
-    const changePercent = data.changesPercentage || 0;
+    const price = profile.price || 0;
+    const change = profile.change || 0;
+    const changePercent = profile.changesPercentage || 0;
     const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
     const changeSign = change >= 0 ? '+' : '';
 
@@ -798,12 +806,12 @@ function renderOverviewCard(data, symbol, status) {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
     }
 
-    const marketCap = formatLargeNumber(data.mktCap);
-    const netIncome = data.netIncome || 0;
-    const peRatio = (data.mktCap && netIncome && netIncome > 0) ? (data.mktCap / netIncome).toFixed(2) : 'N/A';
+    const marketCap = formatLargeNumber(profile.mktCap);
+    const keyMetricsLatest = data.key_metrics_annual?.[0] || {};
+    const peRatio = keyMetricsLatest.peRatio ? keyMetricsLatest.peRatio.toFixed(2) : 'N/A';
     
-    const sma50 = data.priceAvg50 || 'N/A';
-    const sma200 = data.priceAvg200 || 'N/A';
+    const sma50 = profile.priceAvg50 || 'N/A';
+    const sma200 = profile.priceAvg200 || 'N/A';
     
     const fmpTimestampString = data.cachedAt ? `FMP Data Stored On: ${data.cachedAt.toDate().toLocaleDateString()}` : '';
 
@@ -811,8 +819,8 @@ function renderOverviewCard(data, symbol, status) {
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(data.companyName)} (${sanitizeText(data.symbol)}) ${statusBadge}</h2>
-                    <p class="text-gray-500">${sanitizeText(data.exchange)} | ${sanitizeText(data.sector)}</p>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(profile.companyName)} (${sanitizeText(profile.symbol)}) ${statusBadge}</h2>
+                    <p class="text-gray-500">${sanitizeText(profile.exchange)} | ${sanitizeText(profile.sector)}</p>
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="text-2xl font-bold">$${price.toFixed(2)}</p>
@@ -820,7 +828,7 @@ function renderOverviewCard(data, symbol, status) {
                 </div>
             </div>
             
-            <p class="mt-4 text-sm text-gray-600">${sanitizeText(data.description)}</p>
+            <p class="mt-4 text-sm text-gray-600">${sanitizeText(profile.description)}</p>
             
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
@@ -2004,8 +2012,9 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const companyName = data.companyName || 'the company';
-        const tickerSymbol = data.symbol || symbol;
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
+        const tickerSymbol = profile.symbol || symbol;
 
         const prompt = promptTemplate
             .replace(/{companyName}/g, companyName)
@@ -2062,7 +2071,8 @@ async function handleInvestmentMemoRequest(symbol) {
         }).join('\n');
         
         const data = await getFmpStockData(symbol);
-        const companyName = data.companyName || 'the company';
+        const profile = data.profile?.[0] || {};
+        const companyName = profile.companyName || 'the company';
 
         const prompt = INVESTMENT_MEMO_PROMPT
             .replace(/{companyName}/g, companyName)
