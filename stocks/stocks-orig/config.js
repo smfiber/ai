@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.0"; 
+export const APP_VERSION = "13.7.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -320,7 +320,7 @@ Analyze the data for signs of a durable competitive advantage. Discuss:
 - **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital'] **and its trend over the last 5 years.** Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat. If trend data is unavailable, state that.
 - **Pricing Power & Profitability:** Are the 'netProfitMargin' and 'operatingIncome' consistently high **and stable**? Explain this as a sign that the company can reliably charge more for its products without losing customers.
 - **Cost Advantages:** Are the company's **'grossProfitMargin'** consistently high? This can be a sign of economies of scale or a superior process, allowing the company to produce its goods or services cheaper than rivals.
-- **Qualitative Clues (from Description):** Based on the company's 'description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems that would be costly for a customer to switch from. **Summarize the theme, do not invent specific numbers.** For workforce size, reference the `fullTimeEmployees` field if available, and note it is a single data point.
+- **Qualitative Clues (from Description):** Based on the company's 'description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems that would be costly for a customer to switch from. **Summarize the theme, do not invent specific numbers.** For workforce size, reference the 'fullTimeEmployees' field if available, and note it is a single data point.
 
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
