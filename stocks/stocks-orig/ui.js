@@ -17,6 +17,11 @@ const promptMap = {
     'InvestmentMemo': INVESTMENT_MEMO_PROMPT
 };
 
+// Map specific AI analysis types to the FMP endpoints they require.
+const ANALYSIS_REQUIREMENTS = {
+    'ManagementScorecard': ['executive_compensation']
+};
+
 // v13.1.0: Icons for stock-specific analysis tiles
 const ANALYSIS_ICONS = {
     'FinancialAnalysis': `<svg xmlns="http://www.w3.org/2000/svg" class="tile-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 10.5H10.5v.008H10.5V10.5zm.008 0h.008v4.502h-.008V10.5z" /></svg>`,
@@ -176,7 +181,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'stock_grade_news', path: 'grade', version: 'v3' },
-            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
+            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true },
+            { name: 'executive_compensation', path: 'governance/executive-compensation', version: 'stable', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
@@ -185,14 +191,19 @@ async function handleRefreshFmpData(symbol) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
             
             const version = endpoint.version || 'v3';
-            const base = `https://financialmodelingprep.com/api/${version}/`;
+            const base = version === 'stable'
+                ? `https://financialmodelingprep.com/${version}/`
+                : `https://financialmodelingprep.com/api/${version}/`;
+            
             const key = `apikey=${state.fmpApiKey}`;
             const params = endpoint.params ? `${endpoint.params}&` : '';
             let url;
 
             if (endpoint.symbolAsQuery) {
+                // For endpoints like `.../grade?symbol=AAPL&...` or `.../stable/key-executives?symbol=AAPL...`
                 url = `${base}${endpoint.path}?symbol=${symbol}&${params}${key}`;
             } else {
+                // For endpoints like `.../profile/AAPL?...`
                 url = `${base}${endpoint.path}/${symbol}?${params}${key}`;
             }
 
@@ -2032,6 +2043,23 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
+        const requiredEndpoints = ANALYSIS_REQUIREMENTS[reportType];
+        if (requiredEndpoints) {
+            const missingEndpoints = requiredEndpoints.filter(ep => !data || !data[ep]);
+            if (missingEndpoints.length > 0) {
+                closeModal(CONSTANTS.MODAL_LOADING);
+                openConfirmationModal(
+                    'Data Refresh Required',
+                    `This analysis requires specific data that is not yet cached for ${symbol} (${missingEndpoints.join(', ')}). Would you like to refresh all FMP data now? This may take a moment.`,
+                    async () => {
+                        await handleRefreshFmpData(symbol);
+                        await handleAnalysisRequest(symbol, reportType, promptTemplate, true);
+                    }
+                );
+                return;
+            }
+        }
+
         const profile = data.profile?.[0] || {};
         const companyName = profile.companyName || 'the company';
         const tickerSymbol = profile.symbol || symbol;
