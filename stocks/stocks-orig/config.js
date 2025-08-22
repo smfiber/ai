@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.6"; 
+export const APP_VERSION = "13.2.7"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -532,7 +532,7 @@ For each metric, compare {companyName} against the 'industry_averages' and key '
 - **Leverage (Debt-to-Equity):** How does [Value from 'key_metrics.debtToEquity'] compare? This reveals the company's **risk profile** relative to its peers. Is it more aggressive or conservative?
 
 ## 3. Market Perception: Valuation
-- **Valuation (P/E Ratio):** Compare [Value from 'key_metrics.peRatio'] to peers. A premium valuation (higher P/E) suggests the market has **higher growth expectations** or perceives the company as being **higher quality and less risky**. A discount suggests the opposite.
+- **Valuation (P/E) Ratio:** Compare [Value from 'key_metrics.peRatio'] to peers. A premium valuation (higher P/E) suggests the market has **higher growth expectations** or perceives the company as being **higher quality and less risky**. A discount suggests the opposite.
 
 ## 4. Identifying the Competitive Moat
 Synthesize the analysis above to hypothesize the source of the company's competitive advantage (or lack thereof).
