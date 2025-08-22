@@ -116,7 +116,7 @@ export async function generatePolishedArticle(initialPrompt, loadingMessageEleme
     const flowedDraft = await callGeminiApi(flowPrompt);
 
     updateLoadingMessage("Adding final flair...");
-    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowDraft}`;
+    const flairPrompt = `This final pass is about elevating the article from "correct" to "compelling." Is the intro boring? Is the conclusion weak? Is the language engaging? Rewrite the introduction to be more engaging. Strengthen the conclusion. Replace basic words with more dynamic ones. Return only the final, polished article.\n\nARTICLE:\n${flowedDraft}`;
     const finalArticle = await callGeminiApi(flairPrompt);
 
     return finalArticle;
@@ -154,6 +154,34 @@ export async function getFmpStockData(symbol) {
 
     stockData.cachedAt = latestTimestamp;
     return stockData;
+}
+
+export async function getGroupedFmpData(symbol) {
+    // Get all endpoint definitions to map ID to name
+    const endpointsSnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_FMP_ENDPOINTS));
+    const endpointNames = {};
+    endpointsSnapshot.forEach(doc => {
+        endpointNames[doc.id] = doc.data().name || 'Unnamed Endpoint';
+    });
+
+    // Get the cached data for the specific symbol
+    const fmpCacheRef = collection(state.db, CONSTANTS.DB_COLLECTION_FMP_CACHE, symbol, 'endpoints');
+    const fmpCacheSnapshot = await getDocs(fmpCacheRef);
+
+    if (fmpCacheSnapshot.empty) {
+        console.warn(`No FMP data found for ${symbol}.`);
+        return null;
+    }
+
+    const groupedData = {};
+    fmpCacheSnapshot.forEach(docSnap => {
+        const endpointId = docSnap.id;
+        const endpointName = endpointNames[endpointId] || `Unknown (${endpointId})`;
+        const docData = docSnap.data();
+        groupedData[endpointName] = docData.data; // Store the raw data under the endpoint's name
+    });
+
+    return groupedData;
 }
 
 // --- GOOGLE DRIVE FUNCTIONS ---
