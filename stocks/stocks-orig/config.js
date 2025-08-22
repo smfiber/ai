@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.7"; 
+export const APP_VERSION = "13.7.8"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -482,9 +482,7 @@ JSON Data:
 # Management & Governance Scorecard: {companyName} ({tickerSymbol})
 
 ## 1. Leadership Snapshot
-Based on the 'company_profile' data, provide a factual snapshot of the CEO. **Do not infer or analyze their background beyond what is explicitly stated.**
-- **CEO:** [Name of CEO from 'company_profile.ceo']
-- **Tenure:** [CEO's tenure, if available]. **Comment on whether this suggests stability (long-serving) or a recent change in leadership. If data is unavailable, state that.**
+Based on the 'company_profile' and 'executive_compensation' data, provide a factual snapshot of the key executives (CEO, CFO, etc.) including their names, titles, and total compensation for the most recent year.
 
 ## 2. Shareholder Alignment Signals
 This section assesses alignment based on management's own words and actions as reflected in the data.
@@ -499,7 +497,7 @@ This section assesses alignment based on management's own words and actions as r
 
 ## 3. Potential Red Flags
 Based on all available data, identify potential governance or alignment risks.
-- **Vague Strategy:** Does the corporate description lack clarity or rely heavily on buzzwords?
+- **Executive Compensation:** Is the CEO's pay disproportionate to the company's performance (e.g., high pay despite falling net income or ROE)? Are there any unusual compensation structures evident in the data?
 - **Misalignment:** Are there any contradictions between the company's stated strategy and the focus of recent analyst grades (e.g., company talks about long-term value, but analysts are focused on short-term misses)?
 - **Negative Sentiment:** Is there a recurring theme of negative commentary directed at management's decisions in the news items?
 
@@ -510,9 +508,9 @@ Provide a final letter grade (A, B, C, D, F) for the management team's **perceiv
 `.trim();
 
 export const NARRATIVE_CATALYST_PROMPT = `
-Role: You are a forward-looking equity analyst. Your task is to identify the primary investment narrative, future catalysts, and key risks for {companyName}, based strictly on the provided data.
+Role: You are a forward-looking equity analyst. Your task is to analyze the provided data for {companyName} and complete the following investment checklist. You MUST address every single item.
 
-Output Format: Use markdown to create a checklist and a brief summary framing the "Bull vs. Bear" case.
+Output Format: First, complete the checklist. Then, write a final summary that synthesizes your findings into a coherent investment narrative.
 
 JSON Data:
 {jsonData}
@@ -520,27 +518,23 @@ JSON Data:
 # Narrative & Catalyst Checklist: {companyName} ({tickerSymbol})
 
 ## 1. The Big Picture: Secular Tailwinds
-- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company have direct exposure to a long-term secular trend (e.g., AI, Electrification, Demographics)?
-- **The Link:** **If yes, briefly explain *how* the company benefits from this trend.**
+- **[ ] Megatrend Alignment:** Based on the 'company_profile.description' and 'industry', does this company have direct exposure to a long-term secular trend (e.g., AI, Electrification, Demographics)? If yes, briefly explain the link. If no, state that it's a cyclical or macro-driven business.
 
 ## 2. The Foundation: Financial Health Check
-A strong narrative needs a solid foundation.
-- **[ ] Profitability:** Is the company profitable (positive 'netIncome') **and generating positive free cash flow?** A business that funds its own growth is inherently more robust.
-- **[ ] Balance Sheet Strength:** Does the company have a manageable debt load ('debtToEquity')? **This assesses the company's resilience during economic downturns.**
+*You must answer both of the following points.*
+- **[ ] Profitability & Cash Flow:** Is the company profitable (positive 'netIncome' in the most recent year) AND generating positive 'freeCashFlow'?
+- **[ ] Balance Sheet Strength:** Does the company have a manageable debt load (e.g., 'debtToEquity' ratio)? State the ratio and comment on its level.
 
 ## 3. The Spark: Potential Future Catalysts
-- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent 'income_statement' data? This can signal a business inflection point.
-- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' improving? This is a powerful sign of **pricing power or increased efficiency.**
+*You must evaluate all three potential catalysts.*
+- **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent 'income_statement' data?
+- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' in the \`key_metrics_annual\` data showing a trend of improvement?
 - **[ ] Analyst Sentiment Shift:** Are recent "upgrades" in the 'stock_grade_news' data indicating that Wall Street's view is becoming more positive?
 
-## 4. The Investment Narrative: Bull vs. Bear
-Conclude with a concise summary of the core investment thesis and its primary risk.
-
-- **The Bull Case:** In one sentence, what is the main story an investor is buying into? Combine the tailwind and catalysts.
-    - *Example: "The bull case for {companyName} is that of a financially sound leader in [Megatrend], which is now hitting an inflection point with accelerating growth and expanding margins."*
-
-- **The Bear Case (Key Risk):** In one sentence, what is the biggest data-driven risk to the narrative?
-    - *Example: "The key risk is that despite its compelling story, the company's high debt load makes it vulnerable to a slowdown," or "The narrative is challenged by the company's lack of consistent profitability."*
+## 4. Final Summary: The Investment Narrative
+*Synthesize all the points above into a final bull vs. bear summary.*
+- **The Bull Case:** In one sentence, what is the main story an investor is buying into?
+- **The Bear Case (Key Risk):** In one sentence, what is the single biggest data-driven risk to this narrative? (e.g., High debt, margin compression, lack of profitability).
 `.trim();
 
 export const INVESTMENT_MEMO_PROMPT = `
