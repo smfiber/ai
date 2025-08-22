@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.5"; 
+export const APP_VERSION = "13.7.6"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -238,7 +238,7 @@ Task: Analyze the sentiment of the following news articles for {companyName} ({t
 For each valid article, you will perform **six** actions:
 1. Extract the publication date (format as YYYY-MM-DD).
 2. **Extract the article headline and source URL.**
-3. Classify the sentiment as 'Bullish', 'Bearish', or 'Neutral'.
+3. Classify the sentiment as 'Bullish', 'Bearish', 'Neutral'.
 4. Classify the impact as 'High', 'Medium', or 'Low'. High impact news is likely to move the stock price.
 5. Categorize the news into one of the following themes: 'Financials', 'Legal/Regulatory', 'Product/Innovation', 'Management', or 'Market'.
 6. Provide a brief, one-sentence summary explaining the key takeaway for a potential investor.
@@ -428,6 +428,7 @@ These are risks related to the stock's price and behavior in the market.
 These are risks related to the day-to-day health of the business.
 - **Recession Sensitivity (Economic Cycle Risk):** Based on the company's 'sector' from 'company_profile', is it "Cyclical" (like Consumer Cyclical or Industrials) or "Defensive" (like Utilities or Consumer Defensive)? Cyclical companies are often hit harder during economic downturns.
 - **Shrinking Profits? (Margin Compression):** Are profitability margins like 'netProfitMargin' from 'key_metrics' trending downwards over the past few years? This means it's getting harder for the company to make a profit on what it sells.
+- **Core Profitability for Financials (Net Interest Margin):** For banks and financial services companies, is the 'netInterestMargin' from 'key_metrics' trending downwards? This is a critical indicator of core lending profitability and is highly sensitive to interest rate changes.
 
 ## 4. The Bottom Line: What Are the Biggest Worries?
 Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-3 risks an investor should be most aware of.
