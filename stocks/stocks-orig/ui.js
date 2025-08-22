@@ -170,21 +170,32 @@ async function handleRefreshFmpData(symbol) {
 
     try {
         const coreEndpoints = [
-            { name: 'profile', path: 'profile' },
-            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5' },
-            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5' },
-            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5' },
-            { name: 'stock_grade_news', path: 'grade' },
-            { name: 'company_core_information', path: 'v4/company-core-information', params: '' }
+            { name: 'profile', path: 'profile', version: 'v3' },
+            { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'stock_grade_news', path: 'grade', version: 'v3' },
+            { name: 'company_core_information', path: 'company-core-information', version: 'v4', symbolAsQuery: true }
         ];
 
         let successfulFetches = 0;
 
-        // Fetch core historical and profile data
         for (const endpoint of coreEndpoints) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
-            const url = `https://financialmodelingprep.com/api/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            
+            const version = endpoint.version || 'v3';
+            const base = `https://financialmodelingprep.com/api/${version}/`;
+            const key = `apikey=${state.fmpApiKey}`;
+            const params = endpoint.params ? `${endpoint.params}&` : '';
+            let url;
+
+            if (endpoint.symbolAsQuery) {
+                url = `${base}${endpoint.path}?symbol=${symbol}&${params}${key}`;
+            } else {
+                url = `${base}${endpoint.path}/${symbol}?${params}${key}`;
+            }
+
             const data = await callApi(url);
 
             if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -226,6 +237,7 @@ async function handleRefreshFmpData(symbol) {
         closeModal(CONSTANTS.MODAL_LOADING);
     }
 }
+
 
 // --- PORTFOLIO & DASHBOARD MANAGEMENT ---
 
@@ -619,6 +631,7 @@ async function openRawDataViewer(ticker) {
         console.error('Error opening raw data viewer:', error);
         titleEl.textContent = `Error Loading Data for ${ticker}`;
         aiArticleContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        profileDisplayContainer.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
     }
 }
 
