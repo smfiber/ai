@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.6"; 
+export const APP_VERSION = "13.7.7"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -435,7 +435,7 @@ Based on the data, provide a brief, 1-2 sentence summary highlighting the top 2-
 `.trim();
 
 export const CAPITAL_ALLOCATORS_PROMPT = `
-	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. Avoid any information not present in the data provided.
+	Act as a senior analyst at a value-investing fund, channeling the analytical rigor of investors like Warren Buffett. Your analysis must be in the style of a detailed shareholder letter and based *only* on the provided financial data for {companyName}. The provided JSON data contains multi-year arrays for key financial metrics; you MUST use these arrays to analyze trends. Avoid any information not present in the data provided.
 
 	Your task is to critically evaluate the management team of {companyName} ({tickerSymbol}) on their skill as capital allocators. Every claim you make must be substantiated with specific metrics, figures, or trends from the data.
 
@@ -450,15 +450,14 @@ export const CAPITAL_ALLOCATORS_PROMPT = `
 	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using specific metrics:
 
 	- **Reinvestment in the Business:**
-		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)**. Have these core profitability metrics improved or declined as they've reinvested capital?
+		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)** using the historical arrays provided in the `key_metrics_annual` data. Have these core profitability metrics improved, declined, or remained volatile as they've reinvested capital?
 		- Compare the growth in **Capital Expenditures (CapEx)** and **R&D spending** to the corresponding growth in revenue and gross profit. **Is there a clear and profitable link between investment and growth?**
 
 	- **Acquisitions (M&A):**
-		- If M&A activity is evident, analyze the change in **goodwill** on the balance sheet relative to total assets.
-		- Examine the company's **profit margins** and **ROIC** in the years immediately following a major acquisition. Did the deal appear to be accretive (value-creating) or dilutive (value-destroying)? **Is there evidence of overpayment (i.e., large goodwill additions followed by stagnant or declining returns)?**
+		- Analyze the historical arrays for `goodwill` (from `balance_sheet_statement_annual`) and `acquisitionsNet` (from `cash_flow_statement_annual`). Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
 
 	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Correlate the timing and volume of share repurchases with the stock's historical valuation (e.g., Price-to-Earnings or Price-to-Book ratio). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
+		- **Stock Buybacks:** Analyze the `commonStockRepurchased` array from `cash_flow_statement_annual`. Correlate the amount of repurchases each year with the stock's historical valuation (e.g., `peRatio` and `priceToBookRatio` from the corresponding year in `key_metrics_annual`). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
 		- **Dividends:** Analyze the **dividend payout ratio** over time. Is the dividend well-covered by free cash flow? Is its growth steady and sustainable, or erratic?
 
 	## 3. The Scorecard & Investment Thesis
