@@ -175,7 +175,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5' },
-            { name: 'stock_grade_news', path: 'grade' }
+            { name: 'stock_grade_news', path: 'grade' },
+            { name: 'company_core_information', path: 'v4/company-core-information', params: '' }
         ];
 
         let successfulFetches = 0;
@@ -183,7 +184,7 @@ async function handleRefreshFmpData(symbol) {
         // Fetch core historical and profile data
         for (const endpoint of coreEndpoints) {
             loadingMessage.textContent = `Fetching FMP Data: ${endpoint.name.replace(/_/g, ' ')}...`;
-            const url = `https://financialmodelingprep.com/api/v3/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
+            const url = `https://financialmodelingprep.com/api/${endpoint.path}/${symbol}?${endpoint.params ? endpoint.params + '&' : ''}apikey=${state.fmpApiKey}`;
             const data = await callApi(url);
 
             if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -524,12 +525,12 @@ async function openRawDataViewer(ticker) {
 
         const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
 
-        if (!fmpData) {
-            throw new Error('No cached FMP data found for this stock.');
+        if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
+            throw new Error('No cached FMP data found for this stock, or profile data is missing.');
         }
 
         const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
-        const profile = fmpData?.profile?.[0] || {};
+        const profile = fmpData.profile[0];
         
         titleEl.textContent = `Analysis for ${ticker}`;
 
@@ -588,7 +589,7 @@ async function openRawDataViewer(ticker) {
         const imageUrl = profile.image || '';
         const description = profile.description || 'No description available.';
         const exchange = profile.exchange || 'N/A';
-        const sector = profile.sector || 'N/A';
+        const sector = profile.sector || profile.marketSector || 'N/A';
         const filingsUrl = profile.secFilingsUrl || '';
 
         let profileHtml = '<div class="mt-6 border-t pt-4">';
