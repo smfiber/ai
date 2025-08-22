@@ -538,7 +538,12 @@ async function openRawDataViewer(ticker) {
         const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
 
         if (!fmpData || !fmpData.profile || fmpData.profile.length === 0) {
-            throw new Error('No cached FMP data found for this stock, or profile data is missing.');
+            closeModal(modalId);
+            displayMessageInModal(
+                `Crucial data is missing for ${ticker}. This usually means it needs to be fetched from the FMP service.\n\nPlease go to the stock list and use the "Refresh" button for this stock, then try viewing it again.`,
+                'warning'
+            );
+            return;
         }
 
         const savedReportTypes = new Set(savedReportsSnapshot.docs.map(doc => doc.data().reportType));
