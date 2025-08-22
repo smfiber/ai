@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.7"; 
+export const APP_VERSION = "13.2.8"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
