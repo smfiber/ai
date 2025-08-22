@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.3"; 
+export const APP_VERSION = "13.7.4"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -353,13 +353,13 @@ This is the most important test. A company should pay its dividend from the mone
 - **Earnings Payout Ratio:** ('cash_flow_statement.dividendsPaid' / 'income_statement.netIncome'). Explain this as: "For every $1 of profit, how much is paid out as a dividend?" A ratio over 100% means the company is paying out more than it earns, which is a red flag.
 
 ## 3. What is the Track Record? (History & Consistency)
-A company's past behavior is a good indicator of its future commitment to the dividend.
-- **Dividend Growth:** Analyze the trend of 'dividendsPaid' over the last several years from the 'cash_flow_statement' array. Has the company consistently increased its dividend payment? Explain that a history of dividend growth is a powerful sign of a healthy, confident business.
+A company's past behavior is a good indicator of its future commitment to the dividend. The JSON provides an array for financial statements, sorted from most recent to oldest.
+- **Dividend Growth:** Analyze the trend of 'dividendsPaid' over the last several years from the 'cash_flow_statement_annual' array. Has the company consistently increased its dividend payment year-over-year? A history of dividend growth is a powerful sign of a healthy, confident business.
 
 ## 4. Does the Company Have a Safety Net? (Balance Sheet Health)
-A strong company can protect its dividend even when times get tough.
-- **Debt Load:** How has the 'debtToEquity' ratio (from 'key_metrics') trended? Explain this like a personal mortgage: high or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.
-- **Cash Cushion:** Examine the trend in 'cashAndCashEquivalents' from 'balance_sheet_statement'). Does the company have a healthy cash pile to fall back on? This acts as a buffer to protect the dividend during a downturn.
+A strong company can protect its dividend even when times get tough. The JSON provides arrays for financial statements, sorted from most recent to oldest.
+- **Debt Load Trend:** Analyze the trend of the 'debtToEquity' ratio from the 'key_metrics_annual' array. Is the debt load stable, increasing, or decreasing? High or rising debt can put dividend payments at risk if the company needs to prioritize paying back lenders.
+- **Cash Cushion Trend:** Examine the trend in 'cashAndCashEquivalents' from the 'balance_sheet_statement_annual' array. Is the company's cash pile growing or shrinking? This acts as a buffer to protect the dividend during a downturn.
 
 ## 5. The Final Verdict: How Safe Are Your Dividend Checks?
 Conclude with a clear rating and a simple, one-sentence justification.
