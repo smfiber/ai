@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.6.0"; 
+export const APP_VERSION = "13.7.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -304,11 +304,13 @@ Conclude with a 1-2 sentence summary that frames the central conflict for an inv
 `.trim();
 
 export const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using FMP data.
+Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using ONLY the FMP data provided.
 
 Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.
 
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
+
+IMPORTANT: Your analysis must be strictly based on the provided JSON. Do not invent numbers for qualitative factors.
 
 JSON Data:
 {jsonData}
@@ -320,7 +322,7 @@ Analyze the data for signs of a durable competitive advantage. Discuss:
 - **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital'] **and its trend over the last 5 years.** Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
 - **Pricing Power & Profitability:** Are the 'netProfitMargin' and 'operatingIncome' consistently high **and stable**? Explain this as a sign that the company can reliably charge more for its products without losing customers.
 - **Cost Advantages:** Are the company's **'grossProfitMargin'** consistently high? This can be a sign of economies of scale or a superior process, allowing the company to produce its goods or services cheaper than rivals.
-- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company's 'description'. Does it mention a "platform," "network," or "marketplace"? Does it sell "mission-critical" or "integrated" systems that would be difficult and costly for a customer to switch away from?
+- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company's 'description' from the 'profile' data. **Instead of inventing numbers, summarize the themes.** For example, if the description mentions an extensive network, describe it as such, but do not create a specific number of locations. You can reference 'fullTimeEmployees' from the 'profile' data as a measure of scale, but state that it is a single data point and not a historical trend.
 
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
