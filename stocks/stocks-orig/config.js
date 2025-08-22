@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.7.4"; 
+export const APP_VERSION = "13.7.5"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -395,6 +395,7 @@ A company must invest today to grow tomorrow. Examine the data for signs of this
 ## 4. What Does the Market Expect? (Future Outlook)
 Interpret the market's view on the company's growth prospects:
 - **Analyst Grades:** Review the 'stock_grade_news' array. Do recent analyst actions ("Buy", "Hold", "Sell") suggest optimism or pessimism about the company's growth?
+- **Future Estimates:** Analyze the 'analyst_estimates' data. What is the consensus forecast for revenue and EPS growth over the next 2-3 years? This provides a quantitative look at Wall Street's expectations.
 
 ## 5. Final Outlook: What is the Growth Story?
 Based on all the factors above, provide a brief, synthesized outlook. Is this a consistent, long-term grower that is reasonably priced, or is its growth recent and potentially expensive? What is the primary story for a potential investor looking for growth?
