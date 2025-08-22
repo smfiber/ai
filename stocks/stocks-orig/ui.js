@@ -1,5 +1,5 @@
 import { CONSTANTS, SECTORS, SECTOR_ICONS, state, NEWS_SENTIMENT_PROMPT, FINANCIAL_ANALYSIS_PROMPT, UNDERVALUED_ANALYSIS_PROMPT, BULL_VS_BEAR_PROMPT, MOAT_ANALYSIS_PROMPT, DIVIDEND_SAFETY_PROMPT, GROWTH_OUTLOOK_PROMPT, RISK_ASSESSMENT_PROMPT, CAPITAL_ALLOCATORS_PROMPT, creativePromptMap, DISRUPTOR_ANALYSIS_PROMPT, MACRO_PLAYBOOK_PROMPT, INDUSTRY_CAPITAL_ALLOCATORS_PROMPT, INDUSTRY_DISRUPTOR_ANALYSIS_PROMPT, INDUSTRY_MACRO_PLAYBOOK_PROMPT, ONE_SHOT_INDUSTRY_TREND_PROMPT, FORTRESS_ANALYSIS_PROMPT, PHOENIX_ANALYSIS_PROMPT, PICK_AND_SHOVEL_PROMPT, LINCHPIN_ANALYSIS_PROMPT, HIDDEN_VALUE_PROMPT, UNTOUCHABLES_ANALYSIS_PROMPT, MANAGEMENT_SCORECARD_PROMPT, COMPETITIVE_LANDSCAPE_PROMPT, NARRATIVE_CATALYST_PROMPT, INVESTMENT_MEMO_PROMPT } from './config.js';
-import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector } from './api.js';
+import { getFmpStockData, callApi, filterValidNews, callGeminiApi, generatePolishedArticle, getDriveToken, getOrCreateDriveFolder, createDriveFile, findStocksByIndustry, searchSectorNews, findStocksBySector, getGroupedFmpData } from './api.js';
 import { getFirestore, Timestamp, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, limit, addDoc, increment, updateDoc, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- PROMPT MAPPING ---
@@ -515,9 +515,10 @@ async function openRawDataViewer(ticker) {
 
     try {
         const fmpDataPromise = getFmpStockData(ticker);
+        const groupedDataPromise = getGroupedFmpData(ticker);
         const savedReportsPromise = getDocs(query(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), where("ticker", "==", ticker)));
 
-        const [fmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, savedReportsPromise]);
+        const [fmpData, groupedFmpData, savedReportsSnapshot] = await Promise.all([fmpDataPromise, groupedDataPromise, savedReportsPromise]);
 
         if (!fmpData) {
             throw new Error('No cached FMP data found for this stock.');
@@ -529,17 +530,22 @@ async function openRawDataViewer(ticker) {
 
         // Build nested accordions for raw data
         let accordionHtml = '';
-        const sortedKeys = Object.keys(fmpData).filter(key => key !== 'cachedAt' && fmpData[key]).sort();
+        if (groupedFmpData) {
+            const sortedKeys = Object.keys(groupedFmpData).sort();
 
-        for (const key of sortedKeys) {
-            accordionHtml += `
-                <details class="mb-2 bg-white rounded-lg border">
-                    <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${sanitizeText(key)}</summary>
-                    <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(JSON.stringify(fmpData[key], null, 2))}</pre>
-                </details>
-            `;
+            for (const key of sortedKeys) {
+                accordionHtml += `
+                    <details class="mb-2 bg-white rounded-lg border">
+                        <summary class="p-3 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">${sanitizeText(key)}</summary>
+                        <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(JSON.stringify(groupedFmpData[key], null, 2))}</pre>
+                    </details>
+                `;
+            }
+            rawDataContainer.innerHTML = accordionHtml;
+        } else {
+             rawDataContainer.innerHTML = '<p class="text-center text-gray-500 py-8">Could not load grouped raw data.</p>';
         }
-        rawDataContainer.innerHTML = accordionHtml;
+
 
         // Build AI buttons
         const buttons = [
