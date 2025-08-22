@@ -304,13 +304,11 @@ Conclude with a 1-2 sentence summary that frames the central conflict for an inv
 `.trim();
 
 export const MOAT_ANALYSIS_PROMPT = `
-Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using ONLY the FMP data provided.
+Role: You are a business strategist AI who excels at explaining complex business concepts in simple, relatable terms. Your task is to analyze {companyName}'s competitive advantages using the FMP JSON data provided. **Your analysis must be strictly based on the provided data. Do not invent numbers for operational details like locations, customers, or employees.**
 
 Concept: An "economic moat" is a company's ability to maintain its competitive advantages and defend its long-term profits from competitors. Think of it like the moat around a castle—the wider the moat, the harder it is for invaders (competitors) to attack.
 
 Output Format: Provide a brief report in markdown. Explain each point simply and conclude with a clear verdict on the moat's strength.
-
-IMPORTANT: Your analysis must be strictly based on the provided JSON. Do not invent numbers for qualitative factors.
 
 JSON Data:
 {jsonData}
@@ -319,14 +317,14 @@ JSON Data:
 
 ## 1. What Gives This Company Its Edge? (Sources of the Moat)
 Analyze the data for signs of a durable competitive advantage. Discuss:
-- **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital'] **and its trend over the last 5 years.** Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat.
+- **Return on Invested Capital (ROIC):** [Value from 'key_metrics.returnOnInvestedCapital'] **and its trend over the last 5 years.** Explain this as the "gold standard" for moat analysis. A consistently high **and stable/rising** ROIC (>15%) is a strong sign of a moat. If trend data is unavailable, state that.
 - **Pricing Power & Profitability:** Are the 'netProfitMargin' and 'operatingIncome' consistently high **and stable**? Explain this as a sign that the company can reliably charge more for its products without losing customers.
 - **Cost Advantages:** Are the company's **'grossProfitMargin'** consistently high? This can be a sign of economies of scale or a superior process, allowing the company to produce its goods or services cheaper than rivals.
-- **Qualitative Clues (Network Effects/Switching Costs):** Analyze the company's 'description' from the 'profile' data. **Instead of inventing numbers, summarize the themes.** For example, if the description mentions an extensive network, describe it as such, but do not create a specific number of locations. You can reference 'fullTimeEmployees' from the 'profile' data as a measure of scale, but state that it is a single data point and not a historical trend.
+- **Qualitative Clues (from Description):** Based on the company's 'description', what themes suggest a moat? Look for mentions of a "platform," "network," "marketplace," or "mission-critical" systems that would be costly for a customer to switch from. **Summarize the theme, do not invent specific numbers.** For workforce size, reference the `fullTimeEmployees` field if available, and note it is a single data point.
 
 ## 2. How Strong is the Castle Wall? (Moat Sustainability)
 Assess how sustainable this advantage might be by looking at:
-- **Reinvesting in the Defenses:** Are 'capitalExpenditure' and 'researchAndDevelopmentExpenses' significant? Explain this as the company spending money to strengthen its moat (e.g., building higher walls, inventing new weapons).
+- **Reinvesting in the Defenses:** Are 'capitalExpenditure' and 'researchAndDevelopmentExpenses' significant? Explain this as the company spending money to strengthen its moat. Acknowledge that for some industries (like banking), these specific line items may not tell the whole story.
 - **Financial Fortress:** Is the balance sheet strong (low 'debtToEquity')? A company with low debt is better equipped to survive tough times and fight off competitors.
 
 ## 3. The Verdict: How Wide is the Moat?
