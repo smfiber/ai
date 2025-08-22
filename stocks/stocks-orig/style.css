@@ -258,6 +258,15 @@ body.modal-open {
  * AI-GENERATED CONTENT STYLES
  * =================================================================
  */
+#financial-analysis-content.prose,
+#undervalued-analysis-content.prose,
+#custom-analysis-content.prose,
+#industry-analysis-content.prose,
+#ai-article-container.prose {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
 #financial-analysis-content.prose h2,
 #undervalued-analysis-content.prose h2,
 #custom-analysis-content.prose h2,
@@ -382,7 +391,7 @@ body.modal-open {
     position: absolute;
     bottom: 100%;
     left: 50%;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateX(-50%) translateY(-12px); /* Give more space */
     background-color: #1f2937; /* bg-gray-800 */
     color: white;
     padding: 0.5rem 0.75rem;
@@ -396,14 +405,14 @@ body.modal-open {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, visibility 0.2s ease-in-out;
-    z-index: 10;
+    z-index: 1000; /* Increased z-index */
     pointer-events: none;
 }
 
 [data-tooltip]:hover::after {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(-12px);
+    transform: translateX(-50%) translateY(-16px); /* Give more space on hover */
 }
 
 .analysis-tile.has-saved-report::before {
