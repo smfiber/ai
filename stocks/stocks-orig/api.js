@@ -136,14 +136,8 @@ export async function getFmpStockData(symbol) {
 
     fmpCacheSnapshot.forEach(docSnap => {
         const docData = docSnap.data();
-        const endpointData = docData.data;
-
-        // Merge properties into the main stockData object
-        if (Array.isArray(endpointData) && endpointData.length > 0) {
-            Object.assign(stockData, endpointData[0]); // Merge the first object of the array
-        } else if (typeof endpointData === 'object' && endpointData !== null) {
-            Object.assign(stockData, endpointData); // Merge if it's a single object
-        }
+        // Use the document ID (e.g., 'profile', 'income_statement_annual') as the key
+        stockData[docSnap.id] = docData.data;
 
         if (docData.cachedAt && typeof docData.cachedAt.toMillis === 'function') {
             if (!latestTimestamp || docData.cachedAt.toMillis() > latestTimestamp.toMillis()) {
