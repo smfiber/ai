@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.2.8"; 
+export const APP_VERSION = "13.2.9"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -506,43 +506,6 @@ Based on all available data, identify potential governance or alignment risks.
 Provide a final letter grade (A, B, C, D, F) for the management team's **perceived quality and alignment based *only* on this data**. Justify the grade by summarizing the key data points.
 - **Grade:** [Your Grade]
 - **Summary:** [Your justification, directly referencing findings from the sections above].
-`.trim();
-
-export const COMPETITIVE_LANDSCAPE_PROMPT = `
-Role: You are a business strategy consultant, in the style of an analyst from a top-tier firm like McKinsey or Bain. Your task is to analyze {companyName}'s competitive position using the provided financial data, which includes peer and industry benchmarks.
-
-**IMPORTANT:** This prompt assumes the 'jsonData' includes an 'industry_averages' object and/or a 'competitors' array with corresponding financial metrics. Without this comparative data, a meaningful analysis is not possible.
-
-Output Format: Provide a strategic report in markdown. Use ## for major sections and bullet points. Conclude with a clear verdict on the company's market position and the source of its advantage.
-
-JSON Data:
-{jsonData}
-
-# Competitive Landscape Analysis: {companyName} ({tickerSymbol})
-
-## 1. The Competitive Arena
-- **Industry:** [Value from 'company_profile.industry']
-- **Primary Business:** Based on the 'company_profile.description', what is the core product/service and who are the target customers?
-- **Key Competitors:** [List of competitors, if provided in the data]
-
-## 2. Financial Benchmarking: Performance vs. Peers
-For each metric, compare {companyName} against the 'industry_averages' and key 'competitors'.
-- **Profitability (Net Profit Margin):** How does [Value from 'key_metrics.netProfitMargin'] compare? Superior margins can indicate **pricing power** or **cost advantages**.
-- **Efficiency (Return on Equity - ROE):** How does [Value from 'key_metrics.returnOnEquity'] compare? A higher ROE suggests more effective use of capital to generate profits, a sign of a **quality business**.
-- **Leverage (Debt-to-Equity):** How does [Value from 'key_metrics.debtToEquity'] compare? This reveals the company's **risk profile** relative to its peers. Is it more aggressive or conservative?
-
-## 3. Market Perception: Valuation
-- **Valuation (P/E) Ratio:** Compare [Value from 'key_metrics.peRatio'] to peers. A premium valuation (higher P/E) suggests the market has **higher growth expectations** or perceives the company as being **higher quality and less risky**. A discount suggests the opposite.
-
-## 4. Identifying the Competitive Moat
-Synthesize the analysis above to hypothesize the source of the company's competitive advantage (or lack thereof).
-- **Hypothesis:** Based on the financial evidence, what is the most likely "moat"?
-    - *Example if strong:* "The company's consistently superior margins and high ROE, combined with its premium P/E ratio, suggest a strong competitive moat, likely derived from **brand power** or **proprietary technology**."
-    - *Example if weak:* "The company's below-average margins and ROE suggest it may lack a significant competitive moat, possibly competing primarily on **price**."
-
-## 5. Strategic Conclusion: Leader, Laggard, or Contender?
-Provide a one-sentence final verdict that links the company's position to its underlying advantage.
-- **Verdict:** For example: "{companyName} is a clear **Leader** in its space, leveraging its strong brand to command premium pricing and deliver superior returns," or "{companyName} appears to be a **Laggard**, struggling to differentiate itself in a crowded market, as shown by its weak profitability and discounted valuation."
 `.trim();
 
 export const NARRATIVE_CATALYST_PROMPT = `
