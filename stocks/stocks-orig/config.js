@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.4.0"; 
+export const APP_VERSION = "13.5.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -272,7 +272,7 @@ Example JSON Output:
 `.trim();
 
 export const BULL_VS_BEAR_PROMPT = `
-Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. Use ONLY the provided FMP JSON data to build your arguments.
+Role: You are a financial analyst AI who excels at presenting a balanced view. Your task is to explain the two sides of the investment story for {companyName}, acting as a neutral moderator in a debate. **Use ONLY the provided FMP JSON data to build your arguments. Do not reference any data points not present in the provided JSON. If a key data point (like historical employee counts) is missing, you must state that it is unavailable instead of fabricating a trend.**
 
 Output Format: Use markdown format. Explain each point in simple terms, as if talking to a friend who is new to investing. Create a clear "Bull Case" and a "Bear Case" section, each with 3-5 bullet points supported by specific data from the JSON.
 
@@ -285,10 +285,10 @@ JSON Data:
 Construct a positive argument for the company. For each point, state the supporting data and then briefly explain *why* it matters to an investor.
 Focus on strengths like:
 - **Strong Growth:** Is 'revenue' or 'netIncome' consistently increasing? (Use 'income_statement' data).
-- **High Profitability:** Is the company a good money-maker? (Use 'returnOnEquity' from 'key_metrics'). Explain ROE as a "grade" for how well management uses shareholder money.
+- **High Profitability:** Is the company a good money-maker? (Use 'returnOnEquity' from 'key_metrics'). For financial institutions, also look at the **'netInterestMargin'** trend, which shows the core profitability of its lending operations.
 - **Durable Competitive Advantage (Moat):** Does the data suggest a strong moat? Look for **consistently high profit margins or ROE over time**. Explain this as the company's "protective wall" that keeps competitors at bay.
 - **Solid Cash Flow:** Is the business generating real cash? (Use 'operatingCashFlow' from 'cash_flow_statement'). Explain this as the company's "lifeblood".
-- **Potential Bargain:** Does the stock seem cheap relative to its earnings? (Use 'peRatio' from 'key_metrics').
+- **Attractive Valuation:** Does the stock seem cheap relative to its earnings or net assets? (Use 'peRatio' and **'priceToBookRatio'** from 'key_metrics').
 
 ## The Bear Case (The Cautious View: Reasons for Concern)
 Construct a negative argument for the company. For each point, state the supporting data and explain the potential risk.
@@ -296,7 +296,7 @@ Focus on weaknesses like:
 - **Heavy Debt Load:** Does the company owe a lot of money? (Use 'debtToEquity' from 'key_metrics'). Explain this like having a large mortgage; it can be risky if times get tough.
 - **Slowing Growth:** Are sales or profits shrinking or stagnating? (Use 'income_statement' data).
 - **Weakening Competitive Position:** Are **profit margins or ROE declining**? This could be a red flag that the company's "protective wall" is crumbling and competition is hurting them.
-- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples like 'priceToSalesRatio' from 'key_metrics').
+- **Expensive Stock:** Does the stock seem overpriced for its performance? (Use high valuation multiples like 'peRatio' or **'priceToBookRatio'** from 'key_metrics', especially when compared to its historical average).
 - **Analyst Skepticism:** Do the 'stock_grade_news' entries show "Sell" ratings or downgrades?
 
 ## The Final Takeaway: What's the Core Debate?
