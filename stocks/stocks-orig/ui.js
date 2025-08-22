@@ -174,7 +174,8 @@ async function handleRefreshFmpData(symbol) {
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5' },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5' },
-            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5' }
+            { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5' },
+            { name: 'stock_grade_news', path: 'grade' }
         ];
 
         let successfulFetches = 0;
