@@ -58,11 +58,6 @@ function sanitizeText(text) {
     return tempDiv.innerHTML;
 }
 
-function get(obj, path, defaultValue = undefined) {
-  const value = path.split('.').reduce((a, b) => (a ? a[b] : undefined), obj);
-  return value !== undefined ? value : defaultValue;
-}
-
 // --- MODAL HELPERS ---
 
 export function openModal(modalId) {
@@ -580,11 +575,11 @@ async function openRawDataViewer(ticker) {
         `;
 
         // Render the new company profile section
-        const imageUrl = get(fmpData, 'company_profile_data.0.image', '');
-        const description = get(fmpData, 'company_profile_data.0.description', 'No description available.');
-        const exchange = get(fmpData, 'sec_company_full_profile.0.exchange', 'N/A');
-        const sector = get(fmpData, 'company_profile_data.0.sector', 'N/A');
-        const filingsUrl = get(fmpData, 'sec_company_full_profile.0.secFilingsUrl', '');
+        const imageUrl = fmpData.image || '';
+        const description = fmpData.description || 'No description available.';
+        const exchange = fmpData.exchange || 'N/A';
+        const sector = fmpData.sector || 'N/A';
+        const filingsUrl = fmpData.secFilingsUrl || '';
 
         let profileHtml = '<div class="mt-6 border-t pt-4">';
         if (imageUrl) {
@@ -718,7 +713,7 @@ async function handleFetchNews(symbol) {
 
     try {
         const stockData = await getFmpStockData(symbol);
-        const companyName = get(stockData, 'company_profile.0.companyName', symbol);
+        const companyName = stockData.companyName || symbol;
         const url = `https://financialmodelingprep.com/api/v3/stock_news?tickers=${symbol}&limit=50&apikey=${state.fmpApiKey}`;
         
         const newsData = await callApi(url);
@@ -785,15 +780,11 @@ export function renderSectorButtons() {
 }
 
 function renderOverviewCard(data, symbol, status) {
-    const profile = get(data, 'company_profile.0', {});
-    const quote = get(data, 'stock_quote.0', {});
-    const income = get(data, 'income_statement.0', {});
+    if (!data.symbol) return '';
 
-    if (!profile.symbol) return '';
-
-    const price = get(quote, 'price', 0);
-    const change = get(quote, 'change', 0);
-    const changePercent = get(quote, 'changesPercentage', 0);
+    const price = data.price || 0;
+    const change = data.change || 0;
+    const changePercent = data.changesPercentage || 0;
     const changeColorClass = change >= 0 ? 'price-gain' : 'price-loss';
     const changeSign = change >= 0 ? '+' : '';
 
@@ -804,12 +795,12 @@ function renderOverviewCard(data, symbol, status) {
         statusBadge = '<span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">Watchlist</span>';
     }
 
-    const marketCap = formatLargeNumber(get(profile, 'mktCap'));
-    const netIncome = get(income, 'netIncome', 0);
-    const peRatio = (profile.mktCap && netIncome && netIncome > 0) ? (profile.mktCap / netIncome).toFixed(2) : 'N/A';
+    const marketCap = formatLargeNumber(data.mktCap);
+    const netIncome = data.netIncome || 0;
+    const peRatio = (data.mktCap && netIncome && netIncome > 0) ? (data.mktCap / netIncome).toFixed(2) : 'N/A';
     
-    const sma50 = get(quote, 'priceAvg50', 'N/A');
-    const sma200 = get(quote, 'priceAvg200', 'N/A');
+    const sma50 = data.priceAvg50 || 'N/A';
+    const sma200 = data.priceAvg200 || 'N/A';
     
     const fmpTimestampString = data.cachedAt ? `FMP Data Stored On: ${data.cachedAt.toDate().toLocaleDateString()}` : '';
 
@@ -817,8 +808,8 @@ function renderOverviewCard(data, symbol, status) {
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6" id="card-${symbol}">
             <div class="flex justify-between items-start gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(profile.companyName)} (${sanitizeText(profile.symbol)}) ${statusBadge}</h2>
-                    <p class="text-gray-500">${sanitizeText(profile.exchange)} | ${sanitizeText(profile.sector)}</p>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">${sanitizeText(data.companyName)} (${sanitizeText(data.symbol)}) ${statusBadge}</h2>
+                    <p class="text-gray-500">${sanitizeText(data.exchange)} | ${sanitizeText(data.sector)}</p>
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="text-2xl font-bold">$${price.toFixed(2)}</p>
@@ -826,13 +817,13 @@ function renderOverviewCard(data, symbol, status) {
                 </div>
             </div>
             
-            <p class="mt-4 text-sm text-gray-600">${sanitizeText(profile.description)}</p>
+            <p class="mt-4 text-sm text-gray-600">${sanitizeText(data.description)}</p>
             
             <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
                 <div><p class="text-sm text-gray-500">Market Cap</p><p class="text-lg font-semibold">${sanitizeText(marketCap)}</p></div>
                 <div><p class="text-sm text-gray-500">P/E Ratio</p><p class="text-lg font-semibold">${sanitizeText(peRatio)}</p></div>
-                <div><p class="text-sm text-gray-500">50-Day MA</p><p class="text-lg font-semibold">$${sma50.toFixed(2)}</p></div>
-                <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">$${sma200.toFixed(2)}</p></div>
+                <div><p class="text-sm text-gray-500">50-Day MA</p><p class="text-lg font-semibold">$${typeof sma50 === 'number' ? sma50.toFixed(2) : 'N/A'}</p></div>
+                <div><p class="text-sm text-gray-500">200-Day MA</p><p class="text-lg font-semibold">$${typeof sma200 === 'number' ? sma200.toFixed(2) : 'N/A'}</p></div>
             </div>
 
             <div class="mt-6 border-t pt-4 flex items-center flex-wrap gap-x-4 gap-y-2 justify-center">
@@ -2010,8 +2001,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
         const data = await getFmpStockData(symbol);
         if (!data) throw new Error(`No cached FMP data found for ${symbol}.`);
         
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
-        const tickerSymbol = get(data, 'company_profile.0.symbol', symbol);
+        const companyName = data.companyName || 'the company';
+        const tickerSymbol = data.symbol || symbol;
 
         const prompt = promptTemplate
             .replace(/{companyName}/g, companyName)
@@ -2068,7 +2059,7 @@ async function handleInvestmentMemoRequest(symbol) {
         }).join('\n');
         
         const data = await getFmpStockData(symbol);
-        const companyName = get(data, 'company_profile.0.companyName', 'the company');
+        const companyName = data.companyName || 'the company';
 
         const prompt = INVESTMENT_MEMO_PROMPT
             .replace(/{companyName}/g, companyName)
