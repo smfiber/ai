@@ -27,7 +27,7 @@ async function initializeAppContent() {
     document.getElementById('industry-screener-section').classList.remove(CONSTANTS.CLASS_HIDDEN);
     
     await fetchAndCachePortfolioData();
-    renderSectorButtons();
+    await renderSectorButtons();
     await displayIndustryScreener();
 }
 
