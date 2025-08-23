@@ -443,7 +443,7 @@
 
     <div id="financialsModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div id="financialsModalOverlay" class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
-        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-6 w-full max-w-4xl m-4 overflow-y-auto max-h-[90vh]">
+        <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-6 w-full max-w-5xl m-4 overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-start pb-4 border-b">
                 <div>
                     <h2 id="modal-company-name" class="text-2xl font-bold text-gray-800">Company Name (SYMBOL)</h2>
@@ -461,12 +461,14 @@
                 <nav id="financials-modal-tabs" class="-mb-px flex space-x-4" aria-label="Tabs">
                     <button data-tab-target="#modal-ai-summary-content" class="modal-tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">AI Summary</button>
                     <button data-tab-target="#modal-key-metrics-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Key Metrics</button>
+                    <button data-tab-target="#modal-financial-trends-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Financial Trends</button>
                     <button data-tab-target="#modal-raw-data-content" class="modal-tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Raw Data</button>
                 </nav>
             </div>
             <div class="pt-4">
                 <div id="modal-ai-summary-content" class="modal-tab-content active"></div>
                 <div id="modal-key-metrics-content" class="modal-tab-content"></div>
+                <div id="modal-financial-trends-content" class="modal-tab-content"></div>
                 <div id="modal-raw-data-content" class="modal-tab-content"></div>
             </div>
         </div>
@@ -477,7 +479,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.7
+        // Version 4.9.8
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1579,10 +1581,12 @@
                     if (symbol) {
                         document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Refreshing data...</p>';
                         document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Refreshing AI analysis...</p>';
+                         document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Refreshing trend data...</p>';
                         
                         const liveData = await fetchTickerDetails(symbol, true); // Force refresh
                         if (liveData) {
                              populateFinancialsModal(liveData);
+                             populateFinancialTrends(liveData);
                              populateRawDataModal(liveData);
                              const aiSummary = await generateAiRating(liveData);
                              populateAiSummary(aiSummary);
@@ -1613,6 +1617,7 @@
                 document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-gray-500">Loading financial data...</p>';
                 document.getElementById('modal-ai-summary-content').innerHTML = '<p class="text-center text-gray-500">Loading AI analysis...</p>';
                 document.getElementById('modal-raw-data-content').innerHTML = '<p class="text-center text-gray-500">Loading raw data...</p>';
+                document.getElementById('modal-financial-trends-content').innerHTML = '<p class="text-center text-gray-500">Loading trend data...</p>';
                 document.getElementById('modal-company-name').textContent = `Loading... (${symbol})`;
                 document.getElementById('modal-stock-price').textContent = '';
                 document.getElementById('modal-last-updated').textContent = '...';
@@ -1625,6 +1630,7 @@
                 const cachedData = await loadTickerDetailsFromFirebase(symbol);
                 if (cachedData && cachedData.keyMetrics) { // Check if cache is new format
                     populateFinancialsModal(cachedData);
+                    populateFinancialTrends(cachedData);
                     populateRawDataModal(cachedData);
                     if (cachedData.aiSummary) {
                         populateAiSummary(cachedData.aiSummary);
@@ -1637,6 +1643,7 @@
                     const liveData = await fetchTickerDetails(symbol);
                      if (liveData) {
                         populateFinancialsModal(liveData);
+                        populateFinancialTrends(liveData);
                         populateRawDataModal(liveData);
                         const aiSummary = await generateAiRating(liveData);
                         populateAiSummary(aiSummary);
@@ -1646,6 +1653,7 @@
                          document.getElementById('modal-key-metrics-content').innerHTML = '<p class="text-center text-red-500">Could not fetch financial data.</p>';
                          document.getElementById('modal-ai-summary-content').innerHTML = '';
                          document.getElementById('modal-raw-data-content').innerHTML = '';
+                         document.getElementById('modal-financial-trends-content').innerHTML = '';
                     }
                 }
             }
@@ -1693,38 +1701,52 @@
                     return { rating: 'Error', rationale: 'Could not generate AI rating. API key or financial data missing.' };
                 }
                 const profile = financialData.profile?.[0] || {};
-                const metrics = financialData.keyMetrics?.[0] || {};
-                const ratios = financialData.ratios?.[0] || {};
 
-                const eps = metrics.netIncomePerShare;
-                const bvps = metrics.bookValuePerShare;
-                let grahamNumberText = 'N/A';
-                if (eps > 0 && bvps > 0) {
-                    const grahamNumber = Math.sqrt(22.5 * eps * bvps);
-                    grahamNumberText = `$${grahamNumber.toFixed(2)}`;
-                }
+                const getTrend = (dataArray, key, formatter) => {
+                    if (!dataArray || dataArray.length === 0) return 'N/A';
+                    return [...dataArray].reverse().map(item => formatter(item[key])).join(' -> ');
+                };
+                
+                const formatBillions = val => {
+                    if (val === null || typeof val === 'undefined') return 'N/A';
+                    return `${(val / 1e9).toFixed(2)}B`;
+                };
+                const formatPercent = val => {
+                    if (val === null || typeof val === 'undefined') return 'N/A';
+                    return `${(val * 100).toFixed(1)}%`;
+                };
+                const formatRatio = val => {
+                    if (val === null || typeof val === 'undefined') return 'N/A';
+                    return val.toFixed(2);
+                };
+
+                const companyDescription = profile.description || 'No description available.';
+                const revenueTrend = getTrend(financialData.incomeStatement, 'revenue', formatBillions);
+                const netIncomeTrend = getTrend(financialData.incomeStatement, 'netIncome', formatBillions);
+                const peRatioTrend = getTrend(financialData.keyMetrics, 'peRatio', formatRatio);
+                const debtToEquityTrend = getTrend(financialData.keyMetrics, 'debtToEquity', formatRatio);
+                const roeTrend = getTrend(financialData.keyMetrics, 'roe', formatPercent);
+                const freeCashFlowTrend = getTrend(financialData.cashFlow, 'freeCashFlow', formatBillions);
 
                 const prompt = `
-                    Act as a seasoned value investor. I will provide you with key financial metrics for a company based on its latest ANNUAL report. Your task is to analyze these metrics and provide a concise valuation assessment.
+                    Act as a seasoned value investor. I will provide you with the business description and key 5-year financial trends for a company. Your task is to analyze these trends and provide a concise valuation assessment.
 
                     Company: ${profile.companyName} (${profile.symbol})
                     Industry: ${profile.industry}
                     Sector: ${profile.sector}
+                    Description: ${companyDescription}
                     
-                    Key Metrics (Annual):
-                    - P/E Ratio: ${metrics.peRatio?.toFixed(2) || 'N/A'}
-                    - Price to Sales Ratio: ${metrics.priceToSalesRatio?.toFixed(2) || 'N/A'}
-                    - Price to Book Ratio: ${metrics.pbRatio?.toFixed(2) || 'N/A'}
-                    - Graham Number (Intrinsic Value): ${grahamNumberText}
-                    - Debt to Equity: ${metrics.debtToEquity?.toFixed(2) || 'N/A'}
-                    - Return on Equity (ROE): ${(metrics.roe * 100)?.toFixed(2) || 'N/A'}%
-                    - Dividend Yield: ${(metrics.dividendYield * 100)?.toFixed(2) || 'N/A'}%
-                    - Payout Ratio: ${(ratios.payoutRatio * 100)?.toFixed(2) || 'N/A'}%
-                    - Net Profit Margin: ${(ratios.netProfitMargin * 100)?.toFixed(2) || 'N/A'}%
+                    5-Year Financial Trends (oldest to newest):
+                    - Revenue: ${revenueTrend}
+                    - Net Income: ${netIncomeTrend}
+                    - P/E Ratio: ${peRatioTrend}
+                    - Debt to Equity: ${debtToEquityTrend}
+                    - Return on Equity (ROE): ${roeTrend}
+                    - Free Cash Flow: ${freeCashFlowTrend}
 
                     Based on this data, provide your analysis in a valid JSON format with two keys:
                     1. "rating": A single-word assessment. Choose from: "Undervalued", "Fairly Valued", "Overvalued", "Speculative Growth", "Caution Advised".
-                    2. "rationale": A 2-3 sentence justification for your rating, referencing the provided data.
+                    2. "rationale": A 2-3 sentence justification for your rating. Your rationale should comment on revenue growth, profitability trends, the company's debt management, and free cash flow generation based on the 5-year trends.
                 `;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appConfig.geminiApiKey}`;
@@ -1793,6 +1815,67 @@
                              <div class="flex justify-between text-sm"><span class="text-gray-500">Dividend Yield</span><span class="font-medium">${format(metrics.dividendYield * 100, '', '%')}</span></div>
                             <div class="flex justify-between text-sm"><span class="text-gray-500">Payout Ratio</span><span class="font-medium">${format(ratios.payoutRatio * 100, '', '%')}</span></div>
                         </div>
+                    </div>
+                `;
+            }
+            
+            function populateFinancialTrends(data) {
+                const contentEl = document.getElementById('modal-financial-trends-content');
+                
+                const metrics = data.keyMetrics ? [...data.keyMetrics].reverse() : [];
+                const income = data.incomeStatement ? [...data.incomeStatement].reverse() : [];
+                const cashflow = data.cashFlow ? [...data.cashFlow].reverse() : [];
+
+                if (metrics.length === 0 || income.length === 0) {
+                    contentEl.innerHTML = '<p class="text-center text-gray-500">Trend data is not available.</p>';
+                    return;
+                }
+                
+                const formatNum = (val, type = 'default') => {
+                    if (val === null || typeof val === 'undefined' || isNaN(val)) return 'N/A';
+                    if (type === 'currency') {
+                         if (Math.abs(val) >= 1e12) return `${(val / 1e12).toFixed(2)}T`;
+                         if (Math.abs(val) >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
+                         if (Math.abs(val) >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+                         return val.toFixed(2);
+                    }
+                    if (type === 'percent') return `${(val * 100).toFixed(2)}%`;
+                    if (type === 'eps') return val.toFixed(2);
+                    return val.toFixed(2);
+                };
+
+                const years = income.map(i => i.calendarYear);
+                const headers = years.map(y => `<th class="px-3 py-2 text-xs text-right font-medium text-gray-500 uppercase tracking-wider">${y}</th>`).join('');
+
+                const createRow = (title, dataArray, key, formatType) => {
+                    const cells = years.map(year => {
+                        const record = dataArray.find(d => d.calendarYear === year);
+                        const value = record ? record[key] : undefined;
+                        return `<td class="px-3 py-2 whitespace-nowrap text-sm text-right text-gray-500">${formatNum(value, formatType)}</td>`;
+                    }).join('');
+                    return `<tr><td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${title}</td>${cells}</tr>`;
+                };
+
+                const tableRows = [
+                    createRow('Revenue', income, 'revenue', 'currency'),
+                    createRow('Net Income', income, 'netIncome', 'currency'),
+                    createRow('EPS (Diluted)', income, 'epsdiluted', 'eps'),
+                    createRow('Return on Equity (ROE)', metrics, 'roe', 'percent'),
+                    createRow('Debt to Equity', metrics, 'debtToEquity', 'default'),
+                    createRow('Free Cash Flow', cashflow, 'freeCashFlow', 'currency')
+                ].join('');
+
+                contentEl.innerHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
+                                    ${headers}
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody>
+                        </table>
                     </div>
                 `;
             }
