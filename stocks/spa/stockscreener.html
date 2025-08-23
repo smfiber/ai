@@ -451,7 +451,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.2
+        // Version 4.9.3
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1586,6 +1586,15 @@
                     return { rating: 'Error', rationale: 'Could not generate AI rating. API key or financial data missing.' };
                 }
                 const { profile, metrics, ratios } = financialData;
+
+                const eps = metrics.netIncomePerShareTTM;
+                const bvps = metrics.bookValuePerShareTTM;
+                let grahamNumberText = 'N/A';
+                if (eps > 0 && bvps > 0) {
+                    const grahamNumber = Math.sqrt(22.5 * eps * bvps);
+                    grahamNumberText = `$${grahamNumber.toFixed(2)}`;
+                }
+
                 const prompt = `
                     Act as a seasoned value investor. I will provide you with key financial metrics for a company. Your task is to analyze these metrics and provide a concise valuation assessment.
 
@@ -1597,6 +1606,7 @@
                     - P/E Ratio: ${metrics.peRatioTTM?.toFixed(2) || 'N/A'}
                     - Price to Sales Ratio: ${metrics.priceToSalesRatioTTM?.toFixed(2) || 'N/A'}
                     - Price to Book Ratio: ${metrics.pbRatioTTM?.toFixed(2) || 'N/A'}
+                    - Graham Number (Intrinsic Value): ${grahamNumberText}
                     - Debt to Equity: ${metrics.debtToEquityTTM?.toFixed(2) || 'N/A'}
                     - Return on Equity (ROE): ${(metrics.roeTTM * 100)?.toFixed(2) || 'N/A'}%
                     - Dividend Yield: ${(ratios.dividendYieldTTM * 100)?.toFixed(2) || 'N/A'}%
@@ -1632,6 +1642,13 @@
                 const format = (value, prefix = '', suffix = '', digits = 2) => {
                     return (value !== null && typeof value !== 'undefined' && !isNaN(value)) ? `${prefix}${Number(value).toFixed(digits)}${suffix}` : 'N/A';
                 };
+
+                const eps = metrics.netIncomePerShareTTM;
+                const bvps = metrics.bookValuePerShareTTM;
+                let grahamNumber = null;
+                if (eps > 0 && bvps > 0) {
+                    grahamNumber = Math.sqrt(22.5 * eps * bvps);
+                }
                 
                 document.getElementById('modal-company-name').textContent = `${profile.companyName || 'N/A'} (${profile.symbol || ''})`;
                 document.getElementById('modal-stock-price').textContent = format(profile.price, '$');
@@ -1649,7 +1666,8 @@
                             <div class="flex justify-between text-sm"><span class="text-gray-500">P/E Ratio (TTM)</span><span class="font-medium">${format(metrics.peRatioTTM)}</span></div>
                             <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Sales (TTM)</span><span class="font-medium">${format(metrics.priceToSalesRatioTTM)}</span></div>
                             <div class="flex justify-between text-sm"><span class="text-gray-500">Price to Book (TTM)</span><span class="font-medium">${format(metrics.pbRatioTTM)}</span></div>
-                             <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA (TTM)</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDATTM)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">EV/EBITDA (TTM)</span><span class="font-medium">${format(metrics.enterpriseValueOverEBITDATTM)}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-500">Graham Number</span><span class="font-medium">${format(grahamNumber, '$')}</span></div>
                         </div>
                         <div class="space-y-3">
                             <h4 class="font-semibold text-gray-700 border-b pb-2">Financial Health</h4>
