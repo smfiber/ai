@@ -806,15 +806,35 @@ async function handleFetchNews(symbol) {
 
 // --- UI RENDERING ---
 
-export function renderSectorButtons() {
+async function getScreenerInteractions() {
+    const interactions = {};
+    if (!state.db) return interactions;
+    try {
+        const querySnapshot = await getDocs(collection(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS));
+        querySnapshot.forEach(doc => {
+            interactions[doc.id] = doc.data();
+        });
+    } catch (error) {
+        console.error("Error fetching screener interactions:", error);
+    }
+    return interactions;
+}
+
+export async function renderSectorButtons() {
     const container = document.getElementById('sector-buttons-container');
     if (!container) return;
+    
+    const interactions = await getScreenerInteractions();
+
     container.innerHTML = SECTORS.map(sector => {
         const icon = SECTOR_ICONS[sector] || '';
+        const interaction = interactions[sector];
+        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
         return `
             <button class="flex flex-col items-center justify-center p-4 text-center bg-sky-100 text-sky-800 hover:bg-sky-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-sector="${sanitizeText(sector)}">
                 ${icon}
                 <span class="mt-2 font-semibold text-sm">${sanitizeText(sector)}</span>
+                <span class="mt-1 text-xs text-sky-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
             </button>
         `
     }).join('');
@@ -1363,14 +1383,14 @@ export function setupEventListeners() {
     document.getElementById('sector-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (target && target.dataset.sector) {
-            handleSectorSelection(target.dataset.sector);
+            handleSectorSelection(target.dataset.sector, target);
         }
     });
 
     document.getElementById('industry-buttons-container')?.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (target && target.dataset.industry) {
-            handleIndustrySelection(target.dataset.industry);
+            handleIndustrySelection(target.dataset.industry, target);
         }
     });
 
@@ -1471,7 +1491,7 @@ async function handleMarketTrendsAnalysis(sectorName) {
     }
 }
 
-async function handleSectorSelection(sectorName) {
+async function handleSectorSelection(sectorName, buttonElement) {
     const modal = document.getElementById(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
     const modalTitle = modal.querySelector('#custom-analysis-modal-title');
     const selectorContainer = modal.querySelector('#custom-analysis-selector-container');
@@ -1555,6 +1575,19 @@ async function handleSectorSelection(sectorName) {
     html += `</div></div>`;
     selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_CUSTOM_ANALYSIS);
+    
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, sectorName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'sector' });
+        if (buttonElement) {
+            const dateElement = buttonElement.querySelector('.last-clicked-date');
+            if (dateElement) {
+                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
+            }
+        }
+    } catch (error) {
+        console.error(`Error updating last clicked for ${sectorName}:`, error);
+    }
 }
 
 async function handleCreativeSectorAnalysis(contextName, promptNameKey) {
@@ -1768,7 +1801,7 @@ export async function displayIndustryScreener() {
         if (Array.isArray(industryData)) {
             // FIX: Handle both object array and string array formats from the API.
             state.availableIndustries = industryData.map(item => (typeof item === 'object' && item.industry) ? item.industry : item).filter(Boolean).sort();
-            renderIndustryButtons();
+            await renderIndustryButtons();
         }
     } catch (error) {
         console.error("Error fetching available industries:", error);
@@ -1779,22 +1812,27 @@ export async function displayIndustryScreener() {
     }
 }
 
-function renderIndustryButtons() {
+async function renderIndustryButtons() {
     const container = document.getElementById('industry-buttons-container');
     if (!container) return;
-
+    
+    const interactions = await getScreenerInteractions();
     const genericIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`; // Using Industrials icon as generic
 
-    container.innerHTML = state.availableIndustries.map(industry => `
+    container.innerHTML = state.availableIndustries.map(industry => {
+        const interaction = interactions[industry];
+        const lastClickedDate = interaction?.lastClicked ? interaction.lastClicked.toDate().toLocaleDateString() : 'Never';
+        return `
         <button class="flex flex-col items-center justify-center p-4 text-center bg-teal-100 text-teal-800 hover:bg-teal-200 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1" data-industry="${sanitizeText(industry)}">
             ${genericIcon}
             <span class="mt-2 font-semibold text-sm">${sanitizeText(industry)}</span>
+            <span class="mt-1 text-xs text-teal-600 last-clicked-date">Last Clicked: ${lastClickedDate}</span>
         </button>
-    `).join('');
+    `}).join('');
 }
 
 
-async function handleIndustrySelection(industryName) {
+async function handleIndustrySelection(industryName, buttonElement) {
     const modal = document.getElementById(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
     const modalTitle = modal.querySelector('#industry-analysis-modal-title');
     const selectorContainer = modal.querySelector('#industry-analysis-selector-container');
@@ -1878,6 +1916,19 @@ async function handleIndustrySelection(industryName) {
     html += `</div></div>`;
     selectorContainer.innerHTML = html;
     openModal(CONSTANTS.MODAL_INDUSTRY_ANALYSIS);
+
+    try {
+        const docRef = doc(state.db, CONSTANTS.DB_COLLECTION_SCREENER_INTERACTIONS, industryName);
+        await setDoc(docRef, { lastClicked: Timestamp.now(), contextType: 'industry' });
+        if (buttonElement) {
+            const dateElement = buttonElement.querySelector('.last-clicked-date');
+            if (dateElement) {
+                dateElement.textContent = `Last Clicked: ${new Date().toLocaleDateString()}`;
+            }
+        }
+    } catch (error) {
+        console.error(`Error updating last clicked for ${industryName}:`, error);
+    }
 }
 
 // --- NEW INDUSTRY DEEP DIVE WORKFLOW ---
