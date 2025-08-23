@@ -477,7 +477,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.6
+        // Version 4.9.7
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1655,11 +1655,11 @@
                 const apiKey = appConfig.fmpApiKey;
                 const urls = [
                     `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/key-metrics-annual/${symbol}?limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/ratios-annual/${symbol}?limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/income-statement-annual/${symbol}?limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/balance-sheet-statement-annual/${symbol}?limit=5&apikey=${apiKey}`,
-                    `https://financialmodelingprep.com/api/v3/cash-flow-statement-annual/${symbol}?limit=5&apikey=${apiKey}`
+                    `https://financialmodelingprep.com/api/v3/key-metrics/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/ratios/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/balance-sheet-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`,
+                    `https://financialmodelingprep.com/api/v3/cash-flow-statement/${symbol}?period=annual&limit=5&apikey=${apiKey}`
                 ];
 
                 try {
