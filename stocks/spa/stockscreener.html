@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magickal Portfolio Oracle</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         /* Apply the Inter font family */
@@ -53,11 +50,9 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <!-- Main Application Content -->
     <div id="appContent" class="p-4 md:p-8">
         <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 text-center mb-8">Magickal Portfolio Oracle</h1>
         
-        <!-- Main Tab Navigation -->
         <div class="max-w-6xl mx-auto mb-8">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-6" aria-label="Tabs">
@@ -67,6 +62,9 @@
                     <button id="screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Stock Screener
                     </button>
+                    <button id="advanced-screener-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Advanced Screener
+                    </button>
                     <button id="news-tab-button" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Price Target News
                     </button>
@@ -74,18 +72,13 @@
             </div>
         </div>
 
-        <!-- Main Tab Content Area -->
         <div class="max-w-6xl mx-auto">
 
-            <!-- Generative AI Analysis Tab -->
             <div id="gen-ai-tab-content" class="tab-content">
-                <!-- This will be populated by JS -->
-            </div>
+                </div>
 
-            <!-- Stock Screener Tab -->
             <div id="screener-tab-content" class="tab-content">
                 <div class="space-y-4">
-                    <!-- Accordions for Stock Screener Tables -->
                     <div id="nasdaqScreenerAccordion" class="bg-white rounded-xl shadow-md">
                         <button id="nasdaq-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-t-xl focus:outline-none">
                             <span>Stock Screener Table: NASDAQ (Market Cap > $1B)</span>
@@ -115,7 +108,6 @@
                     </div>
                 </div>
 
-                <!-- Card View Section -->
                 <div class="mt-12">
                     <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
                     <div id="nasdaq-card-view" class="mb-8"></div>
@@ -124,10 +116,111 @@
                 </div>
             </div>
 
-            <!-- Price Target News Tab -->
+            <div id="advanced-screener-tab-content" class="tab-content">
+                <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Advanced Stock Screener</h2>
+                    <form id="advancedScreenerFilterForm">
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="marketCapMoreThan" class="block font-medium text-gray-700">Market Cap More Than</label>
+                                    <input type="number" id="marketCapMoreThan" placeholder="Enter Number" value="1000000000" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label for="volumeMoreThan" class="block font-medium text-gray-700">Volume More Than</label>
+                                    <input type="number" id="volumeMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="marketCapLowerThan" class="block font-medium text-gray-700">Market Cap Lower Than</label>
+                                    <input type="number" id="marketCapLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label for="volumeLowerThan" class="block font-medium text-gray-700">Volume Lower Than</label>
+                                    <input type="number" id="volumeLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="sector" class="block font-medium text-gray-700">Sector</label>
+                                    <select id="sector" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                        <option value="">Any</option>
+                                        <option value="Consumer Cyclical">Consumer Cyclical</option>
+                                        <option value="Energy">Energy</option>
+                                        <option value="Technology">Technology</option>
+                                        <option value="Industrials">Industrials</option>
+                                        <option value="Financial Services">Financial Services</option>
+                                        <option value="Basic Materials">Basic Materials</option>
+                                        <option value="Communication Services">Communication Services</option>
+                                        <option value="Consumer Defensive">Consumer Defensive</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Real Estate">Real Estate</option>
+                                        <option value="Utilities">Utilities</option>
+                                    </select>
+                                </div>
+                                <div>
+                                     <label for="exchange" class="block font-medium text-gray-700">Exchange</label>
+                                    <select id="exchange" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                                        <option value="">Any</option>
+                                        <option value="NASDAQ">NASDAQ</option>
+                                        <option value="NYSE">NYSE</option>
+                                        <option value="AMEX">AMEX</option>
+                                        <option value="EURONEXT">EURONEXT</option>
+                                        <option value="TSX">TSX</option>
+                                    </select>
+                                </div>
+                            </div>
+                             <div class="space-y-4">
+                                <div>
+                                    <label for="industry" class="block font-medium text-gray-700">Industry</label>
+                                    <input type="text" id="industry" placeholder="Enter Industry" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label for="country" class="block font-medium text-gray-700">Country</label>
+                                    <input type="text" id="country" placeholder="e.g., US" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="betaMoreThan" class="block font-medium text-gray-700">Beta More Than</label>
+                                    <input type="number" step="0.1" id="betaMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label for="dividendMoreThan" class="block font-medium text-gray-700">Dividend More Than</label>
+                                    <input type="number" step="0.1" id="dividendMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="betaLowerThan" class="block font-medium text-gray-700">Beta Lower Than</label>
+                                    <input type="number" step="0.1" id="betaLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label for="dividendLowerThan" class="block font-medium text-gray-700">Dividend Lower Than</label>
+                                    <input type="number" step="0.1" id="dividendLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors">Run Screener</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-5">
+                    <h2 class="text-lg font-semibold mb-4">Screener Results</h2>
+                    <div id="advanced-screener-data-container" class="border-t pt-4"></div>
+                </div>
+
+                <div class="mt-12">
+                    <h2 class="text-2xl font-bold text-center mb-6">Stock Card View by Sector & Industry</h2>
+                    <div id="advanced-screener-card-view" class="mb-8"></div>
+                </div>
+            </div>
+
             <div id="news-tab-content" class="tab-content">
                 <div class="space-y-4">
-                    <!-- NASDAQ News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <div id="nasdaq-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
                             <span>NASDAQ Price Target News</span>
@@ -140,7 +233,6 @@
                             <div id="nasdaq-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
                         </div>
                     </div>
-                    <!-- NYSE News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <div id="nyse-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
                             <span>NYSE Price Target News</span>
@@ -153,7 +245,6 @@
                             <div id="nyse-news-container" class="mt-4 border-t pt-4 space-y-4"></div>
                         </div>
                     </div>
-                    <!-- AMEX News Accordion -->
                     <div class="bg-white rounded-xl shadow-md">
                         <div id="amex-news-accordion-button" class="w-full flex justify-between items-center p-5 text-left font-semibold text-lg hover:bg-gray-50 rounded-xl focus:outline-none cursor-pointer">
                             <span>AMEX Price Target News</span>
@@ -171,7 +262,6 @@
         </div>
     </div>
 
-    <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
@@ -212,23 +302,18 @@
         </div>
     </div>
 
-    <!-- Floating Action Button for CRUD -->
     <button id="manageSummariesBtn" class="fixed bottom-8 right-8 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-transform transform hover:scale-110 focus:outline-none">
         <i class="fas fa-archive fa-lg"></i>
     </button>
 
-    <!-- CRUD Modal for Summaries -->
     <div id="summaryCrudModal" class="fixed inset-0 z-[100] items-center justify-center p-4 modal">
         <div class="absolute inset-0 bg-gray-900 bg-opacity-75" id="crudModalOverlay"></div>
         <div class="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-8 w-full max-w-4xl m-4 overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-6">Manage Saved Analyses</h2>
             
-            <!-- Container for the list of saved summaries -->
             <div id="savedSummariesList" class="space-y-4">
-                <!-- Summaries will be dynamically inserted here -->
-            </div>
+                </div>
 
-            <!-- Hidden Edit Form -->
             <div id="editSummaryFormContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg">
                 <h3 class="text-xl font-bold mb-4">Edit Analysis</h3>
                 <form id="editSummaryForm">
@@ -246,12 +331,11 @@
     </div>
 
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.3
+        // Version 4.6
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -288,6 +372,7 @@
             const editSummaryFormContainer = document.getElementById('editSummaryFormContainer');
             const editSummaryForm = document.getElementById('editSummaryForm');
             const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const advancedScreenerFilterForm = document.getElementById('advancedScreenerFilterForm');
 
 
             // --- 3. Initialization Logic ---
@@ -333,6 +418,7 @@
                 const tabMap = {
                     'gen-ai-tab-button': 'gen-ai-tab-content',
                     'screener-tab-button': 'screener-tab-content',
+                    'advanced-screener-tab-button': 'advanced-screener-tab-content',
                     'news-tab-button': 'news-tab-content'
                 };
 
@@ -358,13 +444,19 @@
                 
                 setActiveTab('gen-ai-tab-button');
             }
+            
+            async function handleAdvancedScreenerRun(event) {
+                event.preventDefault();
+                await fetchAdvancedStockScreener();
+            }
 
             // --- 6. Main Application Logic ---
             async function startApp() {
                 console.log("Application starting...");
                 setupTabs();
                 setupCrudModalListeners();
-                
+                advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
+
                 try {
                     if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
                         firebase.initializeApp(appConfig.firebaseConfig);
@@ -377,6 +469,9 @@
                     console.error("Firebase initialization failed:", e);
                     alert("Could not initialize Firebase. Please check your configuration.");
                 }
+
+                // Initialize Advanced Screener with default values
+                fetchAdvancedStockScreener();
 
                 const exchanges = ['nasdaq', 'nyse', 'amex'];
                 const genAiContainer = document.getElementById('gen-ai-tab-content');
@@ -400,10 +495,10 @@
                 console.log("All data loaded.");
             }
 
-            // --- 7. Data Initialization for Each Exchange ---
+            // --- 7. Data Initialization for Each Exchange (Simple Screener, News, AI) ---
             async function initExchangeData(exchange) {
                 const exchangeUpperCase = exchange.toUpperCase();
-                // Screener Accordion
+                // Simple Screener Accordion
                 const screenerAccordionButton = document.getElementById(`${exchange}-accordion-button`);
                 const screenerAccordionContent = document.getElementById(`${exchange}-accordion-content`);
                 const screenerAccordionIcon = document.getElementById(`${exchange}-accordion-icon`);
@@ -420,21 +515,22 @@
                 setupAccordionToggle(screenerAccordionButton, screenerAccordionContent, screenerAccordionIcon);
                 setupAccordionToggle(newsAccordionButton, newsAccordionContent, newsAccordionIcon);
                 
-                const screenerData = await fetchStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+                const screenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
                 
                 const loadedFromCache = await loadNewsFromFirebase(exchange, newsContainer, screenerData);
                 if (!loadedFromCache) {
                     await fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange);
                 }
 
-                refreshButton.addEventListener('click', (e) => {
+                refreshButton.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     newsContainer.innerHTML = `<p class="text-indigo-500 font-semibold p-4">Refreshing news for ${exchangeUpperCase}...</p>`;
                     const genAiNav = document.getElementById(`${exchange}-gen-ai-tabs-nav`);
                     const genAiContent = document.getElementById(`${exchange}-gen-ai-tabs-content`);
                     if(genAiNav) genAiNav.innerHTML = '';
                     if(genAiContent) genAiContent.innerHTML = '';
-                    fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, true); // Force refresh
+                    const refreshedScreenerData = await fetchSimpleStockScreener(exchangeUpperCase, tableContainer, cardContainer);
+                    fetchAndRenderPriceTargetNews(refreshedScreenerData, newsContainer, exchange, true); // Force refresh
                 });
             }
 
@@ -448,8 +544,8 @@
                 });
             }
 
-            // --- 9. Fetch Stock Screener Data ---
-            async function fetchStockScreener(exchange, tableEl, cardEl) {
+            // --- 9. Screener Fetching Functions ---
+            async function fetchSimpleStockScreener(exchange, tableEl, cardEl) {
                 const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
                 if(tableEl) tableEl.innerHTML = loadingMsg;
                 if(cardEl) cardEl.innerHTML = loadingMsg;
@@ -467,13 +563,55 @@
                     if (!response.ok) throw new Error(`API request failed: ${response.status}`);
                     const data = await response.json();
                     
-                    renderStockTable(data, tableEl);
+                    renderSimpleStockTable(data, tableEl);
                     renderStockCards(data, cardEl, exchange);
                     return data;
                 } catch (error) {
-                    console.error(`Error fetching screener data for ${exchange}:`, error);
+                    console.error(`Error fetching simple screener data for ${exchange}:`, error);
                     const errorMsg = `<p class="text-red-500">Error fetching data for ${exchange}.</p>`;
                      if(tableEl) tableEl.innerHTML = errorMsg;
+                    if(cardEl) cardEl.innerHTML = errorMsg;
+                    return [];
+                }
+            }
+            
+            async function fetchAdvancedStockScreener() {
+                const tableEl = document.getElementById('advanced-screener-data-container');
+                const cardEl = document.getElementById('advanced-screener-card-view');
+                const loadingMsg = `<p class="text-gray-500">Loading screener data...</p>`;
+                if(tableEl) tableEl.innerHTML = loadingMsg;
+                if(cardEl) cardEl.innerHTML = loadingMsg;
+
+                if (!appConfig.fmpApiKey) {
+                    const errorMsg = '<p class="text-red-500">Financial Modeling Prep API Key is missing.</p>';
+                    if(tableEl) tableEl.innerHTML = errorMsg;
+                    if(cardEl) cardEl.innerHTML = errorMsg;
+                    return [];
+                }
+
+                let url = `https://financialmodelingprep.com/api/v3/stock-screener?apikey=${appConfig.fmpApiKey}&limit=1000`;
+                
+                const formIds = ["marketCapMoreThan", "marketCapLowerThan", "betaMoreThan", "betaLowerThan", "volumeMoreThan", "volumeLowerThan", "dividendMoreThan", "dividendLowerThan", "sector", "industry", "exchange", "country"];
+                const form = document.getElementById('advancedScreenerFilterForm');
+                formIds.forEach(id => {
+                    const element = form.querySelector(`#${id}`);
+                    if(element && element.value) {
+                         url += `&${id}=${encodeURIComponent(element.value)}`;
+                    }
+                });
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+                    const data = await response.json();
+                    
+                    renderAdvancedStockTable(data, tableEl);
+                    renderStockCards(data, cardEl, "Advanced Screener");
+                    return data;
+                } catch (error) {
+                    console.error(`Error fetching advanced screener data:`, error);
+                    const errorMsg = `<p class="text-red-500">Error fetching screener data. Check console for details.</p>`;
+                    if(tableEl) tableEl.innerHTML = errorMsg;
                     if(cardEl) cardEl.innerHTML = errorMsg;
                     return [];
                 }
@@ -1056,8 +1194,8 @@
                 if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
                 return num.toLocaleString();
             };
-
-            function renderStockTable(data, container) {
+            
+            function renderSimpleStockTable(data, container) {
                 if (!container) return;
                 if (!data || data.length === 0) {
                     container.innerHTML = '<p class="text-gray-500">No stock data found.</p>';
@@ -1073,10 +1211,30 @@
                 container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
             }
 
-            function renderStockCards(data, container, exchange) {
+            function renderAdvancedStockTable(data, container) {
                 if (!container) return;
                 if (!data || data.length === 0) {
-                    container.innerHTML = ''; return;
+                    container.innerHTML = '<p class="text-gray-500">No stock data found for the selected criteria.</p>';
+                    return;
+                }
+                const tableRows = data.map(stock => `
+                    <tr>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-indigo-600">${formatText(stock.symbol)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.industry)}</td>
+                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
+                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
+                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
+                    </tr>`).join('');
+                container.innerHTML = `<div class="overflow-x-auto max-h-[60vh]"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
+            }
+
+            function renderStockCards(data, container, title) {
+                if (!container) return;
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-500">No stocks found to display in card view.</p>'; return;
                 }
                 const grouped = data.reduce((acc, stock) => {
                     const sector = stock.sector || 'Unclassified';
@@ -1087,7 +1245,7 @@
                     return acc;
                 }, {});
 
-                let html = `<h3 class="text-xl font-bold mb-4 text-gray-700">${exchange.toUpperCase()} Stocks by Sector</h3>`;
+                let html = `<h3 class="text-xl font-bold mb-4 text-gray-700">${title} Stocks by Sector</h3>`;
                 for (const sector in grouped) {
                     html += `<div class="mb-6"><h4 class="text-lg font-semibold text-indigo-700 p-2 bg-indigo-50 rounded-md">${sector}</h4>`;
                     for (const industry in grouped[sector]) {
@@ -1098,7 +1256,7 @@
                                             <p class="font-bold text-sm text-indigo-600 truncate pr-2">${formatText(stock.symbol)}</p>
                                             <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
                                         </div>
-                                        <p class="text-xs text-gray-500">${formatText(stock.companyName)}</p>
+                                        <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
                                     </div>`;
                         });
                         html += `</div></div>`;
