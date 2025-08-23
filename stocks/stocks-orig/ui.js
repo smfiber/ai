@@ -177,6 +177,7 @@ async function handleRefreshFmpData(symbol) {
         const coreEndpoints = [
             { name: 'profile', path: 'profile', version: 'v3' },
             { name: 'income_statement_annual', path: 'income-statement', params: 'period=annual&limit=5', version: 'v3' },
+            { name: 'income_statement_growth_annual', path: 'income-statement-growth', params: 'period=annual&limit=5', version: 'stable', symbolAsQuery: true },
             { name: 'balance_sheet_statement_annual', path: 'balance-sheet-statement', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'cash_flow_statement_annual', path: 'cash-flow-statement', params: 'period=annual&limit=5', version: 'v3' },
             { name: 'key_metrics_annual', path: 'key-metrics', params: 'period=annual&limit=5', version: 'v3' },
@@ -2088,7 +2089,8 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
 
         if (savedReports.length > 0 && !forceNew) {
             const latestReport = savedReports[0];
-            displayReport(contentContainer, latestReport.content);
+            displayReport(contentContainer, latestReport.content, latestReport.prompt);
+            contentContainer.dataset.currentPrompt = latestReport.prompt || '';
             updateReportStatus(statusContainer, savedReports, latestReport.id, { symbol, reportType, promptTemplate });
             return; 
         }
@@ -2125,8 +2127,10 @@ async function handleAnalysisRequest(symbol, reportType, promptTemplate, forceNe
             .replace(/{tickerSymbol}/g, tickerSymbol)
             .replace('{jsonData}', JSON.stringify(data, null, 2));
 
+        contentContainer.dataset.currentPrompt = prompt;
+
         const newReportContent = await generatePolishedArticle(prompt, loadingMessage);
-        displayReport(contentContainer, newReportContent);
+        displayReport(contentContainer, newReportContent, prompt);
         updateReportStatus(statusContainer, [], null, { symbol, reportType, promptTemplate });
 
     } catch (error) {
@@ -2224,6 +2228,7 @@ async function handleSaveReportToDb() {
     }
 
     const contentToSave = contentContainer.innerHTML;
+    const promptToSave = contentContainer.dataset.currentPrompt || null;
 
     openModal(CONSTANTS.MODAL_LOADING);
     document.getElementById(CONSTANTS.ELEMENT_LOADING_MESSAGE).textContent = `Saving ${reportType} report to database...`;
@@ -2233,7 +2238,8 @@ async function handleSaveReportToDb() {
             ticker: symbol,
             reportType: reportType,
             content: contentToSave,
-            savedAt: Timestamp.now()
+            savedAt: Timestamp.now(),
+            prompt: promptToSave
         };
         await addDoc(collection(state.db, CONSTANTS.DB_COLLECTION_AI_REPORTS), reportData);
         displayMessageInModal("Report saved successfully!", "info");
@@ -2252,12 +2258,23 @@ async function handleSaveReportToDb() {
 }
 
 
-function displayReport(container, content) {
-    if (content.startsWith('<')) { // If content is HTML
-        container.innerHTML = content;
-    } else { // Assume it's markdown
-        container.innerHTML = marked.parse(content);
+function displayReport(container, content, prompt = null) {
+    let finalHtml = '';
+    if (prompt) {
+        finalHtml += `
+            <details class="mb-4 border rounded-lg">
+                <summary class="p-2 font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 bg-gray-100">View Prompt</summary>
+                <pre class="text-xs whitespace-pre-wrap break-all bg-gray-900 text-white p-3 rounded-b-lg">${sanitizeText(prompt)}</pre>
+            </details>
+        `;
     }
+
+    if (content.startsWith('<')) { // If content is already HTML
+        finalHtml += content;
+    } else { // Assume it's markdown
+        finalHtml += marked.parse(content);
+    }
+    container.innerHTML = finalHtml;
 }
 
 function updateReportStatus(statusContainer, reports, activeReportId, analysisParams) {
@@ -2293,7 +2310,8 @@ function updateReportStatus(statusContainer, reports, activeReportId, analysisPa
             const selectedReport = reports.find(r => r.id === e.target.value);
             if (selectedReport) {
                 const contentContainer = statusContainer.nextElementSibling;
-                displayReport(contentContainer, selectedReport.content);
+                displayReport(contentContainer, selectedReport.content, selectedReport.prompt);
+                contentContainer.dataset.currentPrompt = selectedReport.prompt || '';
                 updateReportStatus(statusContainer, reports, selectedReport.id, analysisParams);
             }
         });
