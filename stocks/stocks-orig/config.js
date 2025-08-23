@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.8.0"; 
+export const APP_VERSION = "13.8.1"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -452,14 +452,14 @@ export const CAPITAL_ALLOCATORS_PROMPT = `
 	Analyze their capital allocation decisions over the last 5-10 years across three key areas, using specific metrics:
 
 	- **Reinvestment in the Business:**
-		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)** using the historical arrays provided in the `key_metrics_annual` data. Have these core profitability metrics improved, declined, or remained volatile as they've reinvested capital?
+		- Analyze the trend in **Return on Invested Capital (ROIC)** and **Return on Equity (ROE)** using the historical arrays provided in the 'key_metrics_annual' data. Have these core profitability metrics improved, declined, or remained volatile as they've reinvested capital?
 		- Compare the growth in **Capital Expenditures (CapEx)** and **R&D spending** to the corresponding growth in revenue and gross profit. **Is there a clear and profitable link between investment and growth?**
 
 	- **Acquisitions (M&A):**
-		- Analyze the historical arrays for `goodwill` (from `balance_sheet_statement_annual`) and `acquisitionsNet` (from `cash_flow_statement_annual`). Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
+		- Analyze the historical arrays for 'goodwill' (from 'balance_sheet_statement_annual') and 'acquisitionsNet' (from 'cash_flow_statement_annual'). Does a large increase in goodwill, following significant M&A spending, correlate with a subsequent decline or stagnation in ROIC, suggesting overpayment?
 
 	- **Returning Capital to Shareholders:**
-		- **Stock Buybacks:** Analyze the `commonStockRepurchased` array from `cash_flow_statement_annual`. Correlate the amount of repurchases each year with the stock's historical valuation (e.g., `peRatio` and `priceToBookRatio` from the corresponding year in `key_metrics_annual`). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
+		- **Stock Buybacks:** Analyze the 'commonStockRepurchased' array from 'cash_flow_statement_annual'. Correlate the amount of repurchases each year with the stock's historical valuation (e.g., 'peRatio' and 'priceToBookRatio' from the corresponding year in 'key_metrics_annual'). **Did they opportunistically buy back shares when the stock was cheap, or did they buy high?** Calculate the change in shares outstanding.
 		- **Dividends:** Analyze the **dividend payout ratio** over time. Is the dividend well-covered by free cash flow? Is its growth steady and sustainable, or erratic?
 
 	## 3. The Scorecard & Investment Thesis
@@ -530,7 +530,7 @@ JSON Data:
 ## 3. The Spark: Potential Future Catalysts
 *You must evaluate all three potential catalysts.*
 - **[ ] Operational Momentum:** Is 'revenue' or 'netIncome' growth **accelerating year-over-year** in the most recent 'income_statement' data?
-- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' in the \`key_metrics_annual\` data showing a trend of improvement?
+- **[ ] Margin Expansion:** Are 'grossProfitMargin' or 'operatingMargin' in the 'key_metrics_annual' data showing a trend of improvement?
 - **[ ] Analyst Sentiment Shift:** Are recent "upgrades" in the 'stock_grade_news' data indicating that Wall Street's view is becoming more positive?
 
 ## 4. Final Summary: The Investment Narrative
@@ -747,7 +747,7 @@ Your task is to generate a comprehensive markdown report by following these step
 3.  **Generate Report:** Structure your output as a single, professional markdown report.
 
 Output Format:
-The report must start with an overall summary, followed by a deeper dive into the key companies you identified. For each catalyst or event you mention, you MUST append a source placeholder like this: ` + "`[Source: X]`" + `, where X is the \`articleIndex\` from the original news data JSON.
+The report must start with an overall summary, followed by a deeper dive into the key companies you identified. For each catalyst or event you mention, you MUST append a source placeholder like this: '[Source: X]', where X is the 'articleIndex' from the original news data JSON.
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 
 --- START OF REPORT ---
