@@ -63,6 +63,43 @@
             color: #6366f1;
             font-size: 0.9em;
         }
+        /* Custom Tooltip Styles */
+        [data-tooltip] {
+            position: relative;
+            cursor: help;
+        }
+        [data-tooltip]::before,
+        [data-tooltip]::after {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+        }
+        [data-tooltip]::after { /* Tooltip content box */
+            content: attr(data-tooltip);
+            background-color: #1f2937; /* bg-gray-800 */
+            color: white;
+            font-size: 0.75rem; /* text-xs */
+            line-height: 1.25;
+            padding: 6px 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            bottom: calc(100% + 8px); /* Position above the element */
+        }
+        [data-tooltip]::before { /* Tooltip arrow */
+            content: '';
+            border-style: solid;
+            border-width: 5px;
+            border-color: #1f2937 transparent transparent transparent;
+            bottom: calc(100% + 3px);
+        }
+        [data-tooltip]:hover::before,
+        [data-tooltip]:hover::after {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -142,14 +179,14 @@
                                 <div>
                                     <label for="marketCapMoreThan" class="block font-medium text-gray-700">
                                         Market Cap More Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The total market value of a company's shares in USD (e.g., 1000000000 for $1B)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total market value of a company's shares in USD (e.g., 1000000000 for $1B)."></i>
                                     </label>
                                     <input type="number" id="marketCapMoreThan" placeholder="Enter Number" value="1000000000" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                                 <div>
                                     <label for="volumeMoreThan" class="block font-medium text-gray-700">
                                         Volume More Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The total number of shares traded for a stock on the last trading day."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total number of shares traded for a stock on the last trading day."></i>
                                     </label>
                                     <input type="number" id="volumeMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
@@ -158,14 +195,14 @@
                                 <div>
                                     <label for="marketCapLowerThan" class="block font-medium text-gray-700">
                                         Market Cap Lower Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The total market value of a company's shares in USD (e.g., 50000000000 for $50B)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total market value of a company's shares in USD (e.g., 50000000000 for $50B)."></i>
                                     </label>
                                     <input type="number" id="marketCapLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                                 <div>
                                     <label for="volumeLowerThan" class="block font-medium text-gray-700">
                                         Volume Lower Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The total number of shares traded for a stock on the last trading day."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The total number of shares traded for a stock on the last trading day."></i>
                                     </label>
                                     <input type="number" id="volumeLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
@@ -174,7 +211,7 @@
                                 <div>
                                     <label for="sector" class="block font-medium text-gray-700">
                                         Sector
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="A broad classification of a company's main business activities (e.g., Technology, Healthcare)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A broad classification of a company's main business activities (e.g., Technology, Healthcare)."></i>
                                     </label>
                                     <select id="sector" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
                                         <option value="">Any</option>
@@ -194,7 +231,7 @@
                                 <div>
                                      <label for="exchange" class="block font-medium text-gray-700">
                                         Exchange
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The stock exchange where the company's shares are listed (e.g., NASDAQ, NYSE)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The stock exchange where the company's shares are listed (e.g., NASDAQ, NYSE)."></i>
                                      </label>
                                     <select id="exchange" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2 bg-white">
                                         <option value="">Any</option>
@@ -210,14 +247,14 @@
                                 <div>
                                     <label for="industry" class="block font-medium text-gray-700">
                                         Industry
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="A more specific classification of a company's business within a sector (e.g., Software, Biotechnology)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A more specific classification of a company's business within a sector (e.g., Software, Biotechnology)."></i>
                                     </label>
                                     <input type="text" id="industry" placeholder="Enter Industry" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                                 <div>
                                     <label for="country" class="block font-medium text-gray-700">
                                         Country
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The country where the company is domiciled (e.g., US, CA)."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The country where the company is domiciled (e.g., US, CA)."></i>
                                     </label>
                                     <input type="text" id="country" placeholder="e.g., US" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
@@ -226,14 +263,14 @@
                                 <div>
                                     <label for="betaMoreThan" class="block font-medium text-gray-700">
                                         Beta More Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
                                     </label>
                                     <input type="number" step="0.1" id="betaMoreThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                                 <div>
                                     <label for="dividendMoreThan" class="block font-medium text-gray-700">
                                         Dividend More Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The cash dividend amount paid per share in USD (e.g., 0.50), not the percentage yield."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The cash dividend amount paid per share in USD (e.g., 0.50), not the percentage yield."></i>
                                     </label>
                                     <input type="number" step="0.1" id="dividendMoreThan" placeholder="e.g., 0.50" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
@@ -242,14 +279,14 @@
                                 <div>
                                     <label for="betaLowerThan" class="block font-medium text-gray-700">
                                         Beta Lower Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="A measure of volatility relative to the market. Beta > 1 is more volatile; Beta < 1 is less volatile."></i>
                                     </label>
                                     <input type="number" step="0.1" id="betaLowerThan" placeholder="Enter Number" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
                                 <div>
                                     <label for="dividendLowerThan" class="block font-medium text-gray-700">
                                         Dividend Lower Than
-                                        <i class="fas fa-info-circle text-gray-400 ml-1" title="The cash dividend amount paid per share in USD (e.g., 2.50), not the percentage yield."></i>
+                                        <i class="fas fa-info-circle text-gray-400 ml-1" data-tooltip="The cash dividend amount paid per share in USD (e.g., 2.50), not the percentage yield."></i>
                                     </label>
                                     <input type="number" step="0.1" id="dividendLowerThan" placeholder="e.g., 2.50" class="mt-1 w-full border-gray-300 rounded-md shadow-sm p-2">
                                 </div>
@@ -414,7 +451,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.1
+        // Version 4.9.2
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -1365,7 +1402,7 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.industry)}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
-                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.dividend ? '$'+stock.dividend.toFixed(2) : 'N/A'}</td>
+                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
                     </tr>`).join('');
                 container.innerHTML = `<div class="overflow-x-auto max-h-[60vh]"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
