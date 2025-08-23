@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.8.3"; 
+export const APP_VERSION = "13.9.0"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -20,6 +20,22 @@ export const state = {
     availableIndustries: [],
     sessionLog: [] // To hold prompts and responses for the current session
 };
+
+// --- Starter Plan Symbol Limitation (v13.9.0) ---
+// Set to true to only fetch starter-plan-limited endpoints for symbols in the list below.
+export const ENABLE_STARTER_PLAN_MODE = true;
+export const STARTER_SYMBOLS = [
+    'AAL', 'AAPL', 'ABBV', 'ADBE', 'AMD', 'AMZN', 'ATVI', 'BA', 'BABA', 'BAC', 
+    'BIDU', 'BILI', 'C', 'CARR', 'CCL', 'COIN', 'COST', 'CPRX', 'CSCO', 'CVX', 
+    'DAL', 'DIS', 'DOCU', 'ET', 'ETSY', 'F', 'FDX', 'FUBO', 'GE', 'GM', 
+    'GOOGL', 'GS', 'HCA', 'HOOD', 'INTC', 'JNJ', 'JPM', 'KO', 'LCID', 'LMT', 
+    'META', 'MGM', 'MRNA', 'MRO', 'MSFT', 'NFLX', 'NIO', 'NKE', 'NOK', 'NVDA', 
+    'PEP', 'PFE', 'PINS', 'PLTR', 'PYPL', 'RBLX', 'RIOT', 'RIVN', 'RKT', 'ROKU', 
+    'SBUX', 'SHOP', 'SIRI', 'SNAP', 'SOFI', 'SONY', 'SPY', 'SPYG', 'SQ', 'T', 
+    'TGT', 'TLRY', 'TSLA', 'TSM', 'TWTR', 'UAL', 'UBER', 'UNH', 'V', 'VIAC', 
+    'VWO', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM', 'ZM'
+];
+
 
 // --- Constants ---
 export const CONSTANTS = {
