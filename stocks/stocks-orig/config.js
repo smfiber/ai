@@ -1,5 +1,5 @@
 // --- App Version ---
-export const APP_VERSION = "13.8.1"; 
+export const APP_VERSION = "13.8.2"; 
 
 // --- Shared State ---
 // This object will hold all the application's shared state.
@@ -847,10 +847,10 @@ Article Title: "The 'Pick and Shovel' Play: How [Company Name] is Powering the [
 Your analysis must be structured as follows:
 
 ## 1. The Gold Rush
-- Define the major trend or "gold rush" sweeping through the {contextName} {contextType} (e.g., the build-out of AI data centers, the transition to electric vehicles).
+- Define a major, specific trend (the 'gold rush') that is directly driving growth within the {contextName} {contextType} (e.g., the build-out of AI data centers, the transition to electric vehicles).
 
 ## 2. The "Pick and Shovel" Provider
-- Identify a company within the {contextName} {contextType} that doesn't make the end product but provides a critical component, technology, or service to the companies that do.
+- Identify a company that provides an essential 'pick and shovel' (a critical component, technology, or service) directly to the companies participating in that specific trend and industry.
 
 ## 3. The Tollbooth Thesis
 - Explain why this company's business model acts like a tollbooth on the industry's growth highway.
@@ -866,7 +866,7 @@ Your analysis must be structured as follows:
     - **Valuation Risk:** Is the company's strategic position already fully priced into the stock?
 
 ## 6. Investment Outlook
-- Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme, **after considering the risks and valuation.**
+- Conclude with the thesis for why owning this "arms dealer" is a potentially safer and more durable way to invest in the theme, after considering the risks and valuation. **Crucially, your conclusion must explicitly state the logical link between the {contextName} {contextType}, the identified 'gold rush' trend, and the chosen 'pick and shovel' company.**
 
 When you mention a stock ticker, you MUST wrap it in a special tag like this: <stock-ticker>TICKER</stock-ticker>.
 `;
