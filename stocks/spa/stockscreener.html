@@ -67,6 +67,7 @@
         [data-tooltip] {
             position: relative;
             cursor: help;
+            display: inline-block;
         }
         [data-tooltip]::before,
         [data-tooltip]::after {
@@ -99,6 +100,22 @@
         [data-tooltip]:hover::before,
         [data-tooltip]:hover::after {
             opacity: 1;
+        }
+        /* Saved Stock Styles */
+        .saved-stock-row {
+            background-color: #fefce8; /* Tailwind yellow-50 */
+        }
+        .save-stock-btn {
+            margin-right: 8px;
+            cursor: pointer;
+            color: #9ca3af; /* gray-400 */
+            transition: color 0.2s ease-in-out;
+        }
+        .save-stock-btn:hover {
+            color: #f59e0b; /* yellow-500 */
+        }
+        .save-stock-btn.saved {
+            color: #facc15; /* yellow-400 */
         }
     </style>
 </head>
@@ -451,7 +468,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // Version 4.9.3
+        // Version 4.9.4
         document.addEventListener("DOMContentLoaded", () => {
             // --- 1. Global Configuration Object ---
             const appConfig = {
@@ -465,6 +482,7 @@
             };
             
             let db = null;
+            let savedStocks = new Set();
 
             // --- Utility to pause execution ---
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -578,10 +596,18 @@
             // --- 6. Main Application Logic ---
             async function startApp() {
                 console.log("Application starting...");
+                loadSavedStocks();
                 setupTabs();
                 setupCrudModalListeners();
                 setupFinancialsModalListeners();
                 advancedScreenerFilterForm.addEventListener('submit', handleAdvancedScreenerRun);
+                
+                appContent.addEventListener('click', (e) => {
+                    const saveBtn = e.target.closest('.save-stock-btn');
+                    if (saveBtn && saveBtn.dataset.symbol) {
+                        toggleSaveStock(saveBtn.dataset.symbol);
+                    }
+                });
 
                 try {
                     if (appConfig.firebaseConfig && appConfig.firebaseConfig.databaseURL) {
@@ -621,7 +647,44 @@
                 console.log("All data loaded.");
             }
 
-            // --- 7. Data Initialization for Each Exchange (Simple Screener, News, AI) ---
+            // --- 7. Saved Stocks Logic ---
+            function loadSavedStocks() {
+                const stored = localStorage.getItem('magickalOracleSavedStocks');
+                if (stored) {
+                    savedStocks = new Set(JSON.parse(stored));
+                }
+            }
+
+            function updateSavedStocksStorage() {
+                localStorage.setItem('magickalOracleSavedStocks', JSON.stringify(Array.from(savedStocks)));
+            }
+
+            function toggleSaveStock(symbol) {
+                if (savedStocks.has(symbol)) {
+                    savedStocks.delete(symbol);
+                } else {
+                    savedStocks.add(symbol);
+                }
+                updateSavedStocksStorage();
+                updateUiForSymbol(symbol);
+            }
+
+            function updateUiForSymbol(symbol) {
+                const isSaved = savedStocks.has(symbol);
+                document.querySelectorAll(`tr[data-symbol-row="${symbol}"]`).forEach(row => {
+                    row.classList.toggle('saved-stock-row', isSaved);
+                });
+                document.querySelectorAll(`.save-stock-btn[data-symbol="${symbol}"]`).forEach(btn => {
+                    btn.classList.toggle('saved', isSaved);
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fas', isSaved);
+                        icon.classList.toggle('far', !isSaved);
+                    }
+                });
+            }
+
+            // --- 8. Data Initialization for Each Exchange ---
             async function initExchangeData(exchange) {
                 const exchangeUpperCase = exchange.toUpperCase();
                 // Simple Screener Accordion
@@ -660,7 +723,7 @@
                 });
             }
 
-            // --- 8. Accordion Toggle Logic ---
+            // --- 9. Accordion Toggle Logic ---
             function setupAccordionToggle(button, content, icon) {
                 if (!button) return;
                 button.addEventListener('click', () => {
@@ -670,7 +733,7 @@
                 });
             }
 
-            // --- 9. Screener Fetching Functions ---
+            // --- 10. Screener Fetching Functions ---
             async function fetchSimpleStockScreener(exchange, tableEl, cardEl) {
                 const loadingMsg = `<p class="text-gray-500">Loading screener for ${exchange}...</p>`;
                 if(tableEl) tableEl.innerHTML = loadingMsg;
@@ -743,7 +806,7 @@
                 }
             }
             
-            // --- 10. Fetch and Render Price Target News ---
+            // --- 11. Fetch and Render Price Target News ---
             async function fetchAndRenderPriceTargetNews(screenerData, newsContainer, exchange, forceGenAiRefresh = false) {
                 const symbols = screenerData.map(stock => stock.symbol);
 
@@ -797,7 +860,7 @@
                 await saveNewsToFirebase(exchange, filteredNews);
             }
             
-            // --- 11. Firebase Functions ---
+            // --- 12. Firebase Functions ---
             async function saveNewsToFirebase(exchange, newsData) {
                 if (!db) return;
                 try {
@@ -884,7 +947,7 @@
             }
 
 
-            // --- 12. Generative AI Analysis ---
+            // --- 13. Generative AI Analysis ---
             
             const analysisPrompts = [
                 {
@@ -1210,7 +1273,7 @@
                 });
             }
             
-            // --- 13. CRUD Functions for Analyses ---
+            // --- 14. CRUD Functions for Analyses ---
             function setupCrudModalListeners() {
                 manageSummariesBtn.addEventListener('click', async () => {
                     summaryCrudModal.style.display = 'flex';
@@ -1342,7 +1405,7 @@
                 }
             }
 
-            // --- 14. Rendering Functions ---
+            // --- 15. Rendering Functions ---
             const formatText = (text) => text || 'N/A';
             const formatMarketCap = (num) => {
                 if (!num) return 'N/A';
@@ -1370,16 +1433,22 @@
                     container.innerHTML = '<p class="text-gray-500">No stock data found.</p>';
                     return;
                 }
-                const tableRows = data.map(stock => `
-                    <tr>
+                const tableRows = data.map(stock => {
+                    const isSaved = savedStocks.has(stock.symbol);
+                    return `
+                    <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
                         <td class="px-4 py-3 whitespace-nowrap text-sm">
+                             <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                            </button>
                             <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
                             <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatText(stock.companyName)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${formatMarketCap(stock.marketCap)}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${formatText(stock.sector)}</td>
-                    </tr>`).join('');
+                    </tr>`;
+                }).join('');
                 container.innerHTML = `<div class="overflow-x-auto max-h-96"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
             }
@@ -1390,9 +1459,14 @@
                     container.innerHTML = '<p class="text-gray-500">No stock data found for the selected criteria.</p>';
                     return;
                 }
-                const tableRows = data.map(stock => `
-                    <tr>
+                const tableRows = data.map(stock => {
+                    const isSaved = savedStocks.has(stock.symbol);
+                    return `
+                    <tr data-symbol-row="${stock.symbol}" class="${isSaved ? 'saved-stock-row' : ''}">
                         <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
+                            </button>
                              <button class="ticker-details-btn font-medium text-indigo-600 hover:text-indigo-800" data-symbol="${stock.symbol}">${stock.symbol}</button>
                              <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
                         </td>
@@ -1403,7 +1477,8 @@
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.beta ? stock.beta.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.price ? '$'+stock.price.toFixed(2) : 'N/A'}</td>
                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">${stock.lastAnnualDividend ? '$'+stock.lastAnnualDividend.toFixed(2) : 'N/A'}</td>
-                    </tr>`).join('');
+                    </tr>`;
+                }).join('');
                 container.innerHTML = `<div class="overflow-x-auto max-h-[60vh]"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th><th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Beta</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th><th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dividend</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${tableRows}</tbody></table></div>`;
                 updateViewedIndicators();
             }
@@ -1428,13 +1503,19 @@
                     for (const industry in grouped[sector]) {
                         html += `<div class="mt-4"><h5 class="text-md font-medium text-gray-600 mb-3 ml-2">${industry}</h5><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
                         grouped[sector][industry].forEach(stock => {
+                            const isSaved = savedStocks.has(stock.symbol);
                             html += `<div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                                         <div class="flex justify-between items-baseline mb-1">
-                                            <p class="font-bold text-sm text-indigo-600 truncate pr-2">
-                                                <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
-                                                    <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                                            <div class="flex items-center truncate">
+                                                <button class="save-stock-btn ${isSaved ? 'saved' : ''}" data-symbol="${stock.symbol}" title="Save Stock">
+                                                    <i class="${isSaved ? 'fas' : 'far'} fa-star"></i>
                                                 </button>
-                                            </p>
+                                                <p class="font-bold text-sm text-indigo-600 truncate pr-2">
+                                                    <button class="ticker-details-btn text-left w-full" data-symbol="${stock.symbol}">${stock.symbol}
+                                                        <span class="viewed-indicator" data-indicator-symbol="${stock.symbol}"></span>
+                                                    </button>
+                                                </p>
+                                            </div>
                                             <p class="text-xs font-semibold text-gray-700 whitespace-nowrap">${formatMarketCap(stock.marketCap)}</p>
                                         </div>
                                         <p class="text-xs text-gray-500 truncate" title="${formatText(stock.companyName)}">${formatText(stock.companyName)}</p>
@@ -1472,8 +1553,7 @@
                 container.innerHTML = newsHtml;
             }
 
-            // --- Financials Modal Logic ---
-
+            // --- 16. Financials Modal Logic ---
             function setupFinancialsModalListeners() {
                 financialsModalOverlay.addEventListener('click', hideFinancialsModal);
                 financialsModalCloseBtn.addEventListener('click', hideFinancialsModal);
